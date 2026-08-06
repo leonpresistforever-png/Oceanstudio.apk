@@ -6,8 +6,12 @@ APP_DIR="$ROOT/Ocean.studio-main"
 
 cd "$ROOT"
 
-if [[ ! -d "$APP_DIR" ]]; then
-  unzip -qo Ocean.studio-main.zip -d .
+# Always refresh source from zip (idempotent). Snapshot may retain a partial app dir without package.json.
+unzip -qo Ocean.studio-main.zip -d .
+
+if [[ ! -f "$APP_DIR/package.json" ]]; then
+  echo "Ocean.studio-main/package.json missing after unzip" >&2
+  exit 1
 fi
 
 # Upstream zip ships TypeScript syntax in a .mjs file; strip it for Node ESM.
