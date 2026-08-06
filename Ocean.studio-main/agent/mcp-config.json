@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "Ocean.studio agent MCP configuration — loaded before every agent run",
+  "protocol": "mcp/2024-11-05",
+  "agentDefaults": {
+    "sessionId": "ocean-agent-terminal",
+    "preferConnectedMcps": true,
+    "fallbackToTerminal": true
+  },
+  "platformRouting": {
+    "electron": {
+      "transports": ["stdio", "sse", "http", "websocket"],
+      "hosting": ["local", "cloud"],
+      "features": ["oauth", "npx_spawn", "env_injection", "multi_server"]
+    },
+    "web": {
+      "transports": ["sse", "http"],
+      "hosting": ["cloud"],
+      "features": ["api_key_auth", "sse_stream"]
+    },
+    "mobile": {
+      "transports": ["sse", "http"],
+      "hosting": ["cloud"],
+      "features": ["api_key_auth", "native_terminal_pkg"]
+    }
+  },
+  "communication": {
+    "requestFormat": {
+      "jsonrpc": "2.0",
+      "methods": ["initialize", "tools/list", "tools/call", "resources/list", "prompts/list"]
+    },
+    "eventFormat": {
+      "type": "mcp_event",
+      "fields": ["connectorId", "tool", "arguments", "result", "error"]
+    },
+    "agentContextInjection": {
+      "onSend": [
+        "buildAgentContext()",
+        "mcp.getAgentConfig",
+        "plugins.getTools",
+        "platform.get",
+        "modelStore.getAgentPayload"
+      ],
+      "metadataKeys": ["mcpServers", "modelConfig", "pluginTools", "capabilities"]
+    }
+  },
+  "oauth": {
+    "callbackPort": 8766,
+    "callbackPath": "/oauth/callback",
+    "tokenStorage": "userData/mcp-tokens.json"
+  },
+  "recommendedConnectors": {
+    "electron": ["mcp.filesystem", "mcp.github", "mcp.brave-search", "mcp.memory", "mcp.figma", "mcp.firebase"],
+    "web": ["mcp.firecrawl", "mcp.deepwiki", "mcp.cloudflare-docs", "mcp.supabase"],
+    "mobile": ["mcp.firecrawl", "mcp.deepwiki", "mcp.github-cloud", "mcp.vercel"]
+  },
+  "gateway": {
+    "port": 20128,
+    "routes": ["/v1/models", "/v1/chat/completions", "/cursor/v1/chat/completions", "/gateway/status", "/gateway/workflows"],
+    "skillFile": "agent/gateway-skill.md",
+    "optionalExternal": ["omniroute", "litellm", "openrouter"]
+  },
+  "playground": {
+    "categories": 14,
+    "mcpStoreCount": "130+",
+    "pluginStoreCount": "110+",
+    "skillFile": "agent/playground-skill.md"
+  },
+  "authTags": {
+    "instant": "No API key — one-click SSE connect (Cloudflare Docs, DeepWiki)",
+    "api_key": "Requires token/key in config modal",
+    "oauth": "Browser OAuth redirect",
+    "client_credentials": "OAuth Client ID + Secret",
+    "local_npx": "Desktop stdio via npx — no config if no env vars"
+  }
+}

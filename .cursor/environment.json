@@ -1,0 +1,15 @@
+{
+  "name": "Ocean.studio",
+  "install": "bash scripts/cloud-agent-install.sh",
+  "start": "bash scripts/cloud-agent-install.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "bash scripts/cloud-agent-install.sh && cd Ocean.studio-main && npm run dev"
+    }
+  ],
+  "ports": [
+    { "name": "vite", "port": 5173 },
+    { "name": "terminal-ws", "port": 3847 }
+  ]
+}

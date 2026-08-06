@@ -1,0 +1,105 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #FAFAF9;
+  --bg-secondary: #F5F5F4;
+  --bg-tertiary: #FFFFFF;
+  --bg-warm: #FFFBF5;
+  --text-primary: #1C1917;
+  --text-secondary: #78716C;
+  --text-tertiary: #A8A29E;
+  --border: #E7E5E4;
+  --border-subtle: #F0EEEC;
+  --accent: #1C1917;
+  --accent-warm: #FEF3C7;
+  --accent-soft: #FFF7ED;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.06);
+  --shadow-lg: 0 8px 24px rgba(28, 25, 23, 0.08);
+  --shadow-sidebar: 2px 0 8px rgba(28, 25, 23, 0.04);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, textarea {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D6D3D1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A8A29E;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes rimGlow {
+  0%, 100% { border-color: #E7E5E4; }
+  25% { border-color: #D6D3D1; }
+  50% { border-color: #A8A29E; }
+  75% { border-color: #D6D3D1; }
+}
+
+.rim-glow {
+  animation: rimGlow 4s ease-in-out infinite;
+}
