@@ -5,7 +5,7 @@
   "terminals": [
     {
       "name": "dev",
-      "command": "cd Ocean.studio-main && npm run dev"
+      "command": "bash scripts/cloud-agent-install.sh && cd Ocean.studio-main && npm run dev"
     }
   ],
   "ports": [
