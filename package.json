@@ -1,20 +1,12 @@
 {
-  "name": "oceanstudio",
+  "name": "oceanstudio-apk",
   "version": "0.1.0",
-  "description": "Ocean.studio — hardware-level coding agent workspace",
-  "main": "dist-electron/main.js",
+  "description": "Oceanstudio.apk — Android coding agent workspace (Capacitor)",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"node server/terminal-ws.mjs\"",
-    "dev:web": "vite",
-    "dev:terminal": "node server/terminal-ws.mjs",
-    "build": "tsc -b && vite build && npm run build:electron",
-    "build:electron": "tsc -p electron/tsconfig.json",
-    "build:electron-deps": "npm install",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "postinstall": "electron-builder install-app-deps",
     "plugin:build": "npm run build --prefix plugins/ocean-native-terminal",
     "busybox:download": "bash scripts/download-busybox.sh",
     "cap:sync": "npm run build && npm run busybox:download && npx cap sync",
@@ -33,7 +25,6 @@
     "firebase": "^11.6.0",
     "framer-motion": "^12.6.3",
     "lucide-react": "^0.487.0",
-    "node-pty": "^1.0.0",
     "ocean-native-terminal": "file:plugins/ocean-native-terminal",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -45,32 +36,7 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "concurrently": "^9.1.2",
-    "electron": "^35.1.2",
-    "electron-builder": "^26.0.12",
     "typescript": "^5.8.3",
-    "vite": "^6.2.5",
-    "wait-on": "^8.0.3",
-    "ws": "^8.21.2"
-  },
-  "build": {
-    "appId": "studio.ocean.app",
-    "productName": "Ocean.studio",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "mac": {
-      "category": "public.app-category.developer-tools"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "linux": {
-      "target": "AppImage"
-    }
+    "vite": "^6.2.5"
   }
 }
