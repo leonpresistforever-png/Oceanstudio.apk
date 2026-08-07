@@ -1,0 +1,128 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: APK build type
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build web app and native terminal plugin
+        run: |
+          npm run plugin:build
+          npm run build
+          npm run busybox:download
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Determine build type
+        id: build_type
+        run: |
+          TYPE="${{ github.event.inputs.build_type }}"
+          if [ -z "$TYPE" ]; then TYPE="debug"; fi
+          echo "type=$TYPE" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK (Gradle)
+        working-directory: android
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g
+        run: |
+          if [ "${{ steps.build_type.outputs.type }}" = "release" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Locate APK output
+        id: apk
+        run: |
+          if [ "${{ steps.build_type.outputs.type }}" = "release" ]; then
+            APK=$(find android/app/build/outputs/apk/release -name '*.apk' -type f | head -1)
+          else
+            APK=$(find android/app/build/outputs/apk/debug -name '*.apk' -type f | head -1)
+          fi
+          if [ -z "$APK" ]; then
+            echo "No APK found" >&2
+            find android/app/build/outputs -type f || true
+            exit 1
+          fi
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK"
+          ls -lh "$APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oceanstudio-${{ steps.build_type.outputs.type }}-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          {
+            echo "## Ocean.studio APK build"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Type** | \`${{ steps.build_type.outputs.type }}\` |"
+            echo "| **Artifact** | \`oceanstudio-${{ steps.build_type.outputs.type }}-apk\` |"
+            echo "| **File** | \`$(basename '${{ steps.apk.outputs.path }}')\` |"
+            echo ""
+            echo "Download from the **Artifacts** section of this workflow run."
+          } >> "$GITHUB_STEP_SUMMARY"

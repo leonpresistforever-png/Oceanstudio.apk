@@ -1277,6 +1277,114 @@
 .pg-rec-advanced-toggle { margin-top: 8px; padding: 0; background: none; border: none; color: rgba(250,250,249,0.45); font-size: 0.75rem; cursor: pointer; text-decoration: underline; }
 .pg-rec-bg-hint { display: block; color: #4ade80 !important; margin-top: 4px; }
 
+.pg-ab-remote-panel {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(139, 92, 246, 0.08);
+  color: #c4b5fd;
+  font-size: 0.8125rem;
+}
+
+.pg-ab-remote-panel strong {
+  display: block;
+  color: #a78bfa;
+  margin-bottom: 4px;
+}
+
+.pg-ab-remote-panel p {
+  margin: 0;
+  line-height: 1.45;
+  color: rgba(196, 181, 253, 0.85);
+}
+
+/* Mobile playground — recording, active bot, narrator */
+@media (max-width: 900px) {
+  .pg-recording,
+  .pg-active-bot {
+    gap: 12px;
+  }
+
+  .pg-rec-manual-start {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .pg-rec-manual-btn {
+    margin-left: 0;
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .pg-rec-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pg-rec-status-bar,
+  .pg-ab-status-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .pg-rec-controls,
+  .pg-ab-controls {
+    margin-left: 0;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .pg-rec-btn,
+  .pg-ab-btn {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .pg-rec-toggles label,
+  .pg-ab-risk-check {
+    font-size: 0.875rem;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .pg-ab-cap-grid,
+  .pg-ab-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pg-ab-platform,
+  .pg-rec-hw,
+  .pg-rec-notif-panel,
+  .pg-ab-remote-panel,
+  .pg-ab-accessibility {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pg-ab-full,
+  .pg-ab-limited,
+  .pg-rec-bypass {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+
+  .pg-ab-run-cmd {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .pg-prompt-input {
+    font-size: 16px;
+  }
+}
+
 /* Skills Store */
 .skills-store { display: flex; flex-direction: column; gap: 14px; }
 .skills-store-header { display: flex; align-items: flex-start; gap: 12px; }

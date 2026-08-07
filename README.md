@@ -48,6 +48,15 @@ APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 First launch downloads the Termux bootstrap for full `pkg` / `apt` / `proot` / `bash`. Run `npm run busybox:download` before release builds for offline fallback.
 
+## CI — Download APK
+
+Every push to `main` builds a debug APK via [GitHub Actions](.github/workflows/build.yml).
+
+1. Open **Actions** → **Build APK**
+2. Download the artifact `oceanstudio-debug-apk` from the latest run
+
+Manual release build: **Actions** → **Build APK** → **Run workflow** → choose `release`.
+
 ## Native Terminal Architecture
 
 The terminal uses JNI `openpty()` for real pseudoterminal allocation (interactive bash, ssh, htop, nano). Falls back to ProcessBuilder pipes if native lib unavailable. Linux environment via proot with Termux-compatible prefix path.

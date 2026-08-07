@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn, signUp, signInWithGoogle, signInWithGitHub, resetPassword, isFirebaseConfigured, formatAuthError } from '../lib/firebase';
-import { PREVIEW_LOGIN, isPreviewCredentials, createPreviewUser } from '../lib/previewAuth';
-import { useAppStore } from '../store/appStore';
 import AuthHeroText from '../components/auth/AuthHeroText';
 import './AuthPage.css';
 
@@ -11,7 +9,6 @@ type AuthMode = 'signin' | 'signup' | 'forgot';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const setUser = useAppStore((s) => s.setUser);
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,11 +36,6 @@ export default function AuthPage() {
       }
 
       if (mode === 'signin') {
-        if (isPreviewCredentials(email, password)) {
-          setUser(createPreviewUser() as never);
-          navigate('/');
-          return;
-        }
         await signIn(email, password);
         navigate('/');
       } else if (mode === 'signup') {
@@ -83,14 +75,6 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handlePreviewLogin() {
-    setError('');
-    setEmail(PREVIEW_LOGIN.email);
-    setPassword(PREVIEW_LOGIN.password);
-    setUser(createPreviewUser() as never);
-    navigate('/');
   }
 
   async function handleGitHub() {
@@ -250,15 +234,10 @@ export default function AuthPage() {
 
               <div className="auth-footer">
                 {mode === 'signin' && (
-                  <>
-                    <button type="button" className="auth-preview-btn" onClick={handlePreviewLogin}>
-                      Preview Login (temporary)
-                    </button>
-                    <p style={{ marginTop: '1rem' }}>
-                      Don't have an account?{' '}
-                      <button type="button" onClick={() => { setMode('signup'); setError(''); }}>Sign up</button>
-                    </p>
-                  </>
+                  <p>
+                    Don't have an account?{' '}
+                    <button type="button" onClick={() => { setMode('signup'); setError(''); }}>Sign up</button>
+                  </p>
                 )}
                 {mode === 'signup' && (
                   <>

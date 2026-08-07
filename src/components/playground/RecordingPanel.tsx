@@ -51,6 +51,16 @@ export default function RecordingPanel() {
     const info = await api.platform.get();
     const p = info.isElectron ? 'electron' : info.isAndroid ? 'android' : 'web';
     setPlatform(p);
+    if (p === 'android') {
+      setConfig({
+        outputFormat: 'mp4',
+        codec: 'h264',
+        notificationControls: true,
+        saveToGallery: true,
+        backgroundMode: true,
+        minimizeToTray: false,
+      });
+    }
     if (api.recording?.getHardwareInfo) {
       const hw = await api.recording.getHardwareInfo() as unknown as typeof hardware;
       setHardware(hw);
@@ -60,7 +70,7 @@ export default function RecordingPanel() {
       setSources(src as typeof sources);
       if (src[0] && !selectedSourceId) setSelectedSource(src[0].id);
     }
-  }, [setHardware, setSources, setSelectedSource, selectedSourceId]);
+  }, [setHardware, setSources, setSelectedSource, selectedSourceId, setConfig]);
 
   useEffect(() => {
     void loadHardware();

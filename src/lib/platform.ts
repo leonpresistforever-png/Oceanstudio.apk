@@ -241,8 +241,14 @@ function createAndroidRecordingApi(): NonNullable<OceanAPI['recording']> {
     }),
     getSources: async () => [{ id: 'android:screen', name: 'Full Screen', type: 'screen' }],
     start: async (config) => {
-      emit({ status: 'recording', startedAt: Date.now(), config, notificationPanel: true });
-      return { ok: true, message: 'Android recording started — controls in notification panel' };
+      emit({
+        status: 'recording',
+        startedAt: Date.now(),
+        config,
+        notificationPanel: true,
+        elapsedMs: 0,
+      });
+      return { ok: true, message: 'Android recording started — use notification shade for pause/stop/save' };
     },
     pause: async () => {
       emit({ ...status, status: 'paused' });
@@ -261,7 +267,10 @@ function createAndroidRecordingApi(): NonNullable<OceanAPI['recording']> {
       emit({ status: 'idle', elapsedMs: 0 });
       return { ok: true, message: 'Recording cancelled' };
     },
-    getStatus: async () => status,
+    getStatus: async () => ({
+      ...status,
+      notificationPanel: status.status === 'recording' || status.status === 'paused',
+    }),
     onStatus: (callback) => {
       listeners.push(callback);
       return () => {

@@ -325,26 +325,6 @@
   background: var(--border);
 }
 
-.auth-preview-btn {
-  display: block;
-  width: 100%;
-  padding: 10px 16px;
-  margin-bottom: 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  transition: all var(--transition);
-}
-
-.auth-preview-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-  background: var(--bg-warm);
-}
-
 .auth-footer {
   margin-top: 1.5rem;
   text-align: center;

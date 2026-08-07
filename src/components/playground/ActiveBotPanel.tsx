@@ -198,6 +198,19 @@ export default function ActiveBotPanel() {
         </div>
       </div>
 
+      {platform === 'android' && (
+        <div className="pg-ab-remote-panel">
+          <Smartphone size={16} />
+          <div>
+            <strong>Remote View — Notification Panel</strong>
+            <p>
+              When Active Bot is running, controls appear in the notification shade:
+              pause, resume, stop, and live status — no floating overlay ball.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Game Companion — full configuration */}
       <GameCompanionConfigPanel platform={platform} disabled={isRunning} />
 
