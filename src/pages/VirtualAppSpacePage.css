@@ -1,0 +1,16 @@
+.va-page { height: 100%; overflow-y: auto; background: #0c0a09; color: #fafaf9; }
+.va-header { padding: 24px 28px; background: linear-gradient(135deg, #1c1917, #292524); border-bottom: 1px solid #44403c; }
+.va-header h1 { margin: 0 0 6px; font-size: 1.3rem; }
+.va-header p { margin: 0; color: #a8a29e; font-size: 0.85rem; }
+.va-toolbar { display: flex; gap: 10px; padding: 16px 28px; flex-wrap: wrap; border-bottom: 1px solid #292524; }
+.va-input { padding: 8px 12px; background: #292524; border: 1px solid #44403c; border-radius: 8px; color: #fafaf9; font-size: 0.8125rem; min-width: 160px; }
+.va-btn { padding: 8px 16px; background: #0ea5e9; border: none; border-radius: 8px; color: #fff; font-size: 0.8125rem; cursor: pointer; font-weight: 500; }
+.va-btn--ghost { background: #292524; border: 1px solid #44403c; }
+.va-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: 400px; }
+.va-sidebar { border-right: 1px solid #292524; padding: 16px; }
+.va-clone-item { padding: 12px; border-radius: 8px; cursor: pointer; margin-bottom: 8px; border: 1px solid transparent; }
+.va-clone-item:hover, .va-clone-item--active { background: #292524; border-color: #44403c; }
+.va-clone-item h4 { margin: 0 0 4px; font-size: 0.875rem; }
+.va-clone-item span { font-size: 0.7rem; color: #a8a29e; }
+.va-preview { padding: 16px; min-height: 360px; }
+.va-empty { padding: 48px; text-align: center; color: #78716c; }

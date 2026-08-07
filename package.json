@@ -1,0 +1,42 @@
+{
+  "name": "oceanstudio-apk",
+  "version": "0.1.0",
+  "description": "Oceanstudio.apk — Android coding agent workspace (Capacitor)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "plugin:build": "npm run build --prefix plugins/ocean-native-terminal",
+    "busybox:download": "bash scripts/download-busybox.sh",
+    "cap:sync": "npm run build && npm run busybox:download && npx cap sync",
+    "android:open": "npx cap open android",
+    "android:build": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:build:release": "npm run cap:sync && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/cli": "^7.6.8",
+    "@capacitor/core": "^7.6.8",
+    "@monaco-editor/react": "^4.7.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "firebase": "^11.6.0",
+    "framer-motion": "^12.6.3",
+    "lucide-react": "^0.487.0",
+    "ocean-native-terminal": "file:plugins/ocean-native-terminal",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.5"
+  }
+}

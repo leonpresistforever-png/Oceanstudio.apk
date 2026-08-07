@@ -1,0 +1,84 @@
+.agent-timeout-bar {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.agent-timeout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.agent-timeout-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.agent-timeout-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.agent-timeout-badge.anti {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.agent-anti-timeout {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.agent-anti-timeout input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.agent-timeout-slider {
+  width: 100%;
+  margin: 4px 0 8px;
+  accent-color: #0ea5e9;
+}
+
+.agent-timeout-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.agent-timeout-presets button {
+  padding: 3px 8px;
+  font-size: 0.6875rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.agent-timeout-presets button.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #fff;
+}
+
+.agent-timeout-presets button:hover:not(.active) {
+  background: var(--bg-secondary);
+}
