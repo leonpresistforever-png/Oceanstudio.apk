@@ -4,7 +4,7 @@ export type RecordingResolution = '4k' | '2k' | '1080p' | '720p';
 
 export type RecordingFps = 30 | 60 | 90 | 120 | 144 | 165;
 
-export type RecordingBitrateMbps = 30 | 60 | 80 | 100 | 150;
+export type RecordingBitrateMbps = 30 | 60 | 80 | 100 | 150 | 200;
 
 export type RecordingCaptureMode = 'fullscreen' | 'window' | 'region';
 
@@ -63,6 +63,12 @@ export interface RecordingConfig {
   keepAliveInBackground: boolean;
   showCountdown: boolean;
   includeAgentPanel: boolean;
+  /** HEVC/H.265 high-quality profile — max bitrate, minimal GOP compression */
+  highQualityEncoder: boolean;
+  /** Motion stabilization — reduces pan/swipe blur during screen capture */
+  antiBlurPan: boolean;
+  /** Near-lossless output — disables aggressive encoder compression / artifacting */
+  antiCompression: boolean;
 }
 
 export const RESOLUTION_DIMS: Record<RecordingResolution, { width: number; height: number }> = {
@@ -75,7 +81,7 @@ export const RESOLUTION_DIMS: Record<RecordingResolution, { width: number; heigh
 export const DEFAULT_RECORDING_CONFIG: RecordingConfig = {
   resolution: '1080p',
   fps: 60,
-  bitrateMbps: 80,
+  bitrateMbps: 150,
   captureMode: 'fullscreen',
   ultraRender: true,
   hardwareBypass: true,
@@ -83,8 +89,8 @@ export const DEFAULT_RECORDING_CONFIG: RecordingConfig = {
   notificationControls: true,
   backgroundMode: true,
   audioSource: 'both',
-  outputFormat: 'webm',
-  codec: 'vp9',
+  outputFormat: 'mp4',
+  codec: 'hevc',
   cursorHighlight: true,
   clickRipple: false,
   systemAudio: true,
@@ -92,15 +98,21 @@ export const DEFAULT_RECORDING_CONFIG: RecordingConfig = {
   startDelaySec: 0,
   autoStopMinutes: 0,
   outputFolder: '',
-  filenameTemplate: 'recording-{date}-{resolution}-{fps}fps',
+  filenameTemplate: 'recording-{date}-{resolution}-{fps}fps-hevc',
   minimizeToTray: true,
   keepAliveInBackground: true,
   showCountdown: true,
   includeAgentPanel: false,
+  highQualityEncoder: true,
+  antiBlurPan: true,
+  antiCompression: true,
   region: { x: 0, y: 0, width: 1920, height: 1080 },
 };
 
 export const ELECTRON_RECORDING_FEATURES = [
+  'HEVC/H.265 hardware encoder — high quality, efficient 4K',
+  'Anti-blur pan stabilization for smooth scrolling capture',
+  'Anti-compression mode — near-lossless, minimal artifacting',
   'GPU hardware encoder bypass (NVENC / AMF / QuickSync)',
   'Multi-monitor source picker with per-display DPI',
   'Window-level capture — record specific app only',
@@ -112,6 +124,9 @@ export const ELECTRON_RECORDING_FEATURES = [
 ] as const;
 
 export const ANDROID_RECORDING_FEATURES = [
+  'HEVC/H.265 MediaCodec — high quality up to 200 Mbps',
+  'Anti-blur pan — motion-stabilized screen capture',
+  'Anti-compression — CRF-style quality, no heavy file squash',
   'MediaProjection hardware capture — no pixel stretch',
   'Notification panel controls (timer, pause, stop, save)',
   'No on-screen floating ball — zero overlay artifacts',

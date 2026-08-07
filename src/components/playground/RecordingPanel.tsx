@@ -54,7 +54,11 @@ export default function RecordingPanel() {
     if (p === 'android') {
       setConfig({
         outputFormat: 'mp4',
-        codec: 'h264',
+        codec: 'hevc',
+        bitrateMbps: 150,
+        highQualityEncoder: true,
+        antiBlurPan: true,
+        antiCompression: true,
         notificationControls: true,
         saveToGallery: true,
         backgroundMode: true,
@@ -215,8 +219,8 @@ export default function RecordingPanel() {
           <label>
             <span>Bitrate</span>
             <select value={config.bitrateMbps} onChange={(e) => setConfig({ bitrateMbps: Number(e.target.value) as RecordingBitrateMbps })} disabled={!canRecord}>
-              {([30, 60, 80, 100, 150] as const).map((b) => (
-                <option key={b} value={b}>{b} Mbps</option>
+              {([30, 60, 80, 100, 150, 200] as const).map((b) => (
+                <option key={b} value={b}>{b} Mbps{b >= 150 ? ' (HQ)' : ''}</option>
               ))}
             </select>
           </label>
@@ -224,8 +228,8 @@ export default function RecordingPanel() {
             <span>Codec / Format</span>
             <div className="pg-rec-inline">
               <select value={config.codec} onChange={(e) => setConfig({ codec: e.target.value as RecordingCodec })} disabled={!canRecord}>
+                <option value="hevc">HEVC / H.265 (recommended)</option>
                 <option value="h264">H.264</option>
-                <option value="hevc">HEVC</option>
                 <option value="vp9">VP9</option>
               </select>
               <select value={config.outputFormat} onChange={(e) => setConfig({ outputFormat: e.target.value as RecordingOutputFormat })} disabled={!canRecord}>
@@ -255,6 +259,9 @@ export default function RecordingPanel() {
         </div>
 
         <div className="pg-rec-toggles">
+          <label><input type="checkbox" checked={config.highQualityEncoder} onChange={(e) => setConfig({ highQualityEncoder: e.target.checked, codec: e.target.checked ? 'hevc' : config.codec })} disabled={!canRecord} /> HEVC/H.265 high-quality encoder</label>
+          <label><input type="checkbox" checked={config.antiBlurPan} onChange={(e) => setConfig({ antiBlurPan: e.target.checked })} disabled={!canRecord} /> Anti-blur pan (motion stabilization)</label>
+          <label><input type="checkbox" checked={config.antiCompression} onChange={(e) => setConfig({ antiCompression: e.target.checked, bitrateMbps: e.target.checked ? Math.max(config.bitrateMbps, 150) as RecordingBitrateMbps : config.bitrateMbps })} disabled={!canRecord} /> Anti-compression (near-lossless, no heavy squash)</label>
           <label><input type="checkbox" checked={config.ultraRender} onChange={(e) => setConfig({ ultraRender: e.target.checked })} disabled={!canRecord} /> Ultra render (crystal sharp)</label>
           <label><input type="checkbox" checked={config.hardwareBypass} onChange={(e) => setConfig({ hardwareBypass: e.target.checked })} disabled={!canRecord} /> GPU hardware encoder bypass</label>
           <label><input type="checkbox" checked={config.backgroundMode} onChange={(e) => setConfig({ backgroundMode: e.target.checked })} disabled={!canRecord} /> Background recording (app stays alive)</label>
@@ -338,7 +345,7 @@ export default function RecordingPanel() {
         <div>
           <strong>{isRecording ? 'RECORDING' : isPaused ? 'PAUSED' : 'Ready'}</strong>
           {(isRecording || isPaused) && <span className="pg-rec-timer">{formatElapsed(elapsedMs)}</span>}
-          <small>{dims.width}×{dims.height} · {config.fps}fps · {config.bitrateMbps}Mbps · {config.codec}/{config.outputFormat}</small>
+          <small>{dims.width}×{dims.height} · {config.fps}fps · {config.bitrateMbps}Mbps · {config.codec.toUpperCase()}/{config.outputFormat}{config.antiBlurPan ? ' · anti-blur' : ''}{config.antiCompression ? ' · anti-compress' : ''}</small>
           {config.backgroundMode && isRecording && <small className="pg-rec-bg-hint">Background mode active — app can minimize</small>}
         </div>
         <div className="pg-rec-controls">

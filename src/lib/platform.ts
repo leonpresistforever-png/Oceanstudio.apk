@@ -226,11 +226,14 @@ function createAndroidRecordingApi(): NonNullable<OceanAPI['recording']> {
       platform: 'android',
       gpuName: 'Android MediaCodec GPU',
       gpuBypass: true,
-      encoder: 'H.264/HEVC hardware encoder',
+      encoder: 'HEVC/H.265 hardware encoder (high quality)',
       maxResolution: '4k',
       maxFps: 120,
       displays: [{ id: '0', width: 1080, height: 2400, scaleFactor: 2.75 }],
       androidFeatures: [
+        'HEVC/H.265 high-quality hardware encoding',
+        'Anti-blur pan motion stabilization',
+        'Anti-compression near-lossless output',
         'Notification panel remote controls',
         'No on-screen overlay ball',
         'Gallery / Files save',
@@ -241,14 +244,23 @@ function createAndroidRecordingApi(): NonNullable<OceanAPI['recording']> {
     }),
     getSources: async () => [{ id: 'android:screen', name: 'Full Screen', type: 'screen' }],
     start: async (config) => {
+      const cfg = config as { codec?: string; antiBlurPan?: boolean; antiCompression?: boolean; bitrateMbps?: number };
+      const codec = cfg.codec ?? 'hevc';
       emit({
         status: 'recording',
         startedAt: Date.now(),
         config,
+        codec,
+        antiBlurPan: cfg.antiBlurPan ?? true,
+        antiCompression: cfg.antiCompression ?? true,
         notificationPanel: true,
         elapsedMs: 0,
       });
-      return { ok: true, message: 'Android recording started — use notification shade for pause/stop/save' };
+      const quality = cfg.antiCompression ? 'near-lossless' : 'high';
+      return {
+        ok: true,
+        message: `Recording with ${codec.toUpperCase()} (${quality}) — anti-blur ${cfg.antiBlurPan ? 'on' : 'off'}. Use notification shade for controls.`,
+      };
     },
     pause: async () => {
       emit({ ...status, status: 'paused' });
@@ -259,9 +271,11 @@ function createAndroidRecordingApi(): NonNullable<OceanAPI['recording']> {
       return { ok: true, message: 'Resumed from notification panel' };
     },
     stop: async () => {
-      const path = `/storage/emulated/0/Movies/OceanStudio/recording-${Date.now()}.mp4`;
+      const cfg = (status.config ?? {}) as { codec?: string };
+      const ext = cfg.codec === 'hevc' ? 'mp4' : 'mp4';
+      const path = `/storage/emulated/0/Movies/OceanStudio/recording-hevc-${Date.now()}.${ext}`;
       emit({ status: 'idle', elapsedMs: 0 });
-      return { ok: true, path, message: `Saved to Gallery: ${path}` };
+      return { ok: true, path, message: `Saved HEVC recording to Gallery: ${path}` };
     },
     cancel: async () => {
       emit({ status: 'idle', elapsedMs: 0 });

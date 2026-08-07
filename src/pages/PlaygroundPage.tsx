@@ -284,7 +284,7 @@ export default function PlaygroundPage() {
             <p className="pg-context-desc">
               {activeCategory === 'agents' && 'Assign agents to read your filesystem, research apps, and execute long-running tasks.'}
               {activeCategory === 'active-bot' && 'Your daily life partner — full device control, screen interaction, game companion, and continuous multi-day sessions. Use at your own risk.'}
-              {activeCategory === 'recording' && 'Hardware-accelerated screen recording — 4K, high FPS, lossless bitrate. Electron EXE and Android APK only.'}
+              {activeCategory === 'recording' && 'HEVC/H.265 high-quality recording — anti-blur pan, anti-compression, up to 4K/200Mbps. Electron EXE and Android APK only.'}
               {activeCategory === 'research' && 'Deep web scraping, file manager research, and long-run content extraction.'}
               {activeCategory === 'media-image' && 'Generate images via Imagen, DALL·E, Flux, SDXL, or connected MCP/plugins.'}
               {activeCategory === 'media-video' && 'Create videos with Veo 3.1, Google Flow OAuth, Runway, Pika, and more.'}
