@@ -2,6 +2,8 @@ package studio.ocean.nativeterminal;
 
 import android.util.Log;
 
+import java.io.IOException;
+
 /**
  * JNI bridge allocating a real pseudoterminal (PTY) via openpty().
  * Enables interactive shells (bash, ssh, htop, nano) unlike ProcessBuilder pipes.
@@ -52,6 +54,11 @@ public final class PtyBridge {
         if (!available) return null;
         int[] result = nativeCreatePty(cmd, env, cwd, rows, cols);
         if (result == null || result.length < 2) return null;
-        return new PtySession(result[0], result[1], rows, cols);
+        try {
+            return new PtySession(result[0], result[1], rows, cols);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to open PTY session: " + e.getMessage());
+            return null;
+        }
     }
 }
