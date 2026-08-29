@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/loading_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/ocean_background" android:gravity="center" android:orientation="vertical">
+    <ImageView android:id="@+id/loading_logo" android:layout_width="58dp" android:layout_height="58dp" android:contentDescription="@null" android:src="@drawable/ic_ocean_mark" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/app_name" android:textColor="@color/ocean_ink" android:textSize="19sp" android:textStyle="bold" />
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="20dp" android:layout_marginTop="22dp" android:gravity="center" android:orientation="horizontal">
+        <View android:id="@+id/loading_dot_one" style="@style/OceanLoadingDot" />
+        <View android:id="@+id/loading_dot_two" style="@style/OceanLoadingDot" android:layout_marginStart="7dp" />
+        <View android:id="@+id/loading_dot_three" style="@style/OceanLoadingDot" android:layout_marginStart="7dp" />
+    </LinearLayout>
+</LinearLayout>

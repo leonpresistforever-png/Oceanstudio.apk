@@ -2,11 +2,11 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/ocean_background" android:fillViewport="true" android:overScrollMode="never">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="720dp"
         android:gravity="center_horizontal" android:orientation="vertical"
         android:paddingHorizontal="28dp" android:paddingBottom="28dp">
 
-        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.38" />
+        <Space android:layout_width="1dp" android:layout_height="112dp" />
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="36dp" android:gravity="center_vertical">
             <ImageView android:layout_width="36dp" android:layout_height="36dp" android:contentDescription="@null" android:src="@drawable/ic_ocean_mark" />
@@ -57,6 +57,6 @@
             android:gravity="center" android:text="@string/no_account_signup" android:textColor="@color/ocean_muted" android:textSize="13sp" />
         <TextView android:id="@+id/dev_auth_continue" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center"
             android:text="@string/continue_development" android:textColor="@color/ocean_muted" android:textSize="12sp" android:visibility="gone" />
-        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.62" />
+        <Space android:layout_width="1dp" android:layout_height="36dp" />
     </LinearLayout>
 </ScrollView>
