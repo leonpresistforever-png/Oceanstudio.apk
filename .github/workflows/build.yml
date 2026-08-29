@@ -2,19 +2,9 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
-    branches: [main]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: APK build type
-        required: true
-        default: debug
-        type: choice
-        options:
-          - debug
-          - release
 
 concurrency:
   group: build-apk-${{ github.ref }}
@@ -34,7 +24,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "17"
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -50,33 +41,20 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
-      - name: Determine build type
-        id: build_type
-        run: |
-          TYPE="${{ github.event.inputs.build_type }}"
-          if [ -z "$TYPE" ]; then TYPE="debug"; fi
-          echo "type=$TYPE" >> "$GITHUB_OUTPUT"
+      - name: Verify Ocean architecture
+        run: ./scripts/verify-native-only.sh
 
-      - name: Build APK (Gradle)
+      - name: Build debug APK (Gradle)
         working-directory: android
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g
-        run: |
-          if [ "${{ steps.build_type.outputs.type }}" = "release" ]; then
-            ./gradlew assembleRelease --no-daemon --stacktrace
-          else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
+        run: ./gradlew clean test assembleDebug --no-daemon --stacktrace
 
       - name: Locate APK output
         id: apk
         run: |
-          if [ "${{ steps.build_type.outputs.type }}" = "release" ]; then
-            APK=$(find android/app/build/outputs/apk/release -name '*.apk' -type f | head -1)
-          else
-            APK=$(find android/app/build/outputs/apk/debug -name '*.apk' -type f | head -1)
-          fi
-          if [ -z "$APK" ]; then
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK" ]; then
             echo "No APK found" >&2
             find android/app/build/outputs -type f || true
             exit 1
@@ -88,7 +66,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: oceanstudio-${{ steps.build_type.outputs.type }}-apk
+          name: oceanstudio-debug-${{ github.sha }}
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 30
@@ -100,8 +78,8 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| **Type** | \`${{ steps.build_type.outputs.type }}\` |"
-            echo "| **Artifact** | \`oceanstudio-${{ steps.build_type.outputs.type }}-apk\` |"
+            echo "| **Type** | \`debug\` |"
+            echo "| **Artifact** | \`oceanstudio-debug-${{ github.sha }}\` |"
             echo "| **File** | \`$(basename '${{ steps.apk.outputs.path }}')\` |"
             echo ""
             echo "Download from the **Artifacts** section of this workflow run."
