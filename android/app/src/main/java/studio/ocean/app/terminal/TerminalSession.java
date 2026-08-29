@@ -24,6 +24,8 @@ public final class TerminalSession {
     public void resize(int rows,int columns,int width,int height){if(running)NativePty.resize(handle,rows,columns,width,height);}
     public void interrupt(){if(running)NativePty.signal(handle,2);}
     public void close(){if(!running)return;NativePty.signal(handle,15);}
+    public int pid(){return NativePty.pid(handle);}
+    public LocalProcessDiagnostics.Snapshot diagnostics(String oceanPrefix){return LocalProcessDiagnostics.inspect(pid(),oceanPrefix);}
     public boolean isRunning(){return running;} public int getExitCode(){return exitCode;}
     private void appendScrollback(byte[] bytes,int length){synchronized(scrollback){if(scrollback.size()+length>200000){byte[] old=scrollback.toByteArray();scrollback.reset();int keep=Math.min(old.length,150000);scrollback.write(old,old.length-keep,keep);}scrollback.write(bytes,0,length);}}
 }
