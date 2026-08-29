@@ -23,9 +23,8 @@ if find android/app/src/main -type f \( -name '*.java' -o -name '*.kt' -o -name 
 fi
 echo "Ocean native architecture verified."
 
-# Ocean Terminal commands must remain local PTY children. Network clients are
-# allowed for package downloads only, never in terminal/session execution code.
+# Ocean Terminal commands must remain local PTY children. Package downloads
+# are separate; terminal/session code must not contain remote execution clients.
 if find android/app/src/main/java/studio/ocean/app/terminal android/app/src/main/cpp -type f -print0 | xargs -0 sed -nE '/(HttpURLConnection|OkHttpClient|WebSocket|ssh |https?:\/\/.*(exec|shell|command))/p' | head -1 | grep -q .; then
-  echo "Remote command execution dependency found in Ocean Terminal runtime" >&2
-  exit 1
+  fail "remote command execution dependency found in Ocean Terminal runtime"
 fi
