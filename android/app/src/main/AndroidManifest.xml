@@ -9,6 +9,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <service android:name=".terminal.OceanTerminalRuntimeService" android:exported="false" />
+        <activity android:name=".OceanTerminalActivity" android:exported="false" android:screenOrientation="unspecified" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
