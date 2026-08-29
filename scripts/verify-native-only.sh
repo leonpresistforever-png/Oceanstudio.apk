@@ -14,6 +14,8 @@ target_sdk="$(sed -n 's/^\s*targetSdkVersion = \([0-9][0-9]*\)\s*$/\1/p' android
 [[ "$target_sdk" = 28 ]] || fail "targetSdk must be 28"
 sed -n '/BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS/p' android/app/src/main/java/studio/ocean/app/MainActivity.java | read -r guard \
   || fail "development authentication must require DEBUG and the dedicated flag"
+sed -n '/release {/,/}/p' android/app/build.gradle | sed -n '/OCEAN_DEV_AUTH_BYPASS.*false/p' | read -r release_guard \
+  || fail "release builds must hard-disable development authentication"
 if find android/app/src/main -type f \( -name '*.java' -o -name '*.kt' -o -name '*.c' -o -name '*.cpp' \) \
     -exec sed -n '/com\.getcapacitor\|android\.webkit\.WebView\|com\.termux\|\/data\/data\/com\.termux/p' {} + \
     | sed -n '1p' | read -r forbidden; then

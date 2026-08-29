@@ -20,11 +20,15 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${System.getenv('OCEAN_FIREBASE_API_KEY') ?: ''}\""
-        buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "${(System.getenv('OCEAN_DEV_AUTH_BYPASS') ?: 'false').toBoolean()}"
     }
     buildFeatures { buildConfig true }
     buildTypes {
+        debug {
+            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "${(System.getenv('OCEAN_DEV_AUTH_BYPASS') ?: 'false').toBoolean()}"
+        }
         release {
+            // Hard-disabled regardless of environment: release builds never contain the bypass.
+            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "false"
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
