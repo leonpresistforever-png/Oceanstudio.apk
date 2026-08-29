@@ -1,69 +1,25 @@
-# Oceanstudio.apk
+# Ocean.studio for Android
 
-Android APK for the Ocean coding agent workspace — unified mobile build with all Electron/web features adapted for Android.
+Ocean.studio is now a standalone native Android application. The repository intentionally contains no Electron, website, React, Vite, Capacitor, WebView, Node.js, or browser-bridge application code.
 
-## Stack
+## Current milestone
 
-| Layer | Technology |
-|-------|------------|
-| Mobile shell | Capacitor 7 (Android, target SDK 28) |
-| UI | React 19 + TypeScript + Vite — modern white aesthetic, mobile-first nav |
-| Terminal | `ocean-native-terminal` — **real PTY via JNI openpty**, proot Linux prefix (Termux bootstrap + busybox fallback) |
-| Plugins | DexClassLoader marketplace (`plugin.json` manifest) |
-| Auth | Firebase (redirect flow on Android WebView, popup on web) |
-| Agent | Web agent + provider inference + playground |
+The first native shell includes:
 
-## Features (APK-compatible)
+- a native Android activity and XML layout;
+- Agent, Editor, Terminal, Files, and Tools navigation;
+- a model picker, agent empty state, and prompt field matching the mobile product direction;
+- a clean Gradle-only APK build targeting Android API 35.
 
-All desktop Electron features are available on mobile:
+The product specifications shared in Google Docs require access permission before their detailed requirements can be implemented. This milestone establishes the native-only foundation without attempting to preserve the old web implementation.
 
-- **Workspace** — Agent panel, code editor, file tree, native terminal, preview
-- **Playground** — Active bot, screen narrator, recording, 3D studio, media jobs
-- **Multi Agent** — Team orchestration, fusion, mission control
-- **Providers & MCP** — Cloud SSE connectors (stdio MCP requires desktop)
-- **Skills, Extensions, Plugins** — Marketplace catalogs
-- **Integrations Hub** — Service connections
-- **Native Terminal** — PTY-backed shell surpassing pipe-only wrappers; full proot/pkg/apt when bootstrap downloads
+## Build
 
-## Prerequisites
-
-- Node.js 20+
-- Android Studio + SDK (`ANDROID_HOME`)
-- JDK 17+
-
-## Development
+Requirements: JDK 17+ and Android SDK 35.
 
 ```bash
-npm install
-npm run plugin:build
-
-# Web UI preview in browser (terminal requires device/emulator APK)
-npm run dev
-
-# Debug APK
-npm run android:build
+cd android
+./gradlew assembleDebug
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
-
-First launch downloads the Termux bootstrap for full `pkg` / `apt` / `proot` / `bash`. Run `npm run busybox:download` before release builds for offline fallback.
-
-## CI — Download APK
-
-Every push to `main` builds a debug APK via [GitHub Actions](.github/workflows/build.yml).
-
-1. Open **Actions** → **Build APK**
-2. Download the artifact `oceanstudio-debug-apk` from the latest run
-
-Manual release build: **Actions** → **Build APK** → **Run workflow** → choose `release`.
-
-## Native Terminal Architecture
-
-The terminal uses JNI `openpty()` for real pseudoterminal allocation (interactive bash, ssh, htop, nano). Falls back to ProcessBuilder pipes if native lib unavailable. Linux environment via proot with Termux-compatible prefix path.
-
-## What belongs in this repo
-
-- `src/` — React UI (mobile-adapted)
-- `android/` — Capacitor Android project
-- `plugins/ocean-native-terminal/` — PTY terminal + proot + DexClassLoader plugins
-- `capacitor.config.ts`, `vite.config.ts`, etc.
+The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.

@@ -1,7 +1,12 @@
-<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Ocean.studio</string>
     <string name="title_activity_main">Ocean.studio</string>
-    <string name="package_name">studio.ocean.app</string>
-    <string name="custom_url_scheme">studio.ocean.app</string>
+    <string name="agent">Agent</string>
+    <string name="editor">Editor</string>
+    <string name="terminal">Terminal</string>
+    <string name="files">Files</string>
+    <string name="tools">Tools</string>
+    <string name="new_session">New</string>
+    <string name="default_model">Choose a model</string>
+    <string name="prompt_hint">Ask the agent anything…</string>
 </resources>
