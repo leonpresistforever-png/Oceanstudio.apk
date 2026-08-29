@@ -1,37 +1,29 @@
 package studio.ocean.app.terminal;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayOutputStream;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-/** A real PTY-backed process. Output and exit state always originate from the child. */
-public final class TerminalSession implements Closeable {
-    public interface Listener { void onOutput(byte[] data, int length); void onExit(int exitCode); }
-    private final String id = UUID.randomUUID().toString();
-    private final int readFd, writeFd, pid;
-    private final ExecutorService reader = Executors.newSingleThreadExecutor();
-    private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
-    private final AtomicBoolean readerStarted = new AtomicBoolean();
-    private volatile boolean running = true;
+/** A live PTY session. Output is produced only by the child connected to the PTY. */
+public final class TerminalSession {
+    public interface Listener { void onOutput(byte[] bytes, int length); void onExit(int exitCode); }
+    public final String id=UUID.randomUUID().toString(); public final long startedAt=System.currentTimeMillis();
+    private final long handle; private final Thread reader; private final CopyOnWriteArrayList<Listener> listeners=new CopyOnWriteArrayList<>();
+    private final ByteArrayOutputStream scrollback=new ByteArrayOutputStream();
+    private volatile boolean running=true; private volatile int exitCode=-1;
 
-    public TerminalSession(String[] command, String[] environment, String cwd, int rows, int columns) throws IOException {
-        int[] descriptors = NativePty.create(command, environment, cwd, rows, columns);
-        if (descriptors == null || descriptors.length != 3) throw new IOException("PTY creation failed");
-        readFd=descriptors[0]; writeFd=descriptors[1]; pid=descriptors[2];
+    TerminalSession(long handle) {
+        this.handle=handle;
+        reader=new Thread(() -> { byte[] buffer=new byte[8192]; while(running){int count=NativePty.read(handle,buffer);if(count>0){appendScrollback(buffer,count);for(Listener listener:listeners)listener.onOutput(buffer,count);}else break;} int code=NativePty.pollExit(handle);exitCode=code<0?255:code;running=false;NativePty.close(handle);for(Listener listener:listeners)listener.onExit(exitCode); },"ocean-pty-reader-"+id);
+        reader.start();
     }
-    public String id() { return id; }
-    public int pid() { return pid; }
-    public boolean isRunning() { return running; }
-    public void attach(Listener listener) { listeners.addIfAbsent(listener); if(readerStarted.compareAndSet(false,true)) reader.execute(() -> { byte[] buffer=new byte[8192]; try { int count; while(running && (count=NativePty.read(readFd,buffer))>0) for(Listener item:listeners)item.onOutput(buffer,count); } finally { running=false; int exit=NativePty.waitFor(pid); for(Listener item:listeners)item.onExit(exit); } }); }
-    public void detach(Listener listener) { listeners.remove(listener); }
-    public void write(String value) throws IOException { write(value.getBytes(StandardCharsets.UTF_8)); }
-    public void write(byte[] value) throws IOException { if(!running || NativePty.write(writeFd,value)<0) throw new IOException("PTY write failed"); }
-    public void resize(int rows,int columns) { if(running) NativePty.resize(readFd,rows,columns); }
-    public void interrupt() { if(running) NativePty.signal(pid,2); }
-    @Override public void close() { if(!running)return; running=false; NativePty.signal(pid,15); NativePty.close(readFd); NativePty.close(writeFd); reader.shutdownNow(); }
+    public void addListener(Listener listener){listeners.add(listener);byte[] snapshot; synchronized(scrollback){snapshot=scrollback.toByteArray();}if(snapshot.length>0)listener.onOutput(snapshot,snapshot.length);}
+    public void removeListener(Listener listener){listeners.remove(listener);}
+    public boolean write(String value){byte[] bytes=value.getBytes(StandardCharsets.UTF_8);return running&&NativePty.write(handle,bytes,bytes.length)==bytes.length;}
+    public void resize(int rows,int columns,int width,int height){if(running)NativePty.resize(handle,rows,columns,width,height);}
+    public void interrupt(){if(running)NativePty.signal(handle,2);}
+    public void close(){if(!running)return;NativePty.signal(handle,15);}
+    public boolean isRunning(){return running;} public int getExitCode(){return exitCode;}
+    private void appendScrollback(byte[] bytes,int length){synchronized(scrollback){if(scrollback.size()+length>200000){byte[] old=scrollback.toByteArray();scrollback.reset();int keep=Math.min(old.length,150000);scrollback.write(old,old.length-keep,keep);}scrollback.write(bytes,0,length);}}
 }

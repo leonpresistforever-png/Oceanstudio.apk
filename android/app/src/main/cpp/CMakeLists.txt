@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(oceanpty C)
 add_library(oceanpty SHARED ocean_pty.c)
+target_compile_options(oceanpty PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(oceanpty log)

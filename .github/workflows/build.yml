@@ -38,7 +38,9 @@ jobs:
           sdkmanager --install \
             "platform-tools" \
             "platforms;android-35" \
-            "build-tools;35.0.0"
+            "build-tools;35.0.0" \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       - name: Make Gradle wrapper executable

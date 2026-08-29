@@ -6,6 +6,7 @@ import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.content.Intent;
 import android.util.Patterns;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer()); backdrop.setOnClickListener(v -> closeDrawer()); findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat()); findViewById(R.id.model_button).setOnClickListener(this::showModels);
         bindGroup(R.id.group_workspace,R.id.workspace_children,R.id.chevron_workspace); bindGroup(R.id.group_agents,R.id.agents_children,R.id.chevron_agents); bindGroup(R.id.group_tools,R.id.tools_children,R.id.chevron_tools); bindGroup(R.id.group_connections,R.id.connections_children,R.id.chevron_connections);
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
-        findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new android.content.Intent(this,OceanTerminalActivity.class)); });
+        findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
         View skeleton=findViewById(R.id.home_skeleton), content=findViewById(R.id.home_content); content.post(() -> { skeleton.animate().alpha(0f).setDuration(220).withEndAction(() -> skeleton.setVisibility(View.GONE)).start(); content.animate().alpha(1f).translationY(0f).setDuration(260).start(); });
