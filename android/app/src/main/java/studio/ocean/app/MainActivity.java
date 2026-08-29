@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -42,9 +43,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.auth_primary).setOnClickListener(v -> submitAuth());
         findViewById(R.id.forgot_password).setOnClickListener(v -> setAuthMode(AuthMode.FORGOT));
         findViewById(R.id.auth_switch).setOnClickListener(v -> setAuthMode(authMode == AuthMode.SIGN_IN ? AuthMode.SIGN_UP : AuthMode.SIGN_IN));
-        findViewById(R.id.google_auth).setOnClickListener(v -> showAuthStatus(getString(R.string.oauth_not_configured,"Google"),false));
-        findViewById(R.id.github_auth).setOnClickListener(v -> showAuthStatus(getString(R.string.oauth_not_configured,"GitHub"),false));
+        findViewById(R.id.google_auth).setOnClickListener(v -> Toast.makeText(this,getString(R.string.oauth_not_configured,"Google"),Toast.LENGTH_SHORT).show());
+        findViewById(R.id.github_auth).setOnClickListener(v -> Toast.makeText(this,getString(R.string.oauth_not_configured,"GitHub"),Toast.LENGTH_SHORT).show());
         findViewById(R.id.dev_auth_indicator).setVisibility(devBypassAvailable()?View.VISIBLE:View.GONE);
+        findViewById(R.id.dev_auth_continue).setVisibility(devBypassAvailable()?View.VISIBLE:View.GONE);
+        findViewById(R.id.dev_auth_continue).setOnClickListener(v -> startDevelopmentSession());
         setAuthMode(AuthMode.SIGN_IN);
     }
 
@@ -53,14 +56,14 @@ public class MainActivity extends AppCompatActivity {
         boolean signup=mode==AuthMode.SIGN_UP, reset=mode==AuthMode.FORGOT;
         title.setText(reset?R.string.reset_password:signup?R.string.create_account:R.string.welcome_back); subtitle.setText(reset?R.string.reset_subtitle:signup?R.string.signup_subtitle:R.string.auth_subtitle); primary.setText(reset?R.string.send_reset:signup?R.string.sign_up:R.string.sign_in); toggle.setText(reset?R.string.back_to_signin:signup?R.string.have_account_signin:R.string.no_account_signup);
         password.setVisibility(reset?View.GONE:View.VISIBLE); passwordLabel.setVisibility(reset?View.GONE:View.VISIBLE); confirm.setVisibility(signup?View.VISIBLE:View.GONE); confirmLabel.setVisibility(signup?View.VISIBLE:View.GONE); forgot.setVisibility(mode==AuthMode.SIGN_IN?View.VISIBLE:View.GONE); social.setVisibility(reset?View.GONE:View.VISIBLE); divider.setVisibility(reset?View.GONE:View.VISIBLE); findViewById(R.id.auth_status).setVisibility(View.GONE);
-        String footer=getString(reset?R.string.back_to_signin:signup?R.string.have_account_signin:R.string.no_account_signup); SpannableString footerText=new SpannableString(footer); int actionStart=footer.lastIndexOf(' ')+1; footerText.setSpan(new UnderlineSpan(),actionStart,footer.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); toggle.setText(footerText);
+        String footer=getString(reset?R.string.back_to_signin:signup?R.string.have_account_signin:R.string.no_account_signup); String action=reset?footer:(signup?"Sign in":"Sign up"); SpannableString footerText=new SpannableString(footer); int actionStart=footer.lastIndexOf(action); footerText.setSpan(new UnderlineSpan(),actionStart,footer.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); toggle.setText(footerText);
         findViewById(R.id.progress_one).setBackgroundResource(R.drawable.progress_active); findViewById(R.id.progress_two).setBackgroundResource(signup?R.drawable.progress_active:R.drawable.progress_inactive); findViewById(R.id.progress_three).setBackgroundResource(R.drawable.progress_inactive);
         title.setAlpha(0f); title.setTranslationY(10f); title.animate().alpha(1f).translationY(0f).setDuration(240).start();
     }
 
     private void submitAuth() {
         EditText emailView=findViewById(R.id.auth_email), passwordView=findViewById(R.id.auth_password), confirmView=findViewById(R.id.auth_confirm); String email=emailView.getText().toString().trim(), password=passwordView.getText().toString();
-        if (!authClient.configured() && devBypassAvailable() && authMode==AuthMode.SIGN_IN && !email.isEmpty() && !password.isEmpty()) { developmentSession=true; authState=AuthState.DEV_BYPASS_LOGGED_IN; showMain(); return; }
+        if (!authClient.configured() && devBypassAvailable() && authMode==AuthMode.SIGN_IN && !email.isEmpty() && !password.isEmpty()) { startDevelopmentSession(); return; }
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) { showAuthStatus(getString(R.string.invalid_email),false); return; }
         if (!authClient.configured()) { authState=AuthState.CONFIGURATION_MISSING; showAuthStatus(getString(R.string.auth_unavailable),false); return; }
         if (authMode==AuthMode.SIGN_UP && !password.equals(confirmView.getText().toString())) { showAuthStatus(getString(R.string.password_mismatch),false); return; }
@@ -73,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private void setAuthBusy(boolean busy) { findViewById(R.id.auth_primary).setEnabled(!busy); findViewById(R.id.google_auth).setEnabled(!busy); findViewById(R.id.github_auth).setEnabled(!busy); }
     private void showAuthStatus(String message, boolean success) { TextView status=findViewById(R.id.auth_status); status.setText(message); status.setTextColor(getColor(success?R.color.ocean_ink:R.color.ocean_error)); status.setVisibility(View.VISIBLE); }
     private boolean devBypassAvailable() { return BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS; }
+    private void startDevelopmentSession() { if (!devBypassAvailable()) return; developmentSession=true; authState=AuthState.DEV_BYPASS_LOGGED_IN; showMain(); }
 
     private void showMain() {
         setContentView(R.layout.activity_main); sidebar=findViewById(R.id.sidebar); backdrop=findViewById(R.id.drawer_backdrop);

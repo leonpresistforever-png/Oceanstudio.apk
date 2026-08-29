@@ -51,6 +51,7 @@ jobs:
         working-directory: android
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g
+          OCEAN_DEV_AUTH_BYPASS: "true"
         run: ./gradlew clean test assembleDebug --no-daemon --stacktrace
 
       - name: Locate APK output

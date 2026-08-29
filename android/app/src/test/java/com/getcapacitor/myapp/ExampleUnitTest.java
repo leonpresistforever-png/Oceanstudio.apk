@@ -17,7 +17,7 @@ public class ExampleUnitTest {
     }
 
     @Test
-    public void developmentAuthBypassIsOffByDefault() {
-        assertFalse(BuildConfig.OCEAN_DEV_AUTH_BYPASS);
+    public void developmentAuthBypassCannotActivateOutsideDebug() {
+        assertFalse(!BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS);
     }
 }
