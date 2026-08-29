@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// AppCompat/Core transitively request different Kotlin stdlib generations.
+// Keep every compatibility artifact on one generation to prevent duplicate classes.
+configurations.configureEach {
+    resolutionStrategy.force(
+            'org.jetbrains.kotlin:kotlin-stdlib:1.8.22',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22')
+}
+
 android {
     namespace "studio.ocean.app"
     compileSdk rootProject.ext.compileSdkVersion
