@@ -1,32 +1,5 @@
-# Dependencies
-node_modules/
-dist/
-dist-electron/
-release/
-
-# Environment
-.env
-.env.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-*.swp
-*.swo
-
-# Build
-*.log
-*.tsbuildinfo
-vite.config.d.ts
-src/plugins/*.js
-
-# Electron
-out/
-
-# Capacitor / Android
+# Android / Gradle
+.gradle/
 android/.gradle/
 android/build/
 android/app/build/
@@ -35,5 +8,16 @@ android/.idea/
 *.apk
 *.aab
 
-# Native terminal binary (downloaded via npm run busybox:download)
-plugins/ocean-native-terminal/android/src/main/assets/busybox-arm64
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.iml
+*.swp
+*.swo
+
+# Logs and signing secrets
+*.log
+*.jks
+*.keystore

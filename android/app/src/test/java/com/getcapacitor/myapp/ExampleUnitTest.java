@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package studio.ocean.app;
 
 import static org.junit.Assert.*;
 

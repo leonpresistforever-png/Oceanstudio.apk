@@ -1,0 +1,12 @@
+<resources>
+    <color name="ocean_background">#FFFFFFFF</color>
+    <color name="ocean_surface">#FFF6F6F5</color>
+    <color name="ocean_selected">#FFEAF7FC</color>
+    <color name="ocean_ink">#FF191817</color>
+    <color name="ocean_muted">#FF7B7873</color>
+    <color name="ocean_border">#FFE5E3E0</color>
+    <color name="ocean_blue">#FF18A9DF</color>
+    <color name="colorPrimary">#FF191817</color>
+    <color name="colorPrimaryDark">#FF191817</color>
+    <color name="colorAccent">#FF18A9DF</color>
+</resources>

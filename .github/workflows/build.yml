@@ -30,12 +30,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -50,22 +44,8 @@ jobs:
           sdkmanager --install \
             "platform-tools" \
             "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
+            "build-tools;35.0.0"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Build web app and native terminal plugin
-        run: |
-          npm run plugin:build
-          npm run build
-          npm run busybox:download
-
-      - name: Sync Capacitor Android project
-        run: npx cap sync android
 
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
