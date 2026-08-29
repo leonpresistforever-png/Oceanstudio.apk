@@ -1,0 +1,21 @@
+#!/data/data/studio.ocean.app/files/usr/bin/bash
+set -euo pipefail
+export PREFIX=${PREFIX:-/data/data/studio.ocean.app/files/usr}
+lock="$PREFIX/var/run/ocean-pkg.lock"
+mkdir -p "${lock%/*}"
+exec 9>"$lock"
+if ! flock -w 120 9; then echo 'Ocean package manager is busy.' >&2; exit 75; fi
+command=${1:-help}; shift || true
+case "$command" in
+ update) exec apt-get update "$@";;
+ upgrade) apt-get update; exec apt-get full-upgrade "$@";;
+ install) exec apt-get install "$@";;
+ remove) exec apt-get remove "$@";;
+ reinstall) exec apt-get install --reinstall "$@";;
+ search) exec apt-cache search "$@";;
+ show) exec apt-cache show "$@";;
+ list-installed) exec dpkg-query -W "$@";;
+ clean) exec apt-get clean "$@";;
+ help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean';;
+ *) echo "Unknown pkg command: $command" >&2; exit 64;;
+esac

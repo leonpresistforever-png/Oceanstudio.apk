@@ -1,0 +1,42 @@
+name: Build Ocean distribution
+on:
+  workflow_dispatch:
+  push:
+    paths: ['ocean-packages/**', '.github/workflows/ocean-distribution.yml']
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: {group: ocean-distribution, cancel-in-progress: false}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg
+      - name: Import repository signing key
+        env: {OCEAN_REPOSITORY_SIGNING_KEY: '${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}'}
+        run: |
+          test -n "$OCEAN_REPOSITORY_SIGNING_KEY"
+          printf '%s' "$OCEAN_REPOSITORY_SIGNING_KEY" | gpg --batch --import
+          echo "OCEAN_REPO_SIGNING_KEY=$(gpg --with-colons --list-secret-keys | awk -F: '$1==\"fpr\"{print $10;exit}')" >> "$GITHUB_ENV"
+      - name: Build Android aarch64 packages, repository, and bootstrap
+        run: ./ocean-packages/scripts/build-ocean-distribution.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocean-aarch64-distribution-${{ github.sha }}
+          path: ocean-packages/build/out/
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p ocean-packages/build/pages/apt
+          cp -a ocean-packages/build/out/repository/. ocean-packages/build/pages/apt/
+      - uses: actions/upload-pages-artifact@v3
+        with: {path: ocean-packages/build/pages}
+  deploy:
+    needs: build
+    environment: {name: github-pages, url: '${{ steps.deployment.outputs.page_url }}'}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
