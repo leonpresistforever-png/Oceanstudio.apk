@@ -15,4 +15,9 @@ public class ExampleUnitTest {
     public void addition_isCorrect() throws Exception {
         assertEquals(4, 2 + 2);
     }
+
+    @Test
+    public void developmentAuthBypassIsOffByDefault() {
+        assertFalse(BuildConfig.OCEAN_DEV_AUTH_BYPASS);
+    }
 }
