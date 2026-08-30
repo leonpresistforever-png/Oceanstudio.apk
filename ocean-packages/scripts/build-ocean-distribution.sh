@@ -36,15 +36,14 @@ PY
 # it without exposing unverified files as package inputs.
 install -m755 "$ROOT/ocean-packages/scripts/ocean-download.sh" \
   "$UPSTREAM/scripts/build/termux_download.sh"
-mkdir -p "$UPSTREAM/.ocean-cache/sources"
-cp -a "$ROOT/ocean-packages/.cache/sources/." "$UPSTREAM/.ocean-cache/sources/"
-# GitHub's host runner and the package-builder image use different numeric
-# UIDs. This cache contains only public, checksum-verified source archives, so
-# grant the isolated builder write access without changing package integrity.
-chmod -R a+rwX "$UPSTREAM/.ocean-cache/sources"
+# Restore caches at their normal recipe-relative locations. Those directories
+# are writable under the package builder's restricted profile, and the
+# downloader re-verifies each cached archive against its recipe checksum.
+(cd "$ROOT/ocean-packages/.cache/sources" && tar -cf - .) | (cd "$UPSTREAM" && tar -xf -)
 sync_source_cache() {
   mkdir -p "$ROOT/ocean-packages/.cache/sources"
-  cp -a "$UPSTREAM/.ocean-cache/sources/." "$ROOT/ocean-packages/.cache/sources/" 2>/dev/null || true
+  (cd "$UPSTREAM" && find . -type d -name cache -print0 | tar --null -T - -cf -) \
+    | (cd "$ROOT/ocean-packages/.cache/sources" && tar -xf -) 2>/dev/null || true
 }
 trap sync_source_cache EXIT
 cat > "$UPSTREAM/repo.json" <<JSON

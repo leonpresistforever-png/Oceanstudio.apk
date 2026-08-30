@@ -9,9 +9,8 @@ termux_download() {
 		return 1
 	fi
 	local url_spec="$1" destination="$2" checksum="${3:-SKIP_CHECKSUM}"
-	local cache_root="${OCEAN_SOURCE_CACHE:-$TERMUX_SCRIPTDIR/.ocean-cache/sources}"
-	local cache_file="" partial_file
-	mkdir -p "$cache_root"
+	local partial_file
+	mkdir -p "$TERMUX_PKG_TMPDIR"
 
 	verify() {
 		[[ -f "$1" ]] || return 1
@@ -22,15 +21,6 @@ termux_download() {
 
 	if verify "$destination"; then return 0; fi
 	rm -f "$destination"
-	if [[ "$checksum" != "SKIP_CHECKSUM" && -n "$checksum" ]]; then
-		cache_file="$cache_root/$checksum"
-		if verify "$cache_file"; then
-			cp -f "$cache_file" "$destination"
-			return 0
-		fi
-		rm -f "$cache_file"
-	fi
-
 	IFS='|' read -r -a urls <<< "$url_spec"
 	for url in "${urls[@]}"; do
 		if [[ "$url" =~ ^file://(/[^/]+)+$ ]]; then
@@ -39,7 +29,7 @@ termux_download() {
 			cp -f "$source" "$destination"
 			verify "$destination" || { rm -f "$destination"; continue; }
 		else
-			partial_file="$cache_root/.partial-${checksum:-$(printf %s "$url" | sha256sum | cut -d' ' -f1)}"
+			partial_file="$TERMUX_PKG_TMPDIR/.partial-${checksum:-$(printf %s "$url" | sha256sum | cut -d' ' -f1)}"
 			echo "Downloading $url"
 			# curl retries transient HTTP failures (including 429/5xx), connection
 			# resets, refused connections, and timeouts with exponential backoff.
@@ -62,7 +52,6 @@ termux_download() {
 		fi
 
 		if verify "$destination"; then
-			[[ -z "$cache_file" ]] || cp -f "$destination" "$cache_file"
 			return 0
 		fi
 	done
