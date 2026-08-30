@@ -42,6 +42,8 @@ jobs:
           test "$ACTUAL" = "$EXPECTED" || { echo "Signing key does not match pinned Ocean development key" >&2; exit 1; }
           echo "OCEAN_REPO_SIGNING_KEY=$ACTUAL" >> "$GITHUB_ENV"
       - name: Build Android aarch64 packages, repository, and bootstrap
+        id: distribution-build
+        continue-on-error: true
         run: |
           # The package builder is intentionally verbose enough to exhaust the
           # Actions worker diagnostic disk. Keep the full log out of the runner
@@ -53,6 +55,21 @@ jobs:
           fi
           tail -n 100 /tmp/ocean-package-build.log
           rm -f /tmp/ocean-package-build.log
+      - name: Save verified sources after interrupted builds
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ocean-packages/.cache/sources
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}
+      - name: Save completed packages after interrupted builds
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ocean-packages/build/package-builder/output
+          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}
+      - name: Enforce successful distribution build
+        if: steps.distribution-build.outcome == 'failure'
+        run: exit 1
       - name: Verify distribution and inject bootstrap
         run: |
           test -s ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst

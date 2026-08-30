@@ -29,7 +29,9 @@ PY
 install -m755 "$ROOT/ocean-packages/scripts/ocean-download.sh" \
   "$UPSTREAM/scripts/build/termux_download.sh"
 mkdir -p "$UPSTREAM/.ocean-cache"
-ln -sfn "$ROOT/ocean-packages/.cache/sources" "$UPSTREAM/.ocean-cache/sources"
+# The package-builder container mounts the repository at a different absolute
+# path, so this must remain a relative link valid on both host and container.
+ln -sfn ../../../.cache/sources "$UPSTREAM/.ocean-cache/sources"
 cat > "$UPSTREAM/repo.json" <<JSON
 {"pkg_format":"debian","packages":{"name":"ocean-main","distribution":"stable","component":"main","url":"$OCEAN_REPOSITORY_URL"}}
 JSON
