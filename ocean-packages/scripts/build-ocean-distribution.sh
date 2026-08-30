@@ -36,14 +36,14 @@ for filename, removed in ((sys.argv[1], ("termux-tools",)),
     path.write_text(text)
 PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
-CORE=(bash apt dpkg coreutils grep sed tar gzip libcurl findutils procps util-linux zlib xz-utils zstd openssl ca-certificates ncurses readline)
-for package in "${CORE[@]}"; do
+ROOT_PACKAGES=(bash apt libcurl)
+for package in "${ROOT_PACKAGES[@]}"; do
   test -f "$UPSTREAM/packages/$package/build.sh" || {
     echo "Ocean package recipe does not exist at pinned upstream commit: $package" >&2
     exit 1
   }
 done
-(cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${CORE[@]}")
+(cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${ROOT_PACKAGES[@]}")
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
 # whose ELF files exist but whose certificates/configuration are incomplete.
