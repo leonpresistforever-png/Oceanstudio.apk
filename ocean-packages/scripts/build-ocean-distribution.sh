@@ -44,7 +44,10 @@ for package in "${CORE[@]}"; do
   }
 done
 (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${CORE[@]}")
-find "$UPSTREAM/output" -type f -name '*_aarch64.deb' -exec cp -v {} "$OUT/debs/" \;
+# Runtime dependency closure contains both architecture-specific and
+# Architecture: all data packages. Omitting the latter produces a bootstrap
+# whose ELF files exist but whose certificates/configuration are incomplete.
+find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -exec cp -v {} "$OUT/debs/" \;
 test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)"
 test -n "$(find "$OUT/debs" -name 'apt_*_aarch64.deb' -print -quit)"
 test -n "$(find "$OUT/debs" -name 'dpkg_*_aarch64.deb' -print -quit)"
@@ -68,10 +71,25 @@ gpg --batch --yes --local-user "$OCEAN_REPO_SIGNING_KEY" --detach-sign -o dists/
 gpg --batch --export "$OCEAN_REPO_SIGNING_KEY" > "$OUT/ocean-repository.gpg"
 # Install actual deb payloads into the bootstrap root and initialize dpkg state.
 for deb in "$OUT/debs"/*.deb; do dpkg-deb -x "$deb" "$OUT/bootstrap/root"; done
-mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/trusted.gpg.d" "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg"
-printf 'deb %s stable main\n' "$OCEAN_REPOSITORY_URL" > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d/ocean.list"
-cp "$OUT/ocean-repository.gpg" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/trusted.gpg.d/ocean.gpg"
-: > "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"
+mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings" "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg"
+printf 'deb [signed-by=%s/etc/apt/keyrings/ocean.gpg] %s stable main\n' "$OCEAN_PREFIX" "$OCEAN_REPOSITORY_URL" > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d/ocean.list"
+cp "$OUT/ocean-repository.gpg" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings/ocean.gpg"
+cat > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d/00-ocean-paths" <<EOF
+Dir "$OCEAN_PREFIX";
+Dir::Etc "etc/apt";
+Dir::State "var/lib/apt";
+Dir::State::status "var/lib/dpkg/status";
+Dir::Cache "var/cache/apt";
+Dir::Log "var/log/apt";
+EOF
+# Register the packages whose payloads form the bootstrap. This is real dpkg
+# state derived from each .deb control archive, not hand-written package data.
+STATUS="$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"
+: > "$STATUS"
+for deb in "$OUT/debs"/*.deb; do
+  dpkg-deb -f "$deb" Package Version Architecture Maintainer Depends Section Priority Description >> "$STATUS"
+  printf 'Status: install ok installed\n\n' >> "$STATUS"
+done
 # APK extraction root is filesDir, therefore archive paths begin with usr/.
 cd "$OUT/bootstrap/root/data/data/$OCEAN_APP_PACKAGE/files"
 tar --sort=name --mtime='UTC 2026-01-01' --owner=0 --group=0 --numeric-owner -cf "$WORK/ocean-aarch64.tar" usr
@@ -79,10 +97,15 @@ COUNT=$(tar -tf "$WORK/ocean-aarch64.tar"|wc -l)
 zstd -19 -T0 "$WORK/ocean-aarch64.tar" -o "$OUT/bootstrap/ocean-aarch64.tar.zst"
 ARCHIVE=$OUT/bootstrap/ocean-aarch64.tar.zst
 SHA=$(sha256sum "$ARCHIVE"|cut -d' ' -f1); SIZE=$(stat -c%s "$ARCHIVE"); FPR=$(gpg --with-colons --fingerprint "$OCEAN_REPO_SIGNING_KEY"|awk -F: '$1=="fpr"{print $10;exit}')
-python3 - "$OUT/bootstrap/ocean-aarch64.manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "${CORE[*]} ocean-pkg ocean-hello" <<'PY'
-import json,os,sys
-p,sha,size,count,fpr,packages=sys.argv[1:]
-m={"bootstrapVersion":"1.0.0","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":packages.split(),"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
+python3 - "$OUT/bootstrap/ocean-aarch64.manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "$OUT/debs" <<'PY'
+import json,os,pathlib,subprocess,sys
+p,sha,size,count,fpr,debs=sys.argv[1:]
+packages=[]
+for deb in sorted(pathlib.Path(debs).glob('*.deb')):
+ def field(name): return subprocess.check_output(['dpkg-deb','-f',deb,name],text=True).strip()
+ name,version,arch=field('Package'),field('Version'),field('Architecture')
+ packages.append({'name':name,'version':version,'architecture':arch,'artifact':deb.name,'size':deb.stat().st_size})
+m={"bootstrapVersion":"1.0.0","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":[x['name'] for x in packages],"packages":packages,"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
 open(p,'w').write(json.dumps(m,indent=2)+"\n")
 PY
 python3 "$ROOT/ocean-packages/scripts/verify-bootstrap.py" "$OUT/bootstrap/ocean-aarch64.manifest.json" "$ARCHIVE"
