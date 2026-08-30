@@ -18,14 +18,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ocean-packages/.cache/sources
-          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
+          restore-keys: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-
       - name: Restore completed Android package artifacts
         uses: actions/cache@v4
         with:
           path: ocean-packages/build/package-builder/output
           # The pinned upstream commit identifies all upstream recipes/patches;
           # the hash covers Ocean recipes and dependency-relevant configuration.
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}
+          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-${{ github.run_id }}
+          restore-keys: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-
       - name: Reclaim runner disk for the Android package toolchain
         run: |
           sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android || true
@@ -60,13 +62,13 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/.cache/sources
-          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
       - name: Save completed packages after interrupted builds
         if: always()
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/build/package-builder/output
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}
+          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-${{ github.run_id }}
       - name: Enforce successful distribution build
         if: steps.distribution-build.outcome == 'failure'
         run: exit 1
