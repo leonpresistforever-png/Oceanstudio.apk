@@ -14,7 +14,12 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd
+      - name: Reclaim runner disk for the Android package toolchain
+        run: |
+          sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android || true
+          docker system prune --all --force --volumes || true
+          df -h /
+      - run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
       - name: Import repository signing key
         env: {OCEAN_REPOSITORY_SIGNING_KEY: '${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}'}
         run: |
@@ -25,7 +30,17 @@ jobs:
           test "$ACTUAL" = "$EXPECTED" || { echo "Signing key does not match pinned Ocean development key" >&2; exit 1; }
           echo "OCEAN_REPO_SIGNING_KEY=$ACTUAL" >> "$GITHUB_ENV"
       - name: Build Android aarch64 packages, repository, and bootstrap
-        run: ./ocean-packages/scripts/build-ocean-distribution.sh
+        run: |
+          # The package builder is intentionally verbose enough to exhaust the
+          # Actions worker diagnostic disk. Keep the full log out of the runner
+          # event stream and print only its tail when the build fails.
+          if ! ./ocean-packages/scripts/build-ocean-distribution.sh > /tmp/ocean-package-build.log 2>&1; then
+            tail -n 500 /tmp/ocean-package-build.log
+            df -h /
+            exit 1
+          fi
+          tail -n 100 /tmp/ocean-package-build.log
+          rm -f /tmp/ocean-package-build.log
       - name: Verify distribution and inject bootstrap
         run: |
           test -s ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
@@ -39,6 +54,10 @@ jobs:
           cp ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json android/app/src/main/assets/ocean/bootstrap/aarch64/
           find ocean-packages/build/out/debs -name '*.deb' -printf '%f %s bytes\n' | sort
           sha256sum ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
+          MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
+          echo "OCEAN_BUILD_COMMIT=$(jq -r .buildCommit "$MANIFEST")" >> "$GITHUB_ENV"
+          echo "OCEAN_BOOTSTRAP_VERSION=$(jq -r .bootstrapVersion "$MANIFEST")" >> "$GITHUB_ENV"
+          echo "OCEAN_BOOTSTRAP_SHA256=$(jq -r .archiveSha256 "$MANIFEST")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '17', cache: gradle}
       - uses: android-actions/setup-android@v3
@@ -46,25 +65,41 @@ jobs:
         run: sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
       - name: Build bootstrap-bearing APK
         working-directory: android
-        env: {OCEAN_DEV_AUTH_BYPASS: 'true'}
+        env:
+          OCEAN_DEV_AUTH_BYPASS: 'true'
         run: ./gradlew clean test assembleDebug --no-daemon --stacktrace
       - name: Verify APK bootstrap assets
+        id: apk
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
-          unzip -l "$APK" | grep -q assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst
-          unzip -l "$APK" | grep -q assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json
+          ARCHIVE=assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst
+          MANIFEST=assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json
+          unzip -l "$APK" | grep -q "$ARCHIVE"
+          unzip -l "$APK" | grep -q "$MANIFEST"
+          unzip -p "$APK" "$ARCHIVE" > /tmp/ocean-aarch64.tar.zst
+          test "$(stat -c%s /tmp/ocean-aarch64.tar.zst)" = "$(jq -r .archiveSize ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json)"
+          test "$(sha256sum /tmp/ocean-aarch64.tar.zst | cut -d' ' -f1)" = "$OCEAN_BOOTSTRAP_SHA256"
+          SHORT=${GITHUB_SHA::7}
+          FINAL="android/app/build/outputs/apk/debug/OceanStudio-debug-${SHORT}.apk"
+          mv "$APK" "$FINAL"
+          echo "path=$FINAL" >> "$GITHUB_OUTPUT"
+          echo "name=OceanStudio-debug-${SHORT}.apk" >> "$GITHUB_OUTPUT"
+          echo "FINAL APK VERIFIED TO CONTAIN BOOTSTRAP: PASS"
+          echo "bootstrap asset path: $ARCHIVE"
+          echo "bootstrap asset bytes: $(stat -c%s /tmp/ocean-aarch64.tar.zst)"
+          echo "bootstrap SHA-256: $OCEAN_BOOTSTRAP_SHA256"
       - uses: actions/upload-artifact@v4
         with:
           name: ocean-aarch64-distribution-${{ github.sha }}
           path: |
             ocean-packages/build/out/
-            android/app/build/outputs/apk/debug/app-debug.apk
+            ${{ steps.apk.outputs.path }}
       - name: Publish verified debug APK
         env: {GH_TOKEN: '${{ github.token }}'}
         run: |
-          gh release view debug-latest >/dev/null 2>&1 && gh release edit debug-latest --target "$GITHUB_SHA" --prerelease --title "OceanStudio verified runtime debug APK" || gh release create debug-latest --target "$GITHUB_SHA" --prerelease --title "OceanStudio verified runtime debug APK" --notes "Contains verified Ocean aarch64 bootstrap."
-          gh release upload debug-latest android/app/build/outputs/apk/debug/app-debug.apk#OceanStudio-debug.apk --clobber
+          TAG="ocean-runtime-${GITHUB_SHA::7}"
+          gh release create "$TAG" "${{ steps.apk.outputs.path }}" --target "$GITHUB_SHA" --prerelease --title "OceanStudio runtime ${GITHUB_SHA::7}" --notes "Verified bootstrap $OCEAN_BOOTSTRAP_VERSION ($OCEAN_BOOTSTRAP_SHA256)."
       - name: Prepare Pages artifact
         run: |
           mkdir -p ocean-packages/build/pages/apt
