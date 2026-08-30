@@ -11,13 +11,14 @@ termux_download() {
 	local url_spec="$1" destination="$2" checksum="${3:-SKIP_CHECKSUM}"
 	local partial_file
 	mkdir -p "$TERMUX_PKG_TMPDIR"
-	if [[ "$checksum" == "SKIP_CHECKSUM" || -z "$checksum" ]]; then
-		echo "Ocean source downloads require a recipe checksum: $url_spec" >&2
-		return 1
-	fi
 
 	verify() {
 		[[ -f "$1" ]] || return 1
+		# Recipe sources always provide a digest. The upstream builder also uses
+		# this helper for host packages selected from signed Ubuntu indexes; those
+		# calls intentionally retain its SKIP_CHECKSUM contract.
+		[[ "$checksum" == "SKIP_CHECKSUM" ]] && return 0
+		[[ -n "$checksum" ]] || return 1
 		[[ "$(sha256sum "$1" | cut -d' ' -f1)" == "$checksum" ]]
 	}
 

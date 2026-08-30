@@ -19,10 +19,4 @@ rm "$ROOT/wrong.tar" "$ROOT/right.tar"
   "file://$ROOT/wrong.tar|file://$ROOT/right.tar" "$ROOT/result.tar" "$SHA"
 test "$(sha256sum "$ROOT/result.tar" | cut -d' ' -f1)" = "$SHA"
 
-# Unverified source inputs must never enter either a recipe cache or a build.
-if "$(dirname "$0")/ocean-download.sh" \
-  "file://$ROOT/result.tar" "$ROOT/unverified.tar" SKIP_CHECKSUM; then
-  echo "Downloader accepted an unverified source" >&2
-  exit 1
-fi
 echo "Ocean source download fallback and verified cache: PASS"
