@@ -35,6 +35,11 @@ for filename, removed in ((sys.argv[1], ("termux-tools",)),
         text = text.replace(", " + package, "").replace(package + ", ", "")
     path.write_text(text)
 PY
+# Savannah's plain-HTTP endpoint intermittently resets long-running GitHub
+# builds. Use its canonical TLS endpoint without changing the pinned source
+# archive or checksum.
+grep -rl 'http://download.savannah.gnu.org/' "$UPSTREAM/packages" \
+  | xargs -r sed -i 's#http://download\.savannah\.gnu\.org/#https://download.savannah.gnu.org/#g'
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 ROOT_PACKAGES=(bash apt libcurl)
 for package in "${ROOT_PACKAGES[@]}"; do
