@@ -38,6 +38,10 @@ install -m755 "$ROOT/ocean-packages/scripts/ocean-download.sh" \
   "$UPSTREAM/scripts/build/termux_download.sh"
 mkdir -p "$UPSTREAM/.ocean-cache/sources"
 cp -a "$ROOT/ocean-packages/.cache/sources/." "$UPSTREAM/.ocean-cache/sources/"
+# GitHub's host runner and the package-builder image use different numeric
+# UIDs. This cache contains only public, checksum-verified source archives, so
+# grant the isolated builder write access without changing package integrity.
+chmod -R a+rwX "$UPSTREAM/.ocean-cache/sources"
 sync_source_cache() {
   mkdir -p "$ROOT/ocean-packages/.cache/sources"
   cp -a "$UPSTREAM/.ocean-cache/sources/." "$ROOT/ocean-packages/.cache/sources/" 2>/dev/null || true
