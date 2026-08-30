@@ -36,7 +36,13 @@ for filename, removed in ((sys.argv[1], ("termux-tools",)),
     path.write_text(text)
 PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
-CORE=(bash apt dpkg coreutils grep sed tar gzip curl findutils procps util-linux zlib xz-utils zstd openssl ca-certificates ncurses readline)
+CORE=(bash apt dpkg coreutils grep sed tar gzip libcurl findutils procps util-linux zlib xz-utils zstd openssl ca-certificates ncurses readline)
+for package in "${CORE[@]}"; do
+  test -f "$UPSTREAM/packages/$package/build.sh" || {
+    echo "Ocean package recipe does not exist at pinned upstream commit: $package" >&2
+    exit 1
+  }
+done
 (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${CORE[@]}")
 find "$UPSTREAM/output" -type f -name '*_aarch64.deb' -exec cp -v {} "$OUT/debs/" \;
 test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)"
