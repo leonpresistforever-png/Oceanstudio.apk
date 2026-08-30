@@ -40,6 +40,8 @@ android {
 dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "org.apache.commons:commons-compress:1.27.1"
+    implementation "com.github.luben:zstd-jni:1.5.6-9"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

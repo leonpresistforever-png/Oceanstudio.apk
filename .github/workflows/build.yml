@@ -1,4 +1,4 @@
-name: Build APK
+name: Validate Android source
 
 on:
   push:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -69,37 +69,5 @@ jobs:
           echo "Found APK: $APK"
           ls -lh "$APK"
 
-      - name: Upload APK artifact
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: oceanstudio-debug-${{ github.sha }}
-          path: ${{ steps.apk.outputs.path }}
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Publish rolling debug release
-        if: github.event_name != 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view debug-latest >/dev/null 2>&1; then
-            gh release edit debug-latest --target "$GITHUB_SHA" --prerelease --title "OceanStudio latest debug APK"
-          else
-            gh release create debug-latest --target "$GITHUB_SHA" --prerelease --title "OceanStudio latest debug APK" --notes "Automated debug build from $GITHUB_SHA"
-          fi
-          gh release upload debug-latest "${{ steps.apk.outputs.path }}#OceanStudio-debug.apk" --clobber
-
-      - name: Build summary
-        run: |
-          {
-            echo "## Ocean.studio APK build"
-            echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| **Type** | \`debug\` |"
-            echo "| **Artifact** | \`oceanstudio-debug-${{ github.sha }}\` |"
-            echo "| **File** | \`$(basename '${{ steps.apk.outputs.path }}')\` |"
-            echo ""
-            echo "Download from the **Artifacts** section, or from the **debug-latest** prerelease when artifact quota is unavailable."
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Publication gate
+        run: echo "Source validation passed. Only ocean-distribution.yml may publish a bootstrap-bearing APK."

@@ -17,10 +17,11 @@ public final class OceanTerminalRuntimeService extends Service {
     @Override public IBinder onBind(Intent intent){return binder;}
     public synchronized TerminalSession firstRunning(){for(TerminalSession session:sessions.values())if(session.isRunning())return session;return null;}
     public synchronized TerminalSession createSession(int rows,int columns) throws IOException {
-        OceanPaths paths=new OceanPaths(this); paths.ensureDirectoryContract();
+        OceanPaths paths=new OceanPaths(this);
+        if(!OceanRuntimeState.isInstalled(this))new OceanBootstrapInstaller(this).install();
         File oceanShell=new File(paths.prefix(),"bin/bash");
-        // A system shell is explicitly recovery mode, never represented as an installed Ocean runtime.
-        String shell=OceanRuntimeState.isInstalled(this)?oceanShell.getAbsolutePath():"/system/bin/sh";
+        if(!OceanRuntimeState.isInstalled(this))throw new IOException("Ocean bootstrap verification failed");
+        String shell=oceanShell.getAbsolutePath();
         String[] argv={shell,"-i"}; long handle=NativePty.create(shell,argv,OceanEnvironment.create(this,shell),paths.home().getAbsolutePath(),rows,columns);
         if(handle==0)throw new IOException("openpty/fork/exec failed"); TerminalSession session=new TerminalSession(handle);sessions.put(session.id,session);return session;
     }

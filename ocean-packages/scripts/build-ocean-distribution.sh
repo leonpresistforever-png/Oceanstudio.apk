@@ -54,13 +54,15 @@ cp "$OUT/ocean-repository.gpg" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/trusted
 : > "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"
 # APK extraction root is filesDir, therefore archive paths begin with usr/.
 cd "$OUT/bootstrap/root/data/data/$OCEAN_APP_PACKAGE/files"
-tar --sort=name --mtime='UTC 2026-01-01' --owner=0 --group=0 --numeric-owner -cf "$OUT/bootstrap/ocean-aarch64.tar" usr
-ARCHIVE=$OUT/bootstrap/ocean-aarch64.tar
-SHA=$(sha256sum "$ARCHIVE"|cut -d' ' -f1); SIZE=$(stat -c%s "$ARCHIVE"); COUNT=$(tar -tf "$ARCHIVE"|wc -l); FPR=$(gpg --with-colons --fingerprint "$OCEAN_REPO_SIGNING_KEY"|awk -F: '$1=="fpr"{print $10;exit}')
-python3 - "$OUT/bootstrap/manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "${CORE[*]} ocean-hello" <<'PY'
+tar --sort=name --mtime='UTC 2026-01-01' --owner=0 --group=0 --numeric-owner -cf "$WORK/ocean-aarch64.tar" usr
+COUNT=$(tar -tf "$WORK/ocean-aarch64.tar"|wc -l)
+zstd -19 -T0 "$WORK/ocean-aarch64.tar" -o "$OUT/bootstrap/ocean-aarch64.tar.zst"
+ARCHIVE=$OUT/bootstrap/ocean-aarch64.tar.zst
+SHA=$(sha256sum "$ARCHIVE"|cut -d' ' -f1); SIZE=$(stat -c%s "$ARCHIVE"); FPR=$(gpg --with-colons --fingerprint "$OCEAN_REPO_SIGNING_KEY"|awk -F: '$1=="fpr"{print $10;exit}')
+python3 - "$OUT/bootstrap/ocean-aarch64.manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "${CORE[*]} ocean-pkg ocean-hello" <<'PY'
 import json,os,sys
 p,sha,size,count,fpr,packages=sys.argv[1:]
-m={"bootstrapVersion":"1.0.0","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":packages.split(),"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
+m={"bootstrapVersion":"1.0.0","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":packages.split(),"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
 open(p,'w').write(json.dumps(m,indent=2)+"\n")
 PY
-python3 "$ROOT/ocean-packages/scripts/verify-bootstrap.py" "$OUT/bootstrap/manifest.json" "$ARCHIVE"
+python3 "$ROOT/ocean-packages/scripts/verify-bootstrap.py" "$OUT/bootstrap/ocean-aarch64.manifest.json" "$ARCHIVE"
