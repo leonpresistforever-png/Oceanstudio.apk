@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+      - name: Verify resilient source downloader
+        run: ./ocean-packages/scripts/test-ocean-download.sh
       - name: Restore checksum-addressed source downloads
         uses: actions/cache@v4
         with:
@@ -26,8 +28,8 @@ jobs:
           path: ocean-packages/build/package-builder/output
           # The pinned upstream commit identifies all upstream recipes/patches;
           # the hash covers Ocean recipes and dependency-relevant configuration.
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-${{ github.run_id }}
-          restore-keys: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-
+          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-${{ github.run_id }}
+          restore-keys: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-
       - name: Reclaim runner disk for the Android package toolchain
         run: |
           sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android || true
@@ -68,7 +70,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/build/package-builder/output
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-${{ github.run_id }}
+          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-${{ github.run_id }}
       - name: Enforce successful distribution build
         if: steps.distribution-build.outcome == 'failure'
         run: exit 1

@@ -11,11 +11,13 @@ termux_download() {
 	local url_spec="$1" destination="$2" checksum="${3:-SKIP_CHECKSUM}"
 	local partial_file
 	mkdir -p "$TERMUX_PKG_TMPDIR"
+	if [[ "$checksum" == "SKIP_CHECKSUM" || -z "$checksum" ]]; then
+		echo "Ocean source downloads require a recipe checksum: $url_spec" >&2
+		return 1
+	fi
 
 	verify() {
 		[[ -f "$1" ]] || return 1
-		[[ "$checksum" == "SKIP_CHECKSUM" ]] && return 0
-		[[ -n "$checksum" ]] || return 1
 		[[ "$(sha256sum "$1" | cut -d' ' -f1)" == "$checksum" ]]
 	}
 
@@ -40,8 +42,18 @@ termux_download() {
 				--connect-timeout 30 --max-time 1200 \
 				--speed-limit 1024 --speed-time 90 \
 				--output "$partial_file" "$url"; then
-				echo "Source candidate failed: $url" >&2
+				# Some verified mirrors do not implement byte ranges. Retry that
+				# candidate once from byte zero; the checksum remains authoritative.
+				rm -f "$partial_file"
+				if ! curl --fail --location \
+					--retry 10 --retry-all-errors --retry-connrefused \
+					--retry-max-time 900 \
+					--connect-timeout 30 --max-time 1200 \
+					--speed-limit 1024 --speed-time 90 \
+					--output "$partial_file" "$url"; then
+					echo "Source candidate failed after resumed and clean retries: $url" >&2
 				continue
+				fi
 			fi
 			if ! verify "$partial_file"; then
 				echo "Checksum rejected source candidate: $url" >&2
