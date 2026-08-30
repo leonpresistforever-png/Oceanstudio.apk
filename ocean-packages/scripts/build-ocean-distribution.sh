@@ -8,7 +8,15 @@ OUT=$WORK/out
 mkdir -p "$WORK" "$ROOT/ocean-packages/.cache/sources"
 rm -rf "$OUT"; mkdir -p "$OUT/debs" "$OUT/repository/pool/main" "$OUT/bootstrap/root/usr"
 if [[ ! -d "$UPSTREAM/.git" ]]; then
+  # actions/cache may restore output/ before the pinned source checkout exists.
+  # Preserve those completed packages while replacing the cache-created shell
+  # directory with the real Git checkout.
+  CACHED_OUTPUT="$WORK/restored-package-output"
+  rm -rf "$CACHED_OUTPUT"
+  if [[ -d "$UPSTREAM/output" ]]; then mv "$UPSTREAM/output" "$CACHED_OUTPUT"; fi
+  rm -rf "$UPSTREAM"
   git clone https://github.com/termux/termux-packages.git "$UPSTREAM"
+  if [[ -d "$CACHED_OUTPUT" ]]; then mv "$CACHED_OUTPUT" "$UPSTREAM/output"; fi
 fi
 git -C "$UPSTREAM" fetch --no-tags origin "$UPSTREAM_PACKAGES_COMMIT"
 git -C "$UPSTREAM" reset --hard "$UPSTREAM_PACKAGES_COMMIT"
