@@ -29,6 +29,12 @@ PY
 install -m755 "$ROOT/ocean-packages/scripts/ocean-download.sh" \
   "$UPSTREAM/scripts/build/termux_download.sh"
 mkdir -p "$UPSTREAM/.ocean-cache/sources"
+cp -a "$ROOT/ocean-packages/.cache/sources/." "$UPSTREAM/.ocean-cache/sources/"
+sync_source_cache() {
+  mkdir -p "$ROOT/ocean-packages/.cache/sources"
+  cp -a "$UPSTREAM/.ocean-cache/sources/." "$ROOT/ocean-packages/.cache/sources/" 2>/dev/null || true
+}
+trap sync_source_cache EXIT
 cat > "$UPSTREAM/repo.json" <<JSON
 {"pkg_format":"debian","packages":{"name":"ocean-main","distribution":"stable","component":"main","url":"$OCEAN_REPOSITORY_URL"}}
 JSON
@@ -71,9 +77,9 @@ for package in "${ROOT_PACKAGES[@]}"; do
     exit 1
   }
 done
-# Mount the Actions-restored source cache explicitly because run-docker mounts
-# only the upstream checkout, not its parent Ocean repository.
-export TERMUX_DOCKER_RUN_EXTRA_ARGS="--volume $ROOT/ocean-packages/.cache/sources:/home/builder/termux-packages/.ocean-cache/sources"
+# The cache lives inside the checkout mounted by run-docker while compilation
+# is active; the EXIT trap synchronizes it back to the Actions cache path even
+# when a later source or package fails.
 (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${ROOT_PACKAGES[@]}")
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
