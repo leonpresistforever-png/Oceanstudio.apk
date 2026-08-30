@@ -21,6 +21,20 @@ PY
 cat > "$UPSTREAM/repo.json" <<JSON
 {"pkg_format":"debian","packages":{"name":"ocean-main","distribution":"stable","component":"main","url":"$OCEAN_REPOSITORY_URL"}}
 JSON
+# Ocean owns its bootstrap helpers and keyring.  Do not pull the upstream
+# Android app bridge (`termux-tools` -> `termux-am`) or upstream repository
+# identity into the native Ocean distribution.  These dependencies are shell
+# integration/data packages, not ELF link dependencies of bash or apt.
+python3 - "$UPSTREAM/packages/bash/build.sh" "$UPSTREAM/packages/apt/build.sh" <<'PY'
+import pathlib, sys
+for filename, removed in ((sys.argv[1], ("termux-tools",)),
+                          (sys.argv[2], ("termux-keyring", "termux-licenses"))):
+    path = pathlib.Path(filename)
+    text = path.read_text()
+    for package in removed:
+        text = text.replace(", " + package, "").replace(package + ", ", "")
+    path.write_text(text)
+PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 CORE=(bash apt dpkg coreutils grep sed tar gzip curl findutils procps util-linux zlib xz-utils zstd openssl ca-certificates ncurses readline)
 (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${CORE[@]}")
