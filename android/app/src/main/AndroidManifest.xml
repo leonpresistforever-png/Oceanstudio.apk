@@ -9,6 +9,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <activity android:name=".terminal.OceanTerminalActivity" android:label="Ocean Terminal" android:windowSoftInputMode="adjustResize" />
+        <service android:name=".terminal.OceanTerminalRuntimeService" android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
