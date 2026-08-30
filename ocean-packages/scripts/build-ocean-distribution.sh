@@ -5,9 +5,14 @@ source "$ROOT/ocean-packages/config.env"
 WORK=${OCEAN_BUILD_WORK:-$ROOT/ocean-packages/build}
 UPSTREAM=$WORK/package-builder
 OUT=$WORK/out
-rm -rf "$WORK"; mkdir -p "$OUT/debs" "$OUT/repository/pool/main" "$OUT/bootstrap/root/usr"
-git clone https://github.com/termux/termux-packages.git "$UPSTREAM"
-git -C "$UPSTREAM" checkout --detach "$UPSTREAM_PACKAGES_COMMIT"
+mkdir -p "$WORK" "$ROOT/ocean-packages/.cache/sources"
+rm -rf "$OUT"; mkdir -p "$OUT/debs" "$OUT/repository/pool/main" "$OUT/bootstrap/root/usr"
+if [[ ! -d "$UPSTREAM/.git" ]]; then
+  git clone https://github.com/termux/termux-packages.git "$UPSTREAM"
+fi
+git -C "$UPSTREAM" fetch --no-tags origin "$UPSTREAM_PACKAGES_COMMIT"
+git -C "$UPSTREAM" reset --hard "$UPSTREAM_PACKAGES_COMMIT"
+git -C "$UPSTREAM" clean -fd -e output -e .ocean-cache
 # The audited upstream GPL package build framework is used only as a compiler.
 # These substitutions make packages Ocean-native at configure/compile time.
 python3 - "$UPSTREAM/scripts/properties.sh" <<'PY'
@@ -18,6 +23,13 @@ s=s.replace('TERMUX__INTERNAL_NAME="termux"','TERMUX__INTERNAL_NAME="ocean"')
 s=s.replace('TERMUX_APP__PACKAGE_NAME="com.termux"','TERMUX_APP__PACKAGE_NAME="studio.ocean.app"')
 p.write_text(s)
 PY
+# Install Ocean's checksum-addressed resilient downloader into the audited
+# builder. Its persistent cache is inside the checkout so Actions can restore
+# it without exposing unverified files as package inputs.
+install -m755 "$ROOT/ocean-packages/scripts/ocean-download.sh" \
+  "$UPSTREAM/scripts/build/termux_download.sh"
+mkdir -p "$UPSTREAM/.ocean-cache"
+ln -sfn "$ROOT/ocean-packages/.cache/sources" "$UPSTREAM/.ocean-cache/sources"
 cat > "$UPSTREAM/repo.json" <<JSON
 {"pkg_format":"debian","packages":{"name":"ocean-main","distribution":"stable","component":"main","url":"$OCEAN_REPOSITORY_URL"}}
 JSON
@@ -40,6 +52,18 @@ PY
 # archive or checksum.
 grep -rl 'http://download.savannah.gnu.org/' "$UPSTREAM/packages" \
   | xargs -r sed -i 's#http://download\.savannah\.gnu\.org/#https://download.savannah.gnu.org/#g'
+# attr's recipe provides a checksum-verified GNU mirror fallback. The custom
+# downloader tries it only after the canonical Savannah endpoint fails.
+python3 - "$UPSTREAM/packages/attr/build.sh" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+needle = 'TERMUX_PKG_SRCURL="https://download.savannah.gnu.org/releases/attr/attr-${TERMUX_PKG_VERSION}.tar.gz"'
+replacement = needle[:-1] + '|https://ftpmirror.gnu.org/attr/attr-${TERMUX_PKG_VERSION}.tar.gz"'
+if needle not in s:
+    raise SystemExit("Pinned attr source recipe changed unexpectedly")
+p.write_text(s.replace(needle, replacement))
+PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 ROOT_PACKAGES=(bash apt libcurl)
 for package in "${ROOT_PACKAGES[@]}"; do
