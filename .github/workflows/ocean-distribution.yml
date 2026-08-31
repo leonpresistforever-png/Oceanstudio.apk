@@ -29,9 +29,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.distribution_run_id }}
         run: |
-          mkdir -p ocean-packages/build/out
+          mkdir -p /tmp/ocean-prior ocean-packages/build/out
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name "$DISTRIBUTION_ARTIFACT" --dir ocean-packages/build/out
+            --name "$DISTRIBUTION_ARTIFACT" --dir /tmp/ocean-prior
+          zstd -q -d -c /tmp/ocean-prior/ocean-aarch64-distribution.tar.zst \
+            | tar -C ocean-packages/build/out -xf -
       - name: Restore verified distribution cache
         id: distribution-cache
         if: steps.prior.outcome == 'skipped'
@@ -136,18 +138,19 @@ jobs:
         with:
           path: ocean-packages/build/out
           key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/build-ocean-distribution.sh', 'ocean-packages/scripts/verify-bootstrap.py') }}
+      - name: Pack portable verified distribution
+        run: |
+          tar -C ocean-packages/build/out --exclude='bootstrap/root' \
+            -cf /tmp/ocean-aarch64-distribution.tar \
+            debs repository bootstrap ocean-repository.gpg
+          zstd -q -19 -T0 /tmp/ocean-aarch64-distribution.tar \
+            -o /tmp/ocean-aarch64-distribution.tar.zst
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.DISTRIBUTION_ARTIFACT }}
-          # Upload only immutable distribution products. The extraction staging
-          # tree contains valid Unix filenames (including ':') that GitHub's
-          # cross-platform artifact service intentionally rejects.
-          path: |
-            ocean-packages/build/out/debs
-            ocean-packages/build/out/repository
-            ocean-packages/build/out/bootstrap/*.tar.zst
-            ocean-packages/build/out/bootstrap/*.manifest.json
-            ocean-packages/build/out/ocean-repository.gpg
+          # Tar preserves valid Unix package filenames containing epoch colons,
+          # which the cross-platform artifact service rejects individually.
+          path: /tmp/ocean-aarch64-distribution.tar.zst
           retention-days: 30
 
   build-apk:
@@ -161,7 +164,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ env.DISTRIBUTION_ARTIFACT }}
-          path: ocean-packages/build/out
+          path: /tmp/ocean-distribution
+      - name: Unpack verified distribution artifact
+        run: |
+          mkdir -p ocean-packages/build/out
+          zstd -q -d -c /tmp/ocean-distribution/ocean-aarch64-distribution.tar.zst \
+            | tar -C ocean-packages/build/out -xf -
       - name: Verify distribution and inject bootstrap
         run: |
           ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
