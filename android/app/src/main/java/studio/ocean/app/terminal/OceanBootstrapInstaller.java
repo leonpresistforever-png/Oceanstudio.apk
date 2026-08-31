@@ -16,8 +16,12 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -29,6 +33,7 @@ public final class OceanBootstrapInstaller {
     private static final String ASSET_ROOT = "ocean/bootstrap/aarch64/";
     static final String STAGING_PREFIX = ".ocean-bootstrap-staging-";
     private static final String ROLLBACK_PREFIX = ".ocean-prefix-rollback-";
+    private static final String BUILD_PREFIX = "/data/data/studio.ocean.app/files/usr";
 
     private final Context context;
     private final OceanPaths paths;
@@ -216,31 +221,44 @@ public final class OceanBootstrapInstaller {
     }
 
     private void extract(File archive, File staging) throws IOException {
-        String root = staging.getCanonicalPath() + File.separator;
+        List<DirectoryMode> directoryModes = new ArrayList<>();
         try (TarArchiveInputStream tar = new TarArchiveInputStream(
                 new ZstdInputStream(new BufferedInputStream(new FileInputStream(archive))))) {
             for (TarArchiveEntry entry; (entry = tar.getNextTarEntry()) != null;) {
-                String name = entry.getName();
-                if (name.startsWith("/") || name.indexOf('\0') >= 0) throw new IOException("Unsafe archive path");
-                File target = new File(staging, name);
-                if (!target.getCanonicalPath().startsWith(root)) throw new IOException("Archive path traversal");
+                Path logical = normalizeArchivePath(entry.getName(), "entry");
+                File target = new File(staging, logical.toString());
+                TerminalStartupLog.stage("07E", describeEntry(entry, logical));
+                ensureRealParents(staging, logical.getParent());
                 if (entry.isDirectory()) {
-                    if (!target.isDirectory() && !target.mkdirs()) throw new IOException("Cannot create " + name);
+                    createOrVerifyDirectory(target, entry.getName());
+                    directoryModes.add(new DirectoryMode(target, entry.getMode() & 0777));
                     continue;
                 }
-                File parent = target.getParentFile();
-                if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
-                    throw new IOException("Cannot create archive parent");
-                }
+                requireAbsent(target, entry.getName());
                 if (entry.isSymbolicLink()) {
-                    String link = entry.getLinkName();
-                    if (link.startsWith("/") || !new File(parent, link).getCanonicalPath().startsWith(root)) {
-                        throw new IOException("Unsafe archive symlink");
-                    }
+                    String link = safeSymlinkTarget(logical, entry.getLinkName());
                     try {
                         Os.symlink(link, target.getAbsolutePath());
                     } catch (Exception error) {
-                        throw new IOException("Cannot create symlink", error);
+                        throw new IOException("Cannot create symlink entry=" + entry.getName()
+                                + " target=" + link, error);
+                    }
+                    continue;
+                }
+                if (entry.isLink()) {
+                    Path linkLogical = normalizeLinkPath(entry.getLinkName(), "hardlink");
+                    File source = new File(staging, linkLogical.toString());
+                    StructStat sourceStat = lstat(source, "hardlink source");
+                    if (!OsConstants.S_ISREG(sourceStat.st_mode)) {
+                        throw new IOException("Unsafe archive hardlink entry=" + entry.getName()
+                                + " target=" + entry.getLinkName() + " normalized=" + linkLogical
+                                + " reason=target is not an extracted regular file");
+                    }
+                    try {
+                        Os.link(source.getAbsolutePath(), target.getAbsolutePath());
+                    } catch (Exception error) {
+                        throw new IOException("Cannot create hardlink entry=" + entry.getName()
+                                + " target=" + entry.getLinkName(), error);
                     }
                     continue;
                 }
@@ -262,6 +280,138 @@ public final class OceanBootstrapInstaller {
                     throw new IOException("Cannot set archive mode", error);
                 }
             }
+        }
+        // Apply archived directory modes only after all children exist. Applying a read-only
+        // mode during extraction could make legitimate later entries impossible to create.
+        for (int index = directoryModes.size() - 1; index >= 0; index--) {
+            DirectoryMode mode = directoryModes.get(index);
+            try {
+                Os.chmod(mode.directory.getAbsolutePath(), mode.mode);
+            } catch (ErrnoException error) {
+                throw filesystemError("chmod archive directory", mode.directory, error);
+            }
+        }
+    }
+
+    private static final class DirectoryMode {
+        final File directory;
+        final int mode;
+        DirectoryMode(File directory, int mode) { this.directory = directory; this.mode = mode; }
+    }
+
+    private static Path normalizeArchivePath(String value, String kind) throws IOException {
+        if (value == null || value.isEmpty() || value.indexOf('\0') >= 0) {
+            throw new IOException("Unsafe archive " + kind + " path=" + value + " reason=empty-or-NUL");
+        }
+        Path raw = Paths.get(value);
+        Path normalized = raw.normalize();
+        if (raw.isAbsolute() || normalized.getNameCount() == 0 || normalized.startsWith("..")
+                || !"usr".equals(normalized.getName(0).toString())) {
+            throw new IOException("Unsafe archive " + kind + " path=" + value
+                    + " normalized=" + normalized + " reason=outside usr");
+        }
+        return normalized;
+    }
+
+    private static Path normalizeLinkPath(String value, String kind) throws IOException {
+        if (value != null && (value.equals(BUILD_PREFIX) || value.startsWith(BUILD_PREFIX + "/"))) {
+            String suffix = value.substring(BUILD_PREFIX.length());
+            value = "usr" + suffix;
+        }
+        return normalizeArchivePath(value, kind);
+    }
+
+    private static String safeSymlinkTarget(Path entry, String original) throws IOException {
+        boolean absolute = original != null && original.startsWith("/");
+        boolean containsParent = containsParentComponent(original);
+        Path resolved;
+        if (absolute) {
+            resolved = normalizeLinkPath(original, "symlink target");
+        } else {
+            if (original == null || original.isEmpty() || original.indexOf('\0') >= 0) {
+                throw unsafeLink(entry, original, null, absolute, containsParent, "empty-or-NUL");
+            }
+            resolved = entry.getParent().resolve(original).normalize();
+            if (resolved.getNameCount() == 0 || resolved.startsWith("..")
+                    || !"usr".equals(resolved.getName(0).toString())) {
+                throw unsafeLink(entry, original, resolved, false, containsParent, "escapes usr");
+            }
+        }
+        String relative = entry.getParent().relativize(resolved).toString();
+        TerminalStartupLog.stage("07L", "archive symlink entry=" + entry + " target=" + original
+                + " normalized=" + resolved + " installedTarget=" + relative
+                + " absolute=" + absolute + " containsParent=" + containsParent
+                + " canonicalPrefix=" + (original != null && original.startsWith(BUILD_PREFIX)));
+        return relative;
+    }
+
+    private static boolean containsParentComponent(String value) {
+        if (value == null) return false;
+        for (Path component : Paths.get(value)) if ("..".equals(component.toString())) return true;
+        return false;
+    }
+
+    private static IOException unsafeLink(Path entry, String target, Path normalized,
+                                          boolean absolute, boolean containsParent, String reason) {
+        return new IOException("Unsafe archive symlink entry=" + entry + " target=" + target
+                + " normalized=" + normalized + " absolute=" + absolute
+                + " containsParent=" + containsParent + " canonicalPrefix="
+                + (target != null && target.startsWith(BUILD_PREFIX)) + " reason=" + reason);
+    }
+
+    private static String describeEntry(TarArchiveEntry entry, Path normalized) {
+        String type = entry.isDirectory() ? "directory" : entry.isSymbolicLink() ? "symlink"
+                : entry.isLink() ? "hardlink" : entry.isFile() ? "file" : "special";
+        return "archive entry path=" + entry.getName() + " type=" + type
+                + " symlinkTarget=" + (entry.isSymbolicLink() ? entry.getLinkName() : "")
+                + " hardlinkTarget=" + (entry.isLink() ? entry.getLinkName() : "")
+                + " normalized=" + normalized;
+    }
+
+    /** Creates parents one component at a time and refuses to traverse a pre-existing symlink. */
+    private static void ensureRealParents(File staging, Path parent) throws IOException {
+        if (parent == null) return;
+        File current = staging;
+        for (Path component : parent) {
+            current = new File(current, component.toString());
+            try {
+                StructStat stat = Os.lstat(current.getAbsolutePath());
+                if (!OsConstants.S_ISDIR(stat.st_mode)) {
+                    throw new IOException("Unsafe archive parent is not a real directory: " + current);
+                }
+            } catch (ErrnoException error) {
+                if (error.errno != OsConstants.ENOENT) throw filesystemError("lstat parent", current, error);
+                if (!current.mkdir()) throw new IOException("Cannot create archive parent " + current);
+            }
+        }
+    }
+
+    private static void createOrVerifyDirectory(File target, String entry) throws IOException {
+        try {
+            StructStat stat = Os.lstat(target.getAbsolutePath());
+            if (!OsConstants.S_ISDIR(stat.st_mode)) {
+                throw new IOException("Archive directory collides with non-directory entry=" + entry);
+            }
+        } catch (ErrnoException error) {
+            if (error.errno != OsConstants.ENOENT) throw filesystemError("lstat directory", target, error);
+            if (!target.mkdir()) throw new IOException("Cannot create archive directory " + entry);
+        }
+    }
+
+    private static void requireAbsent(File target, String entry) throws IOException {
+        try {
+            Os.lstat(target.getAbsolutePath());
+            throw new IOException("Duplicate archive entry=" + entry);
+        } catch (ErrnoException error) {
+            if (error.errno != OsConstants.ENOENT) throw filesystemError("lstat entry", target, error);
+        }
+    }
+
+    private static StructStat lstat(File file, String operation) throws IOException {
+        try {
+            return Os.lstat(file.getAbsolutePath());
+        } catch (ErrnoException error) {
+            throw filesystemError(operation, file, error);
         }
     }
 

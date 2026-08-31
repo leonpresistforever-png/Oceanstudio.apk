@@ -152,6 +152,29 @@ for deb in "$OUT/debs"/*.deb; do
 done
 # APK extraction root is filesDir, therefore archive paths begin with usr/.
 cd "$OUT/bootstrap/root/data/data/$OCEAN_APP_PACKAGE/files"
+# Package payloads may contain build-prefix symlinks. Convert the two forms into
+# equivalent relative links before archiving so /data/data and /data/user/0 are
+# never part of symlink resolution on-device. Any other absolute or escaping
+# link is a distribution error, even though the repository is signed.
+python3 - "$OCEAN_PREFIX" usr <<'PY'
+import os,posixpath,sys
+prefix,root=sys.argv[1:]
+for directory,dirs,files in os.walk(root,topdown=True,followlinks=False):
+ for name in dirs+files:
+  path=posixpath.join(directory,name)
+  if not os.path.islink(path): continue
+  target=os.readlink(path)
+  if target==prefix or target.startswith(prefix+'/'):
+   logical='usr'+target[len(prefix):]
+   rewritten=posixpath.relpath(logical,directory)
+   os.unlink(path); os.symlink(rewritten,path); target=rewritten
+  if posixpath.isabs(target):
+   raise SystemExit(f'unsafe absolute bootstrap symlink: {path} -> {target}')
+  resolved=posixpath.normpath(posixpath.join(directory,target))
+  if resolved!='usr' and not resolved.startswith('usr/'):
+   raise SystemExit(f'escaping bootstrap symlink: {path} -> {target} ({resolved})')
+  print(f'bootstrap symlink: {path} -> {target} ({resolved})')
+PY
 tar --sort=name --mtime='UTC 2026-01-01' --owner=0 --group=0 --numeric-owner -cf "$WORK/ocean-aarch64.tar" usr
 COUNT=$(tar -tf "$WORK/ocean-aarch64.tar"|wc -l)
 zstd -19 -T0 "$WORK/ocean-aarch64.tar" -o "$OUT/bootstrap/ocean-aarch64.tar.zst"
@@ -165,7 +188,7 @@ for deb in sorted(pathlib.Path(debs).glob('*.deb')):
  def field(name): return subprocess.check_output(['dpkg-deb','-f',deb,name],text=True).strip()
  name,version,arch=field('Package'),field('Version'),field('Architecture')
  packages.append({'name':name,'version':version,'architecture':arch,'artifact':deb.name,'size':deb.stat().st_size})
-m={"bootstrapVersion":"1.0.0","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":[x['name'] for x in packages],"packages":packages,"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
+m={"bootstrapVersion":"1.0.1","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":[x['name'] for x in packages],"packages":packages,"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
 open(p,'w').write(json.dumps(m,indent=2)+"\n")
 PY
 python3 "$ROOT/ocean-packages/scripts/verify-bootstrap.py" "$OUT/bootstrap/ocean-aarch64.manifest.json" "$ARCHIVE"
