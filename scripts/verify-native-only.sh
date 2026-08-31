@@ -34,3 +34,8 @@ fi
 if sed -nE '/(sigaction|signal)\([^,]*(SIGSEGV|SIGABRT|SIGBUS|SIGILL|SIGFPE)/p' android/app/src/main/cpp/ocean_pty.c | grep -q .; then
   fail "Ocean PTY must not install process-wide fatal signal handlers"
 fi
+if grep -q 'WNOHANG' android/app/src/main/cpp/ocean_pty.c; then
+  fail "Ocean PTY child lifecycle must use the dedicated blocking reaper"
+fi
+grep -q 'waitpid(p->pid,&status,0)' android/app/src/main/cpp/ocean_pty.c \
+  || fail "Ocean PTY blocking waitpid reaper missing"
