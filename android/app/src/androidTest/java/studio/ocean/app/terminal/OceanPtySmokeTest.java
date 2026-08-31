@@ -34,14 +34,17 @@ public final class OceanPtySmokeTest {
         long handle=NativePty.create(executable,argv,environment,cwd.getAbsolutePath(),24,80,log.getAbsolutePath());
         assertTrue("PTY handle",handle!=0);
         try{
-            byte[] command="echo OCEAN_PTY_OK\rexit\r".getBytes(StandardCharsets.UTF_8);
-            assertTrue("write command",NativePty.write(handle,command,command.length)==command.length);
+            byte[] command="echo OCEAN_PTY_OK\r".getBytes(StandardCharsets.UTF_8);
+            assertTrue("write echo",NativePty.write(handle,command,command.length)==command.length);
             byte[] buffer=new byte[4096];StringBuilder output=new StringBuilder();long deadline=System.currentTimeMillis()+10000;
             while(System.currentTimeMillis()<deadline&&!output.toString().contains("OCEAN_PTY_OK")){
                 int count=NativePty.read(handle,buffer);
                 if(count>0)output.append(new String(buffer,0,count,StandardCharsets.UTF_8));else if(count<0)break;
             }
             assertTrue("actual PTY output: "+output,output.toString().contains("OCEAN_PTY_OK"));
+            byte[] exit="exit\r".getBytes(StandardCharsets.UTF_8);
+            assertTrue("write exit once",NativePty.write(handle,exit,exit.length)==exit.length);
+            assertTrue("real child exit",NativePty.waitExit(handle)==0);
         }finally{NativePty.close(handle);NativePty.destroy(handle);}
     }
 }

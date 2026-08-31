@@ -47,9 +47,10 @@ public final class OceanTerminalRuntimeService extends Service {
         if(handle==0){int error=NativePty.lastErrno();TerminalStartupLog.stage("10F","PTY create failed errno="+error);throw new IOException("PTY creation failed, errno="+error);}
         int pid=NativePty.pid(handle);TerminalDiagnosticBundle.state("PTY_CREATING","FORKED","pid="+pid+" handle=0x"+Long.toHexString(handle));TerminalStartupLog.stage("12","fork success pid="+pid);
         TerminalSession session;
-        try{session=new TerminalSession(this,handle);}catch(Throwable error){NativePty.close(handle);NativePty.destroy(handle);throw new IOException("Cannot start PTY reader",error);}
-        TerminalDiagnosticBundle.log("startup.log","[J10] session object created id="+session.id);sessions.put(session.id,session);TerminalDiagnosticBundle.state("FORKED","EXECUTING","session="+session.id+" childPid="+pid);TerminalStartupLog.stage("13","child exec requested shell="+shell+" recovery="+recovery);return session;
+        try{session=new TerminalSession(this,handle,this::removeCompletedSession);}catch(Throwable error){NativePty.signal(handle,15);NativePty.close(handle);NativePty.waitExit(handle);NativePty.destroy(handle);throw new IOException("Cannot start PTY workers",error);}
+        TerminalDiagnosticBundle.log("startup.log","[J10] session object created id="+session.id);sessions.put(session.id,session);session.startWorkers();TerminalDiagnosticBundle.state("FORKED","EXECUTING","session="+session.id+" childPid="+pid);TerminalStartupLog.stage("13","child exec requested shell="+shell+" recovery="+recovery);return session;
     }
     public synchronized void closeSession(String id){TerminalSession session=sessions.remove(id);if(session!=null)session.close();}
-    @Override public void onDestroy(){for(TerminalSession session:sessions.values())session.close();sessions.clear();super.onDestroy();}
+    private synchronized void removeCompletedSession(TerminalSession session){if(sessions.get(session.id)==session){sessions.remove(session.id);TerminalDiagnosticBundle.log("session-state.log","completed session removed from service registry id="+session.id);}}
+    @Override public synchronized void onDestroy(){TerminalSession[] active=sessions.values().toArray(new TerminalSession[0]);sessions.clear();for(TerminalSession session:active)session.close();super.onDestroy();}
 }
