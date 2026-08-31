@@ -59,7 +59,7 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         status.setText((installed?getString(R.string.terminal_runtime_ready):getString(R.string.terminal_recovery_mode))+buildIdentity(installed)+"\n"+process.summary());
     }
     private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);status.setText(message+buildIdentity(false));failureActions.setVisibility(View.VISIBLE);input.setEnabled(false);}
-    private void showDiagnosticLog(){try{output.setText(new String(Files.readAllBytes(TerminalStartupLog.file(this).toPath()),StandardCharsets.UTF_8));}catch(Exception error){output.setText(error.toString());}}
+    private void showDiagnosticLog(){try{output.setText(PreviousProcessExit.read(this)+"\n"+new String(Files.readAllBytes(TerminalStartupLog.file(this).toPath()),StandardCharsets.UTF_8));}catch(Exception error){output.setText(error.toString());}}
     private static String safeMessage(Throwable error){return error.getMessage()==null?error.getClass().getSimpleName():error.getMessage();}
     private void write(String value){if(session!=null&&!session.write(value))status.setText(R.string.terminal_write_failed);}
     private String buildIdentity(boolean installed){return "\nBuild commit: "+BuildConfig.OCEAN_BUILD_COMMIT+"\nBootstrap build: "+BuildConfig.OCEAN_BOOTSTRAP_BUILD_COMMIT+"\nBootstrap version: "+BuildConfig.OCEAN_BOOTSTRAP_VERSION+"\nBootstrap SHA-256: "+BuildConfig.OCEAN_BOOTSTRAP_SHA256+"\nRuntime installed: "+(installed?"yes":"no");}

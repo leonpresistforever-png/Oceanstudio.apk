@@ -4,7 +4,7 @@ package studio.ocean.app.terminal;
 public final class NativePty {
     static { System.loadLibrary("oceanpty"); }
     private NativePty() {}
-    public static native long create(String executable, String[] arguments, String[] environment, String cwd, int rows, int columns);
+    public static native long create(String executable, String[] arguments, String[] environment, String cwd, int rows, int columns, String diagnosticPath);
     public static native int lastErrno();
     public static native int read(long handle, byte[] buffer);
     public static native int write(long handle, byte[] buffer, int length);

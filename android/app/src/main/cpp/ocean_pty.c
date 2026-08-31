@@ -14,6 +14,14 @@
 typedef struct { _Atomic int master; pid_t pid; int exit_status; _Atomic int closed; } ocean_pty;
 static _Thread_local int ocean_last_errno;
 
+static void breadcrumb(int fd,const char *message,size_t length) {
+    if(fd<0)return;
+    size_t written=0;
+    while(written<length){ssize_t n=write(fd,message+written,length-written);if(n>0){written+=(size_t)n;continue;}if(n<0&&errno==EINTR)continue;break;}
+    (void)fsync(fd);
+}
+#define CRUMB(fd,literal) breadcrumb((fd),(literal),sizeof(literal)-1)
+
 static char **strings(JNIEnv *env, jobjectArray source) {
     jsize count = source ? (*env)->GetArrayLength(env, source) : 0;
     char **result = calloc((size_t)count + 1, sizeof(char *));
@@ -40,37 +48,55 @@ static void child_exec_error(int error) {
     (void)write(STDERR_FILENO,message,sizeof(message)-1);
 }
 
-JNIEXPORT jlong JNICALL Java_studio_ocean_app_terminal_NativePty_create(JNIEnv *env,jclass type,jstring executable,jobjectArray arguments,jobjectArray environment,jstring cwd,jint rows,jint columns) {
+JNIEXPORT jlong JNICALL Java_studio_ocean_app_terminal_NativePty_create(JNIEnv *env,jclass type,jstring executable,jobjectArray arguments,jobjectArray environment,jstring cwd,jint rows,jint columns,jstring diagnostic_path) {
     (void)type; ocean_last_errno=0;
-    if(!executable||!arguments||!environment||!cwd||rows<=0||columns<=0){ocean_last_errno=EINVAL;return 0;}
+    if(!executable||!arguments||!environment||!cwd||!diagnostic_path||rows<=0||columns<=0){ocean_last_errno=EINVAL;return 0;}
     const char *exe=(*env)->GetStringUTFChars(env,executable,NULL);
     const char *directory=(*env)->GetStringUTFChars(env,cwd,NULL);
-    if(!exe||!directory){if(exe)(*env)->ReleaseStringUTFChars(env,executable,exe);if(directory)(*env)->ReleaseStringUTFChars(env,cwd,directory);ocean_last_errno=ENOMEM;return 0;}
+    const char *diagnostic=(*env)->GetStringUTFChars(env,diagnostic_path,NULL);
+    if(!exe||!directory||!diagnostic){if(exe)(*env)->ReleaseStringUTFChars(env,executable,exe);if(directory)(*env)->ReleaseStringUTFChars(env,cwd,directory);if(diagnostic)(*env)->ReleaseStringUTFChars(env,diagnostic_path,diagnostic);ocean_last_errno=ENOMEM;return 0;}
     char **argv=strings(env,arguments), **envp=strings(env,environment);
-    int master=-1,slave=-1; struct winsize size={(unsigned short)rows,(unsigned short)columns,0,0};
+    int master=-1,slave=-1,diagnostic_fd=open(diagnostic,O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC,0600); struct winsize size={(unsigned short)rows,(unsigned short)columns,0,0};
+    CRUMB(diagnostic_fd,"[N01] nativeCreate entered\n");
     if(!argv||!envp)goto failure;
+    CRUMB(diagnostic_fd,"[N02] arguments copied and validated\n[N03] openpty begin\n");
     if(openpty(&master,&slave,NULL,NULL,&size)<0){ocean_last_errno=errno;goto failure;}
+    CRUMB(diagnostic_fd,"[N04] openpty success\n[N05] fork begin\n");
     pid_t pid=fork(); if(pid<0){ocean_last_errno=errno;goto failure;}
     if(pid==0){
+        CRUMB(diagnostic_fd,"[N06-child] child entered\n");
         close(master);
+        CRUMB(diagnostic_fd,"[N07-child] setsid begin\n");
         if(setsid()<0){child_exec_error(errno);_exit(126);}
+        CRUMB(diagnostic_fd,"[N08-child] setsid success\n[N09-child] TIOCSCTTY begin\n");
         if(ioctl(slave,TIOCSCTTY,0)<0){child_exec_error(errno);_exit(126);}
-        if(dup2(slave,0)<0||dup2(slave,1)<0||dup2(slave,2)<0){child_exec_error(errno);_exit(126);}
+        CRUMB(diagnostic_fd,"[N10-child] dup2 stdin\n");
+        if(dup2(slave,0)<0){child_exec_error(errno);_exit(126);}
+        CRUMB(diagnostic_fd,"[N11-child] dup2 stdout\n");
+        if(dup2(slave,1)<0){child_exec_error(errno);_exit(126);}
+        CRUMB(diagnostic_fd,"[N12-child] dup2 stderr\n");
+        if(dup2(slave,2)<0){child_exec_error(errno);_exit(126);}
         if(slave>2)close(slave);
+        CRUMB(diagnostic_fd,"[N13-child] inherited PTY fds closed\n");
         if(chdir(directory)<0){child_exec_error(errno);_exit(126);}
+        CRUMB(diagnostic_fd,"[N14-child] execve begin\n");
         execve(exe,argv,envp); int error=errno; child_exec_error(error); _exit(error==ENOENT?127:126);
     }
+    CRUMB(diagnostic_fd,"[N06-parent] fork returned child pid\n");
     close(slave); slave=-1;
     if(fcntl(master,F_SETFD,FD_CLOEXEC)<0){ocean_last_errno=errno;kill(pid,SIGKILL);close(master);master=-1;goto failure;}
     ocean_pty *pty=calloc(1,sizeof(*pty));
     if(!pty){ocean_last_errno=ENOMEM;kill(pid,SIGKILL);close(master);master=-1;goto failure;}
     pty->master=master;pty->pid=pid;pty->exit_status=-1;
-    release_strings(argv);release_strings(envp);(*env)->ReleaseStringUTFChars(env,executable,exe);(*env)->ReleaseStringUTFChars(env,cwd,directory);return (jlong)(intptr_t)pty;
+    CRUMB(diagnostic_fd,"[N15-parent] PTY session allocated\n");
+    if(diagnostic_fd>=0)close(diagnostic_fd);
+    release_strings(argv);release_strings(envp);(*env)->ReleaseStringUTFChars(env,executable,exe);(*env)->ReleaseStringUTFChars(env,cwd,directory);(*env)->ReleaseStringUTFChars(env,diagnostic_path,diagnostic);return (jlong)(intptr_t)pty;
 failure:
     if(master>=0)close(master);
     if(slave>=0)close(slave);
     release_strings(argv);release_strings(envp);
-    (*env)->ReleaseStringUTFChars(env,executable,exe);(*env)->ReleaseStringUTFChars(env,cwd,directory);return 0;
+    CRUMB(diagnostic_fd,"[NXX] nativeCreate failed\n");if(diagnostic_fd>=0)close(diagnostic_fd);
+    (*env)->ReleaseStringUTFChars(env,executable,exe);(*env)->ReleaseStringUTFChars(env,cwd,directory);(*env)->ReleaseStringUTFChars(env,diagnostic_path,diagnostic);return 0;
 }
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_lastErrno(JNIEnv*e,jclass t){(void)e;(void)t;return ocean_last_errno;}
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_read(JNIEnv*env,jclass type,jlong handle,jbyteArray target){
