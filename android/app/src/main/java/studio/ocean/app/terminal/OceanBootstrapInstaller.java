@@ -321,7 +321,9 @@ public final class OceanBootstrapInstaller {
         return normalizeArchivePath(value, kind);
     }
 
-    private static String safeSymlinkTarget(Path entry, String original) throws IOException {
+    // Package-visible so the security policy can be exercised by host tests without
+    // weakening the production extraction boundary.
+    static String safeSymlinkTarget(Path entry, String original) throws IOException {
         boolean absolute = original != null && original.startsWith("/");
         boolean containsParent = containsParentComponent(original);
         Path resolved;
