@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import hashlib,json,pathlib,subprocess,sys,tarfile,tempfile
+import hashlib,json,pathlib,posixpath,subprocess,sys,tarfile,tempfile
 manifest_path,archive_path=map(pathlib.Path,sys.argv[1:3]); m=json.loads(manifest_path.read_text()); data=archive_path.read_bytes()
 assert m['packageName']=='studio.ocean.app' and m['prefix']=='/data/data/studio.ocean.app/files/usr'
 assert m['architecture']=='aarch64' and m['archiveSize']==len(data)
@@ -11,5 +11,14 @@ with tempfile.NamedTemporaryFile(suffix='.tar') as expanded:
  for path in ('usr/bin/bash','usr/bin/apt','usr/bin/dpkg','usr/bin/pkg'): assert path in names, path
  for member in tar.getmembers():
   p=pathlib.PurePosixPath(member.name); assert not p.is_absolute() and '..' not in p.parts
+  assert p.parts and p.parts[0]=='usr', member.name
+  if member.issym():
+   assert not posixpath.isabs(member.linkname), (member.name,member.linkname)
+   resolved=posixpath.normpath(posixpath.join(posixpath.dirname(member.name),member.linkname))
+   assert resolved=='usr' or resolved.startswith('usr/'), (member.name,member.linkname,resolved)
+  if member.islnk():
+   assert not posixpath.isabs(member.linkname), (member.name,member.linkname)
+   resolved=posixpath.normpath(member.linkname)
+   assert resolved=='usr' or resolved.startswith('usr/'), (member.name,member.linkname,resolved)
 assert {'bash','apt','dpkg','ocean-pkg','ocean-hello'} <= set(m['packageList'])
 print(f"verified Ocean bootstrap {m['bootstrapVersion']} ({len(data)} bytes)")
