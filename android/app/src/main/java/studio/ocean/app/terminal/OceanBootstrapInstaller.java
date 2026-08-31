@@ -33,6 +33,9 @@ public final class OceanBootstrapInstaller {
         JSONObject manifest=manifest();
         if(!"studio.ocean.app".equals(manifest.optString("packageName"))||!"aarch64".equals(manifest.optString("architecture"))
             ||!"ocean-aarch64.tar.zst".equals(manifest.optString("archive")))throw new IOException("Bootstrap identity mismatch");
+        if(!paths.home().isDirectory()&&!paths.home().mkdirs())throw new IOException("Cannot create Ocean HOME");
+        try{Os.chmod(paths.home().getAbsolutePath(),0700);}catch(Exception error){throw new IOException("Cannot secure Ocean HOME",error);}
+        TerminalStartupLog.stage("05H","Ocean HOME ready path="+paths.home());
         File archive=new File(context.getCacheDir(),"ocean-aarch64.tar.zst");
         copyAndVerify(archive,manifest.getLong("archiveSize"),manifest.getString("archiveSha256"));
         File staging=new File(paths.root(),".ocean-bootstrap-staging");deleteTree(staging);

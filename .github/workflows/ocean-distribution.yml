@@ -110,6 +110,25 @@ jobs:
             find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || exit 1
           done
           python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"
+          INSPECT=$(mktemp -d)
+          zstd -q -d -c "$ARCHIVE" | tar -C "$INSPECT" -xf -
+          for executable in bash apt dpkg; do
+            FILE="$INSPECT/usr/bin/$executable"
+            test -x "$FILE"
+            readelf -h "$FILE" | grep -q 'Machine:.*AArch64'
+            readelf -l "$FILE" | grep -q 'Requesting program interpreter: /system/bin/linker64'
+            while read -r library; do
+              case "$library" in libc.so|libdl.so|libm.so|liblog.so) continue;; esac
+              find "$INSPECT/usr/lib" -name "$library" -print -quit | grep -q . || {
+                echo "$executable requires missing $library" >&2; exit 1;
+              }
+            done < <(readelf -d "$FILE" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
+          done
+          test -x "$INSPECT/usr/bin/pkg"
+          if grep -aR -E 'com\.termux|/data/data/com\.termux' "$INSPECT/usr/bin" "$INSPECT/usr/lib"; then
+            echo 'Termux identity found in Ocean bootstrap binaries' >&2
+            exit 1
+          fi
           find ocean-packages/build/out/debs -name '*.deb' -printf '%f %s bytes\n' | sort
           sha256sum "$ARCHIVE"
       - name: Save reusable verified distribution
@@ -143,7 +162,8 @@ jobs:
           mkdir -p android/app/src/main/assets/ocean/bootstrap/aarch64
           cp "$ARCHIVE" android/app/src/main/assets/ocean/bootstrap/aarch64/
           cp "$MANIFEST" android/app/src/main/assets/ocean/bootstrap/aarch64/
-          echo "OCEAN_BUILD_COMMIT=$(jq -r .buildCommit "$MANIFEST")" >> "$GITHUB_ENV"
+          echo "OCEAN_BUILD_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "OCEAN_BOOTSTRAP_BUILD_COMMIT=$(jq -r .buildCommit "$MANIFEST")" >> "$GITHUB_ENV"
           echo "OCEAN_BOOTSTRAP_VERSION=$(jq -r .bootstrapVersion "$MANIFEST")" >> "$GITHUB_ENV"
           echo "OCEAN_BOOTSTRAP_SHA256=$(jq -r .archiveSha256 "$MANIFEST")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
