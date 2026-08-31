@@ -28,3 +28,9 @@ echo "Ocean native architecture verified."
 if find android/app/src/main/java/studio/ocean/app/terminal android/app/src/main/cpp -type f -print0 | xargs -0 sed -nE '/(HttpURLConnection|OkHttpClient|WebSocket|ssh |https?:\/\/.*(exec|shell|command))/p' | head -1 | grep -q .; then
   fail "remote command execution dependency found in Ocean Terminal runtime"
 fi
+
+# ART/Android owns fatal process signals and tombstone generation. JNI terminal
+# diagnostics must never replace process-wide fatal signal handlers.
+if sed -nE '/(sigaction|signal)\([^,]*(SIGSEGV|SIGABRT|SIGBUS|SIGILL|SIGFPE)/p' android/app/src/main/cpp/ocean_pty.c | grep -q .; then
+  fail "Ocean PTY must not install process-wide fatal signal handlers"
+fi

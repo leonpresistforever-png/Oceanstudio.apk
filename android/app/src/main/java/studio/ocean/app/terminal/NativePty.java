@@ -9,7 +9,7 @@ public final class NativePty {
     public static native int read(long handle, byte[] buffer);
     public static native int write(long handle, byte[] buffer, int length);
     public static native int resize(long handle, int rows, int columns, int pixelWidth, int pixelHeight);
-    public static native int pollExit(long handle);
+    public static native int waitExit(long handle);
     public static native void destroy(long handle);
     public static native int pid(long handle);
     public static native int masterFd(long handle);

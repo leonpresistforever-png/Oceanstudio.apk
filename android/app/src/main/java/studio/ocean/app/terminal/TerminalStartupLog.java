@@ -15,10 +15,12 @@ public final class TerminalStartupLog {
     private static final Object LOCK = new Object();
     private static volatile String lastStage = "not-started";
     private static File file;
+    private static Context appContext;
     private static Thread.UncaughtExceptionHandler installedHandler;
     private TerminalStartupLog() {}
 
     public static void initialize(Context context) {
+        appContext=context.getApplicationContext();
         TerminalDiagnosticBundle.initialize(context);
         synchronized (LOCK) {
             File directory = new File(context.getFilesDir(), "logs");
@@ -43,6 +45,7 @@ public final class TerminalStartupLog {
         lastStage = number + " " + message;
         append("[" + number + "] " + message + "\n");
         TerminalDiagnosticBundle.log("startup.log","[J"+number+"] "+message);
+        if(appContext!=null)TerminalDiagnosticBundle.updateStage(appContext,number+" "+message);
     }
 
     public static void failure(String message, Throwable error) {
