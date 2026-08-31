@@ -28,16 +28,16 @@ public final class OceanTerminalRuntimeService extends Service {
         File oceanShell=new File(paths.prefix(),"bin/bash");
         TerminalStartupLog.environment(this,oceanShell.getAbsolutePath());
         OceanRuntimeValidator.Result validation=OceanRuntimeValidator.validate(paths);validation.requireValid();TerminalDiagnosticBundle.log("runtime-validation.log","[J06] bootstrap/runtime validation passed");
-        return startSession(oceanShell.getAbsolutePath(),paths.home(),rows,columns,false);
+        return startSession(oceanShell.getAbsolutePath(),new String[]{oceanShell.getAbsolutePath(),"-i"},paths.home(),rows,columns,false);
     }
     public synchronized TerminalSession createRecoverySession(int rows,int columns) throws IOException {
         OceanPaths paths=new OceanPaths(this);File shell=new File("/system/bin/sh");
         if(!shell.isFile()||!shell.canExecute())throw new IOException("Android recovery shell unavailable");
         TerminalStartupLog.stage("R1","explicit recovery shell requested");
-        return startSession(shell.getAbsolutePath(),paths.home(),rows,columns,true);
+        return startSession(shell.getAbsolutePath(),new String[]{shell.getAbsolutePath(),"-i"},paths.home(),rows,columns,true);
     }
-    private TerminalSession startSession(String shell,File cwd,int rows,int columns,boolean recovery) throws IOException {
-        String[] argv={shell,"-i"};
+    public synchronized TerminalSession createDiagnosticOceanSession(int rows,int columns)throws IOException{OceanPaths p=new OceanPaths(this);OceanRuntimeValidator.validate(p).requireValid();File shell=new File(p.prefix(),"bin/bash");return startSession(shell.getAbsolutePath(),new String[]{shell.getAbsolutePath(),"--noprofile","--norc"},p.home(),rows,columns,false);}
+    private TerminalSession startSession(String shell,String[] argv,File cwd,int rows,int columns,boolean recovery) throws IOException {
         TerminalDiagnosticBundle.state("VALIDATING","STARTING","shell="+shell+" recovery="+recovery);
         TerminalStartupLog.stage("10","create PTY begin rows="+rows+" columns="+columns);
         File nativeLog=TerminalDiagnosticBundle.nativeLog(this);
@@ -47,7 +47,7 @@ public final class OceanTerminalRuntimeService extends Service {
         if(handle==0){int error=NativePty.lastErrno();TerminalStartupLog.stage("10F","PTY create failed errno="+error);throw new IOException("PTY creation failed, errno="+error);}
         int pid=NativePty.pid(handle);TerminalDiagnosticBundle.state("PTY_CREATING","FORKED","pid="+pid+" handle=0x"+Long.toHexString(handle));TerminalStartupLog.stage("12","fork success pid="+pid);
         TerminalSession session;
-        try{session=new TerminalSession(handle);}catch(Throwable error){NativePty.close(handle);NativePty.destroy(handle);throw new IOException("Cannot start PTY reader",error);}
+        try{session=new TerminalSession(this,handle);}catch(Throwable error){NativePty.close(handle);NativePty.destroy(handle);throw new IOException("Cannot start PTY reader",error);}
         TerminalDiagnosticBundle.log("startup.log","[J10] session object created id="+session.id);sessions.put(session.id,session);TerminalDiagnosticBundle.state("FORKED","EXECUTING","session="+session.id+" childPid="+pid);TerminalStartupLog.stage("13","child exec requested shell="+shell+" recovery="+recovery);return session;
     }
     public synchronized void closeSession(String id){TerminalSession session=sessions.remove(id);if(session!=null)session.close();}

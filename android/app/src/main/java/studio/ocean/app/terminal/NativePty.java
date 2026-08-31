@@ -12,6 +12,7 @@ public final class NativePty {
     public static native int pollExit(long handle);
     public static native void destroy(long handle);
     public static native int pid(long handle);
+    public static native int masterFd(long handle);
     public static native void signal(long handle, int signal);
     public static native void close(long handle);
 }

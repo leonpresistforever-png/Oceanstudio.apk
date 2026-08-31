@@ -11,7 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-typedef struct { _Atomic int master; pid_t pid; int exit_status; _Atomic int closed; } ocean_pty;
+typedef struct { _Atomic int master; pid_t pid; int exit_status; _Atomic int closed; int log_fd; } ocean_pty;
 static _Thread_local int ocean_last_errno;
 static _Atomic int fatal_log_fd=-1;
 static _Atomic int native_log_fd=-1;
@@ -98,9 +98,9 @@ JNIEXPORT jlong JNICALL Java_studio_ocean_app_terminal_NativePty_create(JNIEnv *
     if(fcntl(master,F_SETFD,FD_CLOEXEC)<0){ocean_last_errno=errno;kill(pid,SIGKILL);close(master);master=-1;goto failure;}
     ocean_pty *pty=calloc(1,sizeof(*pty));
     if(!pty){ocean_last_errno=ENOMEM;kill(pid,SIGKILL);close(master);master=-1;goto failure;}
-    pty->master=master;pty->pid=pid;pty->exit_status=-1;
+    pty->master=master;pty->pid=pid;pty->exit_status=-1;pty->log_fd=diagnostic_fd;
     atomic_store(&fatal_stage,51);CRUMB(diagnostic_fd,"[N051] session native object constructed; master owner=native-session\n[N052] session registered return-to-Java\n");
-    /* Keep the append descriptor open so a fatal signal can persist its marker. */
+    diagnostic_fd=-1; /* Native session owns the durable timeline fd. */
     release_strings(argv);release_strings(envp);(*env)->ReleaseStringUTFChars(env,executable,exe);(*env)->ReleaseStringUTFChars(env,cwd,directory);(*env)->ReleaseStringUTFChars(env,diagnostic_path,diagnostic);return (jlong)(intptr_t)pty;
 failure:
     if(master>=0)close(master);
@@ -116,7 +116,8 @@ JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_read(JNIEnv*env,
     jbyte*bytes=(*env)->GetByteArrayElements(env,target,NULL);if(!bytes)return-ENOMEM;
     int logfd=atomic_load(&native_log_fd);atomic_store(&fatal_stage,55);CRUMB(logfd,"[N055] first/read BEGIN\n");ssize_t n;do{n=read(atomic_load(&p->master),bytes,(size_t)size);}while(n<0&&errno==EINTR);CRUMB(logfd,"[N056] read END (result returned to Java)\n");
     int error=errno;(*env)->ReleaseByteArrayElements(env,target,bytes,n>0?0:JNI_ABORT);
-    if(n<0&&(error==EIO||error==EAGAIN))return 0;
+    if(n<0&&error==EIO){CRUMB(p->log_fd,"[F03] PTY_EOF_EIO_CHILD_EXIT\n");return 0;}
+    if(n<0&&error==EAGAIN)return-EAGAIN;
     return n<0?-error:(jint)n;
 }
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_write(JNIEnv*env,jclass type,jlong handle,jbyteArray source,jint length){
@@ -129,6 +130,7 @@ JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_write(JNIEnv*env
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_resize(JNIEnv*env,jclass type,jlong handle,jint rows,jint columns,jint width,jint height){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p||atomic_load(&p->closed)||rows<=0||columns<=0)return-EINVAL;struct winsize s={(unsigned short)rows,(unsigned short)columns,(unsigned short)width,(unsigned short)height};return ioctl(atomic_load(&p->master),TIOCSWINSZ,&s)<0?-errno:0;}
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_pollExit(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p)return-EINVAL;if(p->exit_status>=0)return p->exit_status;int status;pid_t result;do{result=waitpid(p->pid,&status,WNOHANG);}while(result<0&&errno==EINTR);if(result==0)return-1;if(result<0)return-errno;p->exit_status=WIFEXITED(status)?WEXITSTATUS(status):WIFSIGNALED(status)?128+WTERMSIG(status):255;return p->exit_status;}
 JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_signal(JNIEnv*env,jclass type,jlong handle,jint signal){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(p&&!atomic_load(&p->closed)&&signal>0)kill(-p->pid,signal);}
-JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_close(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;int logfd=atomic_load(&native_log_fd);ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p){CRUMB(logfd,"[FD] close ignored null handle\n");return;}if(atomic_exchange(&p->closed,1)){CRUMB(logfd,"[FD] double close ignored\n");return;}CRUMB(logfd,"[FD] master close requested\n");int fd=atomic_exchange(&p->master,-1);if(fd>=0)close(fd);CRUMB(logfd,"[FD] master close completed\n");if(p->exit_status<0)kill(-p->pid,SIGHUP);}
-JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_destroy(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p)return;if(!atomic_exchange(&p->closed,1)){int fd=atomic_exchange(&p->master,-1);if(fd>=0)close(fd);kill(-p->pid,SIGHUP);}while(waitpid(p->pid,NULL,0)<0&&errno==EINTR){}free(p);}
+JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_close(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;int logfd=atomic_load(&native_log_fd);ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p){CRUMB(logfd,"[FD] close ignored null handle\n");return;}if(atomic_exchange(&p->closed,1)){CRUMB(p->log_fd,"[FD] DOUBLE_CLOSE_ATTEMPT ignored\n");return;}CRUMB(p->log_fd,"[F05] master close requested\n");int fd=atomic_exchange(&p->master,-1);if(fd>=0)close(fd);CRUMB(p->log_fd,"[F06] master close completed\n");if(p->exit_status<0)kill(-p->pid,SIGHUP);}
+JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_destroy(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;if(!p)return;if(!atomic_exchange(&p->closed,1)){int fd=atomic_exchange(&p->master,-1);if(fd>=0)close(fd);kill(-p->pid,SIGHUP);}while(waitpid(p->pid,NULL,0)<0&&errno==EINTR){}CRUMB(p->log_fd,"[F11] native session destroyed\n");if(p->log_fd>=0)close(p->log_fd);free(p);}
 JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_pid(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;return p?(jint)p->pid:-EINVAL;}
+JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_masterFd(JNIEnv*env,jclass type,jlong handle){(void)env;(void)type;ocean_pty*p=(ocean_pty*)(intptr_t)handle;return p?atomic_load(&p->master):-EINVAL;}

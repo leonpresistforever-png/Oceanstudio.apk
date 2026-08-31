@@ -1,63 +1,21 @@
 package studio.ocean.app.terminal;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
+import android.content.Context;import java.io.ByteArrayOutputStream;import java.nio.charset.StandardCharsets;import java.util.UUID;import java.util.concurrent.CopyOnWriteArrayList;import java.util.concurrent.atomic.AtomicBoolean;import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/** A live PTY session. Native ownership ends only after the reader has stopped. */
+/** Service-owned PTY with one finalizer and native lifetime protected from concurrent I/O. */
 public final class TerminalSession {
-    public interface Listener { void onOutput(byte[] bytes, int length); void onExit(int exitCode); }
-    public final String id=UUID.randomUUID().toString(); public final long startedAt=System.currentTimeMillis();
-    private final long handle; private final Thread reader; private final CopyOnWriteArrayList<Listener> listeners=new CopyOnWriteArrayList<>();
-    private final ByteArrayOutputStream scrollback=new ByteArrayOutputStream();
-    private final AtomicBoolean disposed=new AtomicBoolean(false);
-    private volatile boolean running=true; private volatile int exitCode=-1;
+ public enum State{NEW,STARTING,RUNNING,EXITING,EXITED,CLOSING,CLOSED,FAILED}
+ public enum WriteResult{WRITTEN,SESSION_ALREADY_EXITED,NATIVE_WRITE_FAILED}
+ public interface Listener{void onOutput(byte[] bytes,int length);void onExit(int exitCode);}
+ public final String id=UUID.randomUUID().toString();public final long startedAt=System.currentTimeMillis();
+ private final Context context;private final long handle;private final Thread reader;private final CopyOnWriteArrayList<Listener> listeners=new CopyOnWriteArrayList<>();private final ByteArrayOutputStream scrollback=new ByteArrayOutputStream();private final AtomicBoolean finalized=new AtomicBoolean();private final ReentrantReadWriteLock nativeLife=new ReentrantReadWriteLock();private volatile State state=State.NEW;private volatile int exitCode=-1;
+ TerminalSession(Context context,long handle){if(handle==0)throw new IllegalArgumentException("Native PTY handle is zero");this.context=context.getApplicationContext();this.handle=handle;transition(State.STARTING,"session constructed handle=0x"+Long.toHexString(handle));reader=new Thread(this::readLoop,"ocean-pty-reader-"+id);reader.start();}
+ private void readLoop(){transition(State.RUNNING,"reader attached pid="+pid()+" masterFd="+masterFd());byte[] b=new byte[8192];try{while(true){int count;nativeLife.readLock().lock();try{if(state!=State.RUNNING)break;count=NativePty.read(handle,b);}finally{nativeLife.readLock().unlock();}if(count>0){TerminalDiagnosticBundle.log(context,"session-state.log","reader=bytes count="+count);append(b,count);for(Listener l:listeners)l.onOutput(b,count);continue;}if(count==0){TerminalDiagnosticBundle.log(context,"session-state.log","[F02/F03] reader=PTY_EOF_EIO_CHILD_EXIT");break;}if(count==-11){TerminalDiagnosticBundle.log(context,"session-state.log","reader=EAGAIN");continue;}TerminalDiagnosticBundle.log(context,"session-state.log","reader=errno "+(-count));break;}transition(State.EXITING,"reader ended; child exit observation begin");int code;do{code=NativePty.pollExit(handle);if(code==-1)try{Thread.sleep(10);}catch(InterruptedException e){Thread.currentThread().interrupt();break;}}while(code==-1);exitCode=code<0?255:code;TerminalDiagnosticBundle.log(context,"session-state.log","[F01/F08] child exit observed pid="+pid()+" status="+exitCode);}catch(Throwable e){exitCode=255;transition(State.FAILED,"reader exception="+e);TerminalStartupLog.failure("PTY reader failed",e);}finally{finalizeOnce("reader-complete");for(Listener l:listeners)l.onExit(exitCode);}}
+ private void finalizeOnce(String reason){if(!finalized.compareAndSet(false,true)){TerminalDiagnosticBundle.log(context,"session-state.log","DOUBLE_FINALIZE_ATTEMPT caller="+reason);return;}transition(State.CLOSING,"[F04/F05] reason="+reason);nativeLife.writeLock().lock();try{NativePty.close(handle);TerminalDiagnosticBundle.log(context,"fd-ownership.log","[F06] master close completed fd="+masterFd());NativePty.destroy(handle);TerminalDiagnosticBundle.log(context,"session-state.log","[F10/F11] native session destroyed");}finally{nativeLife.writeLock().unlock();}transition(State.EXITED,"[F07/F12] reader stopped exit="+exitCode);}
+ public WriteResult write(String value){nativeLife.readLock().lock();try{if(state!=State.RUNNING){TerminalDiagnosticBundle.log(context,"session-state.log","write rejected state="+state);return WriteResult.SESSION_ALREADY_EXITED;}byte[] b=value.getBytes(StandardCharsets.UTF_8);return NativePty.write(handle,b,b.length)==b.length?WriteResult.WRITTEN:WriteResult.NATIVE_WRITE_FAILED;}finally{nativeLife.readLock().unlock();}}
+ public void close(){State before=state;if(before==State.EXITED||before==State.CLOSED)return;transition(State.CLOSING,"explicit close caller="+Thread.currentThread().getName());NativePty.signal(handle,15);NativePty.close(handle);if(Thread.currentThread()!=reader)try{reader.join(3000);}catch(InterruptedException e){Thread.currentThread().interrupt();}if(reader.isAlive())TerminalDiagnosticBundle.log(context,"session-state.log","reader still alive; native memory retained");else if(!finalized.get())finalizeOnce("explicit-close");}
+ public void addListener(Listener l){listeners.add(l);byte[] s;synchronized(scrollback){s=scrollback.toByteArray();}if(s.length>0)l.onOutput(s,s.length);}public void removeListener(Listener l){listeners.remove(l);TerminalDiagnosticBundle.log(context,"session-state.log","[F09] Java listener detached session="+id);}public void interrupt(){if(state==State.RUNNING)NativePty.signal(handle,2);}public void resize(int r,int c,int w,int h){if(state==State.RUNNING)NativePty.resize(handle,r,c,w,h);}public int pid(){return finalized.get()?-1:NativePty.pid(handle);}public int masterFd(){return finalized.get()?-1:NativePty.masterFd(handle);}public boolean isRunning(){return state==State.RUNNING||state==State.STARTING;}public State state(){return state;}public int getExitCode(){return exitCode;}public LocalProcessDiagnostics.Snapshot diagnostics(String prefix){return LocalProcessDiagnostics.inspect(pid(),prefix);}
+ private void transition(State next,String detail){State old=state;state=next;TerminalDiagnosticBundle.log(context,"session-state.log",old+" -> "+next+" session="+id+" pid="+pid()+" masterFd="+masterFd()+" "+detail);}
+ private void append(byte[] b,int n){synchronized(scrollback){if(scrollback.size()+n>200000){byte[] old=scrollback.toByteArray();scrollback.reset();int keep=Math.min(old.length,150000);scrollback.write(old,old.length-keep,keep);}scrollback.write(b,0,n);}}
 
-    TerminalSession(long handle) {
-        if(handle==0)throw new IllegalArgumentException("Native PTY handle is zero");
-        this.handle=handle;
-        reader=new Thread(this::readLoop,"ocean-pty-reader-"+id);
-        TerminalDiagnosticBundle.log("startup.log","[J11] reader startup requested session="+id+" handle=0x"+Long.toHexString(handle));
-        reader.start();
-    }
-    private void readLoop(){
-        TerminalStartupLog.stage("14","parent PTY read loop started pid="+pid());TerminalDiagnosticBundle.state("EXECUTING","RUNNING","reader running session="+id+" pid="+pid());
-        byte[] buffer=new byte[8192]; boolean first=true;
-        try{
-            while(running){
-                int count=NativePty.read(handle,buffer);
-                if(count>0){
-                    if(first){first=false;TerminalStartupLog.stage("15","first PTY bytes received count="+count);}
-                    appendScrollback(buffer,count);
-                    for(Listener listener:listeners)listener.onOutput(buffer,count);
-                }else break;
-            }
-            int code=NativePty.pollExit(handle);exitCode=code<0?255:code;
-        }catch(Throwable error){
-            exitCode=255;TerminalStartupLog.failure("PTY reader failed",error);
-        }finally{
-            running=false;
-            TerminalStartupLog.stage("16","PTY reader stopped exit="+exitCode);TerminalDiagnosticBundle.state("RUNNING","EXITING","session="+id+" exit="+exitCode);
-            for(Listener listener:listeners)listener.onExit(exitCode);
-        }
-    }
-    public void addListener(Listener listener){listeners.add(listener);byte[] snapshot;synchronized(scrollback){snapshot=scrollback.toByteArray();}if(snapshot.length>0)listener.onOutput(snapshot,snapshot.length);}
-    public void removeListener(Listener listener){listeners.remove(listener);}
-    public boolean write(String value){byte[] bytes=value.getBytes(StandardCharsets.UTF_8);return running&&!disposed.get()&&NativePty.write(handle,bytes,bytes.length)==bytes.length;}
-    public void resize(int rows,int columns,int width,int height){if(running&&!disposed.get())NativePty.resize(handle,rows,columns,width,height);}
-    public void interrupt(){if(running&&!disposed.get())NativePty.signal(handle,2);}
-    public void close(){
-        if(!disposed.compareAndSet(false,true)){TerminalDiagnosticBundle.log("session-state.log","double close ignored session="+id);return;}
-        TerminalDiagnosticBundle.state(running?"RUNNING":"EXITED","CLOSING","session="+id+" caller="+Thread.currentThread().getName());
-        running=false;NativePty.signal(handle,15);NativePty.close(handle);
-        if(Thread.currentThread()!=reader)try{reader.join(3000);}catch(InterruptedException error){Thread.currentThread().interrupt();}
-        if(!reader.isAlive()){NativePty.destroy(handle);TerminalDiagnosticBundle.state("CLOSING","CLOSED","session="+id+" handle destroyed");}
-        else TerminalStartupLog.stage("16F","reader did not stop; native handle retained to prevent use-after-free");
-    }
-    public int pid(){return disposed.get()?-1:NativePty.pid(handle);}
-    public LocalProcessDiagnostics.Snapshot diagnostics(String oceanPrefix){return LocalProcessDiagnostics.inspect(pid(),oceanPrefix);}
-    public boolean isRunning(){return running&&!disposed.get();} public int getExitCode(){return exitCode;}
-    private void appendScrollback(byte[] bytes,int length){synchronized(scrollback){if(scrollback.size()+length>200000){byte[] old=scrollback.toByteArray();scrollback.reset();int keep=Math.min(old.length,150000);scrollback.write(old,old.length-keep,keep);}scrollback.write(bytes,0,length);}}
 }
