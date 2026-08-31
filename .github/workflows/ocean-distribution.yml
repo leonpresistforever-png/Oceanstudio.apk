@@ -139,7 +139,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.DISTRIBUTION_ARTIFACT }}
-          path: ocean-packages/build/out
+          # Upload only immutable distribution products. The extraction staging
+          # tree contains valid Unix filenames (including ':') that GitHub's
+          # cross-platform artifact service intentionally rejects.
+          path: |
+            ocean-packages/build/out/debs
+            ocean-packages/build/out/repository
+            ocean-packages/build/out/bootstrap/*.tar.zst
+            ocean-packages/build/out/bootstrap/*.manifest.json
+            ocean-packages/build/out/ocean-repository.gpg
           retention-days: 30
 
   build-apk:
