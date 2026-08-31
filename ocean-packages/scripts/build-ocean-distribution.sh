@@ -88,10 +88,22 @@ for package in "${ROOT_PACKAGES[@]}"; do
     exit 1
   }
 done
-# The cache lives inside the checkout mounted by run-docker while compilation
-# is active; the EXIT trap synchronizes it back to the Actions cache path even
-# when a later source or package fails.
-(cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${ROOT_PACKAGES[@]}")
+# A completed package-output cache is already the expensive, NDK-compiled
+# distribution input. Do not ask the upstream builder to rebuild it merely to
+# regenerate repository metadata or the bootstrap archive after an APK-stage
+# failure. Rebuild only when one of the root package outputs is absent.
+cached_roots=true
+for package in "${ROOT_PACKAGES[@]}"; do
+  find "$UPSTREAM/output" -type f -name "${package}_*_aarch64.deb" -size +0c -print -quit \
+    | grep -q . || cached_roots=false
+done
+if "$cached_roots"; then
+  echo "Reusing completed Android/aarch64 package outputs; source compilation skipped."
+else
+  # The cache lives inside the checkout mounted by run-docker while compilation
+  # is active; the EXIT trap synchronizes it after success or failure.
+  (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${ROOT_PACKAGES[@]}")
+fi
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
 # whose ELF files exist but whose certificates/configuration are incomplete.
