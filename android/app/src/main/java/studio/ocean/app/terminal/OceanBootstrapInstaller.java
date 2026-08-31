@@ -305,16 +305,16 @@ public final class OceanBootstrapInstaller {
             if (children == null) throw new IOException("Cannot list staging directory " + file);
             for (File child : children) deleteTree(child);
             try {
-                Os.rmdir(file.getAbsolutePath());
+                Os.remove(file.getAbsolutePath());
             } catch (ErrnoException error) {
-                throw filesystemError("rmdir", file, error);
+                throw filesystemError("remove directory", file, error);
             }
         } else {
             // unlink removes a symlink itself and never follows its target.
             try {
-                Os.unlink(file.getAbsolutePath());
+                Os.remove(file.getAbsolutePath());
             } catch (ErrnoException error) {
-                throw filesystemError("unlink", file, error);
+                throw filesystemError("remove entry", file, error);
             }
         }
     }
