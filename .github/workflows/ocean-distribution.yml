@@ -1,59 +1,102 @@
 name: Build Ocean distribution
 on:
   workflow_dispatch:
+    inputs:
+      distribution_run_id:
+        description: 'Optional successful run ID whose verified distribution artifact should be reused'
+        required: false
+        type: string
   push:
-    paths: ['ocean-packages/**', '.github/workflows/ocean-distribution.yml']
+    paths: ['ocean-packages/**', 'android/**', '.github/workflows/ocean-distribution.yml']
 permissions:
+  actions: read
   contents: write
   pages: write
   id-token: write
 concurrency: {group: ocean-distribution, cancel-in-progress: false}
+env:
+  DISTRIBUTION_ARTIFACT: ocean-aarch64-verified-distribution
+  DISTRIBUTION_CACHE_KEY: ocean-distribution-aarch64-api28-ndk27-a3c7f613-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/build-ocean-distribution.sh', 'ocean-packages/scripts/verify-bootstrap.py') }}
 jobs:
-  build:
+  build-distribution:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+      - name: Reuse verified distribution from an earlier run
+        id: prior
+        if: inputs.distribution_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.distribution_run_id }}
+        run: |
+          mkdir -p ocean-packages/build/out
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "$DISTRIBUTION_ARTIFACT" --dir ocean-packages/build/out
+      - name: Restore verified distribution cache
+        id: distribution-cache
+        if: steps.prior.outcome == 'skipped'
+        uses: actions/cache/restore@v4
+        with:
+          path: ocean-packages/build/out
+          key: ${{ env.DISTRIBUTION_CACHE_KEY }}
+      - name: Validate reusable distribution
+        id: reusable
+        run: |
+          ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
+          MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
+          if test -s "$ARCHIVE" && test -s "$MANIFEST" && \
+             test -s ocean-packages/build/out/repository/dists/stable/InRelease && \
+             python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Reusing an already verified Ocean distribution; package compilation is skipped.'
+          else
+            rm -rf ocean-packages/build/out
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Verify resilient source downloader
+        if: steps.reusable.outputs.ready != 'true'
         run: ./ocean-packages/scripts/test-ocean-download.sh
       - name: Restore checksum-addressed source downloads
+        if: steps.reusable.outputs.ready != 'true'
         uses: actions/cache@v4
         with:
           path: ocean-packages/.cache/sources
           key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
           restore-keys: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-
       - name: Restore completed Android package artifacts
+        if: steps.reusable.outputs.ready != 'true'
         uses: actions/cache@v4
         with:
           path: ocean-packages/build/package-builder/output
-          # The pinned upstream commit identifies all upstream recipes/patches;
-          # the hash covers Ocean recipes and dependency-relevant configuration.
           key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-${{ github.run_id }}
           restore-keys: |
             ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-
             ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-
-      - name: Reclaim runner disk for the Android package toolchain
+      - name: Reclaim runner disk for package compilation
+        if: steps.reusable.outputs.ready != 'true'
         run: |
-          sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android || true
+          sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
           docker system prune --all --force --volumes || true
           df -h /
-      - run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
+      - name: Install distribution build tools
+        if: steps.reusable.outputs.ready != 'true'
+        run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
       - name: Import repository signing key
+        if: steps.reusable.outputs.ready != 'true'
         env: {OCEAN_REPOSITORY_SIGNING_KEY: '${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}'}
         run: |
-          test -n "$OCEAN_REPOSITORY_SIGNING_KEY" || { echo "Missing OCEAN_REPOSITORY_SIGNING_KEY" >&2; exit 1; }
+          test -n "$OCEAN_REPOSITORY_SIGNING_KEY" || { echo 'Missing OCEAN_REPOSITORY_SIGNING_KEY' >&2; exit 1; }
           printf '%s' "$OCEAN_REPOSITORY_SIGNING_KEY" | gpg --batch --import
           ACTUAL=$(gpg --with-colons --list-secret-keys | awk -F: '$1=="fpr"{print $10;exit}')
           EXPECTED=$(tr -d '[:space:]' < ocean-packages/keys/ocean-development-repository.fingerprint)
-          test "$ACTUAL" = "$EXPECTED" || { echo "Signing key does not match pinned Ocean development key" >&2; exit 1; }
+          test "$ACTUAL" = "$EXPECTED" || { echo 'Signing key does not match pinned Ocean development key' >&2; exit 1; }
           echo "OCEAN_REPO_SIGNING_KEY=$ACTUAL" >> "$GITHUB_ENV"
-      - name: Build Android aarch64 packages, repository, and bootstrap
-        id: distribution-build
+      - name: Build packages, repository, and bootstrap
+        id: compile
+        if: steps.reusable.outputs.ready != 'true'
         continue-on-error: true
         run: |
-          # The package builder is intentionally verbose enough to exhaust the
-          # Actions worker diagnostic disk. Keep the full log out of the runner
-          # event stream and print only its tail when the build fails.
           if ! ./ocean-packages/scripts/build-ocean-distribution.sh > /tmp/ocean-package-build.log 2>&1; then
             tail -n 500 /tmp/ocean-package-build.log
             df -h /
@@ -62,54 +105,87 @@ jobs:
           tail -n 100 /tmp/ocean-package-build.log
           rm -f /tmp/ocean-package-build.log
       - name: Save verified sources after interrupted builds
-        if: always()
+        if: always() && steps.reusable.outputs.ready != 'true'
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/.cache/sources
           key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
       - name: Save completed packages after interrupted builds
-        if: always()
+        if: always() && steps.reusable.outputs.ready != 'true'
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/build/package-builder/output
           key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-${{ github.run_id }}
       - name: Enforce successful distribution build
-        if: steps.distribution-build.outcome == 'failure'
+        if: steps.compile.outcome == 'failure'
         run: exit 1
-      - name: Verify distribution and inject bootstrap
+      - name: Verify final distribution
         run: |
-          test -s ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
-          test -s ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
+          ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
+          MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
           test -s ocean-packages/build/out/repository/dists/stable/InRelease
           for package in bash apt dpkg ocean-pkg ocean-hello; do
             find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || exit 1
           done
-          mkdir -p android/app/src/main/assets/ocean/bootstrap/aarch64
-          cp ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst android/app/src/main/assets/ocean/bootstrap/aarch64/
-          cp ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json android/app/src/main/assets/ocean/bootstrap/aarch64/
+          python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"
           find ocean-packages/build/out/debs -name '*.deb' -printf '%f %s bytes\n' | sort
-          sha256sum ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
+          sha256sum "$ARCHIVE"
+      - name: Save reusable verified distribution
+        if: steps.distribution-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ocean-packages/build/out
+          key: ${{ env.DISTRIBUTION_CACHE_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.DISTRIBUTION_ARTIFACT }}
+          path: ocean-packages/build/out
+          retention-days: 30
+
+  build-apk:
+    needs: build-distribution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bootstrap verification tools
+        run: sudo apt-get update && sudo apt-get install -y zstd jq
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.DISTRIBUTION_ARTIFACT }}
+          path: ocean-packages/build/out
+      - name: Verify distribution and inject bootstrap
+        run: |
+          ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
           MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
+          python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"
+          mkdir -p android/app/src/main/assets/ocean/bootstrap/aarch64
+          cp "$ARCHIVE" android/app/src/main/assets/ocean/bootstrap/aarch64/
+          cp "$MANIFEST" android/app/src/main/assets/ocean/bootstrap/aarch64/
           echo "OCEAN_BUILD_COMMIT=$(jq -r .buildCommit "$MANIFEST")" >> "$GITHUB_ENV"
           echo "OCEAN_BOOTSTRAP_VERSION=$(jq -r .bootstrapVersion "$MANIFEST")" >> "$GITHUB_ENV"
           echo "OCEAN_BOOTSTRAP_SHA256=$(jq -r .archiveSha256 "$MANIFEST")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '17', cache: gradle}
+      - name: Prepare writable Android SDK directory
+        run: |
+          echo "ANDROID_HOME=$RUNNER_TEMP/android-sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$RUNNER_TEMP/android-sdk" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/android-sdk"
       - uses: android-actions/setup-android@v3
       - name: Install Android toolchain
-        run: sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
+        run: sdkmanager --install 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - name: Build bootstrap-bearing APK
         working-directory: android
-        env:
-          OCEAN_DEV_AUTH_BYPASS: 'true'
+        env: {OCEAN_DEV_AUTH_BYPASS: 'true'}
         run: ./gradlew clean test assembleDebug --no-daemon --stacktrace
       - name: Verify APK bootstrap assets
         id: apk
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
-          test -s "$APK"
           ARCHIVE=assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst
           MANIFEST=assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json
+          test -s "$APK"
           unzip -l "$APK" | grep -q "$ARCHIVE"
           unzip -l "$APK" | grep -q "$MANIFEST"
           unzip -p "$APK" "$ARCHIVE" > /tmp/ocean-aarch64.tar.zst
@@ -119,17 +195,14 @@ jobs:
           FINAL="android/app/build/outputs/apk/debug/OceanStudio-debug-${SHORT}.apk"
           mv "$APK" "$FINAL"
           echo "path=$FINAL" >> "$GITHUB_OUTPUT"
-          echo "name=OceanStudio-debug-${SHORT}.apk" >> "$GITHUB_OUTPUT"
           echo "FINAL APK VERIFIED TO CONTAIN BOOTSTRAP: PASS"
           echo "bootstrap asset path: $ARCHIVE"
           echo "bootstrap asset bytes: $(stat -c%s /tmp/ocean-aarch64.tar.zst)"
           echo "bootstrap SHA-256: $OCEAN_BOOTSTRAP_SHA256"
       - uses: actions/upload-artifact@v4
         with:
-          name: ocean-aarch64-distribution-${{ github.sha }}
-          path: |
-            ocean-packages/build/out/
-            ${{ steps.apk.outputs.path }}
+          name: oceanstudio-bootstrap-apk-${{ github.sha }}
+          path: ${{ steps.apk.outputs.path }}
       - name: Publish verified debug APK
         env: {GH_TOKEN: '${{ github.token }}'}
         run: |
@@ -141,8 +214,9 @@ jobs:
           cp -a ocean-packages/build/out/repository/. ocean-packages/build/pages/apt/
       - uses: actions/upload-pages-artifact@v3
         with: {path: ocean-packages/build/pages}
+
   deploy:
-    needs: build
+    needs: build-apk
     environment: {name: github-pages, url: '${{ steps.deployment.outputs.page_url }}'}
     runs-on: ubuntu-latest
     steps:
