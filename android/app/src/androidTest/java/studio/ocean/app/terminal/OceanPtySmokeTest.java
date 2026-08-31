@@ -7,6 +7,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import studio.ocean.app.OceanPaths;
@@ -33,18 +36,16 @@ public final class OceanPtySmokeTest {
         String[] environment=OceanEnvironment.create(context,executable);
         long handle=NativePty.create(executable,argv,environment,cwd.getAbsolutePath(),24,80,log.getAbsolutePath());
         assertTrue("PTY handle",handle!=0);
-        try{
-            byte[] command="echo OCEAN_PTY_OK\r".getBytes(StandardCharsets.UTF_8);
-            assertTrue("write echo",NativePty.write(handle,command,command.length)==command.length);
-            byte[] buffer=new byte[4096];StringBuilder output=new StringBuilder();long deadline=System.currentTimeMillis()+10000;
-            while(System.currentTimeMillis()<deadline&&!output.toString().contains("OCEAN_PTY_OK")){
-                int count=NativePty.read(handle,buffer);
-                if(count>0)output.append(new String(buffer,0,count,StandardCharsets.UTF_8));else if(count<0)break;
-            }
-            assertTrue("actual PTY output: "+output,output.toString().contains("OCEAN_PTY_OK"));
-            byte[] exit="exit\r".getBytes(StandardCharsets.UTF_8);
-            assertTrue("write exit once",NativePty.write(handle,exit,exit.length)==exit.length);
-            assertTrue("real child exit",NativePty.waitExit(handle)==0);
-        }finally{NativePty.close(handle);NativePty.destroy(handle);}
+        CountDownLatch outputSeen=new CountDownLatch(1),exited=new CountDownLatch(1);StringBuilder output=new StringBuilder();AtomicInteger status=new AtomicInteger(-1);
+        TerminalSession session=new TerminalSession(context,handle,s->{ });
+        session.addListener(new TerminalSession.Listener(){public void onOutput(byte[] bytes,int length){synchronized(output){output.append(new String(bytes,0,length,StandardCharsets.UTF_8));if(output.indexOf("OCEAN_PTY_OK")>=0)outputSeen.countDown();}}public void onExit(int code){status.set(code);exited.countDown();}});
+        session.startWorkers();
+        assertTrue("write echo",session.write("echo OCEAN_PTY_OK\r")==TerminalSession.WriteResult.WRITTEN);
+        assertTrue("actual PTY output",outputSeen.await(10,TimeUnit.SECONDS));
+        assertTrue("write exit once",session.write("exit\r")==TerminalSession.WriteResult.WRITTEN);
+        assertTrue("session exit callback",exited.await(10,TimeUnit.SECONDS));
+        assertTrue("real child exit="+status.get(),status.get()==0);
+        assertTrue("terminal state",session.state()==TerminalSession.State.EXITED);
+        assertTrue("late write rejected",session.write("echo too-late\r")==TerminalSession.WriteResult.SESSION_ALREADY_EXITED);
     }
 }

@@ -20,6 +20,7 @@ public final class OceanRuntimeValidator {
     private OceanRuntimeValidator() {}
 
     public static Result validate(OceanPaths paths) {
+        OceanBootstrapInstaller.requireWorkerThread("runtime validation");
         List<String> failures = new ArrayList<>();
         requireDirectory(paths.home(), failures);
         requireDirectory(paths.prefix(), failures);
