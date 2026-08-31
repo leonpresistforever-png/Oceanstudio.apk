@@ -179,7 +179,7 @@ jobs:
       - name: Build bootstrap-bearing APK
         working-directory: android
         env: {OCEAN_DEV_AUTH_BYPASS: 'true'}
-        run: ./gradlew clean test assembleDebug --no-daemon --stacktrace
+        run: ./gradlew clean test assembleDebug assembleDebugAndroidTest --no-daemon --stacktrace
       - name: Verify APK bootstrap assets
         id: apk
         run: |
