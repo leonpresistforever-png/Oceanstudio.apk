@@ -43,19 +43,24 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         findViewById(R.id.terminal_recovery).setOnClickListener(v->startRecoverySession());
         input.setOnEditorActionListener((v,action,event)->{boolean ime=action==EditorInfo.IME_ACTION_SEND;boolean enter=event!=null&&event.getKeyCode()==KeyEvent.KEYCODE_ENTER&&event.getAction()==KeyEvent.ACTION_DOWN;if(!ime&&!enter)return false;String command=input.getText().toString();if(command.isEmpty())return true;input.setText("");write(command+"\r");return true;});
         TerminalStartupLog.stage("02","bind runtime service");TerminalDiagnosticBundle.log("startup.log","[J02] service bind requested");
+        startService(new Intent(this,OceanTerminalRuntimeService.class));
         if(!bindService(new Intent(this,OceanTerminalRuntimeService.class),connection,Context.BIND_AUTO_CREATE))showFailure("Runtime service binding failed",null);
     }
     private void startOceanSession(){
         if(service==null)return;failureActions.setVisibility(View.GONE);status.setText(R.string.terminal_connecting);TerminalDiagnosticBundle.log("startup.log","[J07] createSession requested");
-        try{TerminalSession candidate=service.firstRunning();attach(candidate==null?service.createSession(24,80):candidate,true);}
-        catch(Throwable error){showFailure("Ocean runtime failed validation: "+safeMessage(error),error);}
+        TerminalSession candidate=service.firstRunning();if(candidate!=null){attach(candidate,true);return;}
+        service.requestTerminalSession(24,80,new OceanTerminalRuntimeService.SessionCallback(){
+            @Override public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long completed,long total){if(isFinishing()||isDestroyed())return;String progress=total>0?"\n"+completed+" / "+total:"";status.setText(detail+progress+buildIdentity(false));}
+            @Override public void onReady(TerminalSession ready){if(isFinishing()||isDestroyed())return;attach(ready,true);}
+            @Override public void onFailure(Throwable error){if(isFinishing()||isDestroyed())return;showFailure("Ocean runtime setup failed: "+safeMessage(error),error);}
+        });
     }
     private void startRecoverySession(){
         if(service==null)return;failureActions.setVisibility(View.GONE);
         try{attach(service.createRecoverySession(24,80),false);}
         catch(Throwable error){showFailure("Recovery shell failed: "+safeMessage(error),error);}
     }
-    private void startDiagnosticOceanSession(){if(service==null)return;failureActions.setVisibility(View.GONE);try{attach(service.createDiagnosticOceanSession(24,80),true);if("C".equals(diagnosticMode)){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","waiting for RUNNING");writeWhenRunning("echo OCEAN_PTY_OK\r",0);}}catch(Throwable error){showFailure("Ocean Bash diagnostic failed: "+safeMessage(error),error);}}
+    private void startDiagnosticOceanSession(){if(service==null)return;failureActions.setVisibility(View.GONE);service.requestDiagnosticOceanSession(24,80,new OceanTerminalRuntimeService.SessionCallback(){public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long done,long total){if(!isFinishing()&&!isDestroyed())status.setText(detail);}public void onReady(TerminalSession ready){if(isFinishing()||isDestroyed())return;attach(ready,true);if("C".equals(diagnosticMode)){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","waiting for RUNNING");writeWhenRunning("echo OCEAN_PTY_OK\r",0);}}public void onFailure(Throwable error){if(!isFinishing()&&!isDestroyed())showFailure("Ocean Bash diagnostic failed: "+safeMessage(error)+". Use Install/Repair Ocean Runtime from the production terminal.",error);}});}
     private void writeWhenRunning(String value,int attempt){if(session==null||attempt>50)return;if(session.state()==TerminalSession.State.RUNNING){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","script write echo exactly once");write(value);}else input.postDelayed(()->writeWhenRunning(value,attempt+1),50);}
     private void attach(TerminalSession candidate,boolean installed){
         if(session!=null)session.removeListener(this);session=candidate;session.addListener(this);input.setEnabled(session.isRunning());

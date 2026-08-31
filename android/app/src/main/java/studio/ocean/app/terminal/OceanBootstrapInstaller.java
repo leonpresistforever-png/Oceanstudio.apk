@@ -5,6 +5,7 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
 import android.system.StructStat;
+import android.os.Looper;
 import com.github.luben.zstd.ZstdInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,9 +31,13 @@ import studio.ocean.app.OceanPaths;
 
 /** Verifies and transactionally installs the CI-generated Ocean bootstrap. */
 public final class OceanBootstrapInstaller {
+    public enum Stage { CHECKING, INSTALLING, VERIFYING_STAGING, ACTIVATING, VERIFYING_ACTIVE }
+    public interface ProgressListener { void onProgress(Stage stage, String detail, long completed, long total); }
+    private static final ProgressListener NO_PROGRESS = (stage, detail, completed, total) -> {};
     private static final String ASSET_ROOT = "ocean/bootstrap/aarch64/";
     static final String STAGING_PREFIX = ".ocean-bootstrap-staging-";
     private static final String ROLLBACK_PREFIX = ".ocean-prefix-rollback-";
+    private static final String TRANSACTION_FILE = ".ocean-bootstrap-transaction.json";
     private static final String BUILD_PREFIX = "/data/data/studio.ocean.app/files/usr";
 
     private final Context context;
@@ -43,9 +48,12 @@ public final class OceanBootstrapInstaller {
         this.paths = new OceanPaths(context);
     }
 
-    public synchronized void install() throws IOException {
+    public void install() throws IOException { install(NO_PROGRESS); }
+
+    public void install(ProgressListener progress) throws IOException {
+        requireWorkerThread("install");
         try {
-            installVerified();
+            installVerified(progress == null ? NO_PROGRESS : progress);
         } catch (IOException error) {
             throw error;
         } catch (Exception error) {
@@ -53,7 +61,8 @@ public final class OceanBootstrapInstaller {
         }
     }
 
-    private void installVerified() throws Exception {
+    private void installVerified(ProgressListener progress) throws Exception {
+        requireWorkerThread("installVerified");
         if (OceanRuntimeState.isInstalled(context)) return;
         if (!"arm64-v8a".equals(OceanEnvironment.architecture())) {
             throw new IOException("Ocean runtime supports arm64-v8a only");
@@ -80,19 +89,30 @@ public final class OceanBootstrapInstaller {
         boolean oldPrefixMoved = false;
         boolean newPrefixActivated = false;
         try {
+            // Recovery is deterministic and non-blocking to callers because install() is worker-only.
+            // Partial staging is never activated; unique stale trees are removed before a fresh attempt.
+            cleanupStaleTransactions(staging, rollback);
+            writeTransaction("PREPARING", staging, rollback);
+            progress.onProgress(Stage.CHECKING, "Verifying bundled runtime", 0, 0);
             copyAndVerify(archive, manifest.getLong("archiveSize"), manifest.getString("archiveSha256"));
             if (!staging.mkdir()) throw new IOException("Cannot create bootstrap staging directory " + staging);
+            writeTransaction("EXTRACTING", staging, rollback);
             Os.chmod(staging.getAbsolutePath(), 0700);
             TerminalStartupLog.stage("06", "staging directory created path=" + staging);
             TerminalStartupLog.stage("07", "bootstrap extraction begin");
-            extract(archive, staging);
+            progress.onProgress(Stage.INSTALLING, "Extracting Ocean runtime", 0, manifest.optLong("entryCount", 0));
+            extract(archive, staging, progress, manifest.optLong("entryCount", 0));
             TerminalStartupLog.stage("08", "bootstrap extraction complete");
             File candidate = new File(staging, "usr");
             TerminalStartupLog.stage("09", "staged runtime validation begin");
+            progress.onProgress(Stage.VERIFYING_STAGING, "Verifying extracted runtime", 0, 0);
             validate(candidate);
+            writeTransaction("STAGED_VALID", staging, rollback);
             TerminalStartupLog.stage("10", "staged runtime valid");
 
             TerminalStartupLog.stage("11", "activation begin");
+            writeTransaction("ACTIVATING", staging, rollback);
+            progress.onProgress(Stage.ACTIVATING, "Activating Ocean runtime", 0, 0);
             if (paths.prefix().exists()) {
                 if (!paths.prefix().renameTo(rollback)) {
                     throw new IOException("Cannot preserve previous prefix at " + rollback);
@@ -105,9 +125,11 @@ public final class OceanBootstrapInstaller {
                 throw new IOException("Cannot activate Ocean prefix from " + candidate);
             }
             newPrefixActivated = true;
+            progress.onProgress(Stage.VERIFYING_ACTIVE, "Verifying active runtime", 0, 0);
             validate(paths.prefix());
             TerminalStartupLog.stage("12", "activation complete path=" + paths.prefix());
             writeMarker(manifest);
+            deleteTransactionMarker();
             TerminalStartupLog.stage("13", "bootstrap marker written");
 
             // The marker commits the transaction. Cleanup after this point is deliberately nonfatal.
@@ -124,6 +146,7 @@ public final class OceanBootstrapInstaller {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
+            try { writeTransaction("FAILED", staging, rollback); } catch (Exception metadataFailure) { failure.addSuppressed(metadataFailure); }
             throw failure;
         } finally {
             if (!archive.delete() && archive.exists()) {
@@ -132,6 +155,26 @@ public final class OceanBootstrapInstaller {
             cleanupWarning(staging);
             if (!oldPrefixMoved) cleanupWarning(rollback);
         }
+    }
+
+    private void writeTransaction(String phase, File staging, File rollback) throws IOException {
+        JSONObject value = new JSONObject();
+        try {
+            value.put("phase", phase);
+            value.put("staging", staging.getName());
+            value.put("rollback", rollback.getName());
+            value.put("updatedAt", System.currentTimeMillis());
+        } catch (Exception error) { throw new IOException("Cannot encode bootstrap transaction", error); }
+        File file = new File(paths.root(), TRANSACTION_FILE);
+        try (FileOutputStream output = new FileOutputStream(file, false)) {
+            output.write((value.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+            output.getFD().sync();
+        }
+    }
+
+    private void deleteTransactionMarker() {
+        File file = new File(paths.root(), TRANSACTION_FILE);
+        if (file.exists() && !file.delete()) TerminalStartupLog.stage("WARN", "cannot remove completed transaction marker");
     }
 
     private File ownedTransactionDirectory(String prefix) throws IOException {
@@ -202,6 +245,7 @@ public final class OceanBootstrapInstaller {
     }
 
     private void copyAndVerify(File output, long expectedSize, String expectedHash) throws Exception {
+        requireWorkerThread("copyAndVerify");
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         long size = 0;
         byte[] buffer = new byte[65536];
@@ -220,14 +264,16 @@ public final class OceanBootstrapInstaller {
         }
     }
 
-    private void extract(File archive, File staging) throws IOException {
+    private void extract(File archive, File staging, ProgressListener progress, long totalEntries) throws IOException {
+        requireWorkerThread("extract");
         List<DirectoryMode> directoryModes = new ArrayList<>();
+        long entries = 0, bytes = 0, lastUpdate = 0;
         try (TarArchiveInputStream tar = new TarArchiveInputStream(
                 new ZstdInputStream(new BufferedInputStream(new FileInputStream(archive))))) {
             for (TarArchiveEntry entry; (entry = tar.getNextTarEntry()) != null;) {
+                entries++;
                 Path logical = normalizeArchivePath(entry.getName(), "entry");
                 File target = new File(staging, logical.toString());
-                TerminalStartupLog.stage("07E", describeEntry(entry, logical));
                 ensureRealParents(staging, logical.getParent());
                 if (entry.isDirectory()) {
                     createOrVerifyDirectory(target, entry.getName());
@@ -271,6 +317,7 @@ public final class OceanBootstrapInstaller {
                         if (count < 0) throw new IOException("Truncated archive");
                         out.write(buffer, 0, count);
                         remaining -= count;
+                        bytes += count;
                     }
                     out.getFD().sync();
                 }
@@ -279,8 +326,15 @@ public final class OceanBootstrapInstaller {
                 } catch (Exception error) {
                     throw new IOException("Cannot set archive mode", error);
                 }
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (now - lastUpdate >= 200) {
+                    progress.onProgress(Stage.INSTALLING, "Extracting Ocean runtime", entries, totalEntries);
+                    lastUpdate = now;
+                }
             }
         }
+        TerminalStartupLog.stage("07P", "extraction entries=" + entries + " bytes=" + bytes);
+        progress.onProgress(Stage.INSTALLING, "Extracted Ocean runtime", entries, totalEntries > 0 ? totalEntries : entries);
         // Apply archived directory modes only after all children exist. Applying a read-only
         // mode during extraction could make legitimate later entries impossible to create.
         for (int index = directoryModes.size() - 1; index >= 0; index--) {
@@ -439,6 +493,7 @@ public final class OceanBootstrapInstaller {
 
     /** Deletes only an Ocean-owned transaction tree; lstat prevents traversal through symlinks. */
     static void deleteTree(File file) throws IOException {
+        requireWorkerThread("deleteTree");
         if (file == null) return;
         final StructStat stat;
         try {
@@ -473,5 +528,11 @@ public final class OceanBootstrapInstaller {
 
     private static IOException filesystemError(String operation, File file, ErrnoException error) {
         return new IOException(operation + " failed path=" + file + " errno=" + error.errno, error);
+    }
+
+    static void requireWorkerThread(String operation) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            throw new IllegalStateException(operation + " must not run on Android main thread");
+        }
     }
 }
