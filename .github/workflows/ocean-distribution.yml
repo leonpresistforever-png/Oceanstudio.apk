@@ -192,6 +192,17 @@ jobs:
           unzip -p "$APK" "$ARCHIVE" > /tmp/ocean-aarch64.tar.zst
           test "$(stat -c%s /tmp/ocean-aarch64.tar.zst)" = "$(jq -r .archiveSize ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json)"
           test "$(sha256sum /tmp/ocean-aarch64.tar.zst | cut -d' ' -f1)" = "$OCEAN_BOOTSTRAP_SHA256"
+          ZSTD_JNI=lib/arm64-v8a/libzstd-jni-1.5.6-9.so
+          OCEAN_PTY=lib/arm64-v8a/liboceanpty.so
+          unzip -l "$APK" | grep -q "$ZSTD_JNI"
+          unzip -l "$APK" | grep -q "$OCEAN_PTY"
+          if unzip -l "$APK" | grep -q 'linux/aarch64/libzstd-jni'; then
+            echo 'Desktop Linux zstd classifier was packaged instead of Android JNI' >&2
+            exit 1
+          fi
+          unzip -p "$APK" "$ZSTD_JNI" > /tmp/libzstd-jni.so
+          readelf -h /tmp/libzstd-jni.so | grep -q 'Machine:.*AArch64'
+          readelf -h /tmp/libzstd-jni.so | grep -q 'Type:.*DYN'
           SHORT=${GITHUB_SHA::7}
           FINAL="android/app/build/outputs/apk/debug/OceanStudio-debug-${SHORT}.apk"
           mv "$APK" "$FINAL"
@@ -200,6 +211,7 @@ jobs:
           echo "bootstrap asset path: $ARCHIVE"
           echo "bootstrap asset bytes: $(stat -c%s /tmp/ocean-aarch64.tar.zst)"
           echo "bootstrap SHA-256: $OCEAN_BOOTSTRAP_SHA256"
+          echo "Android zstd JNI: $ZSTD_JNI (AArch64 DYN)"
       - name: Publish verified debug APK
         env: {GH_TOKEN: '${{ github.token }}'}
         run: |
