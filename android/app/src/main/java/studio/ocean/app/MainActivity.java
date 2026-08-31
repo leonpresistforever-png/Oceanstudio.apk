@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        studio.ocean.app.terminal.PreviousProcessExit.capture(this);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) { @Override public void handleOnBackPressed() { if (drawerOpen) closeDrawer(); else finish(); }});
         showLoading(() -> {
             if (getSharedPreferences(PREFS,MODE_PRIVATE).contains(TOKEN)) { authState=AuthState.CONFIGURED_LOGGED_IN; showMain(); }

@@ -38,7 +38,8 @@ public final class OceanTerminalRuntimeService extends Service {
     private TerminalSession startSession(String shell,File cwd,int rows,int columns,boolean recovery) throws IOException {
         String[] argv={shell,"-i"};
         TerminalStartupLog.stage("10","create PTY begin rows="+rows+" columns="+columns);
-        long handle=NativePty.create(shell,argv,OceanEnvironment.create(this,shell),cwd.getAbsolutePath(),rows,columns);
+        File nativeLog=new File(new File(getFilesDir(),"logs"),"terminal-native.log");
+        long handle=NativePty.create(shell,argv,OceanEnvironment.create(this,shell),cwd.getAbsolutePath(),rows,columns,nativeLog.getAbsolutePath());
         if(handle==0){int error=NativePty.lastErrno();TerminalStartupLog.stage("10F","PTY create failed errno="+error);throw new IOException("PTY creation failed, errno="+error);}
         int pid=NativePty.pid(handle);TerminalStartupLog.stage("12","fork success pid="+pid);
         TerminalSession session;
