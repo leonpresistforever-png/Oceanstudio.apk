@@ -23,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 
 /** Native auth and chat-first workspace. No WebView or browser bridge is involved. */
 public class MainActivity extends AppCompatActivity {
@@ -40,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         studio.ocean.app.terminal.PreviousProcessExit.capture(this);
+        if(studio.ocean.app.terminal.TerminalDiagnosticBundle.hasStartupCrash(this)) new AlertDialog.Builder(this).setTitle("Ocean Terminal crashed during PTY startup").setMessage("Complete evidence from the previous process was preserved.").setPositiveButton("Open full diagnostic",(d,w)->startActivity(new Intent(this,studio.ocean.app.terminal.OceanTerminalDiagnosticsActivity.class))).setNegativeButton("Later",null).show();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) { @Override public void handleOnBackPressed() { if (drawerOpen) closeDrawer(); else finish(); }});
         showLoading(() -> {
             if (getSharedPreferences(PREFS,MODE_PRIVATE).contains(TOKEN)) { authState=AuthState.CONFIGURED_LOGGED_IN; showMain(); }

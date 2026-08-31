@@ -19,6 +19,7 @@ public final class TerminalStartupLog {
     private TerminalStartupLog() {}
 
     public static void initialize(Context context) {
+        TerminalDiagnosticBundle.initialize(context);
         synchronized (LOCK) {
             File directory = new File(context.getFilesDir(), "logs");
             if (!directory.isDirectory()) directory.mkdirs();
@@ -41,6 +42,7 @@ public final class TerminalStartupLog {
     public static void stage(String number, String message) {
         lastStage = number + " " + message;
         append("[" + number + "] " + message + "\n");
+        TerminalDiagnosticBundle.log("startup.log","[J"+number+"] "+message);
     }
 
     public static void failure(String message, Throwable error) {
@@ -52,6 +54,7 @@ public final class TerminalStartupLog {
     public static Thread.UncaughtExceptionHandler installCrashCapture() {
         Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         installedHandler = (thread, error) -> {
+            TerminalDiagnosticBundle.javaCrash(thread,error);
             failure("uncaught thread=" + thread.getName() + " class=" + error.getClass().getName()
                 + " message=" + error.getMessage(), error);
             if (previous != null) previous.uncaughtException(thread, error);

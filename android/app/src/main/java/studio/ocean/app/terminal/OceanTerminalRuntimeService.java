@@ -14,11 +14,12 @@ import studio.ocean.app.OceanPaths;
 public final class OceanTerminalRuntimeService extends Service {
     public final class LocalBinder extends Binder { public OceanTerminalRuntimeService service(){return OceanTerminalRuntimeService.this;} }
     private final LocalBinder binder=new LocalBinder(); private final Map<String,TerminalSession> sessions=new LinkedHashMap<>();
-    @Override public void onCreate(){super.onCreate();TerminalStartupLog.stage("02","OceanTerminalRuntimeService.onCreate");}
+    @Override public void onCreate(){super.onCreate();TerminalDiagnosticBundle.initialize(this);TerminalDiagnosticBundle.log("startup.log","[J03] RuntimeService.onCreate");TerminalDiagnosticBundle.state("NEW","VALIDATING","service created");TerminalStartupLog.stage("02","OceanTerminalRuntimeService.onCreate");}
     @Override public IBinder onBind(Intent intent){TerminalStartupLog.stage("03","runtime service bound");return binder;}
     public synchronized TerminalSession firstRunning(){for(TerminalSession session:sessions.values())if(session.isRunning())return session;return null;}
     public synchronized TerminalSession createSession(int rows,int columns) throws IOException {
         OceanPaths paths=new OceanPaths(this);
+        TerminalDiagnosticBundle.log("runtime-validation.log","[J05] runtime validation begin marker="+paths.runtimeMarker().isFile());
         TerminalStartupLog.stage("04","bootstrap marker present="+paths.runtimeMarker().isFile());
         if(!OceanRuntimeState.isInstalled(this)){TerminalStartupLog.stage("05","bootstrap install begin");new OceanBootstrapInstaller(this).install();}
         // Repair the directory contract for runtimes installed by older APKs,
@@ -26,7 +27,7 @@ public final class OceanTerminalRuntimeService extends Service {
         paths.ensureDirectoryContract();
         File oceanShell=new File(paths.prefix(),"bin/bash");
         TerminalStartupLog.environment(this,oceanShell.getAbsolutePath());
-        OceanRuntimeValidator.Result validation=OceanRuntimeValidator.validate(paths);validation.requireValid();
+        OceanRuntimeValidator.Result validation=OceanRuntimeValidator.validate(paths);validation.requireValid();TerminalDiagnosticBundle.log("runtime-validation.log","[J06] bootstrap/runtime validation passed");
         return startSession(oceanShell.getAbsolutePath(),paths.home(),rows,columns,false);
     }
     public synchronized TerminalSession createRecoverySession(int rows,int columns) throws IOException {
@@ -37,14 +38,17 @@ public final class OceanTerminalRuntimeService extends Service {
     }
     private TerminalSession startSession(String shell,File cwd,int rows,int columns,boolean recovery) throws IOException {
         String[] argv={shell,"-i"};
+        TerminalDiagnosticBundle.state("VALIDATING","STARTING","shell="+shell+" recovery="+recovery);
         TerminalStartupLog.stage("10","create PTY begin rows="+rows+" columns="+columns);
-        File nativeLog=new File(new File(getFilesDir(),"logs"),"terminal-native.log");
+        File nativeLog=TerminalDiagnosticBundle.nativeLog(this);
+        TerminalDiagnosticBundle.state("STARTING","PTY_CREATING","[J08] JNI nativeCreate about to be called cwd="+cwd+" shell="+shell);
         long handle=NativePty.create(shell,argv,OceanEnvironment.create(this,shell),cwd.getAbsolutePath(),rows,columns,nativeLog.getAbsolutePath());
+        TerminalDiagnosticBundle.log("startup.log","[J09] JNI nativeCreate returned handle=0x"+Long.toHexString(handle));
         if(handle==0){int error=NativePty.lastErrno();TerminalStartupLog.stage("10F","PTY create failed errno="+error);throw new IOException("PTY creation failed, errno="+error);}
-        int pid=NativePty.pid(handle);TerminalStartupLog.stage("12","fork success pid="+pid);
+        int pid=NativePty.pid(handle);TerminalDiagnosticBundle.state("PTY_CREATING","FORKED","pid="+pid+" handle=0x"+Long.toHexString(handle));TerminalStartupLog.stage("12","fork success pid="+pid);
         TerminalSession session;
         try{session=new TerminalSession(handle);}catch(Throwable error){NativePty.close(handle);NativePty.destroy(handle);throw new IOException("Cannot start PTY reader",error);}
-        sessions.put(session.id,session);TerminalStartupLog.stage("13","child exec requested shell="+shell+" recovery="+recovery);return session;
+        TerminalDiagnosticBundle.log("startup.log","[J10] session object created id="+session.id);sessions.put(session.id,session);TerminalDiagnosticBundle.state("FORKED","EXECUTING","session="+session.id+" childPid="+pid);TerminalStartupLog.stage("13","child exec requested shell="+shell+" recovery="+recovery);return session;
     }
     public synchronized void closeSession(String id){TerminalSession session=sessions.remove(id);if(session!=null)session.close();}
     @Override public void onDestroy(){for(TerminalSession session:sessions.values())session.close();sessions.clear();super.onDestroy();}

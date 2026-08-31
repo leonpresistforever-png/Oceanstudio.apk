@@ -12,8 +12,8 @@ import java.util.List;
 
 /** Persists Android's account of the previous app-process death for device-only diagnosis. */
 public final class PreviousProcessExit {
-    private static final String SUMMARY = "previous-process-exit.txt";
-    private static final String TRACE = "previous-process-crash.txt";
+    private static final String SUMMARY = "previous-process-exit.log";
+    private static final String TRACE = "previous-process-trace.txt";
     private PreviousProcessExit() {}
 
     public static void capture(Context context) {
@@ -24,17 +24,18 @@ public final class PreviousProcessExit {
                     context.getPackageName(), 0, 1);
             if (exits.isEmpty()) return;
             ApplicationExitInfo exit = exits.get(0);
-            File logs = new File(context.getFilesDir(), "logs");
+            TerminalDiagnosticBundle.initialize(context);
+            File logs = new File(context.getFilesDir(), "logs/terminal-diagnostics");
             if (!logs.isDirectory()) logs.mkdirs();
             boolean traceAvailable = false;
             try (InputStream trace = exit.getTraceInputStream()) {
                 if (trace != null) {
                     traceAvailable = true;
-                    copyLimited(trace, new File(logs, TRACE), 2 * 1024 * 1024);
+                    copyAll(trace, new File(logs, TRACE));
                 }
             }
             String summary = "Previous OceanStudio process exit:\n"
-                    + "Reason: " + exit.getReason() + "\n"
+                    + "Reason: " + reasonName(exit.getReason()) + " (" + exit.getReason() + ")\n"
                     + "Status: " + exit.getStatus() + "\n"
                     + "Description: " + safe(exit.getDescription()) + "\n"
                     + "Timestamp: " + exit.getTimestamp() + "\n"
@@ -51,7 +52,7 @@ public final class PreviousProcessExit {
 
     public static String read(Context context) {
         try {
-            File file = new File(new File(context.getFilesDir(), "logs"), SUMMARY);
+            File file = new File(new File(context.getFilesDir(), "logs/terminal-diagnostics"), SUMMARY);
             return file.isFile() ? new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
                     : "Previous OceanStudio process exit: unavailable\n";
         } catch (Exception error) {
@@ -59,15 +60,13 @@ public final class PreviousProcessExit {
         }
     }
 
-    private static void copyLimited(InputStream input, File output, int maximum) throws Exception {
+    private static void copyAll(InputStream input, File output) throws Exception {
         try (FileOutputStream destination = new FileOutputStream(output, false)) {
             byte[] buffer = new byte[8192];
-            int total = 0;
-            while (total < maximum) {
-                int count = input.read(buffer, 0, Math.min(buffer.length, maximum - total));
+            while (true) {
+                int count = input.read(buffer);
                 if (count < 0) break;
                 destination.write(buffer, 0, count);
-                total += count;
             }
             destination.getFD().sync();
         }
@@ -81,4 +80,5 @@ public final class PreviousProcessExit {
     }
 
     private static String safe(String value) { return value == null ? "" : value.replace('\n', ' '); }
+    private static String reasonName(int r){switch(r){case ApplicationExitInfo.REASON_CRASH:return "REASON_CRASH";case ApplicationExitInfo.REASON_CRASH_NATIVE:return "REASON_CRASH_NATIVE";case ApplicationExitInfo.REASON_SIGNALED:return "REASON_SIGNALED";case ApplicationExitInfo.REASON_ANR:return "REASON_ANR";case ApplicationExitInfo.REASON_LOW_MEMORY:return "REASON_LOW_MEMORY";case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE:return "REASON_EXCESSIVE_RESOURCE_USAGE";case ApplicationExitInfo.REASON_USER_REQUESTED:return "REASON_USER_REQUESTED";case ApplicationExitInfo.REASON_EXIT_SELF:return "REASON_EXIT_SELF";case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE:return "REASON_INITIALIZATION_FAILURE";case ApplicationExitInfo.REASON_PERMISSION_CHANGE:return "REASON_PERMISSION_CHANGE";case ApplicationExitInfo.REASON_DEPENDENCY_DIED:return "REASON_DEPENDENCY_DIED";default:return "REASON_"+r;}}
 }

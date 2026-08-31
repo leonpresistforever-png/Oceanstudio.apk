@@ -10,6 +10,7 @@
         android:theme="@style/AppTheme">
 
         <activity android:name=".terminal.OceanTerminalActivity" android:label="Ocean Terminal" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".terminal.OceanTerminalDiagnosticsActivity" android:label="Ocean Terminal Diagnostics" />
         <service android:name=".terminal.OceanTerminalRuntimeService" android:exported="false" />
 
         <activity

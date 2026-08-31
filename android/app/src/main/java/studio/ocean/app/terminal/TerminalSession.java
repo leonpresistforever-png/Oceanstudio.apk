@@ -19,10 +19,11 @@ public final class TerminalSession {
         if(handle==0)throw new IllegalArgumentException("Native PTY handle is zero");
         this.handle=handle;
         reader=new Thread(this::readLoop,"ocean-pty-reader-"+id);
+        TerminalDiagnosticBundle.log("startup.log","[J11] reader startup requested session="+id+" handle=0x"+Long.toHexString(handle));
         reader.start();
     }
     private void readLoop(){
-        TerminalStartupLog.stage("14","parent PTY read loop started pid="+pid());
+        TerminalStartupLog.stage("14","parent PTY read loop started pid="+pid());TerminalDiagnosticBundle.state("EXECUTING","RUNNING","reader running session="+id+" pid="+pid());
         byte[] buffer=new byte[8192]; boolean first=true;
         try{
             while(running){
@@ -38,7 +39,7 @@ public final class TerminalSession {
             exitCode=255;TerminalStartupLog.failure("PTY reader failed",error);
         }finally{
             running=false;
-            TerminalStartupLog.stage("16","PTY reader stopped exit="+exitCode);
+            TerminalStartupLog.stage("16","PTY reader stopped exit="+exitCode);TerminalDiagnosticBundle.state("RUNNING","EXITING","session="+id+" exit="+exitCode);
             for(Listener listener:listeners)listener.onExit(exitCode);
         }
     }
@@ -48,10 +49,11 @@ public final class TerminalSession {
     public void resize(int rows,int columns,int width,int height){if(running&&!disposed.get())NativePty.resize(handle,rows,columns,width,height);}
     public void interrupt(){if(running&&!disposed.get())NativePty.signal(handle,2);}
     public void close(){
-        if(!disposed.compareAndSet(false,true))return;
+        if(!disposed.compareAndSet(false,true)){TerminalDiagnosticBundle.log("session-state.log","double close ignored session="+id);return;}
+        TerminalDiagnosticBundle.state(running?"RUNNING":"EXITED","CLOSING","session="+id+" caller="+Thread.currentThread().getName());
         running=false;NativePty.signal(handle,15);NativePty.close(handle);
         if(Thread.currentThread()!=reader)try{reader.join(3000);}catch(InterruptedException error){Thread.currentThread().interrupt();}
-        if(!reader.isAlive())NativePty.destroy(handle);
+        if(!reader.isAlive()){NativePty.destroy(handle);TerminalDiagnosticBundle.state("CLOSING","CLOSED","session="+id+" handle destroyed");}
         else TerminalStartupLog.stage("16F","reader did not stop; native handle retained to prevent use-after-free");
     }
     public int pid(){return disposed.get()?-1:NativePty.pid(handle);}
