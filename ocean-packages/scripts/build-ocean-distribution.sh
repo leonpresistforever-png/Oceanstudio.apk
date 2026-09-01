@@ -119,7 +119,7 @@ dpkg-deb --root-owner-group --build "$HELLO" "$OUT/debs/ocean-hello_1.0.0_aarch6
 PKGROOT=$WORK/ocean-pkg; mkdir -p "$PKGROOT/DEBIAN" "$PKGROOT$OCEAN_PREFIX/bin"
 cp "$ROOT/ocean-packages/packages/ocean-pkg/control" "$PKGROOT/DEBIAN/control"
 install -m755 "$ROOT/ocean-packages/packages/ocean-pkg/pkg" "$PKGROOT$OCEAN_PREFIX/bin/pkg"
-dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.0.1_all.deb"
+dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.0.2_all.deb"
 cp "$OUT/debs"/*.deb "$OUT/repository/pool/main/"
 cd "$OUT/repository"; mkdir -p dists/stable/main/binary-aarch64
 apt-ftparchive packages pool/main > dists/stable/main/binary-aarch64/Packages
@@ -129,10 +129,23 @@ apt-ftparchive -o APT::FTPArchive::Release::Origin=OceanStudio -o APT::FTPArchiv
 gpg --batch --yes --local-user "$OCEAN_REPO_SIGNING_KEY" --clearsign -o dists/stable/InRelease dists/stable/Release
 gpg --batch --yes --local-user "$OCEAN_REPO_SIGNING_KEY" --detach-sign -o dists/stable/Release.gpg dists/stable/Release
 gpg --batch --export "$OCEAN_REPO_SIGNING_KEY" > "$OUT/ocean-repository.gpg"
-# Install actual deb payloads into the bootstrap root and initialize dpkg state.
-for deb in "$OUT/debs"/*.deb; do dpkg-deb -x "$deb" "$OUT/bootstrap/root"; done
+# Install the real bootstrap payloads and initialize dpkg state. ocean-hello is
+# deliberately repository-only: first install must exercise APT -> .deb ->
+# dpkg instead of finding a preinstalled test executable.
+for deb in "$OUT/debs"/*.deb; do
+  case "$(dpkg-deb -f "$deb" Package)" in ocean-hello) continue;; esac
+  dpkg-deb -x "$deb" "$OUT/bootstrap/root"
+done
 mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings" "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg"
-printf 'deb [signed-by=%s/etc/apt/keyrings/ocean.gpg] %s stable main\n' "$OCEAN_PREFIX" "$OCEAN_REPOSITORY_URL" > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d/ocean.list"
+# Bundle the signed minimal acceptance repository. The configured GitHub
+# Pages endpoint is not anonymously reachable while this repository remains
+# private; file:// still exercises real signed APT metadata and dpkg installs.
+CORE_REPO="$OUT/bootstrap/root$OCEAN_PREFIX/share/ocean/repository"
+mkdir -p "$CORE_REPO/pool/main"
+cp -a "$OUT/repository/dists" "$CORE_REPO/"
+cp "$OUT/debs/ocean-hello_"*.deb "$CORE_REPO/pool/main/"
+printf 'deb [signed-by=%s/etc/apt/keyrings/ocean.gpg] file:%s/share/ocean/repository stable main\n' "$OCEAN_PREFIX" "$OCEAN_PREFIX" > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d/ocean.list"
+printf '# Enable after the Ocean HTTPS repository is publicly reachable.\n# deb [signed-by=%s/etc/apt/keyrings/ocean.gpg] %s stable main\n' "$OCEAN_PREFIX" "$OCEAN_REPOSITORY_URL" > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d/ocean-online.list.disabled"
 cp "$OUT/ocean-repository.gpg" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings/ocean.gpg"
 cat > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d/00-ocean-paths" <<EOF
 Dir "$OCEAN_PREFIX";
@@ -147,6 +160,7 @@ EOF
 STATUS="$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"
 : > "$STATUS"
 for deb in "$OUT/debs"/*.deb; do
+  case "$(dpkg-deb -f "$deb" Package)" in ocean-hello) continue;; esac
   dpkg-deb -f "$deb" Package Version Architecture Maintainer Depends Section Priority Description >> "$STATUS"
   printf 'Status: install ok installed\n\n' >> "$STATUS"
 done

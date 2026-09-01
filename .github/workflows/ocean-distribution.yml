@@ -130,6 +130,13 @@ jobs:
           test -x "$INSPECT/usr/bin/pkg"
           bash -n "$INSPECT/usr/bin/pkg"
           grep -q 'ocean-pkg.lock.d' "$INSPECT/usr/bin/pkg"
+          grep -q 'file:/data/data/studio.ocean.app/files/usr/share/ocean/repository' "$INSPECT/usr/etc/apt/sources.list.d/ocean.list"
+          test -s "$INSPECT/usr/share/ocean/repository/dists/stable/InRelease"
+          find "$INSPECT/usr/share/ocean/repository/pool/main" -name 'ocean-hello_*.deb' -size +0c | grep -q .
+          if test -e "$INSPECT/usr/bin/ocean-hello"; then
+            echo 'ocean-hello must be installed by APT, not preinstalled in bootstrap' >&2
+            exit 1
+          fi
           if grep -qE '(^|[[:space:]])flock([[:space:]]|$)' "$INSPECT/usr/bin/pkg"; then
             echo 'Ocean pkg still depends on the incompatible bootstrap flock implementation' >&2
             exit 1

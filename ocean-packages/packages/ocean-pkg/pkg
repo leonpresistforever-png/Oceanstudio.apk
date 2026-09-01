@@ -5,23 +5,49 @@ export PREFIX=${PREFIX:-/data/data/studio.ocean.app/files/usr}
 lock_dir="$PREFIX/var/run/ocean-pkg.lock.d"
 wait_seconds=${OCEAN_PKG_LOCK_WAIT:-120}
 mkdir -p "${lock_dir%/*}"
+lock_token="$$-$(date +%s 2>/dev/null || printf 0)-${RANDOM:-0}"
+
+process_start() {
+    # /proc/<pid>/stat field 22 prevents a recycled PID being mistaken for the
+    # process which originally acquired the lock. Parentheses in comm may
+    # contain spaces, therefore strip through the final ') ' before indexing.
+    local stat rest
+    stat=$(cat "/proc/$1/stat" 2>/dev/null) || return 1
+    rest=${stat##*) }
+    set -- $rest
+    printf '%s\n' "${20:-}"
+}
 
 lock_owner_alive() {
-    local owner
+    local owner recorded_start actual_start
     owner=$(cat "$lock_dir/pid" 2>/dev/null || true)
     [[ "$owner" =~ ^[0-9]+$ ]] || return 1
-    kill -0 "$owner" 2>/dev/null
+    recorded_start=$(cat "$lock_dir/start" 2>/dev/null || true)
+    [[ "$recorded_start" =~ ^[0-9]+$ ]] || return 1
+    actual_start=$(process_start "$owner" 2>/dev/null || true)
+    [[ "$actual_start" == "$recorded_start" ]] && kill -0 "$owner" 2>/dev/null
+}
+
+quarantine_stale_lock() {
+    local quarantine="$lock_dir.stale.$lock_token"
+    # rename is the ownership hand-off: exactly one contender can move a
+    # particular stale lock. Never rm -rf the live lock path after racing.
+    if mv "$lock_dir" "$quarantine" 2>/dev/null; then
+        rm -rf -- "$quarantine"
+    fi
 }
 
 acquired=false
 for ((elapsed=0; elapsed<=wait_seconds; elapsed++)); do
     if mkdir "$lock_dir" 2>/dev/null; then
         printf '%s\n' "$$" > "$lock_dir/pid"
+        process_start "$$" > "$lock_dir/start"
+        printf '%s\n' "$lock_token" > "$lock_dir/token"
         acquired=true
         break
     fi
     if ! lock_owner_alive; then
-        rm -rf -- "$lock_dir"
+        quarantine_stale_lock
         continue
     fi
     (( elapsed < wait_seconds )) && sleep 1
@@ -35,7 +61,10 @@ fi
 release_lock() {
     local status=$?
     trap - EXIT
-    rm -rf -- "$lock_dir"
+    # Only the owner that created this exact directory may release it.
+    if [[ "$(cat "$lock_dir/token" 2>/dev/null || true)" == "$lock_token" ]]; then
+        quarantine_stale_lock
+    fi
     exit "$status"
 }
 trap release_lock EXIT
