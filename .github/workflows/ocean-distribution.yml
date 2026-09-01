@@ -1,6 +1,13 @@
 name: Build Ocean distribution
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        description: Highest dependency-ordered Ocean catalogue phase to build
+        required: true
+        default: foundation
+        type: choice
+        options: [foundation, network, source-control, runtimes, development, workstation, distro, second-wave]
   push:
     paths: ['ocean-packages/**', 'android/**', '.github/workflows/ocean-distribution.yml']
 permissions:
@@ -11,18 +18,24 @@ permissions:
 concurrency: {group: ocean-distribution, cancel-in-progress: false}
 jobs:
   build-distribution:
+    env:
+      OCEAN_PACKAGE_PHASE: ${{ inputs.phase || 'foundation' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Ocean pkg transaction locking
-        run: ./ocean-packages/scripts/test-ocean-pkg-lock.sh
+      - name: Validate Ocean package catalogue and transaction tooling
+        run: |
+          python3 ocean-packages/scripts/catalog.py validate
+          python3 ocean-packages/tests/test-catalog.py
+          ./ocean-packages/tests/test-bootstrap-closure.sh
+          ./ocean-packages/scripts/test-ocean-pkg-lock.sh
       - name: Restore verified distribution cache
         id: distribution-cache
         uses: actions/cache/restore@v4
         with:
           path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/build-ocean-distribution.sh', 'ocean-packages/scripts/verify-bootstrap.py') }}
+          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
       - name: Validate reusable distribution
         id: reusable
         run: |
@@ -112,6 +125,13 @@ jobs:
           for package in bash apt dpkg ocean-pkg ocean-hello; do
             find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || exit 1
           done
+          for package in coreutils findutils grep sed gawk diffutils tar gzip zstd less which patch util-linux wget openssl ocean-tools; do
+            find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || { echo "missing foundation package: $package" >&2; exit 1; }
+          done
+          while read -r package; do
+            find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || { echo "missing selected phase root: $package" >&2; exit 1; }
+          done < <(python3 ocean-packages/scripts/catalog.py roots --through "$OCEAN_PACKAGE_PHASE")
+          python3 ocean-packages/scripts/validate-packages.py ocean-packages/build/out/debs ocean-packages/build/out/repository/package-index.json
           python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"
           INSPECT=$(mktemp -d)
           zstd -q -d -c "$ARCHIVE" | tar -C "$INSPECT" -xf -
@@ -128,6 +148,7 @@ jobs:
             done < <(readelf -d "$FILE" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
           done
           test -x "$INSPECT/usr/bin/pkg"
+          test -x "$INSPECT/usr/bin/ocean-change-repo"
           bash -n "$INSPECT/usr/bin/pkg"
           grep -q 'ocean-pkg.lock.d' "$INSPECT/usr/bin/pkg"
           grep -q 'file:/data/data/studio.ocean.app/files/usr/share/ocean/repository' "$INSPECT/usr/etc/apt/sources.list.d/ocean.list"
@@ -152,11 +173,13 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/build-ocean-distribution.sh', 'ocean-packages/scripts/verify-bootstrap.py') }}
+          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
 
 
   build-apk:
     needs: build-distribution
+    env:
+      OCEAN_PACKAGE_PHASE: ${{ inputs.phase || 'foundation' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -168,7 +191,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/build-ocean-distribution.sh', 'ocean-packages/scripts/verify-bootstrap.py') }}
+          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
           fail-on-cache-miss: true
       - name: Verify distribution and inject bootstrap
         run: |

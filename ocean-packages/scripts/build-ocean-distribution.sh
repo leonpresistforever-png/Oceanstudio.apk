@@ -81,7 +81,8 @@ if needle not in s:
 p.write_text(s.replace(needle, replacement))
 PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
-ROOT_PACKAGES=(bash apt libcurl)
+OCEAN_PACKAGE_PHASE=${OCEAN_PACKAGE_PHASE:-foundation}
+mapfile -t ROOT_PACKAGES < <(python3 "$ROOT/ocean-packages/scripts/catalog.py" roots --through "$OCEAN_PACKAGE_PHASE")
 for package in "${ROOT_PACKAGES[@]}"; do
   test -f "$UPSTREAM/packages/$package/build.sh" || {
     echo "Ocean package recipe does not exist at pinned upstream commit: $package" >&2
@@ -92,17 +93,18 @@ done
 # distribution input. Do not ask the upstream builder to rebuild it merely to
 # regenerate repository metadata or the bootstrap archive after an APK-stage
 # failure. Rebuild only when one of the root package outputs is absent.
-cached_roots=true
+MISSING_ROOTS=()
 for package in "${ROOT_PACKAGES[@]}"; do
-  find "$UPSTREAM/output" -type f -name "${package}_*_aarch64.deb" -size +0c -print -quit \
-    | grep -q . || cached_roots=false
+  find "$UPSTREAM/output" -type f \( -name "${package}_*_aarch64.deb" -o -name "${package}_*_all.deb" \) -size +0c -print -quit \
+    | grep -q . || MISSING_ROOTS+=("$package")
 done
-if "$cached_roots"; then
+if ((${#MISSING_ROOTS[@]} == 0)); then
   echo "Reusing completed Android/aarch64 package outputs; source compilation skipped."
 else
   # The cache lives inside the checkout mounted by run-docker while compilation
   # is active; the EXIT trap synchronizes it after success or failure.
-  (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${ROOT_PACKAGES[@]}")
+  printf 'Building missing Ocean roots: %s\n' "${MISSING_ROOTS[*]}"
+  (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${MISSING_ROOTS[@]}")
 fi
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
@@ -119,7 +121,12 @@ dpkg-deb --root-owner-group --build "$HELLO" "$OUT/debs/ocean-hello_1.0.0_aarch6
 PKGROOT=$WORK/ocean-pkg; mkdir -p "$PKGROOT/DEBIAN" "$PKGROOT$OCEAN_PREFIX/bin"
 cp "$ROOT/ocean-packages/packages/ocean-pkg/control" "$PKGROOT/DEBIAN/control"
 install -m755 "$ROOT/ocean-packages/packages/ocean-pkg/pkg" "$PKGROOT$OCEAN_PREFIX/bin/pkg"
-dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.0.2_all.deb"
+install -m755 "$ROOT/ocean-packages/packages/ocean-pkg/ocean-change-repo" "$PKGROOT$OCEAN_PREFIX/bin/ocean-change-repo"
+dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.1.0_all.deb"
+TOOLSROOT=$WORK/ocean-tools; mkdir -p "$TOOLSROOT/DEBIAN" "$TOOLSROOT$OCEAN_PREFIX/bin"
+cp "$ROOT/ocean-packages/packages/ocean-tools/control" "$TOOLSROOT/DEBIAN/control"
+install -m755 "$ROOT/ocean-packages/scripts/ocean-package-smoke-test" "$TOOLSROOT$OCEAN_PREFIX/bin/ocean-package-smoke-test"
+dpkg-deb --root-owner-group --build "$TOOLSROOT" "$OUT/debs/ocean-tools_1.0.0_all.deb"
 cp "$OUT/debs"/*.deb "$OUT/repository/pool/main/"
 cd "$OUT/repository"; mkdir -p dists/stable/main/binary-aarch64
 apt-ftparchive packages pool/main > dists/stable/main/binary-aarch64/Packages
@@ -129,13 +136,9 @@ apt-ftparchive -o APT::FTPArchive::Release::Origin=OceanStudio -o APT::FTPArchiv
 gpg --batch --yes --local-user "$OCEAN_REPO_SIGNING_KEY" --clearsign -o dists/stable/InRelease dists/stable/Release
 gpg --batch --yes --local-user "$OCEAN_REPO_SIGNING_KEY" --detach-sign -o dists/stable/Release.gpg dists/stable/Release
 gpg --batch --export "$OCEAN_REPO_SIGNING_KEY" > "$OUT/ocean-repository.gpg"
-# Install the real bootstrap payloads and initialize dpkg state. ocean-hello is
-# deliberately repository-only: first install must exercise APT -> .deb ->
-# dpkg instead of finding a preinstalled test executable.
-for deb in "$OUT/debs"/*.deb; do
-  case "$(dpkg-deb -f "$deb" Package)" in ocean-hello) continue;; esac
-  dpkg-deb -x "$deb" "$OUT/bootstrap/root"
-done
+# Keep the APK bootstrap minimal as the signed online catalogue expands.
+mapfile -t BOOTSTRAP_DEBS < <(python3 "$ROOT/ocean-packages/scripts/bootstrap-closure.py" "$OUT/debs" --seed bash --seed apt --seed libcurl --seed ocean-pkg)
+for deb in "${BOOTSTRAP_DEBS[@]}"; do dpkg-deb -x "$deb" "$OUT/bootstrap/root"; done
 mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings" "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg"
 # Bundle the signed minimal acceptance repository. The configured GitHub
 # Pages endpoint is not anonymously reachable while this repository remains
@@ -159,8 +162,7 @@ EOF
 # state derived from each .deb control archive, not hand-written package data.
 STATUS="$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"
 : > "$STATUS"
-for deb in "$OUT/debs"/*.deb; do
-  case "$(dpkg-deb -f "$deb" Package)" in ocean-hello) continue;; esac
+for deb in "${BOOTSTRAP_DEBS[@]}"; do
   dpkg-deb -f "$deb" Package Version Architecture Maintainer Depends Section Priority Description >> "$STATUS"
   printf 'Status: install ok installed\n\n' >> "$STATUS"
 done
