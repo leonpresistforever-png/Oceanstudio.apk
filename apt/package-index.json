@@ -1,0 +1,4242 @@
+{
+  "schemaVersion": 1,
+  "target": "Android/bionic API 28 aarch64",
+  "packageCount": 197,
+  "repositoryBytes": 117639574,
+  "packages": [
+    {
+      "name": "apt-ftparchive",
+      "version": "2.8.1-2",
+      "architecture": "aarch64",
+      "depends": "libdb, apt (= 2.8.1-2)",
+      "description": "apt-ftparchive is the command line tool that generates the index files that APT uses to access a distribution source",
+      "artifact": "apt-ftparchive_2.8.1-2_aarch64.deb",
+      "bytes": 96064,
+      "sha256": "91acc3d3e6f00566153f9731b92025f149dc8f63a4b878471c3d3d258f130f1c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/apt-ftparchive"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/apt-ftparchive"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "apt-transport-tor",
+      "version": "2.8.1-2",
+      "architecture": "all",
+      "depends": "tor, apt (= 2.8.1-2)",
+      "description": "APT transport for anonymous package downloads via Tor",
+      "artifact": "apt-transport-tor_2.8.1-2_all.deb",
+      "bytes": 932,
+      "sha256": "fd44d0144282f6810211ef5a5eda8d1481e22b891d80784c00a28e13187e6b37",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "apt",
+      "version": "2.8.1-2",
+      "architecture": "aarch64",
+      "depends": "coreutils, dpkg, findutils, gpgv, grep, libandroid-glob, libbz2, libc++, libiconv, libgcrypt, libgnutls, liblz4, liblzma, sed, xxhash, zlib, zstd",
+      "description": "Front-end for the dpkg package manager",
+      "artifact": "apt_2.8.1-2_aarch64.deb",
+      "bytes": 1031812,
+      "sha256": "ea3b5c375da6e1fdafb6955839a9b6b8acc4446218f6ea61ecffac918b10c855",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/apt-config",
+        "data/data/studio.ocean.app/files/usr/bin/apt-get",
+        "data/data/studio.ocean.app/files/usr/bin/apt-cache",
+        "data/data/studio.ocean.app/files/usr/bin/apt-key",
+        "data/data/studio.ocean.app/files/usr/bin/apt",
+        "data/data/studio.ocean.app/files/usr/bin/apt-mark",
+        "data/data/studio.ocean.app/files/usr/lib/apt/apt-helper",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/gpgv",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/rsh",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/http",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/file",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/store",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/copy"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/apt-config",
+        "data/data/studio.ocean.app/files/usr/bin/apt-get",
+        "data/data/studio.ocean.app/files/usr/bin/apt-cache",
+        "data/data/studio.ocean.app/files/usr/bin/apt",
+        "data/data/studio.ocean.app/files/usr/bin/apt-mark",
+        "data/data/studio.ocean.app/files/usr/lib/libapt-pkg.so",
+        "data/data/studio.ocean.app/files/usr/lib/libapt-private.so",
+        "data/data/studio.ocean.app/files/usr/lib/apt/apt-helper",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/gpgv",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/rsh",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/http",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/file",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/store",
+        "data/data/studio.ocean.app/files/usr/lib/apt/methods/copy"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "attr-static",
+      "version": "2.6.0",
+      "architecture": "aarch64",
+      "depends": "attr (= 2.6.0)",
+      "description": "Static libraries for attr",
+      "artifact": "attr-static_2.6.0_aarch64.deb",
+      "bytes": 7004,
+      "sha256": "6fb4c846a3a54bc2e211b68e70e96c44ab8d5250d1219a7cbc3f12981982e4ff",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libattr.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "attr",
+      "version": "2.6.0",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Utilities for manipulating filesystem extended attributes",
+      "artifact": "attr_2.6.0_aarch64.deb",
+      "bytes": 56176,
+      "sha256": "5bfafd5fda725743ac2be92f15b04bd3e915b28f0f2d1fb198dd995d3dd28337",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/attr",
+        "data/data/studio.ocean.app/files/usr/bin/getfattr",
+        "data/data/studio.ocean.app/files/usr/bin/setfattr",
+        "data/data/studio.ocean.app/files/usr/lib/libattr.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/attr",
+        "data/data/studio.ocean.app/files/usr/bin/getfattr",
+        "data/data/studio.ocean.app/files/usr/bin/setfattr",
+        "data/data/studio.ocean.app/files/usr/lib/libattr.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "bash-completion",
+      "version": "2.18.0",
+      "architecture": "all",
+      "depends": "bash",
+      "description": "Programmable completion for the bash shell",
+      "artifact": "bash-completion_2.18.0_all.deb",
+      "bytes": 194332,
+      "sha256": "d46ee95cfb59ae6d163215eba7dc20b441729eac557092258ff5cfb1b39e41ff",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "bash",
+      "version": "5.3.15",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libiconv, readline (>= 8.3)",
+      "description": "A sh-compatible shell that incorporates useful features from the Korn shell (ksh) and C shell (csh)",
+      "artifact": "bash_5.3.15_aarch64.deb",
+      "bytes": 955584,
+      "sha256": "e68ed58d65151ba5c6c6762b07b3ea7c42534e184da0f0fc2551663c8e155477",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/bash",
+        "data/data/studio.ocean.app/files/usr/lib/bash/ln",
+        "data/data/studio.ocean.app/files/usr/lib/bash/truefalse",
+        "data/data/studio.ocean.app/files/usr/lib/bash/tee",
+        "data/data/studio.ocean.app/files/usr/lib/bash/rm",
+        "data/data/studio.ocean.app/files/usr/lib/bash/stat",
+        "data/data/studio.ocean.app/files/usr/lib/bash/logname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/head",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mypid",
+        "data/data/studio.ocean.app/files/usr/lib/bash/sleep",
+        "data/data/studio.ocean.app/files/usr/lib/bash/print",
+        "data/data/studio.ocean.app/files/usr/lib/bash/setpgid",
+        "data/data/studio.ocean.app/files/usr/lib/bash/dirname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/strptime",
+        "data/data/studio.ocean.app/files/usr/lib/bash/tty",
+        "data/data/studio.ocean.app/files/usr/lib/bash/fdflags",
+        "data/data/studio.ocean.app/files/usr/lib/bash/dsv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/unlink",
+        "data/data/studio.ocean.app/files/usr/lib/bash/push",
+        "data/data/studio.ocean.app/files/usr/lib/bash/realpath",
+        "data/data/studio.ocean.app/files/usr/lib/bash/csv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/seq",
+        "data/data/studio.ocean.app/files/usr/lib/bash/id",
+        "data/data/studio.ocean.app/files/usr/lib/bash/finfo",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mktemp",
+        "data/data/studio.ocean.app/files/usr/lib/bash/cut",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mkfifo",
+        "data/data/studio.ocean.app/files/usr/lib/bash/pathchk",
+        "data/data/studio.ocean.app/files/usr/lib/bash/uname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/fltexpr",
+        "data/data/studio.ocean.app/files/usr/lib/bash/sync",
+        "data/data/studio.ocean.app/files/usr/lib/bash/basename",
+        "data/data/studio.ocean.app/files/usr/lib/bash/chmod",
+        "data/data/studio.ocean.app/files/usr/lib/bash/accept",
+        "data/data/studio.ocean.app/files/usr/lib/bash/strftime",
+        "data/data/studio.ocean.app/files/usr/lib/bash/kv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/rmdir",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mkdir",
+        "data/data/studio.ocean.app/files/usr/lib/bash/getconf",
+        "data/data/studio.ocean.app/files/usr/lib/bash/printenv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/whoami"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/bash",
+        "data/data/studio.ocean.app/files/usr/lib/bash/ln",
+        "data/data/studio.ocean.app/files/usr/lib/bash/truefalse",
+        "data/data/studio.ocean.app/files/usr/lib/bash/tee",
+        "data/data/studio.ocean.app/files/usr/lib/bash/rm",
+        "data/data/studio.ocean.app/files/usr/lib/bash/stat",
+        "data/data/studio.ocean.app/files/usr/lib/bash/logname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/head",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mypid",
+        "data/data/studio.ocean.app/files/usr/lib/bash/sleep",
+        "data/data/studio.ocean.app/files/usr/lib/bash/print",
+        "data/data/studio.ocean.app/files/usr/lib/bash/setpgid",
+        "data/data/studio.ocean.app/files/usr/lib/bash/dirname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/strptime",
+        "data/data/studio.ocean.app/files/usr/lib/bash/tty",
+        "data/data/studio.ocean.app/files/usr/lib/bash/fdflags",
+        "data/data/studio.ocean.app/files/usr/lib/bash/dsv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/unlink",
+        "data/data/studio.ocean.app/files/usr/lib/bash/push",
+        "data/data/studio.ocean.app/files/usr/lib/bash/realpath",
+        "data/data/studio.ocean.app/files/usr/lib/bash/csv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/seq",
+        "data/data/studio.ocean.app/files/usr/lib/bash/id",
+        "data/data/studio.ocean.app/files/usr/lib/bash/finfo",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mktemp",
+        "data/data/studio.ocean.app/files/usr/lib/bash/cut",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mkfifo",
+        "data/data/studio.ocean.app/files/usr/lib/bash/pathchk",
+        "data/data/studio.ocean.app/files/usr/lib/bash/uname",
+        "data/data/studio.ocean.app/files/usr/lib/bash/fltexpr",
+        "data/data/studio.ocean.app/files/usr/lib/bash/sync",
+        "data/data/studio.ocean.app/files/usr/lib/bash/basename",
+        "data/data/studio.ocean.app/files/usr/lib/bash/chmod",
+        "data/data/studio.ocean.app/files/usr/lib/bash/accept",
+        "data/data/studio.ocean.app/files/usr/lib/bash/strftime",
+        "data/data/studio.ocean.app/files/usr/lib/bash/kv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/rmdir",
+        "data/data/studio.ocean.app/files/usr/lib/bash/mkdir",
+        "data/data/studio.ocean.app/files/usr/lib/bash/getconf",
+        "data/data/studio.ocean.app/files/usr/lib/bash/printenv",
+        "data/data/studio.ocean.app/files/usr/lib/bash/whoami"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "blk-utils",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libblkid, libmount, libsmartcols, libuuid",
+      "description": "Utilities for handling block device attributes",
+      "artifact": "blk-utils_2.42.1-4_aarch64.deb",
+      "bytes": 183328,
+      "sha256": "04361a6295d9885e69ef3510fb3cf65a774f3ca3e8c01742cfc95f37958bb795",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/fsck",
+        "data/data/studio.ocean.app/files/usr/bin/blkid",
+        "data/data/studio.ocean.app/files/usr/bin/lsblk",
+        "data/data/studio.ocean.app/files/usr/bin/blkzone",
+        "data/data/studio.ocean.app/files/usr/bin/wipefs",
+        "data/data/studio.ocean.app/files/usr/bin/findfs",
+        "data/data/studio.ocean.app/files/usr/bin/partx",
+        "data/data/studio.ocean.app/files/usr/bin/blkdiscard",
+        "data/data/studio.ocean.app/files/usr/bin/swaplabel",
+        "data/data/studio.ocean.app/files/usr/bin/mkswap"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/fsck",
+        "data/data/studio.ocean.app/files/usr/bin/blkid",
+        "data/data/studio.ocean.app/files/usr/bin/lsblk",
+        "data/data/studio.ocean.app/files/usr/bin/blkzone",
+        "data/data/studio.ocean.app/files/usr/bin/wipefs",
+        "data/data/studio.ocean.app/files/usr/bin/findfs",
+        "data/data/studio.ocean.app/files/usr/bin/partx",
+        "data/data/studio.ocean.app/files/usr/bin/blkdiscard",
+        "data/data/studio.ocean.app/files/usr/bin/swaplabel",
+        "data/data/studio.ocean.app/files/usr/bin/mkswap"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "brotli",
+      "version": "1.2.0",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "lossless compression algorithm and format (command line utility)",
+      "artifact": "brotli_1.2.0_aarch64.deb",
+      "bytes": 340464,
+      "sha256": "1d50ef31e6aad29fad1dc189f6a576aed7c3ec59153e172f3ee68201ab0a934e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/brotli"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/brotli",
+        "data/data/studio.ocean.app/files/usr/lib/libbrotlidec.so",
+        "data/data/studio.ocean.app/files/usr/lib/libbrotlienc.so",
+        "data/data/studio.ocean.app/files/usr/lib/libbrotlicommon.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "bzip2",
+      "version": "1.0.8-8",
+      "architecture": "aarch64",
+      "depends": "libbz2 (= 1.0.8-8)",
+      "description": "Tools for working with bzip2 compression",
+      "artifact": "bzip2_1.0.8-8_aarch64.deb",
+      "bytes": 26324,
+      "sha256": "8ddefbeb11ab08f0f283bbd24274684f7ded76812a78198ddab1b420d3d3da27",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/bzmore",
+        "data/data/studio.ocean.app/files/usr/bin/bzip2",
+        "data/data/studio.ocean.app/files/usr/bin/bzgrep",
+        "data/data/studio.ocean.app/files/usr/bin/bzip2recover",
+        "data/data/studio.ocean.app/files/usr/bin/bzdiff"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/bzip2",
+        "data/data/studio.ocean.app/files/usr/bin/bzip2recover"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ca-certificates-java",
+      "version": "1:2026.07.16",
+      "architecture": "all",
+      "depends": "ca-certificates (= 1:2026.07.16)",
+      "description": "Common CA certificates (java keystore format)",
+      "artifact": "ca-certificates-java_1:2026.07.16_all.deb",
+      "bytes": 95148,
+      "sha256": "4cc62987d031280f9eeccbfb2da3d6b79d45fad270b58a400eb69295c50f87ee",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ca-certificates",
+      "version": "1:2026.07.16",
+      "architecture": "all",
+      "depends": "",
+      "description": "Common CA certificates",
+      "artifact": "ca-certificates_1:2026.07.16_all.deb",
+      "bytes": 104224,
+      "sha256": "258373cd25df8d4c971decc25fa76b779b447e4fd4d4ce3046829ca2231c6adc",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "coreutils",
+      "version": "9.11-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-selinux, libandroid-support, libgmp, libiconv, openssl (>= 1:3.5.0-1)",
+      "description": "Basic file, shell and text manipulation utilities from the GNU project",
+      "artifact": "coreutils_9.11-1_aarch64.deb",
+      "bytes": 812252,
+      "sha256": "21e8ff2f2f68707c6513f50bd781a3434157f3bcff700d0146276df23b4b13ac",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/coreutils",
+        "data/data/studio.ocean.app/files/usr/libexec/coreutils/libstdbuf.so",
+        "data/data/studio.ocean.app/files/usr/libexec/coreutils/cat"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/coreutils",
+        "data/data/studio.ocean.app/files/usr/libexec/coreutils/libstdbuf.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "curl",
+      "version": "8.21.0",
+      "architecture": "aarch64",
+      "depends": "libcurl (= 8.21.0)",
+      "description": "Command line tool for transferring data with URL syntax",
+      "artifact": "curl_8.21.0_aarch64.deb",
+      "bytes": 242828,
+      "sha256": "8419452993bf4a45aee9231a271d40db3bbf7c226cac5d2e50fef74ff30ab4a2",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/curl"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/curl"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "db",
+      "version": "18.1.40-6",
+      "architecture": "aarch64",
+      "depends": "libdb (= 18.1.40-6)",
+      "description": "The Berkeley DB embedded database system",
+      "artifact": "db_18.1.40-6_aarch64.deb",
+      "bytes": 40160,
+      "sha256": "12775330d03d2ac63f6b0782bd7444b67483d677a867011844f8c48039867022",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/db_printlog",
+        "data/data/studio.ocean.app/files/usr/bin/db_verify",
+        "data/data/studio.ocean.app/files/usr/bin/db_tuner",
+        "data/data/studio.ocean.app/files/usr/bin/db_dump",
+        "data/data/studio.ocean.app/files/usr/bin/db_deadlock",
+        "data/data/studio.ocean.app/files/usr/bin/db_log_verify",
+        "data/data/studio.ocean.app/files/usr/bin/db_replicate",
+        "data/data/studio.ocean.app/files/usr/bin/db_load",
+        "data/data/studio.ocean.app/files/usr/bin/db_hotbackup",
+        "data/data/studio.ocean.app/files/usr/bin/db_upgrade",
+        "data/data/studio.ocean.app/files/usr/bin/db_checkpoint",
+        "data/data/studio.ocean.app/files/usr/bin/db_recover",
+        "data/data/studio.ocean.app/files/usr/bin/db_convert",
+        "data/data/studio.ocean.app/files/usr/bin/db_archive",
+        "data/data/studio.ocean.app/files/usr/bin/db_stat"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/db_printlog",
+        "data/data/studio.ocean.app/files/usr/bin/db_verify",
+        "data/data/studio.ocean.app/files/usr/bin/db_tuner",
+        "data/data/studio.ocean.app/files/usr/bin/db_dump",
+        "data/data/studio.ocean.app/files/usr/bin/db_deadlock",
+        "data/data/studio.ocean.app/files/usr/bin/db_log_verify",
+        "data/data/studio.ocean.app/files/usr/bin/db_replicate",
+        "data/data/studio.ocean.app/files/usr/bin/db_load",
+        "data/data/studio.ocean.app/files/usr/bin/db_hotbackup",
+        "data/data/studio.ocean.app/files/usr/bin/db_upgrade",
+        "data/data/studio.ocean.app/files/usr/bin/db_checkpoint",
+        "data/data/studio.ocean.app/files/usr/bin/db_recover",
+        "data/data/studio.ocean.app/files/usr/bin/db_convert",
+        "data/data/studio.ocean.app/files/usr/bin/db_archive",
+        "data/data/studio.ocean.app/files/usr/bin/db_stat"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "diffutils",
+      "version": "3.12-2",
+      "architecture": "aarch64",
+      "depends": "libiconv",
+      "description": "Programs (cmp, diff, diff3 and sdiff) related to finding differences between files",
+      "artifact": "diffutils_3.12-2_aarch64.deb",
+      "bytes": 162980,
+      "sha256": "d9a6a743fc9e53b39e256b12f21a23e6bef07f0ea8aa62e93fd6e96555d18bc7",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/sdiff",
+        "data/data/studio.ocean.app/files/usr/bin/cmp",
+        "data/data/studio.ocean.app/files/usr/bin/diff3",
+        "data/data/studio.ocean.app/files/usr/bin/diff"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/sdiff",
+        "data/data/studio.ocean.app/files/usr/bin/cmp",
+        "data/data/studio.ocean.app/files/usr/bin/diff3",
+        "data/data/studio.ocean.app/files/usr/bin/diff"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "docbook-xml",
+      "version": "5.1-1",
+      "architecture": "all",
+      "depends": "libxml2-utils",
+      "description": "A widely used XML scheme for writing documentation and help",
+      "artifact": "docbook-xml_5.1-1_all.deb",
+      "bytes": 78248,
+      "sha256": "72cb988b5649a2cf8d868cc49920077c6f0ff8bf50b8a60e6fe1e3a803e69404",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/dbpoolx.mod",
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/calstblx.dtd",
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/dbhierx.mod",
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/dbcentx.mod",
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/dbnotnx.mod",
+        "data/data/studio.ocean.app/files/usr/share/xml/docbook/xml-dtd-4.1.2/docbookx.dtd"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "docbook-xsl",
+      "version": "1.79.2-4",
+      "architecture": "all",
+      "depends": "docbook-xml (>= 5.1), libxml2-utils, xsltproc",
+      "description": "XML stylesheets for Docbook-xml transformations",
+      "artifact": "docbook-xsl_1.79.2-4_all.deb",
+      "bytes": 1387564,
+      "sha256": "a9a21b994979b5d1fe87f00b01941f60c621ef8c05c70fd6b54a5cfbd2c3f5b6",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "doxygen",
+      "version": "1.18.0",
+      "architecture": "aarch64",
+      "depends": "libc++, libiconv",
+      "description": "A documentation system for C++, C, Java, IDL and PHP",
+      "artifact": "doxygen_1.18.0_aarch64.deb",
+      "bytes": 10640072,
+      "sha256": "f17edd4e6cc714561aa19565e2fa3d3cb35ef2589469e1490796d63759175a72",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/doxygen",
+        "data/data/studio.ocean.app/files/usr/bin/doxyparse"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/doxygen",
+        "data/data/studio.ocean.app/files/usr/bin/doxyparse"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "dpkg-perl",
+      "version": "1.22.6-5",
+      "architecture": "all",
+      "depends": "perl, clang, make, dpkg (= 1.22.6-5)",
+      "description": "Perl modules for dpkg",
+      "artifact": "dpkg-perl_1.22.6-5_all.deb",
+      "bytes": 126292,
+      "sha256": "0407e93a7d9a8d4ef84b2bb647d9148010e29b9b5401e7fe9cb84e2a2c92205f",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "dpkg-scanpackages",
+      "version": "1.22.6-5",
+      "architecture": "all",
+      "depends": "dpkg-perl, dpkg (= 1.22.6-5)",
+      "description": "Creates Packages index files",
+      "artifact": "dpkg-scanpackages_1.22.6-5_all.deb",
+      "bytes": 6516,
+      "sha256": "18f258caa37f149ea23c4524dd4a32ab434dbb6b0c97f26ee0e70f51a7547e3f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-scanpackages"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "dpkg",
+      "version": "1.22.6-5",
+      "architecture": "aarch64",
+      "depends": "bzip2, coreutils, diffutils, gzip, less, libbz2, liblzma, libmd, tar, xz-utils, zlib, zstd",
+      "description": "Debian package management system",
+      "artifact": "dpkg_1.22.6-5_aarch64.deb",
+      "bytes": 308764,
+      "sha256": "5317a62043d5446222833e18fb719a4a71c09db1d9c152fb8d8840bf3e255aa3",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-buildapi",
+        "data/data/studio.ocean.app/files/usr/bin/start-stop-daemon",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-divert",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-query",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-fsys-usrunmess",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-deb",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-realpath",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-buildtree",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-trigger",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-split",
+        "data/data/studio.ocean.app/files/usr/bin/update-alternatives",
+        "data/data/studio.ocean.app/files/usr/libexec/dpkg/dpkg-db-backup",
+        "data/data/studio.ocean.app/files/usr/libexec/dpkg/dpkg-db-keeper"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/start-stop-daemon",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-divert",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-query",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-deb",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-trigger",
+        "data/data/studio.ocean.app/files/usr/bin/dpkg-split",
+        "data/data/studio.ocean.app/files/usr/bin/update-alternatives"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "fdisk",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libfdisk, libmount, ncurses, readline, libsmartcols",
+      "description": "Utilities to manipulate disk partition tables",
+      "artifact": "fdisk_2.42.1-4_aarch64.deb",
+      "bytes": 116888,
+      "sha256": "a53922cc9f47e4ef378cf3ae4d9e3e551e0790cc41f1607e28ac1d2967c793bb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/fdisk",
+        "data/data/studio.ocean.app/files/usr/bin/sfdisk",
+        "data/data/studio.ocean.app/files/usr/bin/cfdisk"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/fdisk",
+        "data/data/studio.ocean.app/files/usr/bin/sfdisk",
+        "data/data/studio.ocean.app/files/usr/bin/cfdisk"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "findutils",
+      "version": "4.10.0-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-support",
+      "description": "Utilities to find files meeting specified criteria and perform various actions on the files which are found",
+      "artifact": "findutils_4.10.0-1_aarch64.deb",
+      "bytes": 251728,
+      "sha256": "1d3a469142e4994ad3bc7a01ae3f3a9b22c2fe1a97ce80e040788f681dc7818b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xargs",
+        "data/data/studio.ocean.app/files/usr/bin/find",
+        "data/data/studio.ocean.app/files/usr/libexec/frcode"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/xargs",
+        "data/data/studio.ocean.app/files/usr/bin/find",
+        "data/data/studio.ocean.app/files/usr/libexec/frcode"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "fontconfig-static",
+      "version": "2.18.3",
+      "architecture": "aarch64",
+      "depends": "fontconfig (= 2.18.3)",
+      "description": "Static libraries for fontconfig",
+      "artifact": "fontconfig-static_2.18.3_aarch64.deb",
+      "bytes": 135700,
+      "sha256": "b70dcd4ee3d97f2c2dabf1006b9b6034f64092846f5ef20f50e1a071f4e9e8be",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libfontconfig.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "fontconfig-utils",
+      "version": "2.18.3",
+      "architecture": "aarch64",
+      "depends": "fontconfig (= 2.18.3)",
+      "description": "Fontconfig binaries",
+      "artifact": "fontconfig-utils_2.18.3_aarch64.deb",
+      "bytes": 14576,
+      "sha256": "fa39f39e88e24cfadc0520fde36cafcedbbfce45c9e3f7803adc648688d2c8b8",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/fc-conflist",
+        "data/data/studio.ocean.app/files/usr/bin/fc-pattern",
+        "data/data/studio.ocean.app/files/usr/bin/fc-cat",
+        "data/data/studio.ocean.app/files/usr/bin/fc-match",
+        "data/data/studio.ocean.app/files/usr/bin/fc-validate",
+        "data/data/studio.ocean.app/files/usr/bin/fc-scan",
+        "data/data/studio.ocean.app/files/usr/bin/fc-list",
+        "data/data/studio.ocean.app/files/usr/bin/fc-query",
+        "data/data/studio.ocean.app/files/usr/bin/fc-cache"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/fc-conflist",
+        "data/data/studio.ocean.app/files/usr/bin/fc-pattern",
+        "data/data/studio.ocean.app/files/usr/bin/fc-cat",
+        "data/data/studio.ocean.app/files/usr/bin/fc-match",
+        "data/data/studio.ocean.app/files/usr/bin/fc-validate",
+        "data/data/studio.ocean.app/files/usr/bin/fc-scan",
+        "data/data/studio.ocean.app/files/usr/bin/fc-list",
+        "data/data/studio.ocean.app/files/usr/bin/fc-query",
+        "data/data/studio.ocean.app/files/usr/bin/fc-cache"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "fontconfig",
+      "version": "2.18.3",
+      "architecture": "aarch64",
+      "depends": "freetype, libexpat, ttf-dejavu",
+      "description": "Library for configuring and customizing font access",
+      "artifact": "fontconfig_2.18.3_aarch64.deb",
+      "bytes": 140320,
+      "sha256": "4776d321a10724316d3c553629e6bd64c669e710d82293d0d352d3c9c22cea25",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libfontconfig.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libfontconfig.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "freetype-static",
+      "version": "2.14.3",
+      "architecture": "aarch64",
+      "depends": "freetype (= 2.14.3)",
+      "description": "Static libraries for freetype",
+      "artifact": "freetype-static_2.14.3_aarch64.deb",
+      "bytes": 302108,
+      "sha256": "3abd546d49b6361c7a766c35ee9f6d1b815c0abe674d6fbdfb15cf516cd24858",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libfreetype.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "freetype",
+      "version": "2.14.3",
+      "architecture": "aarch64",
+      "depends": "brotli, libbz2, libpng, zlib",
+      "description": "Software font engine capable of producing high-quality output",
+      "artifact": "freetype_2.14.3_aarch64.deb",
+      "bytes": 412196,
+      "sha256": "c7ea6a3c4154dc4cf4ed737e94b89cb65ec43041e9f459480b9bdb5994416965",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/freetype-config",
+        "data/data/studio.ocean.app/files/usr/lib/libfreetype.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libfreetype.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gawk-static",
+      "version": "5.3.2",
+      "architecture": "aarch64",
+      "depends": "gawk (= 5.3.2)",
+      "description": "Static libraries for gawk",
+      "artifact": "gawk-static_5.3.2_aarch64.deb",
+      "bytes": 24872,
+      "sha256": "c52e978e3f16954150cfe675c602d55eba4ab80c09dcc683ffc49440bd3e05ad",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gawk",
+      "version": "5.3.2",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libgmp, libmpfr, readline",
+      "description": "Programming language designed for text processing",
+      "artifact": "gawk_5.3.2_aarch64.deb",
+      "bytes": 872676,
+      "sha256": "bb0a8791abfe939e88b9bd5e997503072ddc9cac22a7954d7d381591cf4797e1",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gawk",
+        "data/data/studio.ocean.app/files/usr/libexec/awk/pwcat",
+        "data/data/studio.ocean.app/files/usr/libexec/awk/grcat",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/inplace.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/revoutput.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/readfile.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/intdiv.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/time.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/revtwoway.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/fnmatch.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/filefuncs.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/rwarray.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/fork.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/ordchr.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/readdir.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gawk",
+        "data/data/studio.ocean.app/files/usr/libexec/awk/pwcat",
+        "data/data/studio.ocean.app/files/usr/libexec/awk/grcat",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/inplace.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/revoutput.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/readfile.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/intdiv.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/time.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/revtwoway.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/fnmatch.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/filefuncs.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/rwarray.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/fork.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/ordchr.so",
+        "data/data/studio.ocean.app/files/usr/lib/gawk/readdir.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gdbm-static",
+      "version": "1.26-1",
+      "architecture": "aarch64",
+      "depends": "gdbm (= 1.26-1)",
+      "description": "Static libraries for gdbm",
+      "artifact": "gdbm-static_1.26-1_aarch64.deb",
+      "bytes": 32008,
+      "sha256": "bd56cfc1d451bc58d9f00191cc177cfc9aae077da8e48036d9c396446c396805",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm.la",
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm_compat.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gdbm",
+      "version": "1.26-1",
+      "architecture": "aarch64",
+      "depends": "readline",
+      "description": "Library of database functions that use extensible hashing",
+      "artifact": "gdbm_1.26-1_aarch64.deb",
+      "bytes": 150092,
+      "sha256": "135d0d2e68133e61062a9ee2465e264186ae87fe34b4234c0933097462bddb83",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gdbm_dump",
+        "data/data/studio.ocean.app/files/usr/bin/gdbmtool",
+        "data/data/studio.ocean.app/files/usr/bin/gdbm_load",
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm_compat.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gdbm_dump",
+        "data/data/studio.ocean.app/files/usr/bin/gdbmtool",
+        "data/data/studio.ocean.app/files/usr/bin/gdbm_load",
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm_compat.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgdbm.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gnupg",
+      "version": "2.5.17",
+      "architecture": "aarch64",
+      "depends": "libassuan, libbz2, libgcrypt, libgnutls, libgpg-error, libksba, libnpth, libsqlite, readline, pinentry, resolv-conf, zlib",
+      "description": "Implementation of the OpenPGP standard for encrypting and signing data and communication",
+      "artifact": "gnupg_2.5.17_aarch64.deb",
+      "bytes": 1409272,
+      "sha256": "e5e321896c94085326f7536f46b1d27d6a0ad0d54d83e7a4bd9f98565bbd33b6",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gpg-wks-client",
+        "data/data/studio.ocean.app/files/usr/bin/dirmngr-client",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-card",
+        "data/data/studio.ocean.app/files/usr/bin/gpgtar",
+        "data/data/studio.ocean.app/files/usr/bin/gpgsplit",
+        "data/data/studio.ocean.app/files/usr/bin/addgnupghome",
+        "data/data/studio.ocean.app/files/usr/bin/dirmngr",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-authcode-sign.sh",
+        "data/data/studio.ocean.app/files/usr/bin/gpgscm",
+        "data/data/studio.ocean.app/files/usr/bin/applygnupgdefaults",
+        "data/data/studio.ocean.app/files/usr/bin/gpgparsemail",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-mail-tube",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-connect-agent",
+        "data/data/studio.ocean.app/files/usr/bin/watchgnupg",
+        "data/data/studio.ocean.app/files/usr/bin/gpgsm",
+        "data/data/studio.ocean.app/files/usr/bin/kbxutil",
+        "data/data/studio.ocean.app/files/usr/bin/gpg",
+        "data/data/studio.ocean.app/files/usr/bin/gpgconf",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-agent",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-wks-client",
+        "data/data/studio.ocean.app/files/usr/libexec/keyboxd",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-protect-tool",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-preset-passphrase",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-auth",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-pair-tool",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-check-pattern"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gpg-wks-client",
+        "data/data/studio.ocean.app/files/usr/bin/dirmngr-client",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-card",
+        "data/data/studio.ocean.app/files/usr/bin/gpgtar",
+        "data/data/studio.ocean.app/files/usr/bin/gpgsplit",
+        "data/data/studio.ocean.app/files/usr/bin/dirmngr",
+        "data/data/studio.ocean.app/files/usr/bin/gpgscm",
+        "data/data/studio.ocean.app/files/usr/bin/gpgparsemail",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-mail-tube",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-connect-agent",
+        "data/data/studio.ocean.app/files/usr/bin/watchgnupg",
+        "data/data/studio.ocean.app/files/usr/bin/gpgsm",
+        "data/data/studio.ocean.app/files/usr/bin/kbxutil",
+        "data/data/studio.ocean.app/files/usr/bin/gpg",
+        "data/data/studio.ocean.app/files/usr/bin/gpgconf",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-agent",
+        "data/data/studio.ocean.app/files/usr/libexec/keyboxd",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-protect-tool",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-preset-passphrase",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-auth",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-pair-tool",
+        "data/data/studio.ocean.app/files/usr/libexec/gpg-check-pattern"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gnutls",
+      "version": "3.8.13-1",
+      "architecture": "aarch64",
+      "depends": "libgnutls (= 3.8.13-1)",
+      "description": "Commandline utilities for interfacing with the gnutls library",
+      "artifact": "gnutls_3.8.13-1_aarch64.deb",
+      "bytes": 184816,
+      "sha256": "3fb560584e62460071a5add7acd67403b29885ea2103952bc435cbb3fc5798dd",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/ocsptool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-cli-debug",
+        "data/data/studio.ocean.app/files/usr/bin/p11tool",
+        "data/data/studio.ocean.app/files/usr/bin/danetool",
+        "data/data/studio.ocean.app/files/usr/bin/psktool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-serv",
+        "data/data/studio.ocean.app/files/usr/bin/certtool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-cli"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/ocsptool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-cli-debug",
+        "data/data/studio.ocean.app/files/usr/bin/p11tool",
+        "data/data/studio.ocean.app/files/usr/bin/danetool",
+        "data/data/studio.ocean.app/files/usr/bin/psktool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-serv",
+        "data/data/studio.ocean.app/files/usr/bin/certtool",
+        "data/data/studio.ocean.app/files/usr/bin/gnutls-cli"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gpgv",
+      "version": "2.5.17",
+      "architecture": "aarch64",
+      "depends": "libassuan, libbz2, libgcrypt, libgpg-error, libnpth, zlib",
+      "description": "GNU privacy guard - signature verification tool",
+      "artifact": "gpgv_2.5.17_aarch64.deb",
+      "bytes": 188344,
+      "sha256": "7df95df0abec3cb1ad9c947c113f049fd8e10a801d095e5d8a57292c3fed1007",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gpgv"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gpgv"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "grep",
+      "version": "3.12-3",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, pcre2",
+      "description": "Command which searches one or more input files for lines containing a match to a specified pattern",
+      "artifact": "grep_3.12-3_aarch64.deb",
+      "bytes": 128340,
+      "sha256": "637103090cdc4c2975a73949623a01f235e3633cece71ab926add185cf09b4dd",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/egrep",
+        "data/data/studio.ocean.app/files/usr/bin/fgrep",
+        "data/data/studio.ocean.app/files/usr/bin/grep"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/grep"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "gzip",
+      "version": "1.14-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Standard GNU file compression utilities",
+      "artifact": "gzip_1.14-1_aarch64.deb",
+      "bytes": 87720,
+      "sha256": "2440b634d1bafc87b4021a520ed19df05917219532eea715720a28f61d404bf1",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/zegrep",
+        "data/data/studio.ocean.app/files/usr/bin/gunzip",
+        "data/data/studio.ocean.app/files/usr/bin/znew",
+        "data/data/studio.ocean.app/files/usr/bin/zforce",
+        "data/data/studio.ocean.app/files/usr/bin/zcat",
+        "data/data/studio.ocean.app/files/usr/bin/zdiff",
+        "data/data/studio.ocean.app/files/usr/bin/zcmp",
+        "data/data/studio.ocean.app/files/usr/bin/zgrep",
+        "data/data/studio.ocean.app/files/usr/bin/zfgrep",
+        "data/data/studio.ocean.app/files/usr/bin/zmore",
+        "data/data/studio.ocean.app/files/usr/bin/uncompress",
+        "data/data/studio.ocean.app/files/usr/bin/gzip",
+        "data/data/studio.ocean.app/files/usr/bin/gzexe"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gzip"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "iconv",
+      "version": "1.18-1",
+      "architecture": "aarch64",
+      "depends": "libiconv (= 1.18-1)",
+      "description": "Utility converting between different character encodings",
+      "artifact": "iconv_1.18-1_aarch64.deb",
+      "bytes": 10132,
+      "sha256": "30d7a621e196d1a6946421f972241f01720c2024a4573e46987bb4e970eb81bc",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/iconv"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/iconv"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "icu-devtools",
+      "version": "78.3",
+      "architecture": "aarch64",
+      "depends": "libicu (= 78.3)",
+      "description": "Development utilities for International Components for Unicode",
+      "artifact": "icu-devtools_78.3_aarch64.deb",
+      "bytes": 210408,
+      "sha256": "4eda0ee6f84f8d6c15f0caeee9eaafa079f7de0ed09cc9ea77a83532a117bd4f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gencfu",
+        "data/data/studio.ocean.app/files/usr/bin/makeconv",
+        "data/data/studio.ocean.app/files/usr/bin/pkgdata",
+        "data/data/studio.ocean.app/files/usr/bin/icuexportdata",
+        "data/data/studio.ocean.app/files/usr/bin/genbrk",
+        "data/data/studio.ocean.app/files/usr/bin/genrb",
+        "data/data/studio.ocean.app/files/usr/bin/gencnval",
+        "data/data/studio.ocean.app/files/usr/bin/uconv",
+        "data/data/studio.ocean.app/files/usr/bin/gencmn",
+        "data/data/studio.ocean.app/files/usr/bin/escapesrc",
+        "data/data/studio.ocean.app/files/usr/bin/icupkg",
+        "data/data/studio.ocean.app/files/usr/bin/icu-config",
+        "data/data/studio.ocean.app/files/usr/bin/gennorm2",
+        "data/data/studio.ocean.app/files/usr/bin/gensprep",
+        "data/data/studio.ocean.app/files/usr/bin/icuinfo",
+        "data/data/studio.ocean.app/files/usr/bin/genccode",
+        "data/data/studio.ocean.app/files/usr/bin/derb",
+        "data/data/studio.ocean.app/files/usr/bin/gendict"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/gencfu",
+        "data/data/studio.ocean.app/files/usr/bin/makeconv",
+        "data/data/studio.ocean.app/files/usr/bin/pkgdata",
+        "data/data/studio.ocean.app/files/usr/bin/icuexportdata",
+        "data/data/studio.ocean.app/files/usr/bin/genbrk",
+        "data/data/studio.ocean.app/files/usr/bin/genrb",
+        "data/data/studio.ocean.app/files/usr/bin/gencnval",
+        "data/data/studio.ocean.app/files/usr/bin/uconv",
+        "data/data/studio.ocean.app/files/usr/bin/gencmn",
+        "data/data/studio.ocean.app/files/usr/bin/escapesrc",
+        "data/data/studio.ocean.app/files/usr/bin/icupkg",
+        "data/data/studio.ocean.app/files/usr/bin/gennorm2",
+        "data/data/studio.ocean.app/files/usr/bin/gensprep",
+        "data/data/studio.ocean.app/files/usr/bin/icuinfo",
+        "data/data/studio.ocean.app/files/usr/bin/genccode",
+        "data/data/studio.ocean.app/files/usr/bin/derb",
+        "data/data/studio.ocean.app/files/usr/bin/gendict"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "less",
+      "version": "704",
+      "architecture": "aarch64",
+      "depends": "ncurses, pcre2",
+      "description": "Terminal pager program used to view the contents of a text file one screen at a time",
+      "artifact": "less_704_aarch64.deb",
+      "bytes": 138748,
+      "sha256": "7108839d02b9c264ba6be7b541d893e8bf8afc99142bee90ab1ae0393bfb8ff6",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/less",
+        "data/data/studio.ocean.app/files/usr/bin/lesskey",
+        "data/data/studio.ocean.app/files/usr/libexec/lessecho",
+        "data/data/studio.ocean.app/files/usr/libexec/less-osc8-open"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/less",
+        "data/data/studio.ocean.app/files/usr/bin/lesskey",
+        "data/data/studio.ocean.app/files/usr/libexec/lessecho"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libacl-static",
+      "version": "2.4.0",
+      "architecture": "aarch64",
+      "depends": "libacl (= 2.4.0)",
+      "description": "Static libraries for libacl",
+      "artifact": "libacl-static_2.4.0_aarch64.deb",
+      "bytes": 20116,
+      "sha256": "5f2f28e9ec0f0f95ae303058cb328aca16578bb7350191e55d1ea4a3aa504a54",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libacl.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libacl",
+      "version": "2.4.0",
+      "architecture": "aarch64",
+      "depends": "attr",
+      "description": "Access control list shared library",
+      "artifact": "libacl_2.4.0_aarch64.deb",
+      "bytes": 123492,
+      "sha256": "1d43e8fd73becc163f9d34b006a0f06c751afb15d35ca0af581e753074da1bc0",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/getfacl",
+        "data/data/studio.ocean.app/files/usr/bin/setfacl",
+        "data/data/studio.ocean.app/files/usr/bin/chacl",
+        "data/data/studio.ocean.app/files/usr/lib/libacl.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/getfacl",
+        "data/data/studio.ocean.app/files/usr/bin/setfacl",
+        "data/data/studio.ocean.app/files/usr/bin/chacl",
+        "data/data/studio.ocean.app/files/usr/lib/libacl.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-glob-static",
+      "version": "0.6-3",
+      "architecture": "aarch64",
+      "depends": "libandroid-glob (= 0.6-3)",
+      "description": "Static libraries for libandroid-glob",
+      "artifact": "libandroid-glob-static_0.6-3_aarch64.deb",
+      "bytes": 4624,
+      "sha256": "c26d3a1caaa702921cbccdece1cc0fc7710b54fafd012368aa836e3be1cb6110",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-glob",
+      "version": "0.6-3",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Shared library for the glob(3) system function",
+      "artifact": "libandroid-glob_0.6-3_aarch64.deb",
+      "bytes": 7036,
+      "sha256": "7860276bde1be27dbb7b872a9bc5339b43a477de841348e803895fbe17b2a77e",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-glob.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-posix-semaphore-static",
+      "version": "0.1-4",
+      "architecture": "aarch64",
+      "depends": "libandroid-posix-semaphore (= 0.1-4)",
+      "description": "Static libraries for libandroid-posix-semaphore",
+      "artifact": "libandroid-posix-semaphore-static_0.1-4_aarch64.deb",
+      "bytes": 2880,
+      "sha256": "3d791f9b1f8e56a778c01fce31f5804a1dce626d2edd1209f52cf046b4cf6ab6",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-posix-semaphore",
+      "version": "0.1-4",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Shared library for the posix semaphore system function",
+      "artifact": "libandroid-posix-semaphore_0.1-4_aarch64.deb",
+      "bytes": 4100,
+      "sha256": "e24cc100c09f9b64e90032f7d766ab42eb41c6adf6e010357fcd719081c47e48",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-posix-semaphore.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-selinux",
+      "version": "14.0.0.11-1",
+      "architecture": "aarch64",
+      "depends": "pcre2",
+      "description": "Android fork of libselinux, an SELinux userland library",
+      "artifact": "libandroid-selinux_14.0.0.11-1_aarch64.deb",
+      "bytes": 59232,
+      "sha256": "a58f9456280427331737c72c6b86904e4f1643c41f6cee19b9ed09656447e28c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-selinux.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-selinux.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-support-static",
+      "version": "29-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-support (= 29-1)",
+      "description": "Static libraries for libandroid-support",
+      "artifact": "libandroid-support-static_29-1_aarch64.deb",
+      "bytes": 8644,
+      "sha256": "63f913550fb8802f83baced8fda0bf6499ab9898868cbb83e1d23e686eb65ef3",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-support",
+      "version": "29-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Library extending the Android C library (Bionic) for additional multibyte, locale and math support",
+      "artifact": "libandroid-support_29-1_aarch64.deb",
+      "bytes": 10948,
+      "sha256": "ea40bc4c4a8db191f3c2aac12d21dd5cc8d2c1925409fc8da9b4e3247af3239f",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-support.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-utimes-static",
+      "version": "0.4",
+      "architecture": "aarch64",
+      "depends": "libandroid-utimes (= 0.4)",
+      "description": "Static libraries for libandroid-utimes",
+      "artifact": "libandroid-utimes-static_0.4_aarch64.deb",
+      "bytes": 1700,
+      "sha256": "e23d2d256119c76da7d0f8557c9e2cc6946c9c4e4bea8e1e758e55d70218373f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-utimes.a"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libandroid-utimes",
+      "version": "0.4",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "futimes, futimesat and lutimes from bionic",
+      "artifact": "libandroid-utimes_0.4_aarch64.deb",
+      "bytes": 3132,
+      "sha256": "7516da5522414334870f26d8ae6bc52562471a9761afea44f791615df0e7f24d",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-utimes.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libandroid-utimes.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libassuan-static",
+      "version": "3.0.2-1",
+      "architecture": "aarch64",
+      "depends": "libassuan (= 3.0.2-1)",
+      "description": "Static libraries for libassuan",
+      "artifact": "libassuan-static_3.0.2-1_aarch64.deb",
+      "bytes": 33500,
+      "sha256": "b92b48489581312b45c62a10cd04a0ec1929d2772cc87e89f4fca266d329a312",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libassuan.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libassuan",
+      "version": "3.0.2-1",
+      "architecture": "aarch64",
+      "depends": "libgpg-error",
+      "description": "Library implementing the Assuan IPC protocol used between most newer GnuPG components",
+      "artifact": "libassuan_3.0.2-1_aarch64.deb",
+      "bytes": 73972,
+      "sha256": "5f717e0fe44ab024b015686bb99ed2bdfdf02d870edba3c4c0c6e4636353f7f5",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/libassuan-config",
+        "data/data/studio.ocean.app/files/usr/lib/libassuan.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libassuan.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libblkid",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libandroid-posix-semaphore",
+      "description": "Block device identification library",
+      "artifact": "libblkid_2.42.1-4_aarch64.deb",
+      "bytes": 128160,
+      "sha256": "afb267b2a881526a20d01c50038740e99df3c20454511701d706325c5689ff23",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libblkid.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libblkid.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libbz2",
+      "version": "1.0.8-8",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "BZ2 format compression library",
+      "artifact": "libbz2_1.0.8-8_aarch64.deb",
+      "bytes": 26140,
+      "sha256": "9d98caa9d2015ead33db39136d3117de9abd1977038e0fd0a1ecc3964fac23f8",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libbz2.so.1.0.8"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libbz2.so.1.0.8"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libc++",
+      "version": "29",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "C++ Standard Library",
+      "artifact": "libc++_29_aarch64.deb",
+      "bytes": 335028,
+      "sha256": "c24f5137ff995c9badef966b319829ec2cd5e4c83d5b0f702a76554c6d09aff7",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libc++_shared.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libc++_shared.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libcap-ng-static",
+      "version": "2:0.9.5",
+      "architecture": "aarch64",
+      "depends": "libcap-ng (= 2:0.9.5)",
+      "description": "Static libraries for libcap-ng",
+      "artifact": "libcap-ng-static_2:0.9.5_aarch64.deb",
+      "bytes": 9816,
+      "sha256": "b380ba713acbb5511005961f1abb5206ee31d80d335aef1f4fd481fc97267b1a",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libdrop_ambient.la",
+        "data/data/studio.ocean.app/files/usr/lib/libcap-ng.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libcap-ng",
+      "version": "2:0.9.5",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Library making programming with POSIX capabilities easier than traditional libcap",
+      "artifact": "libcap-ng_2:0.9.5_aarch64.deb",
+      "bytes": 57900,
+      "sha256": "7b80a629645d38e64c12a476a55ef559b5c1fc8ba21de83ea9a57f6864434d3e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/filecap",
+        "data/data/studio.ocean.app/files/usr/bin/netcap",
+        "data/data/studio.ocean.app/files/usr/bin/pscap",
+        "data/data/studio.ocean.app/files/usr/lib/libdrop_ambient.so",
+        "data/data/studio.ocean.app/files/usr/lib/libcap-ng.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/filecap",
+        "data/data/studio.ocean.app/files/usr/bin/netcap",
+        "data/data/studio.ocean.app/files/usr/bin/pscap",
+        "data/data/studio.ocean.app/files/usr/lib/libdrop_ambient.so",
+        "data/data/studio.ocean.app/files/usr/lib/libcap-ng.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libcrypt",
+      "version": "0.2-6",
+      "architecture": "aarch64",
+      "depends": "openssl",
+      "description": "A crypt(3) implementation",
+      "artifact": "libcrypt_0.2-6_aarch64.deb",
+      "bytes": 8848,
+      "sha256": "4f1b55a4bffcc5e67155fa104ae217c516853b467995452f625b754c5b5ed872",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libcrypt.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libcrypt.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libcurl-static",
+      "version": "8.21.0",
+      "architecture": "aarch64",
+      "depends": "libcurl (= 8.21.0)",
+      "description": "Static libraries for libcurl",
+      "artifact": "libcurl-static_8.21.0_aarch64.deb",
+      "bytes": 417472,
+      "sha256": "d15993efc628316431654b998886ec6a8b2a0a3c9823c8a80db1d003990be0b2",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libcurl.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libcurl",
+      "version": "8.21.0",
+      "architecture": "aarch64",
+      "depends": "libnghttp2, libnghttp3, libngtcp2, libssh2, openssl (>= 1:3.2.1-1), zlib",
+      "description": "Easy-to-use client-side URL transfer library",
+      "artifact": "libcurl_8.21.0_aarch64.deb",
+      "bytes": 1017472,
+      "sha256": "2271bdb2993bad7e9e16f1908548089af288e2bfb124a2b8e102cca548cbb4b4",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/wcurl",
+        "data/data/studio.ocean.app/files/usr/bin/curl-config",
+        "data/data/studio.ocean.app/files/usr/lib/libcurl.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libcurl.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libdb-static",
+      "version": "18.1.40-6",
+      "architecture": "aarch64",
+      "depends": "libdb (= 18.1.40-6)",
+      "description": "Static libraries for libdb",
+      "artifact": "libdb-static_18.1.40-6_aarch64.deb",
+      "bytes": 482936,
+      "sha256": "9a8711696c82ab8f21b4ac4923ce8c68fd108f18deb675a7eb33379b0e1233e2",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libdb",
+      "version": "18.1.40-6",
+      "architecture": "aarch64",
+      "depends": "libc++",
+      "description": "The Berkeley DB embedded database system (library)",
+      "artifact": "libdb_18.1.40-6_aarch64.deb",
+      "bytes": 498344,
+      "sha256": "e004ef3332e66fe7a27dea9d1cdb6f761d421e75ccf204545bc5e86ec9899bb7",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libdb-18.1.so",
+        "data/data/studio.ocean.app/files/usr/lib/libdb_cxx-18.1.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libdb-18.1.so",
+        "data/data/studio.ocean.app/files/usr/lib/libdb_cxx-18.1.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libevent",
+      "version": "2.1.13",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Library that provides asynchronous event notification",
+      "artifact": "libevent_2.1.13_aarch64.deb",
+      "bytes": 202856,
+      "sha256": "ef2f78105a6997109f15b7ecc8b3bc710b3d010fff572fb546cd779435183639",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libevent_pthreads-2.1.so",
+        "data/data/studio.ocean.app/files/usr/lib/libevent_core-2.1.so",
+        "data/data/studio.ocean.app/files/usr/lib/libevent_extra-2.1.so",
+        "data/data/studio.ocean.app/files/usr/lib/libevent-2.1.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libexpat-static",
+      "version": "2.8.3",
+      "architecture": "aarch64",
+      "depends": "libexpat (= 2.8.3)",
+      "description": "Static libraries for libexpat",
+      "artifact": "libexpat-static_2.8.3_aarch64.deb",
+      "bytes": 59480,
+      "sha256": "db2a7fbc38046ea167b5c75a39464f3fb004512dd31d0ba2df135c1a43a37e81",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libexpat.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libexpat",
+      "version": "2.8.3",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "XML parsing C library",
+      "artifact": "libexpat_2.8.3_aarch64.deb",
+      "bytes": 96240,
+      "sha256": "9872342b8c3b50ceb376ebc36affd4b53cf0a4118bf5b71d91b228b2f2e7f37f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libexpat.so.1.12.3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libexpat.so.1.12.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libfdisk",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libblkid, libuuid",
+      "description": "Library for manipulating disk partition tables",
+      "artifact": "libfdisk_2.42.1-4_aarch64.deb",
+      "bytes": 159796,
+      "sha256": "3009ee2b29156a3f2319474f6f530c47ec57d1d4368ad8a053bbdeb10248e51a",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libfdisk.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libfdisk.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libffi-static",
+      "version": "3.5.2",
+      "architecture": "aarch64",
+      "depends": "libffi (= 3.5.2)",
+      "description": "Static libraries for libffi",
+      "artifact": "libffi-static_3.5.2_aarch64.deb",
+      "bytes": 16228,
+      "sha256": "22723c40d269ae3913fdb632d484c2ef180f5abef4913fe021b14ded4cd6d806",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libffi.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libffi",
+      "version": "3.5.2",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Library providing a portable, high level programming interface to various calling conventions",
+      "artifact": "libffi_3.5.2_aarch64.deb",
+      "bytes": 31168,
+      "sha256": "b06ab14fe6cbe73988db612ceafcbe9d48402ffb5a32039dbcd662f4c82cfdbb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libffi.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libffi.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgcrypt-static",
+      "version": "1.12.2",
+      "architecture": "aarch64",
+      "depends": "libgcrypt (= 1.12.2)",
+      "description": "Static libraries for libgcrypt",
+      "artifact": "libgcrypt-static_1.12.2_aarch64.deb",
+      "bytes": 483616,
+      "sha256": "d546fe29a2391268f1d66f2abc3ba8a387466441d148ce23b86d613a9e963f11",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgcrypt.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgcrypt",
+      "version": "1.12.2",
+      "architecture": "aarch64",
+      "depends": "libgpg-error",
+      "description": "General purpose cryptographic library based on the code from GnuPG",
+      "artifact": "libgcrypt_1.12.2_aarch64.deb",
+      "bytes": 513700,
+      "sha256": "6c516d49d10c058efc745ff5f39a2b55a210d5f089512ac056cd488840f36259",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/dumpsexp",
+        "data/data/studio.ocean.app/files/usr/bin/mpicalc",
+        "data/data/studio.ocean.app/files/usr/bin/libgcrypt-config",
+        "data/data/studio.ocean.app/files/usr/bin/hmac256",
+        "data/data/studio.ocean.app/files/usr/lib/libgcrypt.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/dumpsexp",
+        "data/data/studio.ocean.app/files/usr/bin/mpicalc",
+        "data/data/studio.ocean.app/files/usr/bin/hmac256",
+        "data/data/studio.ocean.app/files/usr/lib/libgcrypt.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgmp-static",
+      "version": "6.3.0-2",
+      "architecture": "aarch64",
+      "depends": "libgmp (= 6.3.0-2)",
+      "description": "Static libraries for libgmp",
+      "artifact": "libgmp-static_6.3.0-2_aarch64.deb",
+      "bytes": 226576,
+      "sha256": "9b4f30a388b643590bb64361c5cfecc51b77b4e6d90b164a4e915d1e2cbdff8a",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgmp.la",
+        "data/data/studio.ocean.app/files/usr/lib/libgmpxx.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgmp",
+      "version": "6.3.0-2",
+      "architecture": "aarch64",
+      "depends": "libc++",
+      "description": "Library for arbitrary precision arithmetic",
+      "artifact": "libgmp_6.3.0-2_aarch64.deb",
+      "bytes": 328596,
+      "sha256": "d5b28cc414389dda87384923ce2389863dd13d4b32c6e9e4586935550baee8b0",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgmp.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgmpxx.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libgmp.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgmpxx.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgnutls-static",
+      "version": "3.8.13-1",
+      "architecture": "aarch64",
+      "depends": "libgnutls (= 3.8.13-1)",
+      "description": "Static libraries for libgnutls",
+      "artifact": "libgnutls-static_3.8.13-1_aarch64.deb",
+      "bytes": 839704,
+      "sha256": "04674d1e8753bf9eca629922f0a960643d869fd92de437b4600ad20d655732f8",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls.la",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls-dane.la",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutlsxx.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgnutls",
+      "version": "3.8.13-1",
+      "architecture": "aarch64",
+      "depends": "libc++, libgmp, libnettle, ca-certificates, libidn2, libtasn1, libunbound, libunistring, p11-kit, zlib",
+      "description": "Secure communications library implementing the SSL, TLS and DTLS protocols and technologies around them",
+      "artifact": "libgnutls_3.8.13-1_aarch64.deb",
+      "bytes": 778144,
+      "sha256": "3b5c9ac50d58860551cab835c7e244c944b73ada07fee2e82f309b45102f7cd0",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgnutlsxx.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls-dane.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libgnutlsxx.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls.so",
+        "data/data/studio.ocean.app/files/usr/lib/libgnutls-dane.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgpg-error-static",
+      "version": "1.61",
+      "architecture": "aarch64",
+      "depends": "libgpg-error (= 1.61)",
+      "description": "Static libraries for libgpg-error",
+      "artifact": "libgpg-error-static_1.61_aarch64.deb",
+      "bytes": 65896,
+      "sha256": "0b4a7bc1384a6a045c6a9d4305d0c71db78fc82563be575c109476452b6fb683",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libgpg-error.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libgpg-error",
+      "version": "1.61",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Small library that defines common error values for all GnuPG components",
+      "artifact": "libgpg-error_1.61_aarch64.deb",
+      "bytes": 121356,
+      "sha256": "823f9ff5b43b98903a377e5b0d43cff305d139e9121562e1a734e514eab3835e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/gpgrt-config",
+        "data/data/studio.ocean.app/files/usr/bin/yat2m",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-error-config",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-error",
+        "data/data/studio.ocean.app/files/usr/lib/libgpg-error.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/yat2m",
+        "data/data/studio.ocean.app/files/usr/bin/gpg-error",
+        "data/data/studio.ocean.app/files/usr/lib/libgpg-error.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libiconv-static",
+      "version": "1.18-1",
+      "architecture": "aarch64",
+      "depends": "libiconv (= 1.18-1)",
+      "description": "Static libraries for libiconv",
+      "artifact": "libiconv-static_1.18-1_aarch64.deb",
+      "bytes": 556124,
+      "sha256": "b67dfec567492bf1726b2f4bb42fc9e235d4f1938c91c6876aeb04ee6a53cb24",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libiconv.la",
+        "data/data/studio.ocean.app/files/usr/lib/libcharset.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libiconv",
+      "version": "1.18-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "An implementation of iconv()",
+      "artifact": "libiconv_1.18-1_aarch64.deb",
+      "bytes": 561912,
+      "sha256": "bcc6f4bff3f76b686edc0223facb4a52dcda851435313598dce21d88713cb98b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libcharset.so",
+        "data/data/studio.ocean.app/files/usr/lib/libiconv.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libcharset.so",
+        "data/data/studio.ocean.app/files/usr/lib/libiconv.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libicu-static",
+      "version": "78.3",
+      "architecture": "aarch64",
+      "depends": "libicu (= 78.3)",
+      "description": "Static libraries for libicu",
+      "artifact": "libicu-static_78.3_aarch64.deb",
+      "bytes": 10033948,
+      "sha256": "52aaf8fb14d43b1d227bcd0d20ca281f64e476e5dbd132df97dd66c0e9372c98",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libicutest.a",
+        "data/data/studio.ocean.app/files/usr/lib/libicuio.a",
+        "data/data/studio.ocean.app/files/usr/lib/libicuuc.a",
+        "data/data/studio.ocean.app/files/usr/lib/libicudata.a",
+        "data/data/studio.ocean.app/files/usr/lib/libicui18n.a",
+        "data/data/studio.ocean.app/files/usr/lib/libicutu.a"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libicu",
+      "version": "78.3",
+      "architecture": "aarch64",
+      "depends": "libc++",
+      "description": "International Components for Unicode library",
+      "artifact": "libicu_78.3_aarch64.deb",
+      "bytes": 10243876,
+      "sha256": "5bb26a8c4048fcb5929321d4cd2fb70f7826a40af54794198bc97001870ff311",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libicuio.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicui18n.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicutu.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicuuc.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicutest.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicudata.so.78.3",
+        "data/data/studio.ocean.app/files/usr/share/icu/78.3/mkinstalldirs",
+        "data/data/studio.ocean.app/files/usr/share/icu/78.3/install-sh"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libicuio.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicui18n.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicutu.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicuuc.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicutest.so.78.3",
+        "data/data/studio.ocean.app/files/usr/lib/libicudata.so.78.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libidn2-static",
+      "version": "2.3.8-1",
+      "architecture": "aarch64",
+      "depends": "libidn2 (= 2.3.8-1)",
+      "description": "Static libraries for libidn2",
+      "artifact": "libidn2-static_2.3.8-1_aarch64.deb",
+      "bytes": 73048,
+      "sha256": "5d6281aafe3eb9563768cf4127f2d6d169199080ed4028b9750b4063dfbe4b0e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libidn2.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libidn2",
+      "version": "2.3.8-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libiconv, libunistring",
+      "description": "Free software implementation of IDNA2008, Punycode and TR46",
+      "artifact": "libidn2_2.3.8-1_aarch64.deb",
+      "bytes": 104644,
+      "sha256": "f92616e2e038c7fa5a4f8db6e860f1697931bd1b21019b2c911749794a50b35b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/idn2",
+        "data/data/studio.ocean.app/files/usr/lib/libidn2.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/idn2",
+        "data/data/studio.ocean.app/files/usr/lib/libidn2.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libksba-static",
+      "version": "1.8.1",
+      "architecture": "aarch64",
+      "depends": "libksba (= 1.8.1)",
+      "description": "Static libraries for libksba",
+      "artifact": "libksba-static_1.8.1_aarch64.deb",
+      "bytes": 92696,
+      "sha256": "c6e3940a7d466b610c923665714360c7456bf372676a075d817bb5858d66fdd3",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libksba.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libksba",
+      "version": "1.8.1",
+      "architecture": "aarch64",
+      "depends": "libgpg-error",
+      "description": "Library for using X.509 certificates and CMS (Cryptographic Message Syntax) easily accessible",
+      "artifact": "libksba_1.8.1_aarch64.deb",
+      "bytes": 107020,
+      "sha256": "ffcd10c234b85f22e2be2d828657172e100dd9e9eaba0161cb6dea1b80968132",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/ksba-config",
+        "data/data/studio.ocean.app/files/usr/lib/libksba.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libksba.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "liblz4",
+      "version": "1.10.0-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Fast LZ compression algorithm library",
+      "artifact": "liblz4_1.10.0-1_aarch64.deb",
+      "bytes": 86352,
+      "sha256": "8ccacdb965671efa0a1ccee3534bac94b368c752e9e1560b0282b240caafbf47",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/liblz4.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "liblzma-static",
+      "version": "5.8.3",
+      "architecture": "aarch64",
+      "depends": "liblzma (= 5.8.3)",
+      "description": "Static libraries for liblzma",
+      "artifact": "liblzma-static_5.8.3_aarch64.deb",
+      "bytes": 89568,
+      "sha256": "4eb5bd223d447cf98694aad30f13977698cc4c3e590219edc6487dc658545a44",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/liblzma.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "liblzma",
+      "version": "5.8.3",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "XZ-format compression library",
+      "artifact": "liblzma_5.8.3_aarch64.deb",
+      "bytes": 192976,
+      "sha256": "ff9b990f23922ef1dfcacf925ec0c313f6a6b5924ddcb48849411918b1588c2c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/liblzma.so.5.8.3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/liblzma.so.5.8.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libmd-static",
+      "version": "1.1.0-1",
+      "architecture": "aarch64",
+      "depends": "libmd (= 1.1.0-1)",
+      "description": "Static libraries for libmd",
+      "artifact": "libmd-static_1.1.0-1_aarch64.deb",
+      "bytes": 17900,
+      "sha256": "ed4082b456a2ec57b8cd4dbf452972365b806a18e3b723430543e62c9a1eff11",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmd.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libmd",
+      "version": "1.1.0-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Message Digest functions from BSD systems",
+      "artifact": "libmd_1.1.0-1_aarch64.deb",
+      "bytes": 40612,
+      "sha256": "1f4a3f74ac11817751c80426d0b44068eb072bf06c689c972a015e41a80dab86",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmd.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libmd.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libmount",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libblkid, libsmartcols",
+      "description": "Library for (un)mounting filesystems",
+      "artifact": "libmount_2.42.1-4_aarch64.deb",
+      "bytes": 156616,
+      "sha256": "ac7b46f473c0e69f4ab9349627fc68e62f10285baf0cb8e589b10fe450d5b940",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmount.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libmount.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libmpfr-static",
+      "version": "4.2.1-1",
+      "architecture": "aarch64",
+      "depends": "libmpfr (= 4.2.1-1)",
+      "description": "Static libraries for libmpfr",
+      "artifact": "libmpfr-static_4.2.1-1_aarch64.deb",
+      "bytes": 207972,
+      "sha256": "e39c71df0054d7c1806adaebddd22205f3ac575374702af99cfcbe3411afd46c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmpfr.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libmpfr",
+      "version": "4.2.1-1",
+      "architecture": "aarch64",
+      "depends": "libgmp",
+      "description": "C library for multiple-precision floating-point computations with correct rounding",
+      "artifact": "libmpfr_4.2.1-1_aarch64.deb",
+      "bytes": 272844,
+      "sha256": "c1f892cbfb78242cf80b299a9fe78e6dcc004bd74433d5a423b658b7e2d0e2e1",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmpfr.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libmpfr.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnettle-static",
+      "version": "4.0+really3.10.2",
+      "architecture": "aarch64",
+      "depends": "libnettle (= 4.0+really3.10.2)",
+      "description": "Static libraries for libnettle",
+      "artifact": "libnettle-static_4.0+really3.10.2_aarch64.deb",
+      "bytes": 683348,
+      "sha256": "295ca0a2b1fc7715a58906e3d73e74a1105132265de8675b80818ccf7bf456e1",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnettle",
+      "version": "4.0+really3.10.2",
+      "architecture": "aarch64",
+      "depends": "libgmp",
+      "description": "Cryptographic library that is designed to fit easily in more or less any context",
+      "artifact": "libnettle_4.0+really3.10.2_aarch64.deb",
+      "bytes": 405832,
+      "sha256": "eecfab3dedf56fa230bd3198d9dd9854577ac0b06cecccad35f8b1fb870e1b1d",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libhogweed.so.6.11",
+        "data/data/studio.ocean.app/files/usr/lib/libnettle.so.8.11"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnghttp2-static",
+      "version": "1.70.0",
+      "architecture": "aarch64",
+      "depends": "libnghttp2 (= 1.70.0)",
+      "description": "Static libraries for libnghttp2",
+      "artifact": "libnghttp2-static_1.70.0_aarch64.deb",
+      "bytes": 64064,
+      "sha256": "40ae9d3e99a02e6a06e17056533501746e072ff86358ad7f96e10c725962a405",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp2.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnghttp2",
+      "version": "1.70.0",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "nghttp HTTP 2.0 library",
+      "artifact": "libnghttp2_1.70.0_aarch64.deb",
+      "bytes": 95964,
+      "sha256": "2fd8a218fc30635b8e1c845804a735a1d4087faaa443f4ebd392e645cad7e914",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp2.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp2.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnghttp3-static",
+      "version": "1.18.0",
+      "architecture": "aarch64",
+      "depends": "libnghttp3 (= 1.18.0)",
+      "description": "Static libraries for libnghttp3",
+      "artifact": "libnghttp3-static_1.18.0_aarch64.deb",
+      "bytes": 63916,
+      "sha256": "5e6b642788df61ce205877dc8668768d0d321390539f6208021acde96b55e7a1",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp3.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnghttp3",
+      "version": "1.18.0",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "HTTP/3 library written in C",
+      "artifact": "libnghttp3_1.18.0_aarch64.deb",
+      "bytes": 69700,
+      "sha256": "5cec4c3ef6d77e4afa416b622c5c274bc52ee2dd63e7a27f7bdce9d172f00f6f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp3.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libnghttp3.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libngtcp2-static",
+      "version": "1.25.0",
+      "architecture": "aarch64",
+      "depends": "libngtcp2 (= 1.25.0)",
+      "description": "Static libraries for libngtcp2",
+      "artifact": "libngtcp2-static_1.25.0_aarch64.deb",
+      "bytes": 153732,
+      "sha256": "2f2aa01205948d94f6a1750c8ad852129c6b4d2b087fa97adf0e89ff94db87fa",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libngtcp2",
+      "version": "1.25.0",
+      "architecture": "aarch64",
+      "depends": "openssl",
+      "description": "Implementation of IETF QUIC protocol",
+      "artifact": "libngtcp2_1.25.0_aarch64.deb",
+      "bytes": 174104,
+      "sha256": "864a1f657dce980da1f950044ea4d8dc70b5a6da3effe7998f7ed1b8e99d19d9",
+      "executables": [],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libngtcp2.so",
+        "data/data/studio.ocean.app/files/usr/lib/libngtcp2_crypto_ossl.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnpth-static",
+      "version": "1.6-3",
+      "architecture": "aarch64",
+      "depends": "libnpth (= 1.6-3)",
+      "description": "Static libraries for libnpth",
+      "artifact": "libnpth-static_1.6-3_aarch64.deb",
+      "bytes": 4696,
+      "sha256": "5b4da0081c5d6a403cec0ecdfa8a50cba8783caaeec1ab18ecb0651e79059e5c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libnpth.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libnpth",
+      "version": "1.6-3",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "New GNU Portable Threads Library",
+      "artifact": "libnpth_1.6-3_aarch64.deb",
+      "bytes": 11248,
+      "sha256": "789679a9a9e4d864a829309a7a67bc8a70a4b730c017e7d0b3e271d033437f66",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/npth-config",
+        "data/data/studio.ocean.app/files/usr/lib/libnpth.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libnpth.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libpng-static",
+      "version": "1.6.58",
+      "architecture": "aarch64",
+      "depends": "libpng (= 1.6.58)",
+      "description": "Static libraries for libpng",
+      "artifact": "libpng-static_1.6.58_aarch64.deb",
+      "bytes": 86960,
+      "sha256": "3ab34f2586bc1a4903e205a13d7d82e32f18de574f11971486a199d120e598a4",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libpng16.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.58",
+      "architecture": "aarch64",
+      "depends": "zlib",
+      "description": "Official PNG reference library",
+      "artifact": "libpng_1.6.58_aarch64.deb",
+      "bytes": 195756,
+      "sha256": "4972faae458095be839f50a18a212b7fdd944ae18c34c57f7c43422c2427ef90",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/libpng16-config",
+        "data/data/studio.ocean.app/files/usr/lib/libpng16.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libpng16.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libsmartcols",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libandroid-posix-semaphore",
+      "description": "Library for smart adaptive formatting of tabular data",
+      "artifact": "libsmartcols_2.42.1-4_aarch64.deb",
+      "bytes": 103424,
+      "sha256": "a8ae0ff484ad3b97e0baee00900213cd7263bbf15270ceeb81383a50f89a62b1",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libsmartcols.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libsmartcols.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libsqlite-static",
+      "version": "3.53.4",
+      "architecture": "aarch64",
+      "depends": "libsqlite (= 3.53.4)",
+      "description": "Static libraries for libsqlite",
+      "artifact": "libsqlite-static_3.53.4_aarch64.deb",
+      "bytes": 575972,
+      "sha256": "f69017ed9c18979cacf9531890b09e3d9865d806866f11198af857e50c1ddb23",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libsqlite-tcl",
+      "version": "3.53.4",
+      "architecture": "aarch64",
+      "depends": "tcl, libsqlite (= 3.53.4)",
+      "description": "tcl bindings for SQLite",
+      "artifact": "libsqlite-tcl_3.53.4_aarch64.deb",
+      "bytes": 551824,
+      "sha256": "b26863bf5a483d82284f64bfe33152810068ddc0d9edfcae728aa410cca1e51e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/sqlite3/libtclsqlite3.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/sqlite3/libtclsqlite3.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libsqlite",
+      "version": "3.53.4",
+      "architecture": "aarch64",
+      "depends": "zlib",
+      "description": "Library implementing a self-contained and transactional SQL database engine",
+      "artifact": "libsqlite_3.53.4_aarch64.deb",
+      "bytes": 759248,
+      "sha256": "2b497c657332b2492048a9a3df08bc0f0e1cd1b355b6e1fab8e1886f1d5db796",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libsqlite3.53.4.so",
+        "data/data/studio.ocean.app/files/usr/lib/libsqlite3.so.3.53.4"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libsqlite3.53.4.so",
+        "data/data/studio.ocean.app/files/usr/lib/libsqlite3.so.3.53.4"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libssh2-static",
+      "version": "1.11.1-2",
+      "architecture": "aarch64",
+      "depends": "libssh2 (= 1.11.1-2)",
+      "description": "Static libraries for libssh2",
+      "artifact": "libssh2-static_1.11.1-2_aarch64.deb",
+      "bytes": 111764,
+      "sha256": "a953e3b0d638e4893cd73a81953275530e96a58bd68b1721d9b32e9ad7dea560",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libssh2.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libssh2",
+      "version": "1.11.1-2",
+      "architecture": "aarch64",
+      "depends": "openssl, zlib",
+      "description": "Client-side library implementing the SSH2 protocol",
+      "artifact": "libssh2_1.11.1-2_aarch64.deb",
+      "bytes": 219160,
+      "sha256": "4925ae4b05e75a19214e733eaf9160e0eee461edaf2f7f839942b3360915fe34",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libssh2.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libssh2.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libtasn1-static",
+      "version": "4.21.0",
+      "architecture": "aarch64",
+      "depends": "libtasn1 (= 4.21.0)",
+      "description": "Static libraries for libtasn1",
+      "artifact": "libtasn1-static_4.21.0_aarch64.deb",
+      "bytes": 32468,
+      "sha256": "1fa82fd6cd70e143eaf14c9263efeb7423dceac267b9a0dc4ee20146bfa832ba",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libtasn1.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libtasn1",
+      "version": "4.21.0",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "This is GNU Libtasn1, a small ASN.1 library",
+      "artifact": "libtasn1_4.21.0_aarch64.deb",
+      "bytes": 101400,
+      "sha256": "40c118383a141e5451b8eb8a4b31b73e47d2e7d4af2ac147a05f4e960b048229",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/asn1Decoding",
+        "data/data/studio.ocean.app/files/usr/bin/asn1Parser",
+        "data/data/studio.ocean.app/files/usr/bin/asn1Coding",
+        "data/data/studio.ocean.app/files/usr/lib/libtasn1.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/asn1Decoding",
+        "data/data/studio.ocean.app/files/usr/bin/asn1Parser",
+        "data/data/studio.ocean.app/files/usr/bin/asn1Coding",
+        "data/data/studio.ocean.app/files/usr/lib/libtasn1.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libunbound-static",
+      "version": "1.26.0",
+      "architecture": "aarch64",
+      "depends": "libunbound (= 1.26.0)",
+      "description": "Static libraries for libunbound",
+      "artifact": "libunbound-static_1.26.0_aarch64.deb",
+      "bytes": 463976,
+      "sha256": "9cbfdc5fa6032ed0f815f2f8f6603ea16a1d1798b3391b2269af0edc887ceba9",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libunbound",
+      "version": "1.26.0",
+      "architecture": "aarch64",
+      "depends": "libevent, libnghttp2, libngtcp2, openssl, resolv-conf",
+      "description": "A validating, recursive, caching DNS resolver",
+      "artifact": "libunbound_1.26.0_aarch64.deb",
+      "bytes": 385420,
+      "sha256": "c73205dce788a00bcb763d0ca9389885597536442209e0dfbba31d7d100f59f8",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libunbound.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libunbound.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libunistring-static",
+      "version": "1.4.2",
+      "architecture": "aarch64",
+      "depends": "libunistring (= 1.4.2)",
+      "description": "Static libraries for libunistring",
+      "artifact": "libunistring-static_1.4.2_aarch64.deb",
+      "bytes": 483052,
+      "sha256": "b0228fcfb6f25294bb3f071bf9577a788ce2094c2ae61567f30234f25c185393",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libunistring.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libunistring",
+      "version": "1.4.2",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libiconv",
+      "description": "Library providing functions for manipulating Unicode strings",
+      "artifact": "libunistring_1.4.2_aarch64.deb",
+      "bytes": 565588,
+      "sha256": "2dab8c26beb690618447fef3eef29f9658aaf747b1c720af971723ae0258b509",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libunistring.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libunistring.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libusb-static",
+      "version": "1.0.30",
+      "architecture": "aarch64",
+      "depends": "libusb (= 1.0.30)",
+      "description": "Static libraries for libusb",
+      "artifact": "libusb-static_1.0.30_aarch64.deb",
+      "bytes": 48008,
+      "sha256": "c1a3d2c0a02ca8e27540f9d156dfc174b934a475af1c4b81d056ec8b31e29bed",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libusb-1.0.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libusb",
+      "version": "1.0.30",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "A C library that provides generic access to USB devices",
+      "artifact": "libusb_1.0.30_aarch64.deb",
+      "bytes": 59792,
+      "sha256": "92a59107e2e2b7d4c7ad13094543b39367dd633fb4cc9cfe6f134500d7d0cfad",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libusb-1.0.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libusb-1.0.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libuuid",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libandroid-posix-semaphore",
+      "description": "Library for handling universally unique identifiers",
+      "artifact": "libuuid_2.42.1-4_aarch64.deb",
+      "bytes": 15440,
+      "sha256": "2c4379d4d9af2afb7356b49af80fd5d04e94780a67ee4643596a8424cde07101",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libuuid.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libuuid.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libx11-static",
+      "version": "1.8.13-1",
+      "architecture": "aarch64",
+      "depends": "libx11 (= 1.8.13-1)",
+      "description": "Static libraries for libx11",
+      "artifact": "libx11-static_1.8.13-1_aarch64.deb",
+      "bytes": 567200,
+      "sha256": "4584848f8c2a8e5d931432d7b5a64ea91b0d3c9ae503870c36e6383f8a0d886d",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libX11-xcb.la",
+        "data/data/studio.ocean.app/files/usr/lib/libX11.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libx11",
+      "version": "1.8.13-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libxcb, xorgproto",
+      "description": "X11 client-side library",
+      "artifact": "libx11_1.8.13-1_aarch64.deb",
+      "bytes": 1909688,
+      "sha256": "8bc5152ba9b181a971149d9af5e0f1c351f380f1df9932d2e500d6724b06b7ff",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libX11.so",
+        "data/data/studio.ocean.app/files/usr/lib/libX11-xcb.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libX11.so",
+        "data/data/studio.ocean.app/files/usr/lib/libX11-xcb.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxau",
+      "version": "1.0.12-2",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "X11 authorisation library",
+      "artifact": "libxau_1.0.12-2_aarch64.deb",
+      "bytes": 9156,
+      "sha256": "e9b80aea16f996df35b007d050368fe860db53b342c93668e2112799a961c68e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXau.so",
+        "data/data/studio.ocean.app/files/usr/lib/libXau.la"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXau.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxcb-static",
+      "version": "1.17.0-1",
+      "architecture": "aarch64",
+      "depends": "libxcb (= 1.17.0-1)",
+      "description": "Static libraries for libxcb",
+      "artifact": "libxcb-static_1.17.0-1_aarch64.deb",
+      "bytes": 160712,
+      "sha256": "e15571551f3398226e3c3284f7621877fdc3995da277fa680af12d040eb05daa",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xv.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-record.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shm.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinerama.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shape.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-composite.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-glx.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xkb.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-sync.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-render.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dbe.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-randr.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xf86dri.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dpms.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-screensaver.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinput.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri3.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xtest.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri2.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xfixes.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xvmc.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-damage.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-present.la",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-res.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxcb",
+      "version": "1.17.0-1",
+      "architecture": "aarch64",
+      "depends": "libxau, libxdmcp",
+      "description": "X11 client-side library",
+      "artifact": "libxcb_1.17.0-1_aarch64.deb",
+      "bytes": 917008,
+      "sha256": "1c115ba0d78dc40407e465ddd07cb098f3a4b0c016f57e432f8812386164828b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri2.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-render.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xkb.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-glx.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dpms.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dbe.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinerama.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xf86dri.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-present.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-composite.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-screensaver.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-damage.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xtest.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-sync.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shm.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-record.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-randr.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri3.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shape.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinput.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xfixes.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xv.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xvmc.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-res.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri2.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-render.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xkb.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-glx.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dpms.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dbe.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinerama.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xf86dri.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-present.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-composite.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-screensaver.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-damage.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xtest.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-sync.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shm.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-record.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-randr.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-dri3.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-shape.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xinput.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xfixes.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xv.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-xvmc.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxcb-res.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxdmcp-static",
+      "version": "1.1.5-2",
+      "architecture": "aarch64",
+      "depends": "libxdmcp (= 1.1.5-2)",
+      "description": "Static libraries for libxdmcp",
+      "artifact": "libxdmcp-static_1.1.5-2_aarch64.deb",
+      "bytes": 7940,
+      "sha256": "06f2b5707f727eb9afd9f8498088af23aff337a4b50144d8ac8cfe34b98a1765",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXdmcp.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxdmcp",
+      "version": "1.1.5-2",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "X11 Display Manager Control Protocol library",
+      "artifact": "libxdmcp_1.1.5-2_aarch64.deb",
+      "bytes": 24408,
+      "sha256": "0413e36c64f132561fbab2da9d3ffe23307292928ba34cece84841868434d4fb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXdmcp.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXdmcp.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxext-static",
+      "version": "1.3.7",
+      "architecture": "aarch64",
+      "depends": "libxext (= 1.3.7)",
+      "description": "Static libraries for libxext",
+      "artifact": "libxext-static_1.3.7_aarch64.deb",
+      "bytes": 25948,
+      "sha256": "8dd8ef5f95757e1a6cd2b0589097f0347863cda010c5bcdb0b5b9a163130b349",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXext.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxext",
+      "version": "1.3.7",
+      "architecture": "aarch64",
+      "depends": "libx11",
+      "description": "X11 miscellaneous extensions library",
+      "artifact": "libxext_1.3.7_aarch64.deb",
+      "bytes": 98076,
+      "sha256": "fd659052a278850846ff6fc4621a692963ede9c299bf9f24b8d4a8b03f33c66d",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXext.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXext.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxft-static",
+      "version": "2.3.9-1",
+      "architecture": "aarch64",
+      "depends": "libxft (= 2.3.9-1)",
+      "description": "Static libraries for libxft",
+      "artifact": "libxft-static_2.3.9-1_aarch64.deb",
+      "bytes": 36656,
+      "sha256": "3d53bb0ea72dd6005bf8aa801aba06a9c7c5cbb14f2a6cfdae665fef88bab0a5",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXft.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxft",
+      "version": "2.3.9-1",
+      "architecture": "aarch64",
+      "depends": "fontconfig, freetype, libx11, libxrender",
+      "description": "FreeType-based font drawing library for X",
+      "artifact": "libxft_2.3.9-1_aarch64.deb",
+      "bytes": 48148,
+      "sha256": "02df1e533096a31941c3d270b9bbf22cf6252e3c3cbb1f7bdc4a23f79982f9cb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXft.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXft.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxml2-python",
+      "version": "2.15.3-2",
+      "architecture": "aarch64",
+      "depends": "python, libxml2 (= 2.15.3-2)",
+      "description": "Python bindings for libxml2",
+      "artifact": "libxml2-python_2.15.3-2_aarch64.deb",
+      "bytes": 96096,
+      "sha256": "210e1b87f97d7993d4ef53831c36d3867e0ea7a6ca857de150e89c32c5b6dad3",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/site-packages/libxml2mod.cpython-314-aarch64-linux-android.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/site-packages/libxml2mod.cpython-314-aarch64-linux-android.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxml2-utils",
+      "version": "2.15.3-2",
+      "architecture": "aarch64",
+      "depends": "readline, libxml2 (= 2.15.3-2)",
+      "description": "XML utilities",
+      "artifact": "libxml2-utils_2.15.3-2_aarch64.deb",
+      "bytes": 34040,
+      "sha256": "5d9d1e9434953ff61f46285d9d2d1fb74895c5b8ab0b9532b62be6ac8ebe7089",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xmlcatalog",
+        "data/data/studio.ocean.app/files/usr/bin/xmllint"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/xmlcatalog",
+        "data/data/studio.ocean.app/files/usr/bin/xmllint"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxml2",
+      "version": "2.15.3-2",
+      "architecture": "aarch64",
+      "depends": "libandroid-glob, libiconv, libicu, zlib",
+      "description": "Library for parsing XML documents",
+      "artifact": "libxml2_2.15.3-2_aarch64.deb",
+      "bytes": 442828,
+      "sha256": "158d3e0f93955181d83a8527f1316533ecdb3c853269cd4cd2cd8c26febe4265",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xml2-config",
+        "data/data/studio.ocean.app/files/usr/lib/libxml2.so.16.1.3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libxml2.so.16.1.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxrender",
+      "version": "0.9.12-1",
+      "architecture": "aarch64",
+      "depends": "libx11",
+      "description": "X Rendering Extension client library",
+      "artifact": "libxrender_0.9.12-1_aarch64.deb",
+      "bytes": 24696,
+      "sha256": "6410ef53a420f64cfaf2c834bcf0193538d70dcb45257ce81bfcc514e8b8c5e2",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXrender.so",
+        "data/data/studio.ocean.app/files/usr/lib/libXrender.la"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXrender.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxslt",
+      "version": "1.1.45-1",
+      "architecture": "aarch64",
+      "depends": "libgcrypt, libgpg-error, libxml2, libandroid-glob",
+      "description": "XSLT processing library",
+      "artifact": "libxslt_1.1.45-1_aarch64.deb",
+      "bytes": 225260,
+      "sha256": "e0135879dcf68a61b42a4392fec33e5a6b520d9bba0054f462344830b12f45d7",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xslt-config"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libexslt.so",
+        "data/data/studio.ocean.app/files/usr/lib/libxslt.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxss-static",
+      "version": "1.2.5",
+      "architecture": "aarch64",
+      "depends": "libxss (= 1.2.5)",
+      "description": "Static libraries for libxss",
+      "artifact": "libxss-static_1.2.5_aarch64.deb",
+      "bytes": 4408,
+      "sha256": "072cf152726c1fab1df757123db4b5a56399acf08704082eb70fc934d138f25c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXss.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "libxss",
+      "version": "1.2.5",
+      "architecture": "aarch64",
+      "depends": "libx11, libxau, libxcb, libxdmcp, libxext",
+      "description": "X11 Screen Saver extension library",
+      "artifact": "libxss_1.2.5_aarch64.deb",
+      "bytes": 12000,
+      "sha256": "cf93f90271590efe58dba8e549fb50fc123ed2fb510d3eb87f723998253032b5",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libXss.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libXss.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "lz4",
+      "version": "1.10.0-1",
+      "architecture": "aarch64",
+      "depends": "liblz4 (= 1.10.0-1)",
+      "description": "Fast LZ compression algorithm tool",
+      "artifact": "lz4_1.10.0-1_aarch64.deb",
+      "bytes": 92496,
+      "sha256": "50884de608b46dea6b9e323edb3d7511ae032b1d28513a319fac24265faf33bb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/lz4"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/lz4"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "make",
+      "version": "4.4.1-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Tool to control the generation of non-source files from source files",
+      "artifact": "make_4.4.1-1_aarch64.deb",
+      "bytes": 240604,
+      "sha256": "e6540298ae652223c4ab66afa65b9205be8fb71c763518906e529961cd4a7f55",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/make"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/make"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "mount-utils",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libblkid, libsmartcols, libmount",
+      "description": "Utilities for (un)mounting filesystems",
+      "artifact": "mount-utils_2.42.1-4_aarch64.deb",
+      "bytes": 148988,
+      "sha256": "d6110579d7e4c0c61809d7524d9f6530f916712cba88184e8da167c0f09ec321",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/lslocks",
+        "data/data/studio.ocean.app/files/usr/bin/swapoff",
+        "data/data/studio.ocean.app/files/usr/bin/fstrim",
+        "data/data/studio.ocean.app/files/usr/bin/umount",
+        "data/data/studio.ocean.app/files/usr/bin/findmnt",
+        "data/data/studio.ocean.app/files/usr/bin/swapon",
+        "data/data/studio.ocean.app/files/usr/bin/mount"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/lslocks",
+        "data/data/studio.ocean.app/files/usr/bin/swapoff",
+        "data/data/studio.ocean.app/files/usr/bin/fstrim",
+        "data/data/studio.ocean.app/files/usr/bin/umount",
+        "data/data/studio.ocean.app/files/usr/bin/findmnt",
+        "data/data/studio.ocean.app/files/usr/bin/swapon",
+        "data/data/studio.ocean.app/files/usr/bin/mount"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ncurses-static",
+      "version": "6.6.20260307+really6.5.20250830",
+      "architecture": "aarch64",
+      "depends": "ncurses (= 6.6.20260307+really6.5.20250830)",
+      "description": "Static libraries for ncurses",
+      "artifact": "ncurses-static_6.6.20260307+really6.5.20250830_aarch64.deb",
+      "bytes": 154000,
+      "sha256": "acf782540af21c89d5e4a5047e4867e5d63c5686d0ea2b12401abd9483faf20f",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ncurses-ui-libs-static",
+      "version": "6.6.20260307+really6.5.20250830",
+      "architecture": "aarch64",
+      "depends": "ncurses-ui-libs, ncurses (= 6.6.20260307+really6.5.20250830)",
+      "description": "Static libraries for terminal user interfaces based on ncurses",
+      "artifact": "ncurses-ui-libs-static_6.6.20260307+really6.5.20250830_aarch64.deb",
+      "bytes": 39556,
+      "sha256": "368a5233de4a42fe1e2e53a34b0397b48bbcd95adbbc32f86ae639fbb911dafc",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ncurses-ui-libs",
+      "version": "6.6.20260307+really6.5.20250830",
+      "architecture": "aarch64",
+      "depends": "ncurses (= 6.6.20260307+really6.5.20250830)",
+      "description": "Libraries for terminal user interfaces based on ncurses",
+      "artifact": "ncurses-ui-libs_6.6.20260307+really6.5.20250830_aarch64.deb",
+      "bytes": 32972,
+      "sha256": "c1383f9b12ae5c6b5fa333ec8b005dea798799865b83d6b35b009354fa5fb19e",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libmenuw.so.6.5",
+        "data/data/studio.ocean.app/files/usr/lib/libpanelw.so.6.5",
+        "data/data/studio.ocean.app/files/usr/lib/libformw.so.6.5"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libmenuw.so.6.5",
+        "data/data/studio.ocean.app/files/usr/lib/libpanelw.so.6.5",
+        "data/data/studio.ocean.app/files/usr/lib/libformw.so.6.5"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ncurses-utils",
+      "version": "6.6.20260307+really6.5.20250830",
+      "architecture": "aarch64",
+      "depends": "ncurses (= 6.6.20260307+really6.5.20250830)",
+      "description": "Tools for working with terminals",
+      "artifact": "ncurses-utils_6.6.20260307+really6.5.20250830_aarch64.deb",
+      "bytes": 89140,
+      "sha256": "81166915f332a8d9e24f054d6c5f0789564a52b3943e9e4c7f677dad08caf6fc",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/tic",
+        "data/data/studio.ocean.app/files/usr/bin/tabs",
+        "data/data/studio.ocean.app/files/usr/bin/toe",
+        "data/data/studio.ocean.app/files/usr/bin/infocmp",
+        "data/data/studio.ocean.app/files/usr/bin/tput"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/tic",
+        "data/data/studio.ocean.app/files/usr/bin/tabs",
+        "data/data/studio.ocean.app/files/usr/bin/toe",
+        "data/data/studio.ocean.app/files/usr/bin/infocmp",
+        "data/data/studio.ocean.app/files/usr/bin/tput"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ncurses",
+      "version": "6.6.20260307+really6.5.20250830",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Library for text-based user interfaces in a terminal-independent manner",
+      "artifact": "ncurses_6.6.20260307+really6.5.20250830_aarch64.deb",
+      "bytes": 557928,
+      "sha256": "c1ed2f6d121708ecbaa231012079813fe12ffbe9ca6bfe9c5cf5c30bb8e85b19",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/tset",
+        "data/data/studio.ocean.app/files/usr/bin/ncursesw6-config",
+        "data/data/studio.ocean.app/files/usr/bin/clear",
+        "data/data/studio.ocean.app/files/usr/lib/libncursesw.so.6.5"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/tset",
+        "data/data/studio.ocean.app/files/usr/bin/clear",
+        "data/data/studio.ocean.app/files/usr/lib/libncursesw.so.6.5"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "nettle",
+      "version": "4.0+really3.10.2",
+      "architecture": "aarch64",
+      "depends": "libnettle (= 4.0+really3.10.2)",
+      "description": "Low level cryptographic tools",
+      "artifact": "nettle_4.0+really3.10.2_aarch64.deb",
+      "bytes": 18192,
+      "sha256": "a8663d7dc0d694c5b9b8343f9152893b3e2cfa436aaa9185e05d7d571e9d9c96",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/nettle-hash",
+        "data/data/studio.ocean.app/files/usr/bin/sexp-conv",
+        "data/data/studio.ocean.app/files/usr/bin/nettle-lfib-stream",
+        "data/data/studio.ocean.app/files/usr/bin/pkcs1-conv",
+        "data/data/studio.ocean.app/files/usr/bin/nettle-pbkdf2"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/nettle-hash",
+        "data/data/studio.ocean.app/files/usr/bin/sexp-conv",
+        "data/data/studio.ocean.app/files/usr/bin/nettle-lfib-stream",
+        "data/data/studio.ocean.app/files/usr/bin/pkcs1-conv",
+        "data/data/studio.ocean.app/files/usr/bin/nettle-pbkdf2"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ocean-hello",
+      "version": "1.0.0",
+      "architecture": "aarch64",
+      "depends": "bash",
+      "description": "End-to-end verification executable for the Ocean package distribution",
+      "artifact": "ocean-hello_1.0.0_aarch64.deb",
+      "bytes": 680,
+      "sha256": "11318bceba36871cb26971fdd4bbc43636fd4cf39a64f898003cdf281c9ccf9b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/ocean-hello"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ocean-pkg",
+      "version": "1.1.0",
+      "architecture": "all",
+      "depends": "apt, dpkg",
+      "description": "Ocean package manager command frontend",
+      "artifact": "ocean-pkg_1.1.0_all.deb",
+      "bytes": 2156,
+      "sha256": "6db0fdaf219a1cf67ccbb68a0c97746b2af11c238d5d0e2f5bb4edcb7b785a03",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pkg",
+        "data/data/studio.ocean.app/files/usr/bin/ocean-change-repo"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ocean-tools",
+      "version": "1.0.0",
+      "architecture": "all",
+      "depends": "bash, apt, dpkg, coreutils, findutils, grep, sed, gawk, tar, gzip, zstd, less, which, patch, wget, openssl",
+      "description": "Ocean runtime diagnostics and physical-device package smoke tests",
+      "artifact": "ocean-tools_1.0.0_all.deb",
+      "bytes": 1070,
+      "sha256": "b48c27c525f4899026746f98579722a8c2ddffd0d0e8f1858f9b5a3d7106eb9b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/ocean-package-smoke-test"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "openssl-static",
+      "version": "1:3.6.3",
+      "architecture": "aarch64",
+      "depends": "openssl (= 1:3.6.3)",
+      "description": "Static libraries for openssl",
+      "artifact": "openssl-static_1:3.6.3_aarch64.deb",
+      "bytes": 2639144,
+      "sha256": "aa2a3c0d5f4aa8e4bc1de99348980c422d8df2b0684ac60cf722aa700d4d4bfb",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "openssl-tool",
+      "version": "1:3.6.3",
+      "architecture": "aarch64",
+      "depends": "openssl (= 1:3.6.3)",
+      "description": "The openssl command line cryptographic tool",
+      "artifact": "openssl-tool_1:3.6.3_aarch64.deb",
+      "bytes": 277460,
+      "sha256": "aa01fb813bcfb582fabd0cebfacaae42802d24cef939bd342c86437940822fac",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/openssl",
+        "data/data/studio.ocean.app/files/usr/bin/add-trusted-certificate"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/openssl"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "openssl",
+      "version": "1:3.6.3",
+      "architecture": "aarch64",
+      "depends": "ca-certificates, zlib",
+      "description": "Library implementing the SSL and TLS protocols as well as general purpose cryptography functions",
+      "artifact": "openssl_1:3.6.3_aarch64.deb",
+      "bytes": 2478340,
+      "sha256": "9446c6512029983c42fdef272da04cf6e530093cfcc7c05e079de7071a552f95",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libcrypto.so.3",
+        "data/data/studio.ocean.app/files/usr/lib/libssl.so.3",
+        "data/data/studio.ocean.app/files/usr/lib/ossl-modules/legacy.so",
+        "data/data/studio.ocean.app/files/usr/lib/engines-3/capi.so",
+        "data/data/studio.ocean.app/files/usr/lib/engines-3/loader_attic.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libcrypto.so.3",
+        "data/data/studio.ocean.app/files/usr/lib/libssl.so.3",
+        "data/data/studio.ocean.app/files/usr/lib/ossl-modules/legacy.so",
+        "data/data/studio.ocean.app/files/usr/lib/engines-3/capi.so",
+        "data/data/studio.ocean.app/files/usr/lib/engines-3/loader_attic.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "p11-kit",
+      "version": "0.26.5",
+      "architecture": "aarch64",
+      "depends": "libffi, libtasn1",
+      "description": "Provides a way to load and enumerate PKCS#11 modules",
+      "artifact": "p11-kit_0.26.5_aarch64.deb",
+      "bytes": 469256,
+      "sha256": "a349e24c3941b1b9e2c2d5ce3a2bb8b322d3a62235548dae47385083be334672",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/p11-kit",
+        "data/data/studio.ocean.app/files/usr/bin/trust",
+        "data/data/studio.ocean.app/files/usr/lib/libp11-kit.so",
+        "data/data/studio.ocean.app/files/usr/libexec/p11-kit/p11-kit-remote",
+        "data/data/studio.ocean.app/files/usr/libexec/p11-kit/p11-kit-server",
+        "data/data/studio.ocean.app/files/usr/libexec/p11-kit/trust-extract-compat",
+        "data/data/studio.ocean.app/files/usr/lib/pkcs11/p11-kit-client.so",
+        "data/data/studio.ocean.app/files/usr/lib/pkcs11/p11-kit-trust.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/p11-kit",
+        "data/data/studio.ocean.app/files/usr/bin/trust",
+        "data/data/studio.ocean.app/files/usr/lib/libp11-kit.so",
+        "data/data/studio.ocean.app/files/usr/libexec/p11-kit/p11-kit-remote",
+        "data/data/studio.ocean.app/files/usr/libexec/p11-kit/p11-kit-server",
+        "data/data/studio.ocean.app/files/usr/lib/pkcs11/p11-kit-client.so",
+        "data/data/studio.ocean.app/files/usr/lib/pkcs11/p11-kit-trust.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "patch",
+      "version": "2.8-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "GNU patch which applies diff files to create patched files",
+      "artifact": "patch_2.8-1_aarch64.deb",
+      "bytes": 74008,
+      "sha256": "603c7876106b658fd66932447481647dd3138f9bf747dff9b1f40aedf4375ede",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/patch"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/patch"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pcre2-static",
+      "version": "10.47",
+      "architecture": "aarch64",
+      "depends": "pcre2 (= 10.47)",
+      "description": "Static libraries for pcre2",
+      "artifact": "pcre2-static_10.47_aarch64.deb",
+      "bytes": 376004,
+      "sha256": "4303171744525343e370140818ccdf59b460e8b30ad2f0b7772950452b523895",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-16.la",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-8.la",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-posix.la",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-32.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pcre2",
+      "version": "10.47",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Perl 5 compatible regular expression library",
+      "artifact": "pcre2_10.47_aarch64.deb",
+      "bytes": 960476,
+      "sha256": "60f3de206e497c27e8520b85e81cce444d12ceab7b414ae195552e19fd64afcf",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pcre2-config",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-32.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-8.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-16.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-posix.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-32.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-8.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-16.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpcre2-posix.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pcre2grep",
+      "version": "10.47",
+      "architecture": "aarch64",
+      "depends": "pcre2 (= 10.47)",
+      "description": "A grep with Perl-compatible regular expressions",
+      "artifact": "pcre2grep_10.47_aarch64.deb",
+      "bytes": 34116,
+      "sha256": "e7875953b0b3cc848995bf891fa1cf64c3ae1be93521b362fe6902d2a98b1475",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pcre2grep"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/pcre2grep"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "perl",
+      "version": "5.42.2",
+      "architecture": "aarch64",
+      "depends": "libandroid-utimes",
+      "description": "Capable, feature-rich programming language",
+      "artifact": "perl_5.42.2_aarch64.deb",
+      "bytes": 15449532,
+      "sha256": "152f0d8d0e497703a90eb78deae05dc55f5856ea36aea1641e714f996dd60bf3",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pod2html",
+        "data/data/studio.ocean.app/files/usr/bin/corelist",
+        "data/data/studio.ocean.app/files/usr/bin/pod2usage",
+        "data/data/studio.ocean.app/files/usr/bin/piconv",
+        "data/data/studio.ocean.app/files/usr/bin/cpan",
+        "data/data/studio.ocean.app/files/usr/bin/perlthanks",
+        "data/data/studio.ocean.app/files/usr/bin/streamzip",
+        "data/data/studio.ocean.app/files/usr/bin/xsubpp",
+        "data/data/studio.ocean.app/files/usr/bin/prove",
+        "data/data/studio.ocean.app/files/usr/bin/ptargrep",
+        "data/data/studio.ocean.app/files/usr/bin/splain",
+        "data/data/studio.ocean.app/files/usr/bin/encguess",
+        "data/data/studio.ocean.app/files/usr/bin/enc2xs",
+        "data/data/studio.ocean.app/files/usr/bin/perldoc",
+        "data/data/studio.ocean.app/files/usr/bin/podchecker",
+        "data/data/studio.ocean.app/files/usr/bin/instmodsh",
+        "data/data/studio.ocean.app/files/usr/bin/h2ph",
+        "data/data/studio.ocean.app/files/usr/bin/ptar",
+        "data/data/studio.ocean.app/files/usr/bin/zipdetails",
+        "data/data/studio.ocean.app/files/usr/bin/h2xs",
+        "data/data/studio.ocean.app/files/usr/bin/json_pp",
+        "data/data/studio.ocean.app/files/usr/bin/pod2text",
+        "data/data/studio.ocean.app/files/usr/bin/perl",
+        "data/data/studio.ocean.app/files/usr/bin/pod2man",
+        "data/data/studio.ocean.app/files/usr/bin/ptardiff",
+        "data/data/studio.ocean.app/files/usr/bin/perlivp",
+        "data/data/studio.ocean.app/files/usr/bin/pl2pm",
+        "data/data/studio.ocean.app/files/usr/bin/shasum",
+        "data/data/studio.ocean.app/files/usr/bin/libnetcfg",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/CORE/libperl.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Encode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/mro/mro.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/B/B.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Socket/Socket.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/attributes/attributes.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/re/re.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Fcntl/Fcntl.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Opcode/Opcode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/threads/threads.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/IO/IO.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Cwd/Cwd.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/SDBM_File/SDBM_File.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/POSIX/POSIX.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Storable/Storable.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/MIME/Base64/Base64.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/TW/TW.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/EBCDIC/EBCDIC.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/CN/CN.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Unicode/Unicode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/JP/JP.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/KR/KR.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Byte/Byte.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Symbol/Symbol.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Digest/SHA/SHA.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Digest/MD5/MD5.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Math/BigInt/FastCalc/FastCalc.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/List/Util/Util.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Unicode/Collate/Collate.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Unicode/Normalize/Normalize.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/encoding/encoding.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/via/via.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/mmap/mmap.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Compress/Raw/Zlib/Zlib.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Compress/Raw/Bzip2/Bzip2.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Hash/Util/Util.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Hash/Util/FieldHash/FieldHash.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Data/Dumper/Dumper.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Devel/Peek/Peek.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/threads/shared/shared.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Sys/Syslog/Syslog.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Sys/Hostname/Hostname.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/I18N/Langinfo/Langinfo.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Time/HiRes/HiRes.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Time/Piece/Piece.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/File/DosGlob/DosGlob.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/File/Glob/Glob.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Filter/Util/Call/Call.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/perl",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/CORE/libperl.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Encode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/mro/mro.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/B/B.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Socket/Socket.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/attributes/attributes.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/re/re.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Fcntl/Fcntl.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Opcode/Opcode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/threads/threads.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/IO/IO.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Cwd/Cwd.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/SDBM_File/SDBM_File.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/POSIX/POSIX.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Storable/Storable.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/MIME/Base64/Base64.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/TW/TW.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/EBCDIC/EBCDIC.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/CN/CN.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Unicode/Unicode.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/JP/JP.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/KR/KR.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Byte/Byte.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Encode/Symbol/Symbol.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Digest/SHA/SHA.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Digest/MD5/MD5.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Math/BigInt/FastCalc/FastCalc.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/List/Util/Util.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Unicode/Collate/Collate.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Unicode/Normalize/Normalize.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/encoding/encoding.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/via/via.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/PerlIO/mmap/mmap.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Compress/Raw/Zlib/Zlib.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Compress/Raw/Bzip2/Bzip2.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Hash/Util/Util.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Hash/Util/FieldHash/FieldHash.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Data/Dumper/Dumper.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Devel/Peek/Peek.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/threads/shared/shared.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Sys/Syslog/Syslog.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Sys/Hostname/Hostname.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/I18N/Langinfo/Langinfo.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Time/HiRes/HiRes.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Time/Piece/Piece.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/File/DosGlob/DosGlob.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/File/Glob/Glob.so",
+        "data/data/studio.ocean.app/files/usr/lib/perl5/5.42.2/aarch64-android/auto/Filter/Util/Call/Call.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pinentry",
+      "version": "1.3.3",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libassuan, libgpg-error, libiconv, ncurses",
+      "description": "Dialog allowing secure password entry",
+      "artifact": "pinentry_1.3.3_aarch64.deb",
+      "bytes": 47408,
+      "sha256": "f18635136c4dcfc794b92d48d535321ae79de9a7434dc0ba1f88c84245f4d683",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pinentry-curses",
+        "data/data/studio.ocean.app/files/usr/bin/pinentry-tty"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/pinentry-curses",
+        "data/data/studio.ocean.app/files/usr/bin/pinentry-tty"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "python-ensurepip-wheels",
+      "version": "3.14.6-1",
+      "architecture": "all",
+      "depends": "python (= 3.14.6-1)",
+      "description": "Wheels for Python ensurepip",
+      "artifact": "python-ensurepip-wheels_3.14.6-1_all.deb",
+      "bytes": 1740100,
+      "sha256": "f28ae08fb4b2e14367bb24772a36a01f3408dbdc119a203286eefec54d8ee6b4",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "python-static",
+      "version": "3.14.6-1",
+      "architecture": "aarch64",
+      "depends": "python (= 3.14.6-1)",
+      "description": "Static libraries for python",
+      "artifact": "python-static_3.14.6-1_aarch64.deb",
+      "bytes": 7717060,
+      "sha256": "f3a317b852b4573f5a49cde907971ec4bc1ac63c463e72afb5366d5ff12216eb",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "python-tkinter",
+      "version": "3.14.6-1",
+      "architecture": "aarch64",
+      "depends": "tcl, tk, python (= 3.14.6-1)",
+      "description": "Tkinter support for Python 3",
+      "artifact": "python-tkinter_3.14.6-1_aarch64.deb",
+      "bytes": 507088,
+      "sha256": "371e69aabfc34de8dadbdeccb2b7f33114cf2f09e82354787df13276b22766c8",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/idle3.14",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_tkinter.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/idlelib/pyshell.py"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_tkinter.cpython-314-aarch64-linux-android.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "python-xcbgen",
+      "version": "1.17.0-3",
+      "architecture": "all",
+      "depends": "xcb-proto (= 1.17.0-3)",
+      "description": "The xcbgen Python module",
+      "artifact": "python-xcbgen_1.17.0-3_all.deb",
+      "bytes": 15204,
+      "sha256": "56033071454dda5ed13b6f018c4479b61cec4ddc82360cbaf037460a75832969",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "python",
+      "version": "3.14.6-1",
+      "architecture": "aarch64",
+      "depends": "gdbm, libandroid-posix-semaphore, libandroid-support, libbz2, libcrypt, libexpat, libffi, liblzma, libsqlite, ncurses, ncurses-ui-libs, openssl, readline, zlib, zstd",
+      "description": "Python 3 programming language intended to enable clear programs",
+      "artifact": "python_3.14.6-1_aarch64.deb",
+      "bytes": 4817136,
+      "sha256": "469769197202d21959330c612b6ee8138ab4e24d82c5a6c4450bbbdaf3317571",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/python3.14-config",
+        "data/data/studio.ocean.app/files/usr/bin/pydoc3.14",
+        "data/data/studio.ocean.app/files/usr/bin/py3compile",
+        "data/data/studio.ocean.app/files/usr/bin/py3clean",
+        "data/data/studio.ocean.app/files/usr/bin/python3.14",
+        "data/data/studio.ocean.app/files/usr/lib/libpython3.14.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpython3.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxlimited.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/readline.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/zlib.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/unicodedata.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/termios.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_tw.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testsinglephase.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_zoneinfo.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/resource.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_struct.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_heapq.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_gdbm.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ctypes_test.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_hk.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_curses_panel.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_csv.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_random.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha3.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testinternalcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/cmath.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_bisect.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpqueues.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_queue.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/math.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_hmac.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testbuffer.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_elementtree.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_kr.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_blake2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/syslog.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_cn.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_lsprof.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_multibytecodec.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_xxtestfuzz.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testimportmultiple.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_posixshmem.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxlimited_35.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/select.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_jp.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testmultiphase.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_remote_debugging.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testlimitedcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha1.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_statistics.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_lzma.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ssl.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_posixsubprocess.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testclinic.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxsubtype.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testclinic_limited.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_curses.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_multiprocessing.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_iso2022.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpreters.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/grp.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/binascii.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_zstd.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/mmap.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_socket.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_asyncio.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/fcntl.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_md5.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sqlite3.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_dbm.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_pickle.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/array.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_json.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/pyexpat.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_bz2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpchannels.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_decimal.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/config-3.14-aarch64-linux-android/install-sh",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/config-3.14-aarch64-linux-android/python-config.py",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/config-3.14-aarch64-linux-android/makesetup",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/encodings/rot_13.py",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/ctypes/macholib/fetch_macholib"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/python3.14",
+        "data/data/studio.ocean.app/files/usr/lib/libpython3.14.so",
+        "data/data/studio.ocean.app/files/usr/lib/libpython3.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxlimited.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/readline.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/zlib.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/unicodedata.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/termios.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_tw.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testsinglephase.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_zoneinfo.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/resource.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_struct.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_heapq.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_gdbm.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ctypes_test.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_hk.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_curses_panel.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_csv.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_random.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha3.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testinternalcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/cmath.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_bisect.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpqueues.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_queue.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/math.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_hmac.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testbuffer.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_elementtree.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_kr.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_blake2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/syslog.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_cn.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_lsprof.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_multibytecodec.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_xxtestfuzz.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testimportmultiple.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_posixshmem.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxlimited_35.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/select.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_jp.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testmultiphase.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_remote_debugging.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testlimitedcapi.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sha1.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_statistics.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_lzma.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_ssl.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_posixsubprocess.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testclinic.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/xxsubtype.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_testclinic_limited.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_curses.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_multiprocessing.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_codecs_iso2022.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpreters.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/grp.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/binascii.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_zstd.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/mmap.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_socket.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_asyncio.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/fcntl.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_md5.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_sqlite3.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_dbm.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_pickle.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/array.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_json.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/pyexpat.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_bz2.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_interpchannels.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/lib-dynload/_decimal.cpython-314-aarch64-linux-android.so",
+        "data/data/studio.ocean.app/files/usr/lib/python3.14/config-3.14-aarch64-linux-android/python.o"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pyunbound",
+      "version": "1.26.0",
+      "architecture": "aarch64",
+      "depends": "python, libunbound (= 1.26.0)",
+      "description": "Python bindings for Unbound",
+      "artifact": "pyunbound_1.26.0_aarch64.deb",
+      "bytes": 800,
+      "sha256": "6f61bd896967b4ee1723f5202171561b75457dcc11deea3444fbcefd5489fbcd",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "pzstd",
+      "version": "1.5.7-1",
+      "architecture": "aarch64",
+      "depends": "libc++, zstd (= 1.5.7-1)",
+      "description": "A Pigz-like tool for Zstandard",
+      "artifact": "pzstd_1.5.7-1_aarch64.deb",
+      "bytes": 41816,
+      "sha256": "aff26018219da1b8b6dc3e2ea9440efd20178fc19530bf61bf9f8fa9340340b2",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/pzstd"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/pzstd"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "readline-static",
+      "version": "8.3.3",
+      "architecture": "aarch64",
+      "depends": "readline (= 8.3.3)",
+      "description": "Static libraries for readline",
+      "artifact": "readline-static_8.3.3_aarch64.deb",
+      "bytes": 124852,
+      "sha256": "f64a73bf1f4db3f83deefec6b54c801a1dad5e0962ad18b70f1936b27dc6bb8a",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "readline",
+      "version": "8.3.3",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, ncurses",
+      "description": "Library that allow users to edit command lines as they are typed in",
+      "artifact": "readline_8.3.3_aarch64.deb",
+      "bytes": 294096,
+      "sha256": "6f5b682251e15e0ed33defacadaa2a811357041597d341f3ca9aca73f6254999",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libreadline.so.8.3",
+        "data/data/studio.ocean.app/files/usr/lib/libhistory.so.8.3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libreadline.so.8.3",
+        "data/data/studio.ocean.app/files/usr/lib/libhistory.so.8.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "resolv-conf",
+      "version": "1.3",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Resolver configuration file",
+      "artifact": "resolv-conf_1.3_aarch64.deb",
+      "bytes": 1028,
+      "sha256": "42b25b0742ba98bbeab506212f25fc5aa42cf856762ecfb1678685426b82cbff",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "scdaemon",
+      "version": "2.5.17",
+      "architecture": "aarch64",
+      "depends": "libgcrypt, libksba, libgpg-error, libassuan, libnpth, libusb, gnupg (= 2.5.17)",
+      "description": "Daemon invoked by gpg to manage smartcards",
+      "artifact": "scdaemon_2.5.17_aarch64.deb",
+      "bytes": 183904,
+      "sha256": "7278499706641e9ffc4f52ff2f114276f81ce7e93f84760d1f24d6dcb5412e20",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/libexec/scdaemon"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/libexec/scdaemon"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "sed",
+      "version": "4.9-2",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "GNU stream editor for filtering/transforming text",
+      "artifact": "sed_4.9-2_aarch64.deb",
+      "bytes": 118396,
+      "sha256": "00df452286e2f2a539eb7749e356bef813a62643d6d64aa1d0ed2bf38cd1ec1f",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/sed"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/sed"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "sqlite",
+      "version": "3.53.4",
+      "architecture": "aarch64",
+      "depends": "readline, zlib",
+      "description": "Command line shell for SQLite",
+      "artifact": "sqlite_3.53.4_aarch64.deb",
+      "bytes": 659024,
+      "sha256": "b52331bc0b0cb406039900c0a9244af8b536bd71e61612f15d9016f7097e27f6",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/sqlite3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/sqlite3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "swig",
+      "version": "4.5.0",
+      "architecture": "aarch64",
+      "depends": "libc++, pcre2, zlib",
+      "description": "Generate scripting interfaces to C/C++ code",
+      "artifact": "swig_4.5.0_aarch64.deb",
+      "bytes": 947008,
+      "sha256": "175c51fe893f2d7b8ad4f19bd4f348a40ab5822dd26edab4bdcb4d81c41efb3c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/ccache-swig",
+        "data/data/studio.ocean.app/files/usr/bin/swig"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/ccache-swig",
+        "data/data/studio.ocean.app/files/usr/bin/swig"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "tar",
+      "version": "1.35-3",
+      "architecture": "aarch64",
+      "depends": "libacl, libandroid-glob, libandroid-selinux, libiconv",
+      "description": "GNU tar for manipulating tar archives",
+      "artifact": "tar_1.35-3_aarch64.deb",
+      "bytes": 345580,
+      "sha256": "ebd272536b33b0205c92a5d464b6ce32597454573e0d336c01b2bfdd8379e309",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/tar",
+        "data/data/studio.ocean.app/files/usr/libexec/rmt"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/tar",
+        "data/data/studio.ocean.app/files/usr/libexec/rmt"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "tcl",
+      "version": "8.6.16",
+      "architecture": "aarch64",
+      "depends": "zlib",
+      "description": "Powerful but easy to learn dynamic programming language",
+      "artifact": "tcl_8.6.16_aarch64.deb",
+      "bytes": 2261436,
+      "sha256": "c13e6a275851d842e589a5c911e94ecade5791b943e8a879f98b24932220a123",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/tclsh8.6",
+        "data/data/studio.ocean.app/files/usr/lib/libtclstub8.6.a",
+        "data/data/studio.ocean.app/files/usr/lib/libtcl8.6.so"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/tclsh8.6",
+        "data/data/studio.ocean.app/files/usr/lib/libtcl8.6.so",
+        "data/data/studio.ocean.app/files/usr/lib/itcl4.3.2/libitcl4.3.2.so",
+        "data/data/studio.ocean.app/files/usr/lib/tdbcpostgres1.1.10/libtdbcpostgres1.1.10.so",
+        "data/data/studio.ocean.app/files/usr/lib/thread2.8.11/libthread2.8.11.so",
+        "data/data/studio.ocean.app/files/usr/lib/tdbcodbc1.1.10/libtdbcodbc1.1.10.so",
+        "data/data/studio.ocean.app/files/usr/lib/tdbc1.1.10/libtdbc1.1.10.so",
+        "data/data/studio.ocean.app/files/usr/lib/tdbcmysql1.1.10/libtdbcmysql1.1.10.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "tk",
+      "version": "8.6.14-1",
+      "architecture": "aarch64",
+      "depends": "fontconfig, libx11, libxft, libxss, tcl",
+      "description": "A windowing toolkit for use with tcl",
+      "artifact": "tk_8.6.14-1_aarch64.deb",
+      "bytes": 1754820,
+      "sha256": "07c2e8549946ae787f694f4a2ad4efa4733af22c2f11a6cbcc60726e6388d799",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/wish8.6",
+        "data/data/studio.ocean.app/files/usr/lib/libtkstub8.6.a",
+        "data/data/studio.ocean.app/files/usr/lib/libtk8.6.so",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/timer",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/ixset",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/tcolor",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/rolodex",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/rmt",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/hello",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/widget",
+        "data/data/studio.ocean.app/files/usr/lib/tk8.6/demos/browse"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/wish8.6",
+        "data/data/studio.ocean.app/files/usr/lib/libtk8.6.so"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "tor",
+      "version": "0.4.9.11",
+      "architecture": "aarch64",
+      "depends": "libevent, liblzma, openssl, resolv-conf, zlib",
+      "description": "The Onion Router anonymizing overlay network",
+      "artifact": "tor_0.4.9.11_aarch64.deb",
+      "bytes": 3321864,
+      "sha256": "62e84a4f26356adb249af9597c0e888fd88e156356653976b9a788fd4032d6db",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/tor",
+        "data/data/studio.ocean.app/files/usr/bin/tor-print-ed-signing-cert",
+        "data/data/studio.ocean.app/files/usr/bin/torify",
+        "data/data/studio.ocean.app/files/usr/bin/tor-resolve",
+        "data/data/studio.ocean.app/files/usr/bin/tor-gencert",
+        "data/data/studio.ocean.app/files/usr/var/service/tor/run",
+        "data/data/studio.ocean.app/files/usr/var/service/tor/log/run"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/tor",
+        "data/data/studio.ocean.app/files/usr/bin/tor-print-ed-signing-cert",
+        "data/data/studio.ocean.app/files/usr/bin/tor-resolve",
+        "data/data/studio.ocean.app/files/usr/bin/tor-gencert"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "ttf-dejavu",
+      "version": "2.37-8",
+      "architecture": "all",
+      "depends": "",
+      "description": "Font family based on the Bitstream Vera Fonts with a wider range of characters",
+      "artifact": "ttf-dejavu_2.37-8_all.deb",
+      "bytes": 2459256,
+      "sha256": "de21e4b37cd2ef0361a071561921a296fa6d93fb91ca7ce58df57d0e8936c5df",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "unbound",
+      "version": "1.26.0",
+      "architecture": "aarch64",
+      "depends": "libexpat, libunbound (= 1.26.0)",
+      "description": "Unbound command-line tools",
+      "artifact": "unbound_1.26.0_aarch64.deb",
+      "bytes": 653540,
+      "sha256": "4d51cf5ddf91b6d6e81be4eaca32bb556c9809da4c82081e5b3038b230acee9c",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/unbound",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-checkconf",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-control",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-anchor",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-control-setup",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-host"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/unbound",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-checkconf",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-control",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-anchor",
+        "data/data/studio.ocean.app/files/usr/bin/unbound-host"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "util-linux-static",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "util-linux (= 2.42.1-4)",
+      "description": "Static libraries for util-linux",
+      "artifact": "util-linux-static_2.42.1-4_aarch64.deb",
+      "bytes": 436236,
+      "sha256": "e062cb4339e905b5dedc549d2df46d46c6bd47cfe081dce927c4a8b3a4d9c8f2",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libuuid.la",
+        "data/data/studio.ocean.app/files/usr/lib/libblkid.la",
+        "data/data/studio.ocean.app/files/usr/lib/libsmartcols.la",
+        "data/data/studio.ocean.app/files/usr/lib/libfdisk.la",
+        "data/data/studio.ocean.app/files/usr/lib/libmount.la"
+      ],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "util-linux",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libandroid-glob, libandroid-posix-semaphore, libcap-ng, libsmartcols, ncurses, zlib",
+      "description": "Miscellaneous system utilities",
+      "artifact": "util-linux_2.42.1-4_aarch64.deb",
+      "bytes": 768060,
+      "sha256": "6d885d67cde8bc859875cd822b28f6ce2e6e7b12bad592b66c2905087e6b00be",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/unshare",
+        "data/data/studio.ocean.app/files/usr/bin/losetup",
+        "data/data/studio.ocean.app/files/usr/bin/column",
+        "data/data/studio.ocean.app/files/usr/bin/fsck.minix",
+        "data/data/studio.ocean.app/files/usr/bin/choom",
+        "data/data/studio.ocean.app/files/usr/bin/hexdump",
+        "data/data/studio.ocean.app/files/usr/bin/lsirq",
+        "data/data/studio.ocean.app/files/usr/bin/setterm",
+        "data/data/studio.ocean.app/files/usr/bin/rtcwake",
+        "data/data/studio.ocean.app/files/usr/bin/flock",
+        "data/data/studio.ocean.app/files/usr/bin/hwclock",
+        "data/data/studio.ocean.app/files/usr/bin/irqtop",
+        "data/data/studio.ocean.app/files/usr/bin/fallocate",
+        "data/data/studio.ocean.app/files/usr/bin/fincore",
+        "data/data/studio.ocean.app/files/usr/bin/nsenter",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.minix",
+        "data/data/studio.ocean.app/files/usr/bin/resizepart",
+        "data/data/studio.ocean.app/files/usr/bin/delpart",
+        "data/data/studio.ocean.app/files/usr/bin/ionice",
+        "data/data/studio.ocean.app/files/usr/bin/fsfreeze",
+        "data/data/studio.ocean.app/files/usr/bin/bits",
+        "data/data/studio.ocean.app/files/usr/bin/ctrlaltdel",
+        "data/data/studio.ocean.app/files/usr/bin/rename",
+        "data/data/studio.ocean.app/files/usr/bin/colcrt",
+        "data/data/studio.ocean.app/files/usr/bin/wdctl",
+        "data/data/studio.ocean.app/files/usr/bin/setsid",
+        "data/data/studio.ocean.app/files/usr/bin/setpgid",
+        "data/data/studio.ocean.app/files/usr/bin/uclampset",
+        "data/data/studio.ocean.app/files/usr/bin/script",
+        "data/data/studio.ocean.app/files/usr/bin/lsclocks",
+        "data/data/studio.ocean.app/files/usr/bin/getopt",
+        "data/data/studio.ocean.app/files/usr/bin/isosize",
+        "data/data/studio.ocean.app/files/usr/bin/rev",
+        "data/data/studio.ocean.app/files/usr/bin/exch",
+        "data/data/studio.ocean.app/files/usr/bin/fadvise",
+        "data/data/studio.ocean.app/files/usr/bin/fsck.cramfs",
+        "data/data/studio.ocean.app/files/usr/bin/more",
+        "data/data/studio.ocean.app/files/usr/bin/lsfd",
+        "data/data/studio.ocean.app/files/usr/bin/hardlink",
+        "data/data/studio.ocean.app/files/usr/bin/ul",
+        "data/data/studio.ocean.app/files/usr/bin/lscpu",
+        "data/data/studio.ocean.app/files/usr/bin/chrt",
+        "data/data/studio.ocean.app/files/usr/bin/setarch",
+        "data/data/studio.ocean.app/files/usr/bin/namei",
+        "data/data/studio.ocean.app/files/usr/bin/whereis",
+        "data/data/studio.ocean.app/files/usr/bin/scriptreplay",
+        "data/data/studio.ocean.app/files/usr/bin/blkpr",
+        "data/data/studio.ocean.app/files/usr/bin/ldattach",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.bfs",
+        "data/data/studio.ocean.app/files/usr/bin/prlimit",
+        "data/data/studio.ocean.app/files/usr/bin/waitpid",
+        "data/data/studio.ocean.app/files/usr/bin/look",
+        "data/data/studio.ocean.app/files/usr/bin/lsipc",
+        "data/data/studio.ocean.app/files/usr/bin/pipesz",
+        "data/data/studio.ocean.app/files/usr/bin/enosys",
+        "data/data/studio.ocean.app/files/usr/bin/setpriv",
+        "data/data/studio.ocean.app/files/usr/bin/chcpu",
+        "data/data/studio.ocean.app/files/usr/bin/coresched",
+        "data/data/studio.ocean.app/files/usr/bin/scriptlive",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs",
+        "data/data/studio.ocean.app/files/usr/bin/cal",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.cramfs",
+        "data/data/studio.ocean.app/files/usr/bin/lsns",
+        "data/data/studio.ocean.app/files/usr/bin/readprofile",
+        "data/data/studio.ocean.app/files/usr/bin/mcookie",
+        "data/data/studio.ocean.app/files/usr/bin/col",
+        "data/data/studio.ocean.app/files/usr/bin/zramctl",
+        "data/data/studio.ocean.app/files/usr/bin/taskset",
+        "data/data/studio.ocean.app/files/usr/bin/colrm",
+        "data/data/studio.ocean.app/files/usr/bin/addpart",
+        "data/data/studio.ocean.app/files/usr/bin/blockdev",
+        "data/data/studio.ocean.app/files/usr/bin/renice",
+        "data/data/studio.ocean.app/files/usr/bin/dmesg"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/unshare",
+        "data/data/studio.ocean.app/files/usr/bin/losetup",
+        "data/data/studio.ocean.app/files/usr/bin/column",
+        "data/data/studio.ocean.app/files/usr/bin/fsck.minix",
+        "data/data/studio.ocean.app/files/usr/bin/choom",
+        "data/data/studio.ocean.app/files/usr/bin/hexdump",
+        "data/data/studio.ocean.app/files/usr/bin/lsirq",
+        "data/data/studio.ocean.app/files/usr/bin/setterm",
+        "data/data/studio.ocean.app/files/usr/bin/rtcwake",
+        "data/data/studio.ocean.app/files/usr/bin/flock",
+        "data/data/studio.ocean.app/files/usr/bin/hwclock",
+        "data/data/studio.ocean.app/files/usr/bin/irqtop",
+        "data/data/studio.ocean.app/files/usr/bin/fallocate",
+        "data/data/studio.ocean.app/files/usr/bin/fincore",
+        "data/data/studio.ocean.app/files/usr/bin/nsenter",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.minix",
+        "data/data/studio.ocean.app/files/usr/bin/resizepart",
+        "data/data/studio.ocean.app/files/usr/bin/delpart",
+        "data/data/studio.ocean.app/files/usr/bin/ionice",
+        "data/data/studio.ocean.app/files/usr/bin/fsfreeze",
+        "data/data/studio.ocean.app/files/usr/bin/bits",
+        "data/data/studio.ocean.app/files/usr/bin/ctrlaltdel",
+        "data/data/studio.ocean.app/files/usr/bin/rename",
+        "data/data/studio.ocean.app/files/usr/bin/colcrt",
+        "data/data/studio.ocean.app/files/usr/bin/wdctl",
+        "data/data/studio.ocean.app/files/usr/bin/setsid",
+        "data/data/studio.ocean.app/files/usr/bin/setpgid",
+        "data/data/studio.ocean.app/files/usr/bin/uclampset",
+        "data/data/studio.ocean.app/files/usr/bin/script",
+        "data/data/studio.ocean.app/files/usr/bin/lsclocks",
+        "data/data/studio.ocean.app/files/usr/bin/getopt",
+        "data/data/studio.ocean.app/files/usr/bin/isosize",
+        "data/data/studio.ocean.app/files/usr/bin/rev",
+        "data/data/studio.ocean.app/files/usr/bin/exch",
+        "data/data/studio.ocean.app/files/usr/bin/fadvise",
+        "data/data/studio.ocean.app/files/usr/bin/fsck.cramfs",
+        "data/data/studio.ocean.app/files/usr/bin/more",
+        "data/data/studio.ocean.app/files/usr/bin/lsfd",
+        "data/data/studio.ocean.app/files/usr/bin/hardlink",
+        "data/data/studio.ocean.app/files/usr/bin/ul",
+        "data/data/studio.ocean.app/files/usr/bin/lscpu",
+        "data/data/studio.ocean.app/files/usr/bin/chrt",
+        "data/data/studio.ocean.app/files/usr/bin/setarch",
+        "data/data/studio.ocean.app/files/usr/bin/namei",
+        "data/data/studio.ocean.app/files/usr/bin/whereis",
+        "data/data/studio.ocean.app/files/usr/bin/scriptreplay",
+        "data/data/studio.ocean.app/files/usr/bin/blkpr",
+        "data/data/studio.ocean.app/files/usr/bin/ldattach",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.bfs",
+        "data/data/studio.ocean.app/files/usr/bin/prlimit",
+        "data/data/studio.ocean.app/files/usr/bin/waitpid",
+        "data/data/studio.ocean.app/files/usr/bin/look",
+        "data/data/studio.ocean.app/files/usr/bin/lsipc",
+        "data/data/studio.ocean.app/files/usr/bin/pipesz",
+        "data/data/studio.ocean.app/files/usr/bin/enosys",
+        "data/data/studio.ocean.app/files/usr/bin/setpriv",
+        "data/data/studio.ocean.app/files/usr/bin/chcpu",
+        "data/data/studio.ocean.app/files/usr/bin/coresched",
+        "data/data/studio.ocean.app/files/usr/bin/scriptlive",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs",
+        "data/data/studio.ocean.app/files/usr/bin/cal",
+        "data/data/studio.ocean.app/files/usr/bin/mkfs.cramfs",
+        "data/data/studio.ocean.app/files/usr/bin/lsns",
+        "data/data/studio.ocean.app/files/usr/bin/readprofile",
+        "data/data/studio.ocean.app/files/usr/bin/mcookie",
+        "data/data/studio.ocean.app/files/usr/bin/col",
+        "data/data/studio.ocean.app/files/usr/bin/zramctl",
+        "data/data/studio.ocean.app/files/usr/bin/taskset",
+        "data/data/studio.ocean.app/files/usr/bin/colrm",
+        "data/data/studio.ocean.app/files/usr/bin/addpart",
+        "data/data/studio.ocean.app/files/usr/bin/blockdev",
+        "data/data/studio.ocean.app/files/usr/bin/renice",
+        "data/data/studio.ocean.app/files/usr/bin/dmesg"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "uuid-utils",
+      "version": "2.42.1-4",
+      "architecture": "aarch64",
+      "depends": "libsmartcols, libuuid",
+      "description": "Utilities for handling universally unique identifiers",
+      "artifact": "uuid-utils_2.42.1-4_aarch64.deb",
+      "bytes": 41848,
+      "sha256": "8d068f947cef2e631ce12d588b0eb9af326e9c315e4357c6adc1f966cd620264",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/uuidgen",
+        "data/data/studio.ocean.app/files/usr/bin/uuidd",
+        "data/data/studio.ocean.app/files/usr/bin/uuidparse"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/uuidgen",
+        "data/data/studio.ocean.app/files/usr/bin/uuidd",
+        "data/data/studio.ocean.app/files/usr/bin/uuidparse"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "wget",
+      "version": "1.25.0-1",
+      "architecture": "aarch64",
+      "depends": "libandroid-support, libiconv, libidn2, libuuid, openssl, pcre2, zlib",
+      "description": "Commandline tool for retrieving files using HTTP, HTTPS and FTP",
+      "artifact": "wget_1.25.0-1_aarch64.deb",
+      "bytes": 281804,
+      "sha256": "7691551dc8358b8cd39f8cbe25fea314aa179770027de299b6768fc4fe01dcbc",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/wget"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/wget"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "which",
+      "version": "2.25",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Shows the full path of (shell) commands",
+      "artifact": "which_2.25_aarch64.deb",
+      "bytes": 12632,
+      "sha256": "0a39f076ef63644838478971a47784e41b926394fb40d6b70211ebfe0da7a9ac",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/which"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/which"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xcb-proto",
+      "version": "1.17.0-3",
+      "architecture": "all",
+      "depends": "",
+      "description": "XML-XCB protocol descriptions",
+      "artifact": "xcb-proto_1.17.0-3_all.deb",
+      "bytes": 78652,
+      "sha256": "869eb4d4443b718e9a5c10171788ab67f4356e87ae33ce7972fb59542d1b9f82",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xorg-util-macros",
+      "version": "1.20.2",
+      "architecture": "all",
+      "depends": "",
+      "description": "X.Org Autotools macros",
+      "artifact": "xorg-util-macros_1.20.2_all.deb",
+      "bytes": 21976,
+      "sha256": "5039173b97b90b377284ccdac8d59fb59aefe8222834062b981f88f23777c8e2",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xorgproto",
+      "version": "2025.1",
+      "architecture": "all",
+      "depends": "xorg-util-macros",
+      "description": "X.Org X11 Protocol headers",
+      "artifact": "xorgproto_2025.1_all.deb",
+      "bytes": 249656,
+      "sha256": "115a75f97f9824ea0d4995343be2eb8e159dbecf3683bc5c1630983a39be287d",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xsltproc",
+      "version": "1.1.45-1",
+      "architecture": "aarch64",
+      "depends": "libxslt (= 1.1.45-1)",
+      "description": "XSLT command line processor",
+      "artifact": "xsltproc_1.1.45-1_aarch64.deb",
+      "bytes": 11988,
+      "sha256": "d072aa05964b5187d0fcf0aa79b15efd798fd64e6c1ef64ad2d0390662967813",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xsltproc"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/xsltproc"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xtrans",
+      "version": "1.6.0",
+      "architecture": "all",
+      "depends": "",
+      "description": "X transport library",
+      "artifact": "xtrans_1.6.0_all.deb",
+      "bytes": 39884,
+      "sha256": "c91f77435f10bef2f937b77fccde93f73e60b97dd52979a2b5093f4d40835536",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xxhash-static",
+      "version": "0.8.3-1",
+      "architecture": "aarch64",
+      "depends": "xxhash (= 0.8.3-1)",
+      "description": "Static libraries for xxhash",
+      "artifact": "xxhash-static_0.8.3-1_aarch64.deb",
+      "bytes": 8552,
+      "sha256": "80c997969654821af0575ffb00199931b21e0d669587fb664e2278a0b62f3f5d",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xxhash",
+      "version": "0.8.3-1",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Extremely fast non-cryptographic hash algorithm",
+      "artifact": "xxhash_0.8.3-1_aarch64.deb",
+      "bytes": 76592,
+      "sha256": "d4514e578efbb81e36f657f9a2774a830e28f921b49570b9832e6c6339ae8b5b",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xxhsum",
+        "data/data/studio.ocean.app/files/usr/lib/libxxhash.so.0.8.3"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/xxhsum",
+        "data/data/studio.ocean.app/files/usr/lib/libxxhash.so.0.8.3"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "xz-utils",
+      "version": "5.8.3",
+      "architecture": "aarch64",
+      "depends": "liblzma (= 5.8.3)",
+      "description": "XZ-format compression tools",
+      "artifact": "xz-utils_5.8.3_aarch64.deb",
+      "bytes": 71224,
+      "sha256": "81828ed4c9f1b2ea81b6101f8a11b44263c393ef487b340e366c2a2d4b7e9cdd",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/xzdec",
+        "data/data/studio.ocean.app/files/usr/bin/xzgrep",
+        "data/data/studio.ocean.app/files/usr/bin/lzmainfo",
+        "data/data/studio.ocean.app/files/usr/bin/xzmore",
+        "data/data/studio.ocean.app/files/usr/bin/lzmadec",
+        "data/data/studio.ocean.app/files/usr/bin/xz",
+        "data/data/studio.ocean.app/files/usr/bin/xzless",
+        "data/data/studio.ocean.app/files/usr/bin/xzdiff"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/xzdec",
+        "data/data/studio.ocean.app/files/usr/bin/lzmainfo",
+        "data/data/studio.ocean.app/files/usr/bin/lzmadec",
+        "data/data/studio.ocean.app/files/usr/bin/xz"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "zlib-static",
+      "version": "1.3.2",
+      "architecture": "aarch64",
+      "depends": "zlib (= 1.3.2)",
+      "description": "Static libraries for zlib",
+      "artifact": "zlib-static_1.3.2_aarch64.deb",
+      "bytes": 35488,
+      "sha256": "b9ce506feee76795c9b8e77e8cae04bdca0b80e6e232a7d7196f03113056deda",
+      "executables": [],
+      "elf": [],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2",
+      "architecture": "aarch64",
+      "depends": "",
+      "description": "Compression library implementing the deflate compression method found in gzip and PKZIP",
+      "artifact": "zlib_1.3.2_aarch64.deb",
+      "bytes": 62888,
+      "sha256": "d6dd2558e8400453fa70334451eebe10c2403e5134bc0efc64dbc760d8008eac",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/lib/libz.so.1.3.2"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/lib/libz.so.1.3.2"
+      ],
+      "staticValidation": "PASS"
+    },
+    {
+      "name": "zstd",
+      "version": "1.5.7-1",
+      "architecture": "aarch64",
+      "depends": "liblzma, zlib",
+      "description": "Zstandard compression",
+      "artifact": "zstd_1.5.7-1_aarch64.deb",
+      "bytes": 359468,
+      "sha256": "17100dc507f35d77c1d46458d8178fefc4edf4325711baad019b258ce2d339fb",
+      "executables": [
+        "data/data/studio.ocean.app/files/usr/bin/zstdless",
+        "data/data/studio.ocean.app/files/usr/bin/zstd",
+        "data/data/studio.ocean.app/files/usr/bin/zstdgrep"
+      ],
+      "elf": [
+        "data/data/studio.ocean.app/files/usr/bin/zstd",
+        "data/data/studio.ocean.app/files/usr/lib/libzstd.so.1.5.7"
+      ],
+      "staticValidation": "PASS"
+    }
+  ]
+}

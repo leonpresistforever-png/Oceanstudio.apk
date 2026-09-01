@@ -1,0 +1,21 @@
+Architectures: aarch64
+Components: main
+Date: Tue, 01 Sep 2026 11:32:20 +0000
+Label: Ocean
+Origin: OceanStudio
+MD5Sum:
+ f4e56c4fd77cf62db813d6388cc17d2d              111 Release
+ 9b63bb5bd0482f55c0ba976cbe1f0651           121491 main/binary-aarch64/Packages
+ 84958cbfa8390f51e82e984b369f9c3e            46683 main/binary-aarch64/Packages.gz
+SHA1:
+ 19b7675d9300345cbda26d8e21908b2dc36aa6b3              111 Release
+ 300e3b5f5fcff30a13d5ebae99ae546df65b1a97           121491 main/binary-aarch64/Packages
+ 647f55f6ef422c0b3cf2929d284fff56ef654796            46683 main/binary-aarch64/Packages.gz
+SHA256:
+ cd6f6edb9398233b0038c04de5fddaa5f41b3383188fd158ad3a5f29151412d2              111 Release
+ c939d2cb5b034f99a4d44e09c93893aa0f342fa8476efd5102128a8fab39e866           121491 main/binary-aarch64/Packages
+ 202b7dadfec56d38220ecfd4fe6aa52672cb1afb6d5358bab3c9e7b3c34dd0cf            46683 main/binary-aarch64/Packages.gz
+SHA512:
+ 1dfa6d03dba3f25235edf672769087c9fe6a6bd530fceeaa4af90821c58e5b3ac0c28af2ad91edf6f42344a650e6b26a03827c3261f56986a80b4348b80dc92f              111 Release
+ 8b38c1ffb422e67e886de76d692b6bdd4987b3a0ed242e153ac366f172768e51a819392e1118db0ace9e4f7f642d76454c333c2e51c436dbbfd9bcd9650df93f           121491 main/binary-aarch64/Packages
+ e64bfbe52f426aa057196f54d56a56d19c4abab84d13b0689fcd368d0dbf101a0f43a3028c50d0c98c7d8df545a106bce4b29db4270afd7ad969b48a60bba7f4            46683 main/binary-aarch64/Packages.gz
