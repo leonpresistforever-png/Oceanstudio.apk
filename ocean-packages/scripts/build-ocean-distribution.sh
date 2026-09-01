@@ -119,7 +119,7 @@ dpkg-deb --root-owner-group --build "$HELLO" "$OUT/debs/ocean-hello_1.0.0_aarch6
 PKGROOT=$WORK/ocean-pkg; mkdir -p "$PKGROOT/DEBIAN" "$PKGROOT$OCEAN_PREFIX/bin"
 cp "$ROOT/ocean-packages/packages/ocean-pkg/control" "$PKGROOT/DEBIAN/control"
 install -m755 "$ROOT/ocean-packages/packages/ocean-pkg/pkg" "$PKGROOT$OCEAN_PREFIX/bin/pkg"
-dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.0.0_all.deb"
+dpkg-deb --root-owner-group --build "$PKGROOT" "$OUT/debs/ocean-pkg_1.0.1_all.deb"
 cp "$OUT/debs"/*.deb "$OUT/repository/pool/main/"
 cd "$OUT/repository"; mkdir -p dists/stable/main/binary-aarch64
 apt-ftparchive packages pool/main > dists/stable/main/binary-aarch64/Packages

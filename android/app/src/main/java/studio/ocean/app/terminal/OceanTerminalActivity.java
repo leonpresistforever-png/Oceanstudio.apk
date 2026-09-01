@@ -6,21 +6,17 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.widget.EditText;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import jackpal.androidterm.emulatorview.ColorScheme;
+import jackpal.androidterm.emulatorview.EmulatorView;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import studio.ocean.app.BuildConfig;
-import studio.ocean.app.OceanPaths;
 import studio.ocean.app.R;
 
 /** Native Ocean Terminal UI connected to a service-owned real PTY. */
 public final class OceanTerminalActivity extends AppCompatActivity implements TerminalSession.Listener {
-    private TextView output,status; private EditText input; private TerminalSession session;
+    private TextView status; private EmulatorView terminalView; private OceanEmulatorSession emulatorSession; private TerminalSession session;
     private OceanTerminalRuntimeService service; private boolean bound;
     private View failureActions; private Thread.UncaughtExceptionHandler previousCrashHandler;
     private String diagnosticMode;private boolean scriptedExitSent;private final StringBuilder diagnosticOutput=new StringBuilder();
@@ -34,14 +30,16 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
     };
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);diagnosticMode=getIntent().getStringExtra("diagnostic_test");TerminalDiagnosticBundle.beginAttempt(this);String attemptName=diagnosticMode==null?"PRODUCTION TERMINAL":"PTY TEST "+diagnosticMode;TerminalDiagnosticBundle.setTest(this,attemptName);TerminalDiagnosticBundle.log("session-state.log","activeDiagnosticTest="+attemptName);TerminalStartupLog.initialize(this);previousCrashHandler=TerminalStartupLog.installCrashCapture();
-        setContentView(R.layout.activity_terminal);output=findViewById(R.id.terminal_output);status=findViewById(R.id.terminal_status);input=findViewById(R.id.terminal_input);failureActions=findViewById(R.id.terminal_failure_actions);
+        setContentView(R.layout.activity_terminal);status=findViewById(R.id.terminal_status);terminalView=findViewById(R.id.terminal_emulator);failureActions=findViewById(R.id.terminal_failure_actions);
         findViewById(R.id.terminal_back).setOnClickListener(v->finish());
-        findViewById(R.id.terminal_ctrl_c).setOnClickListener(v->{if(session!=null)session.interrupt();});
+        findViewById(R.id.terminal_ctrl).setOnClickListener(v->terminalView.sendControlKey());
+        findViewById(R.id.terminal_alt).setOnClickListener(v->write("\u001b"));
         findViewById(R.id.terminal_tab).setOnClickListener(v->write("\t"));findViewById(R.id.terminal_escape).setOnClickListener(v->write("\u001b"));
+        findViewById(R.id.terminal_left).setOnClickListener(v->write("\u001b[D"));findViewById(R.id.terminal_down).setOnClickListener(v->write("\u001b[B"));findViewById(R.id.terminal_up).setOnClickListener(v->write("\u001b[A"));findViewById(R.id.terminal_right).setOnClickListener(v->write("\u001b[C"));
+        findViewById(R.id.terminal_home).setOnClickListener(v->write("\u001b[H"));findViewById(R.id.terminal_end).setOnClickListener(v->write("\u001b[F"));
         findViewById(R.id.terminal_retry).setOnClickListener(v->startOceanSession());
         findViewById(R.id.terminal_details).setOnClickListener(v->showDiagnosticLog());
         findViewById(R.id.terminal_recovery).setOnClickListener(v->startRecoverySession());
-        input.setOnEditorActionListener((v,action,event)->{boolean ime=action==EditorInfo.IME_ACTION_SEND;boolean enter=event!=null&&event.getKeyCode()==KeyEvent.KEYCODE_ENTER&&event.getAction()==KeyEvent.ACTION_DOWN;if(!ime&&!enter)return false;String command=input.getText().toString();if(command.isEmpty())return true;input.setText("");write(command+"\r");return true;});
         TerminalStartupLog.stage("02","bind runtime service");TerminalDiagnosticBundle.log("startup.log","[J02] service bind requested");
         startService(new Intent(this,OceanTerminalRuntimeService.class));
         if(!bindService(new Intent(this,OceanTerminalRuntimeService.class),connection,Context.BIND_AUTO_CREATE))showFailure("Runtime service binding failed",null);
@@ -50,7 +48,7 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         if(service==null)return;failureActions.setVisibility(View.GONE);status.setText(R.string.terminal_connecting);TerminalDiagnosticBundle.log("startup.log","[J07] createSession requested");
         TerminalSession candidate=service.firstRunning();if(candidate!=null){attach(candidate,true);return;}
         service.requestTerminalSession(24,80,new OceanTerminalRuntimeService.SessionCallback(){
-            @Override public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long completed,long total){if(isFinishing()||isDestroyed())return;String progress=total>0?"\n"+completed+" / "+total:"";status.setText(detail+progress+buildIdentity(false));}
+            @Override public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long completed,long total){if(isFinishing()||isDestroyed())return;String progress=total>0?"\n"+completed+" / "+total:"";status.setText(detail+progress);}
             @Override public void onReady(TerminalSession ready){if(isFinishing()||isDestroyed())return;attach(ready,true);}
             @Override public void onFailure(Throwable error){if(isFinishing()||isDestroyed())return;showFailure("Ocean runtime setup failed: "+safeMessage(error),error);}
         });
@@ -61,19 +59,20 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         catch(Throwable error){showFailure("Recovery shell failed: "+safeMessage(error),error);}
     }
     private void startDiagnosticOceanSession(){if(service==null)return;failureActions.setVisibility(View.GONE);service.requestDiagnosticOceanSession(24,80,new OceanTerminalRuntimeService.SessionCallback(){public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long done,long total){if(!isFinishing()&&!isDestroyed())status.setText(detail);}public void onReady(TerminalSession ready){if(isFinishing()||isDestroyed())return;attach(ready,true);if("C".equals(diagnosticMode)){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","waiting for RUNNING");writeWhenRunning("echo OCEAN_PTY_OK\r",0);}}public void onFailure(Throwable error){if(!isFinishing()&&!isDestroyed())showFailure("Ocean Bash diagnostic failed: "+safeMessage(error)+". Use Install/Repair Ocean Runtime from the production terminal.",error);}});}
-    private void writeWhenRunning(String value,int attempt){if(session==null||attempt>50)return;if(session.state()==TerminalSession.State.RUNNING){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","script write echo exactly once");write(value);}else input.postDelayed(()->writeWhenRunning(value,attempt+1),50);}
+    private void writeWhenRunning(String value,int attempt){if(session==null||attempt>50)return;if(session.state()==TerminalSession.State.RUNNING){TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","script write echo exactly once");write(value);}else terminalView.postDelayed(()->writeWhenRunning(value,attempt+1),50);}
     private void attach(TerminalSession candidate,boolean installed){
-        if(session!=null)session.removeListener(this);session=candidate;session.addListener(this);input.setEnabled(session.isRunning());
-        LocalProcessDiagnostics.Snapshot process=session.diagnostics(new OceanPaths(this).prefix().getAbsolutePath());
-        status.setText((installed?getString(R.string.terminal_runtime_ready):getString(R.string.terminal_recovery_mode))+buildIdentity(installed)+"\n"+process.summary());
-        status.append("\nSession="+session.state()+" PID="+session.pid()+" masterFd="+session.masterFd());
+        if(session!=null)session.removeListener(this);if(emulatorSession!=null)emulatorSession.finish();session=candidate;
+        emulatorSession=new OceanEmulatorSession();emulatorSession.attachTransport(session);emulatorSession.setColorScheme(new ColorScheme(0xffe9e8e3,0xff11110f,0xff11110f,0xffd8d6cf));
+        terminalView.setDensity(getResources().getDisplayMetrics());terminalView.attachSession(emulatorSession);terminalView.setTextSize((int)(14*getResources().getDisplayMetrics().scaledDensity));terminalView.setUseCookedIME(true);terminalView.setAltSendsEsc(true);terminalView.setTermType("xterm-256color");
+        session.addListener(this);status.setVisibility(View.GONE);terminalView.requestFocus();terminalView.onResume();
     }
-    private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);status.setText(message+buildIdentity(false));failureActions.setVisibility(View.VISIBLE);input.setEnabled(false);}
+    private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);status.setText(message);status.setVisibility(View.VISIBLE);failureActions.setVisibility(View.VISIBLE);}
     private void showDiagnosticLog(){startActivity(new Intent(this,OceanTerminalDiagnosticsActivity.class));}
     private static String safeMessage(Throwable error){return error.getMessage()==null?error.getClass().getSimpleName():error.getMessage();}
     private void write(String value){if(session==null)return;if(session.state()==TerminalSession.State.RUNNING&&"exit".equals(value.replace("\r","").trim()))TerminalDiagnosticBundle.markCritical(this,"EXIT_COMMAND_SENT");TerminalSession.WriteResult result=session.write(value);if(result==TerminalSession.WriteResult.NATIVE_WRITE_FAILED)status.setText(R.string.terminal_write_failed);else if(result==TerminalSession.WriteResult.SESSION_ALREADY_EXITED)TerminalDiagnosticBundle.log("session-state.log","late UI write safely rejected state="+session.state());}
-    private String buildIdentity(boolean installed){return "\nBuild commit: "+BuildConfig.OCEAN_BUILD_COMMIT+"\nBootstrap build: "+BuildConfig.OCEAN_BOOTSTRAP_BUILD_COMMIT+"\nBootstrap version: "+BuildConfig.OCEAN_BOOTSTRAP_VERSION+"\nBootstrap SHA-256: "+BuildConfig.OCEAN_BOOTSTRAP_SHA256+"\nRuntime installed: "+(installed?"yes":"no");}
-    @Override public void onOutput(byte[] bytes,int length){String value=new String(bytes,0,length,StandardCharsets.UTF_8);if("C".equals(diagnosticMode)&&!scriptedExitSent){synchronized(diagnosticOutput){diagnosticOutput.append(value);if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);String normalized=diagnosticOutput.toString().replace("\r\n","\n");if(normalized.contains("\nOCEAN_PTY_OK\n")){scriptedExitSent=true;TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");input.post(()->write("exit\r"));}}}TerminalDiagnosticBundle.log("startup.log","[J12] UI callback received bytes="+length);runOnUiThread(()->{if(isFinishing()||isDestroyed())return;output.append(value);TerminalDiagnosticBundle.log("startup.log","[J13] PTY bytes rendered bytes="+length);if(output.length()>200000)output.setText(output.getText().subSequence(output.length()-150000,output.length()));});}
-    @Override public void onExit(int code){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){input.setEnabled(false);status.setText(getString(R.string.terminal_exited,code)+buildIdentity(OceanRuntimeState.isInstalled(this)));}});}
-    @Override protected void onDestroy(){if(session!=null)session.removeListener(this);if(bound)unbindService(connection);TerminalStartupLog.restoreCrashCapture(previousCrashHandler);super.onDestroy();}
+    @Override public void onOutput(byte[] bytes,int length){byte[] copy=java.util.Arrays.copyOf(bytes,length);String value=new String(copy,StandardCharsets.UTF_8);if("C".equals(diagnosticMode)&&!scriptedExitSent){synchronized(diagnosticOutput){diagnosticOutput.append(value);if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);String normalized=diagnosticOutput.toString().replace("\r\n","\n");if(normalized.contains("\nOCEAN_PTY_OK\n")){scriptedExitSent=true;TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");terminalView.post(()->write("exit\r"));}}}runOnUiThread(()->{if(isFinishing()||isDestroyed()||emulatorSession==null)return;emulatorSession.feed(copy,copy.length);});}
+    @Override public void onExit(int code){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){status.setText(getString(R.string.terminal_exited,code));status.setVisibility(View.VISIBLE);}});}
+    @Override protected void onResume(){super.onResume();if(terminalView!=null&&emulatorSession!=null)terminalView.onResume();}
+    @Override protected void onPause(){if(terminalView!=null&&emulatorSession!=null)terminalView.onPause();super.onPause();}
+    @Override protected void onDestroy(){if(session!=null)session.removeListener(this);if(emulatorSession!=null)emulatorSession.finish();if(bound)unbindService(connection);TerminalStartupLog.restoreCrashCapture(previousCrashHandler);super.onDestroy();}
 }
