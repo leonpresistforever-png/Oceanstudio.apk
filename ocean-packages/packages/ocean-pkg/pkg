@@ -1,21 +1,59 @@
 #!/data/data/studio.ocean.app/files/usr/bin/bash
 set -euo pipefail
+
 export PREFIX=${PREFIX:-/data/data/studio.ocean.app/files/usr}
-lock="$PREFIX/var/run/ocean-pkg.lock"
-mkdir -p "${lock%/*}"
-exec 9>"$lock"
-if ! flock -w 120 9; then echo 'Ocean package manager is busy.' >&2; exit 75; fi
+lock_dir="$PREFIX/var/run/ocean-pkg.lock.d"
+wait_seconds=${OCEAN_PKG_LOCK_WAIT:-120}
+mkdir -p "${lock_dir%/*}"
+
+lock_owner_alive() {
+    local owner
+    owner=$(cat "$lock_dir/pid" 2>/dev/null || true)
+    [[ "$owner" =~ ^[0-9]+$ ]] || return 1
+    kill -0 "$owner" 2>/dev/null
+}
+
+acquired=false
+for ((elapsed=0; elapsed<=wait_seconds; elapsed++)); do
+    if mkdir "$lock_dir" 2>/dev/null; then
+        printf '%s\n' "$$" > "$lock_dir/pid"
+        acquired=true
+        break
+    fi
+    if ! lock_owner_alive; then
+        rm -rf -- "$lock_dir"
+        continue
+    fi
+    (( elapsed < wait_seconds )) && sleep 1
+done
+
+if [[ "$acquired" != true ]]; then
+    echo 'Ocean package manager is busy.' >&2
+    exit 75
+fi
+
+release_lock() {
+    local status=$?
+    trap - EXIT
+    rm -rf -- "$lock_dir"
+    exit "$status"
+}
+trap release_lock EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 command=${1:-help}; shift || true
 case "$command" in
- update) exec apt-get update "$@";;
- upgrade) apt-get update; exec apt-get full-upgrade "$@";;
- install) exec apt-get install "$@";;
- remove) exec apt-get remove "$@";;
- reinstall) exec apt-get install --reinstall "$@";;
- search) exec apt-cache search "$@";;
- show) exec apt-cache show "$@";;
- list-installed) exec dpkg-query -W "$@";;
- clean) exec apt-get clean "$@";;
+ update) apt-get update "$@";;
+ upgrade) apt-get update && apt-get full-upgrade "$@";;
+ install) apt-get install "$@";;
+ remove) apt-get remove "$@";;
+ reinstall) apt-get install --reinstall "$@";;
+ search) apt-cache search "$@";;
+ show) apt-cache show "$@";;
+ list-installed) dpkg-query -W "$@";;
+ clean) apt-get clean "$@";;
  help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean';;
  *) echo "Unknown pkg command: $command" >&2; exit 64;;
 esac

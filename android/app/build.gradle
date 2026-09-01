@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation project(':terminal-emulator')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "org.apache.commons:commons-compress:1.27.1"
