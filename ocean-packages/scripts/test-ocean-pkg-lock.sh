@@ -31,4 +31,27 @@ mkdir -p "$PREFIX/var/run/ocean-pkg.lock.d"
 printf 'not-a-pid\n' > "$PREFIX/var/run/ocean-pkg.lock.d/pid"
 OCEAN_TEST_SLEEP=0 bash "$PKG" search ocean
 test ! -e "$PREFIX/var/run/ocean-pkg.lock.d"
+
+# A PID whose start time does not match is stale even if that PID is alive.
+mkdir -p "$PREFIX/var/run/ocean-pkg.lock.d"
+printf '%s\n' "$$" > "$PREFIX/var/run/ocean-pkg.lock.d/pid"
+printf '1\n' > "$PREFIX/var/run/ocean-pkg.lock.d/start"
+printf 'old-owner\n' > "$PREFIX/var/run/ocean-pkg.lock.d/token"
+OCEAN_TEST_SLEEP=0 bash "$PKG" search ocean
+test ! -e "$PREFIX/var/run/ocean-pkg.lock.d"
+
+# A live owner cannot be stolen and a timed-out contender must leave the
+# owner's token untouched.
+mkdir -p "$PREFIX/var/run/ocean-pkg.lock.d"
+printf '%s\n' "$$" > "$PREFIX/var/run/ocean-pkg.lock.d/pid"
+stat=$(cat "/proc/$$/stat"); rest=${stat##*) }; set -- $rest
+printf '%s\n' "${20}" > "$PREFIX/var/run/ocean-pkg.lock.d/start"
+printf 'live-owner\n' > "$PREFIX/var/run/ocean-pkg.lock.d/token"
+if OCEAN_PKG_LOCK_WAIT=0 bash "$PKG" update; then
+  echo 'contender stole a live package lock' >&2; exit 1
+else
+  test "$?" = 75
+fi
+test "$(cat "$PREFIX/var/run/ocean-pkg.lock.d/token")" = live-owner
+rm -rf "$PREFIX/var/run/ocean-pkg.lock.d"
 echo 'Ocean pkg atomic lock tests passed.'
