@@ -26,3 +26,28 @@ committed public key.
 
 Run `OCEAN_REPO_SIGNING_KEY=<fingerprint> ./ocean-packages/scripts/build-ocean-distribution.sh`
 on a Docker-capable Linux host with that secret key already imported.
+
+## Catalogue phases
+
+`catalog.json` is the Ocean-owned catalogue boundary. The pinned upstream
+recipes provide versioned source URLs, SHA-256 checksums, licenses, patches,
+dependency declarations and build-system instructions; Ocean changes the app
+identity/prefix before configuration and compilation and never imports their
+prebuilt binary repository.
+
+The default build stops at `foundation`: Bash/APT/libcurl plus coreutils,
+findutils, grep, sed, gawk, diffutils, tar, gzip, zstd, less, which, patch,
+util-linux, wget and OpenSSL. Network and source-control roots are declared as
+later phases but are not reported as published until their CI artifacts pass.
+
+Select a phase explicitly with `OCEAN_PACKAGE_PHASE=foundation` (or a later
+declared phase). The builder checks its package-output cache per root and sends
+only missing roots into the dependency-aware upstream compiler. Expansion
+packages are repository-only: `bootstrap-closure.py` computes the actual
+dependency closure of Bash/APT/libcurl/Ocean pkg so catalogue growth does not
+inflate the APK bootstrap.
+
+`ocean-package-smoke-test` is delivered by the real `ocean-tools` package. It
+resolves every command beneath `$PREFIX`, then uses actual pkg/APT/dpkg to
+install and validate `ocean-hello`. It is intended for arm64 physical-device
+acceptance; compilation alone is not considered a runtime pass.

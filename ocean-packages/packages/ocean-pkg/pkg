@@ -83,6 +83,7 @@ case "$command" in
  show) apt-cache show "$@";;
  list-installed) dpkg-query -W "$@";;
  clean) apt-get clean "$@";;
- help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean';;
+ change-repo) ocean-change-repo "$@";;
+ help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean, change-repo';;
  *) echo "Unknown pkg command: $command" >&2; exit 64;;
 esac
