@@ -35,7 +35,7 @@ public final class OceanPkgAcceptanceTest {
             if (count > 0) output.append(new String(buffer, 0, count, StandardCharsets.UTF_8));
             else break;
         }
-        int exit = NativePty.pollExit(handle);
+        int exit = NativePty.waitExit(handle);
         NativePty.close(handle); NativePty.destroy(handle);
         assertEquals("real pkg output:\n" + output, 0, exit);
         assertTrue("real package executable output", output.toString().contains("Ocean package runtime works."));
