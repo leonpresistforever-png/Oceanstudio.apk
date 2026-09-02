@@ -2,12 +2,11 @@ name: Build Ocean distribution
 on:
   workflow_dispatch:
     inputs:
-      phase:
-        description: Highest dependency-ordered Ocean catalogue phase to build
+      publish:
+        description: Assemble repository and APK after all resumable shards
         required: true
-        default: foundation
-        type: choice
-        options: [foundation, network, source-control, runtimes, development, workstation, distro, second-wave]
+        default: true
+        type: boolean
   push:
     paths: ['ocean-packages/**', 'android/**', '.github/workflows/ocean-distribution.yml']
 permissions:
@@ -15,184 +14,192 @@ permissions:
   contents: write
   pages: write
   id-token: write
-concurrency: {group: ocean-distribution, cancel-in-progress: false}
+concurrency:
+  group: ocean-distribution-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OCEAN_CACHE_PREFIX: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-v3-e870bae65dd0bd5326b1fc28000f641f7079410823f7dda0566dc7722f867092
+
 jobs:
-  build-distribution:
-    env:
-      OCEAN_PACKAGE_PHASE: ${{ inputs.phase || 'foundation' }}
+  validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Ocean package catalogue and transaction tooling
+      - name: Validate catalogue, closure, downloader, and package lock
         run: |
           python3 ocean-packages/scripts/catalog.py validate
           python3 ocean-packages/tests/test-catalog.py
           ./ocean-packages/tests/test-bootstrap-closure.sh
+          ./ocean-packages/scripts/test-ocean-download.sh
           ./ocean-packages/scripts/test-ocean-pkg-lock.sh
-      - name: Restore verified distribution cache
-        id: distribution-cache
+
+  build-shards:
+    needs: validate
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - {name: foundation, roots: 'bash apt libcurl coreutils findutils grep sed gawk diffutils tar gzip zstd less which patch util-linux wget openssl'}
+          - {name: network, roots: 'openssh rsync aria2 socat traceroute iperf3 dnsutils'}
+          - {name: source-control, roots: 'git gh'}
+          - {name: python, roots: 'python'}
+          - {name: node, roots: 'nodejs'}
+          - {name: lua, roots: 'lua54'}
+          - {name: llvm, roots: 'libllvm'}
+          - {name: build-tools, roots: 'make cmake ninja pkg-config'}
+          - {name: workstation, roots: 'jq libsqlite nano vim micro fzf tmux'}
+          - {name: ffmpeg, roots: 'ffmpeg'}
+          - {name: proot, roots: 'proot'}
+          - {name: rust, roots: 'rust'}
+          - {name: languages, roots: 'ruby php composer golang'}
+          - {name: jvm, roots: 'openjdk-21 maven'}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore run 60 and subsequent completed package state
         uses: actions/cache/restore@v4
         with:
-          path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
-      - name: Validate reusable distribution
-        id: reusable
-        run: |
-          ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
-          MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
-          if test -s "$ARCHIVE" && test -s "$MANIFEST" && \
-             test -s ocean-packages/build/out/repository/dists/stable/InRelease && \
-             python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"; then
-            echo 'ready=true' >> "$GITHUB_OUTPUT"
-            echo 'Reusing an already verified Ocean distribution; package compilation is skipped.'
-          else
-            rm -rf ocean-packages/build/out
-            echo 'ready=false' >> "$GITHUB_OUTPUT"
-          fi
-      - name: Verify resilient source downloader
-        if: steps.reusable.outputs.ready != 'true'
-        run: ./ocean-packages/scripts/test-ocean-download.sh
-      - name: Restore checksum-addressed source downloads
-        if: steps.reusable.outputs.ready != 'true'
-        uses: actions/cache@v4
+          path: ocean-packages/build/package-builder/output
+          key: ${{ env.OCEAN_CACHE_PREFIX }}-${{ github.run_id }}-${{ matrix.name }}
+          restore-keys: |
+            ${{ env.OCEAN_CACHE_PREFIX }}-
+      - name: Restore verified sources
+        uses: actions/cache/restore@v4
         with:
           path: ocean-packages/.cache/sources
-          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}-${{ matrix.name }}
           restore-keys: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-
-      - name: Restore completed Android package artifacts
-        if: steps.reusable.outputs.ready != 'true'
-        uses: actions/cache@v4
-        with:
-          path: ocean-packages/build/package-builder/output
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-v3-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/upstream-build.inputs') }}-${{ github.run_id }}
-          restore-keys: |
-            ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-v3-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/upstream-build.inputs') }}-
-            ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**', 'ocean-packages/scripts/build-ocean-distribution.sh') }}-
-            ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v2-
-            ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-ocean-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/packages/**') }}-
-      - name: Reclaim runner disk for package compilation
-        if: steps.reusable.outputs.ready != 'true'
+      - name: Inventory restored run 60 packages
+        run: |
+          find ocean-packages/build/package-builder/output -type f -name '*.deb' -printf '%f\n' 2>/dev/null | sort -u | tee restored-${{ matrix.name }}.txt
+          echo "restored=$(wc -l < restored-${{ matrix.name }}.txt)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Reclaim runner disk and install package-build prerequisites
         run: |
           sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
           docker system prune --all --force --volumes || true
-          df -h /
-      - name: Install distribution build tools
-        if: steps.reusable.outputs.ready != 'true'
-        run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
-      - name: Import repository signing key
-        if: steps.reusable.outputs.ready != 'true'
-        env: {OCEAN_REPOSITORY_SIGNING_KEY: '${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}'}
-        run: |
-          test -n "$OCEAN_REPOSITORY_SIGNING_KEY" || { echo 'Missing OCEAN_REPOSITORY_SIGNING_KEY' >&2; exit 1; }
-          printf '%s' "$OCEAN_REPOSITORY_SIGNING_KEY" | gpg --batch --import
-          ACTUAL=$(gpg --with-colons --list-secret-keys | awk -F: '$1=="fpr"{print $10;exit}')
-          EXPECTED=$(tr -d '[:space:]' < ocean-packages/keys/ocean-development-repository.fingerprint)
-          test "$ACTUAL" = "$EXPECTED" || { echo 'Signing key does not match pinned Ocean development key' >&2; exit 1; }
-          echo "OCEAN_REPO_SIGNING_KEY=$ACTUAL" >> "$GITHUB_ENV"
-      - name: Build packages, repository, and bootstrap
+          sudo apt-get update
+          sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
+      - name: Build only missing packages in ${{ matrix.name }} shard
         id: compile
-        if: steps.reusable.outputs.ready != 'true'
         continue-on-error: true
+        env:
+          OCEAN_BUILD_ONLY: '1'
+          OCEAN_ROOT_PACKAGES: ${{ matrix.roots }}
+          OCEAN_SHARD_OUT: ${{ github.workspace }}/ocean-packages/build/shard-debs/${{ matrix.name }}
         run: |
-          if ! ./ocean-packages/scripts/build-ocean-distribution.sh > /tmp/ocean-package-build.log 2>&1; then
-            tail -n 500 /tmp/ocean-package-build.log
-            df -h /
+          if ! ./ocean-packages/scripts/build-ocean-distribution.sh > /tmp/ocean-${{ matrix.name }}.log 2>&1; then
+            echo "## Failed shard: ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 800 /tmp/ocean-${{ matrix.name }}.log | tee failed-${{ matrix.name }}.log
             exit 1
           fi
-          tail -n 100 /tmp/ocean-package-build.log
-          rm -f /tmp/ocean-package-build.log
-      - name: Save verified sources after interrupted builds
-        if: always() && steps.reusable.outputs.ready != 'true'
+          tail -n 150 /tmp/ocean-${{ matrix.name }}.log
+      - name: Preserve verified sources after success or interruption
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/.cache/sources
-          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}
-      - name: Save completed packages after interrupted builds
-        if: always() && steps.reusable.outputs.ready != 'true'
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}-${{ matrix.name }}
+      - name: Preserve every completed package after success or interruption
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: ocean-packages/build/package-builder/output
-          key: ocean-debs-aarch64-api28-ndk27-upstream-a3c7f613-v3-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/upstream-build.inputs') }}-${{ github.run_id }}
-      - name: Enforce successful distribution build
+          key: ${{ env.OCEAN_CACHE_PREFIX }}-${{ github.run_id }}-${{ matrix.name }}
+      - name: Collect completed packages even when a later root fails
+        if: always()
+        run: |
+          mkdir -p ocean-packages/build/shard-debs/${{ matrix.name }}
+          find ocean-packages/build/package-builder/output -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} ocean-packages/build/shard-debs/${{ matrix.name }}/ \;
+      - name: Upload completed package shard
+        if: always()
+        run: |
+          tar -C ocean-packages/build/shard-debs/${{ matrix.name }} \
+            -I 'zstd -3 -T0' -cf ocean-debs-${{ matrix.name }}.tar.zst .
+          test -s ocean-debs-${{ matrix.name }}.tar.zst
+      - name: Preserve completed package shard as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-debs-${{ matrix.name }}
+          path: ocean-debs-${{ matrix.name }}.tar.zst
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Expose exact failed shard
         if: steps.compile.outcome == 'failure'
-        run: exit 1
-      - name: Verify final distribution
+        run: |
+          echo '${{ matrix.name }} failed; completed .debs were preserved.' >&2
+          exit 1
+
+  assemble-distribution:
+    if: always() && needs.validate.result == 'success'
+    needs: [validate, build-shards]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download every completed shard
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ocean-debs-*
+          path: ocean-packages/build/shard-archives
+      - name: Merge shard archives without recompiling
+        run: |
+          mkdir -p ocean-packages/build/prebuilt-debs
+          find ocean-packages/build/shard-archives -name 'ocean-debs-*.tar.zst' -print0 \
+            | while IFS= read -r -d '' archive; do
+                tar -C ocean-packages/build/prebuilt-debs -I zstd -xf "$archive"
+              done
+          test -n "$(find ocean-packages/build/prebuilt-debs -name '*.deb' -print -quit)"
+      - name: Install repository assembly tools
+        run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
+      - name: Import pinned Ocean repository signing key
+        env: {OCEAN_REPOSITORY_SIGNING_KEY: '${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}'}
+        run: |
+          test -n "$OCEAN_REPOSITORY_SIGNING_KEY"
+          printf '%s' "$OCEAN_REPOSITORY_SIGNING_KEY" | gpg --batch --import
+          ACTUAL=$(gpg --with-colons --list-secret-keys | awk -F: '$1=="fpr"{print $10;exit}')
+          EXPECTED=$(tr -d '[:space:]' < ocean-packages/keys/ocean-development-repository.fingerprint)
+          test "$ACTUAL" = "$EXPECTED"
+          echo "OCEAN_REPO_SIGNING_KEY=$ACTUAL" >> "$GITHUB_ENV"
+      - name: Assemble and sign without compiling
+        env:
+          OCEAN_ASSEMBLE_ONLY: '1'
+          OCEAN_PREBUILT_DEBS: ${{ github.workspace }}/ocean-packages/build/prebuilt-debs
+        run: ./ocean-packages/scripts/build-ocean-distribution.sh
+      - name: Validate actual assembled package set
         run: |
           ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst
           MANIFEST=ocean-packages/build/out/bootstrap/ocean-aarch64.manifest.json
           test -s ocean-packages/build/out/repository/dists/stable/InRelease
-          for package in bash apt dpkg ocean-pkg ocean-hello; do
-            find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || exit 1
-          done
-          for package in coreutils findutils grep sed gawk diffutils tar gzip zstd less which patch util-linux wget openssl ocean-tools; do
-            find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || { echo "missing foundation package: $package" >&2; exit 1; }
-          done
-          while read -r package; do
-            find ocean-packages/build/out/debs -name "${package}_*.deb" -size +0c | grep -q . || { echo "missing selected phase root: $package" >&2; exit 1; }
-          done < <(python3 ocean-packages/scripts/catalog.py roots --through "$OCEAN_PACKAGE_PHASE")
           python3 ocean-packages/scripts/validate-packages.py ocean-packages/build/out/debs ocean-packages/build/out/repository/package-index.json
           python3 ocean-packages/scripts/verify-bootstrap.py "$MANIFEST" "$ARCHIVE"
-          INSPECT=$(mktemp -d)
-          zstd -q -d -c "$ARCHIVE" | tar -C "$INSPECT" -xf -
-          for executable in bash apt dpkg; do
-            FILE="$INSPECT/usr/bin/$executable"
-            test -x "$FILE"
-            readelf -h "$FILE" | grep -q 'Machine:.*AArch64'
-            readelf -l "$FILE" | grep -q 'Requesting program interpreter: /system/bin/linker64'
-            while read -r library; do
-              case "$library" in libc.so|libdl.so|libm.so|liblog.so) continue;; esac
-              find "$INSPECT/usr/lib" -name "$library" -print -quit | grep -q . || {
-                echo "$executable requires missing $library" >&2; exit 1;
-              }
-            done < <(readelf -d "$FILE" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
-          done
-          test -x "$INSPECT/usr/bin/pkg"
-          test -x "$INSPECT/usr/bin/ocean-change-repo"
-          bash -n "$INSPECT/usr/bin/pkg"
-          grep -q 'ocean-pkg.lock.d' "$INSPECT/usr/bin/pkg"
-          grep -q 'file:/data/data/studio.ocean.app/files/usr/share/ocean/repository' "$INSPECT/usr/etc/apt/sources.list.d/ocean.list"
-          test -s "$INSPECT/usr/share/ocean/repository/dists/stable/InRelease"
-          find "$INSPECT/usr/share/ocean/repository/pool/main" -name 'ocean-hello_*.deb' -size +0c | grep -q .
-          if test -e "$INSPECT/usr/bin/ocean-hello"; then
-            echo 'ocean-hello must be installed by APT, not preinstalled in bootstrap' >&2
-            exit 1
-          fi
-          if grep -qE '(^|[[:space:]])flock([[:space:]]|$)' "$INSPECT/usr/bin/pkg"; then
-            echo 'Ocean pkg still depends on the incompatible bootstrap flock implementation' >&2
-            exit 1
-          fi
-          if grep -aR -E 'com\.termux|/data/data/com\.termux' "$INSPECT/usr/bin" "$INSPECT/usr/lib"; then
-            echo 'Termux identity found in Ocean bootstrap binaries' >&2
-            exit 1
-          fi
-          find ocean-packages/build/out/debs -name '*.deb' -printf '%f %s bytes\n' | sort
-          sha256sum "$ARCHIVE"
-      - name: Save reusable verified distribution
-        if: steps.distribution-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+          python3 ocean-packages/scripts/report-catalog-status.py ocean-packages/catalog.json ocean-packages/build/out/debs ocean-packages/build/out/repository/catalog-status.json
+          jq -r '.summary' ocean-packages/build/out/repository/catalog-status.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload verified distribution for APK and publication
+        uses: actions/upload-artifact@v4
         with:
+          name: ocean-verified-distribution
           path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
-
+          retention-days: 14
+          compression-level: 0
 
   build-apk:
-    needs: build-distribution
-    env:
-      OCEAN_PACKAGE_PHASE: ${{ inputs.phase || 'foundation' }}
+    needs: assemble-distribution
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Install bootstrap verification tools
         run: sudo apt-get update && sudo apt-get install -y zstd jq
-      - name: Restore verified distribution for APK build
-        id: apk-distribution-cache
-        uses: actions/cache/restore@v4
+      - name: Download assembled Ocean distribution
+        uses: actions/download-artifact@v4
         with:
+          name: ocean-verified-distribution
           path: ocean-packages/build/out
-          key: ocean-distribution-aarch64-api28-ndk27-a3c7f613-${{ env.OCEAN_PACKAGE_PHASE }}-v1-${{ hashFiles('ocean-packages/config.env', 'ocean-packages/catalog.json', 'ocean-packages/packages/**', 'ocean-packages/keys/**', 'ocean-packages/scripts/**', 'ocean-packages/upstream-build.inputs') }}
-          fail-on-cache-miss: true
       - name: Verify distribution and inject bootstrap
         run: |
           ARCHIVE=ocean-packages/build/out/bootstrap/ocean-aarch64.tar.zst

@@ -7,6 +7,16 @@ UPSTREAM=$WORK/package-builder
 OUT=$WORK/out
 mkdir -p "$WORK" "$ROOT/ocean-packages/.cache/sources"
 rm -rf "$OUT"; mkdir -p "$OUT/debs" "$OUT/repository/pool/main" "$OUT/bootstrap/root/usr"
+ASSEMBLE_ONLY=${OCEAN_ASSEMBLE_ONLY:-0}
+BUILD_ONLY=${OCEAN_BUILD_ONLY:-0}
+PREBUILT_DEBS=${OCEAN_PREBUILT_DEBS:-$WORK/prebuilt-debs}
+SHARD_OUT=${OCEAN_SHARD_OUT:-$WORK/shard-debs}
+if [[ "$ASSEMBLE_ONLY" == 1 ]]; then
+  find "$PREBUILT_DEBS" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} "$OUT/debs/" \;
+  test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)" || {
+    echo 'Assembly requires the cached/prebuilt Bash package closure.' >&2; exit 1;
+  }
+else
 if [[ ! -d "$UPSTREAM/.git" ]]; then
   # actions/cache may restore output/ before the pinned source checkout exists.
   # Preserve those completed packages while replacing the cache-created shell
@@ -82,7 +92,11 @@ p.write_text(s.replace(needle, replacement))
 PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 OCEAN_PACKAGE_PHASE=${OCEAN_PACKAGE_PHASE:-foundation}
-mapfile -t ROOT_PACKAGES < <(python3 "$ROOT/ocean-packages/scripts/catalog.py" roots --through "$OCEAN_PACKAGE_PHASE")
+if [[ -n "${OCEAN_ROOT_PACKAGES:-}" ]]; then
+  read -r -a ROOT_PACKAGES <<< "$OCEAN_ROOT_PACKAGES"
+else
+  mapfile -t ROOT_PACKAGES < <(python3 "$ROOT/ocean-packages/scripts/catalog.py" roots --through "$OCEAN_PACKAGE_PHASE")
+fi
 for package in "${ROOT_PACKAGES[@]}"; do
   test -f "$UPSTREAM/packages/$package/build.sh" || {
     echo "Ocean package recipe does not exist at pinned upstream commit: $package" >&2
@@ -106,10 +120,17 @@ else
   printf 'Building missing Ocean roots: %s\n' "${MISSING_ROOTS[*]}"
   (cd "$UPSTREAM"; ./scripts/run-docker.sh ./build-package.sh -a aarch64 "${MISSING_ROOTS[@]}")
 fi
+if [[ "$BUILD_ONLY" == 1 ]]; then
+  rm -rf "$SHARD_OUT"; mkdir -p "$SHARD_OUT"
+  find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} "$SHARD_OUT/" \;
+  printf 'Shard preserved %s completed packages in %s\n' "$(find "$SHARD_OUT" -name '*.deb' | wc -l)" "$SHARD_OUT"
+  exit 0
+fi
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
 # whose ELF files exist but whose certificates/configuration are incomplete.
 find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -exec cp -v {} "$OUT/debs/" \;
+fi
 test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)"
 test -n "$(find "$OUT/debs" -name 'apt_*_aarch64.deb' -print -quit)"
 test -n "$(find "$OUT/debs" -name 'dpkg_*_aarch64.deb' -print -quit)"

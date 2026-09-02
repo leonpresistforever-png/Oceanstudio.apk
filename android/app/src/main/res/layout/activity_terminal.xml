@@ -18,6 +18,8 @@
             <Button android:id="@+id/terminal_right" style="@style/OceanTerminalKey" android:text="→" />
             <Button android:id="@+id/terminal_home" style="@style/OceanTerminalKey" android:text="HOME" />
             <Button android:id="@+id/terminal_end" style="@style/OceanTerminalKey" android:text="END" />
+            <Button android:id="@+id/terminal_page_up" style="@style/OceanTerminalKey" android:text="PGUP" />
+            <Button android:id="@+id/terminal_page_down" style="@style/OceanTerminalKey" android:text="PGDN" />
         </LinearLayout>
     </HorizontalScrollView>
     <LinearLayout android:id="@+id/terminal_failure_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal" android:padding="6dp" android:visibility="gone">

@@ -353,6 +353,16 @@ class TermKeyListener {
         updateCursorMode();
     }
 
+    /** Toggle the software Alt modifier used by the mobile extra-key row. */
+    public void handleAltKey(boolean down) {
+        if (down) {
+            mAltKey.onPress();
+        } else {
+            mAltKey.onRelease();
+        }
+        updateCursorMode();
+    }
+
     public void handleFnKey(boolean down) {
         if (down) {
             mFnKey.onPress();
