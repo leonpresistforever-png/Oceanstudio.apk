@@ -31,7 +31,7 @@ editor and PRoot phases remain unverified until their real artifacts build and
 their binaries execute on arm64 Android. The catalogue declarations for the
 next phases are build inputs, not claims that those packages are published.
 
-The configured GitHub Pages repository also requires a hosting configuration
-that is anonymously reachable over HTTPS from the phone. A private repository
-whose Pages endpoint returns 404 cannot satisfy on-device `pkg update`; CI
-success alone does not change that external hosting fact.
+The signed repository is published from the separate public
+`foxerdude90-source/Oceanstudio-packages` repository. This keeps application
+source private while making APT metadata and packages anonymously reachable at
+`https://foxerdude90-source.github.io/Oceanstudio-packages/apt`.
