@@ -115,10 +115,16 @@ jobs:
           find ocean-packages/build/package-builder/output -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} ocean-packages/build/shard-debs/${{ matrix.name }}/ \;
       - name: Upload completed package shard
         if: always()
+        run: |
+          tar -C ocean-packages/build/shard-debs/${{ matrix.name }} \
+            -I 'zstd -3 -T0' -cf ocean-debs-${{ matrix.name }}.tar.zst .
+          test -s ocean-debs-${{ matrix.name }}.tar.zst
+      - name: Preserve completed package shard as an artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ocean-debs-${{ matrix.name }}
-          path: ocean-packages/build/shard-debs/${{ matrix.name }}/*.deb
+          path: ocean-debs-${{ matrix.name }}.tar.zst
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -139,8 +145,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: ocean-debs-*
-          path: ocean-packages/build/prebuilt-debs
-          merge-multiple: true
+          path: ocean-packages/build/shard-archives
+      - name: Merge shard archives without recompiling
+        run: |
+          mkdir -p ocean-packages/build/prebuilt-debs
+          find ocean-packages/build/shard-archives -name 'ocean-debs-*.tar.zst' -print0 \
+            | while IFS= read -r -d '' archive; do
+                tar -C ocean-packages/build/prebuilt-debs -I zstd -xf "$archive"
+              done
+          test -n "$(find ocean-packages/build/prebuilt-debs -name '*.deb' -print -quit)"
       - name: Install repository assembly tools
         run: sudo apt-get update && sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
       - name: Import pinned Ocean repository signing key
