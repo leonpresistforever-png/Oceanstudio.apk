@@ -48,13 +48,22 @@ jobs:
           - {name: node, roots: 'nodejs'}
           - {name: lua, roots: 'lua54'}
           - {name: llvm, roots: 'libllvm'}
-          - {name: build-tools, roots: 'make cmake ninja pkg-config'}
-          - {name: workstation, roots: 'jq libsqlite nano vim micro fzf tmux'}
+          - {name: make-cmake, roots: 'make cmake'}
+          - {name: ninja-pkgconfig, roots: 'ninja pkg-config'}
+          - {name: data-tools, roots: 'jq libsqlite'}
+          - {name: editors, roots: 'nano vim micro fzf tmux'}
           - {name: ffmpeg, roots: 'ffmpeg'}
           - {name: proot, roots: 'proot'}
           - {name: rust, roots: 'rust'}
-          - {name: languages, roots: 'ruby php composer golang'}
-          - {name: jvm, roots: 'openjdk-21 maven'}
+          - {name: ruby, roots: 'ruby'}
+          - {name: php, roots: 'php composer'}
+          - {name: golang, roots: 'golang'}
+          # OpenJDK's Android audio dependency chain needs libsndfile staged
+          # before PulseAudio configuration. Separate roots make the exact
+          # failing prerequisite visible and preserve it before the JDK build.
+          - {name: jvm-audio, roots: 'libsndfile pulseaudio'}
+          - {name: jvm, roots: 'openjdk-21'}
+          - {name: maven, roots: 'maven'}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:
