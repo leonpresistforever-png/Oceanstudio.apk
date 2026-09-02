@@ -118,6 +118,16 @@ s = s.replace(
 )
 p.write_text(s)
 PY
+python3 - "$UPSTREAM/packages/libsrt/build.sh" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+s = s.replace(
+    'TERMUX_PKG_SRCURL=https://github.com/Haivision/srt/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz',
+    'TERMUX_PKG_SRCURL=git+https://github.com/Haivision/srt\nTERMUX_PKG_GIT_BRANCH=v${TERMUX_PKG_VERSION}'
+)
+p.write_text(s)
+PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 OCEAN_PACKAGE_PHASE=${OCEAN_PACKAGE_PHASE:-foundation}
 if [[ -n "${OCEAN_ROOT_PACKAGES:-}" ]]; then
