@@ -121,7 +121,7 @@ jobs:
         if: always()
         run: |
           mkdir -p ocean-packages/build/shard-debs/${{ matrix.name }}
-          find ocean-packages/build/package-builder/output -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} ocean-packages/build/shard-debs/${{ matrix.name }}/ \;
+          find ocean-packages/build/package-builder/output -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) ! -name 'binutils-cross*' -size +0c -exec cp -f {} ocean-packages/build/shard-debs/${{ matrix.name }}/ \;
       - name: Upload completed package shard
         if: always()
         run: |

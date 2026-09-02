@@ -12,7 +12,7 @@ BUILD_ONLY=${OCEAN_BUILD_ONLY:-0}
 PREBUILT_DEBS=${OCEAN_PREBUILT_DEBS:-$WORK/prebuilt-debs}
 SHARD_OUT=${OCEAN_SHARD_OUT:-$WORK/shard-debs}
 if [[ "$ASSEMBLE_ONLY" == 1 ]]; then
-  find "$PREBUILT_DEBS" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} "$OUT/debs/" \;
+  find "$PREBUILT_DEBS" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) ! -name 'binutils-cross*' -size +0c -exec cp -f {} "$OUT/debs/" \;
   test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)" || {
     echo 'Assembly requires the cached/prebuilt Bash package closure.' >&2; exit 1;
   }
@@ -90,6 +90,24 @@ if needle not in s:
     raise SystemExit("Pinned attr source recipe changed unexpectedly")
 p.write_text(s.replace(needle, replacement))
 PY
+# Break circular dependency: libsndfile -> libmpg123 -> pulseaudio -> libsndfile
+python3 - "$UPSTREAM/packages/libmpg123/build.sh" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text().replace('TERMUX_PKG_BUILD_DEPENDS="pulseaudio"', '# TERMUX_PKG_BUILD_DEPENDS="pulseaudio"')
+p.write_text(s)
+PY
+# VideoLAN web tarball downloads are blocked by Cloudflare bot protection; clone git repository instead.
+python3 - "$UPSTREAM/packages/libx264/build.sh" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+s = s.replace(
+    'TERMUX_PKG_SRCURL=https://code.videolan.org/videolan/x264/-/archive/$_COMMIT/x264-$_COMMIT.tar.bz2',
+    'TERMUX_PKG_SRCURL=git+https://code.videolan.org/videolan/x264\nTERMUX_PKG_GIT_BRANCH=master'
+)
+p.write_text(s)
+PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 OCEAN_PACKAGE_PHASE=${OCEAN_PACKAGE_PHASE:-foundation}
 if [[ -n "${OCEAN_ROOT_PACKAGES:-}" ]]; then
@@ -109,7 +127,7 @@ done
 # failure. Rebuild only when one of the root package outputs is absent.
 MISSING_ROOTS=()
 for package in "${ROOT_PACKAGES[@]}"; do
-  find "$UPSTREAM/output" -type f \( -name "${package}_*_aarch64.deb" -o -name "${package}_*_all.deb" \) -size +0c -print -quit \
+  find "$UPSTREAM/output" -type f \( -name "${package}_*_aarch64.deb" -o -name "${package}_*_all.deb" \) ! -name 'binutils-cross*' -size +0c -print -quit \
     | grep -q . || MISSING_ROOTS+=("$package")
 done
 if ((${#MISSING_ROOTS[@]} == 0)); then
@@ -122,14 +140,14 @@ else
 fi
 if [[ "$BUILD_ONLY" == 1 ]]; then
   rm -rf "$SHARD_OUT"; mkdir -p "$SHARD_OUT"
-  find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -size +0c -exec cp -f {} "$SHARD_OUT/" \;
+  find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) ! -name 'binutils-cross*' -size +0c -exec cp -f {} "$SHARD_OUT/" \;
   printf 'Shard preserved %s completed packages in %s\n' "$(find "$SHARD_OUT" -name '*.deb' | wc -l)" "$SHARD_OUT"
   exit 0
 fi
 # Runtime dependency closure contains both architecture-specific and
 # Architecture: all data packages. Omitting the latter produces a bootstrap
 # whose ELF files exist but whose certificates/configuration are incomplete.
-find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) -exec cp -v {} "$OUT/debs/" \;
+find "$UPSTREAM/output" -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) ! -name 'binutils-cross*' -exec cp -v {} "$OUT/debs/" \;
 fi
 test -n "$(find "$OUT/debs" -name 'bash_*_aarch64.deb' -print -quit)"
 test -n "$(find "$OUT/debs" -name 'apt_*_aarch64.deb' -print -quit)"
