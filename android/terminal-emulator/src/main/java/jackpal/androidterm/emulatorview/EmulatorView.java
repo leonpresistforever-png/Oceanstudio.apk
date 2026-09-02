@@ -1622,6 +1622,12 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
         invalidate();
     }
 
+    /** Arm the emulator's Alt modifier for the next terminal key. */
+    public void sendAltKey() {
+        mKeyListener.handleAltKey(true);
+        invalidate();
+    }
+
     /**
      * Send an Fn key event to the terminal.  The Fn modifier key can be used to
      * generate various special characters and escape codes.

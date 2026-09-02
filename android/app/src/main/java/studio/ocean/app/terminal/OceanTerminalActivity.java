@@ -7,6 +7,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.View;
+import android.view.KeyEvent;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import jackpal.androidterm.emulatorview.ColorScheme;
@@ -33,10 +34,10 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         setContentView(R.layout.activity_terminal);status=findViewById(R.id.terminal_status);terminalView=findViewById(R.id.terminal_emulator);failureActions=findViewById(R.id.terminal_failure_actions);
         findViewById(R.id.terminal_back).setOnClickListener(v->finish());
         findViewById(R.id.terminal_ctrl).setOnClickListener(v->terminalView.sendControlKey());
-        findViewById(R.id.terminal_alt).setOnClickListener(v->write("\u001b"));
+        findViewById(R.id.terminal_alt).setOnClickListener(v->terminalView.sendAltKey());
         findViewById(R.id.terminal_tab).setOnClickListener(v->write("\t"));findViewById(R.id.terminal_escape).setOnClickListener(v->write("\u001b"));
-        findViewById(R.id.terminal_left).setOnClickListener(v->write("\u001b[D"));findViewById(R.id.terminal_down).setOnClickListener(v->write("\u001b[B"));findViewById(R.id.terminal_up).setOnClickListener(v->write("\u001b[A"));findViewById(R.id.terminal_right).setOnClickListener(v->write("\u001b[C"));
-        findViewById(R.id.terminal_home).setOnClickListener(v->write("\u001b[H"));findViewById(R.id.terminal_end).setOnClickListener(v->write("\u001b[F"));
+        findViewById(R.id.terminal_left).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_LEFT));findViewById(R.id.terminal_down).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_DOWN));findViewById(R.id.terminal_up).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_UP));findViewById(R.id.terminal_right).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_RIGHT));
+        findViewById(R.id.terminal_home).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_HOME));findViewById(R.id.terminal_end).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_END));findViewById(R.id.terminal_page_up).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_UP));findViewById(R.id.terminal_page_down).setOnClickListener(v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_DOWN));
         findViewById(R.id.terminal_retry).setOnClickListener(v->startOceanSession());
         findViewById(R.id.terminal_details).setOnClickListener(v->showDiagnosticLog());
         findViewById(R.id.terminal_recovery).setOnClickListener(v->startRecoverySession());
@@ -63,11 +64,12 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
     private void attach(TerminalSession candidate,boolean installed){
         if(session!=null)session.removeListener(this);if(emulatorSession!=null)emulatorSession.finish();session=candidate;
         emulatorSession=new OceanEmulatorSession();emulatorSession.attachTransport(session);emulatorSession.setColorScheme(new ColorScheme(0xffe9e8e3,0xff11110f,0xff11110f,0xffd8d6cf));
-        terminalView.setDensity(getResources().getDisplayMetrics());terminalView.attachSession(emulatorSession);terminalView.setTextSize((int)(14*getResources().getDisplayMetrics().scaledDensity));terminalView.setUseCookedIME(true);terminalView.setAltSendsEsc(true);terminalView.setTermType("xterm-256color");
+        terminalView.setDensity(getResources().getDisplayMetrics());terminalView.attachSession(emulatorSession);terminalView.setTextSize(14);terminalView.setUseCookedIME(true);terminalView.setAltSendsEsc(true);terminalView.setTermType("xterm-256color");
         session.addListener(this);status.setVisibility(View.GONE);terminalView.requestFocus();terminalView.onResume();
     }
     private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);status.setText(message);status.setVisibility(View.VISIBLE);failureActions.setVisibility(View.VISIBLE);}
     private void showDiagnosticLog(){startActivity(new Intent(this,OceanTerminalDiagnosticsActivity.class));}
+    private void sendTerminalKey(int keyCode){long now=android.os.SystemClock.uptimeMillis();terminalView.onKeyDown(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_DOWN,keyCode,0));terminalView.onKeyUp(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_UP,keyCode,0));}
     private static String safeMessage(Throwable error){return error.getMessage()==null?error.getClass().getSimpleName():error.getMessage();}
     private void write(String value){if(session==null)return;if(session.state()==TerminalSession.State.RUNNING&&"exit".equals(value.replace("\r","").trim()))TerminalDiagnosticBundle.markCritical(this,"EXIT_COMMAND_SENT");TerminalSession.WriteResult result=session.write(value);if(result==TerminalSession.WriteResult.NATIVE_WRITE_FAILED)status.setText(R.string.terminal_write_failed);else if(result==TerminalSession.WriteResult.SESSION_ALREADY_EXITED)TerminalDiagnosticBundle.log("session-state.log","late UI write safely rejected state="+session.state());}
     @Override public void onOutput(byte[] bytes,int length){byte[] copy=java.util.Arrays.copyOf(bytes,length);String value=new String(copy,StandardCharsets.UTF_8);if("C".equals(diagnosticMode)&&!scriptedExitSent){synchronized(diagnosticOutput){diagnosticOutput.append(value);if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);String normalized=diagnosticOutput.toString().replace("\r\n","\n");if(normalized.contains("\nOCEAN_PTY_OK\n")){scriptedExitSent=true;TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");terminalView.post(()->write("exit\r"));}}}runOnUiThread(()->{if(isFinishing()||isDestroyed()||emulatorSession==null)return;emulatorSession.feed(copy,copy.length);});}
