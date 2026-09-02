@@ -78,12 +78,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ocean-packages/build/package-builder/output
-          if ! find ocean-packages/build/package-builder/output -name 'bash_*_aarch64.deb' | grep -q .; then
-            echo "Restoring 378 baseline prebuilt packages from release..."
-            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
-            tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
-            rm -f /tmp/restored-debs-43roots.tar.zst
-          fi
+          echo "Restoring baseline verified packages from prebuilt-cache release..."
+          gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+          tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
+          rm -f /tmp/restored-debs-43roots.tar.zst
       - name: Inventory restored run 60 packages
         run: |
           find ocean-packages/build/package-builder/output -type f -name '*.deb' -printf '%f\n' 2>/dev/null | sort -u | tee restored-${{ matrix.name }}.txt
@@ -176,12 +174,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ocean-packages/build/package-builder/output
-          if ! find ocean-packages/build/package-builder/output -name 'bash_*_aarch64.deb' | grep -q .; then
-            echo "Restoring baseline prebuilt packages from release..."
-            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
-            tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
-            rm -f /tmp/restored-debs-43roots.tar.zst
-          fi
+          echo "Restoring baseline prebuilt packages from release..."
+          gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+          tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
+          rm -f /tmp/restored-debs-43roots.tar.zst
       - name: Overlay jvm-audio shard artifact so libsndfile is available
         uses: actions/download-artifact@v4
         with:
