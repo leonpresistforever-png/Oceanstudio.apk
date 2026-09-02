@@ -41,27 +41,8 @@ jobs:
       max-parallel: 8
       matrix:
         include:
-          - {name: foundation, roots: 'bash apt libcurl coreutils findutils grep sed gawk diffutils tar gzip zstd less which patch util-linux wget openssl'}
-          - {name: network, roots: 'openssh rsync aria2 socat traceroute iperf3 dnsutils'}
-          - {name: source-control, roots: 'git gh'}
-          - {name: python, roots: 'python'}
-          - {name: node, roots: 'nodejs'}
-          - {name: lua, roots: 'lua54'}
-          - {name: llvm, roots: 'libllvm'}
-          - {name: make-cmake, roots: 'make cmake'}
-          - {name: ninja-pkgconfig, roots: 'ninja pkg-config'}
-          - {name: data-tools, roots: 'jq libsqlite'}
-          - {name: editors, roots: 'nano vim micro fzf tmux'}
           - {name: ffmpeg, roots: 'ffmpeg'}
-          - {name: proot, roots: 'proot'}
           - {name: rust, roots: 'rust'}
-          - {name: ruby, roots: 'ruby'}
-          - {name: php, roots: 'php composer'}
-          - {name: golang, roots: 'golang'}
-          # jvm-audio (libsndfile + pulseaudio) must complete BEFORE openjdk-21
-          # tries to configure against sndfile.pc, so it lives in this phase
-          # while jvm/maven run in the sequential build-shards-jvm phase below.
-          - {name: jvm-audio, roots: 'libsndfile pulseaudio'}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:
@@ -178,16 +159,10 @@ jobs:
           gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
           tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
           rm -f /tmp/restored-debs-43roots.tar.zst
-      - name: Overlay jvm-audio shard artifact so libsndfile is available
-        uses: actions/download-artifact@v4
-        with:
-          name: ocean-debs-jvm-audio
-          path: /tmp/jvm-audio-art
-      - name: Extract jvm-audio debs into build output
+      - name: Verify libsndfile is staged for openjdk-21 pkg-config
         run: |
-          tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/jvm-audio-art/ocean-debs-jvm-audio.tar.zst
           echo "Staging libsndfile for openjdk-21 pkg-config:"
-          ls ocean-packages/build/package-builder/output/libsndfile*.deb 2>/dev/null || echo "(not found - will re-use prebuilt-cache)"
+          ls -la ocean-packages/build/package-builder/output/libsndfile*.deb
       - name: Inventory restored packages
         run: |
           find ocean-packages/build/package-builder/output -type f -name '*.deb' -printf '%f\n' 2>/dev/null | sort -u | tee restored-${{ matrix.name }}.txt
