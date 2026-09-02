@@ -58,12 +58,10 @@ jobs:
           - {name: ruby, roots: 'ruby'}
           - {name: php, roots: 'php composer'}
           - {name: golang, roots: 'golang'}
-          # OpenJDK's Android audio dependency chain needs libsndfile staged
-          # before PulseAudio configuration. Separate roots make the exact
-          # failing prerequisite visible and preserve it before the JDK build.
+          # jvm-audio (libsndfile + pulseaudio) must complete BEFORE openjdk-21
+          # tries to configure against sndfile.pc, so it lives in this phase
+          # while jvm/maven run in the sequential build-shards-jvm phase below.
           - {name: jvm-audio, roots: 'libsndfile pulseaudio'}
-          - {name: jvm, roots: 'openjdk-21'}
-          - {name: maven, roots: 'maven'}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:
@@ -148,9 +146,117 @@ jobs:
           echo '${{ matrix.name }} failed; completed .debs were preserved.' >&2
           exit 1
 
-  assemble-distribution:
+  # Phase 2: JVM shards that need libsndfile/pulseaudio from phase 1
+  # Running these AFTER build-shards guarantees jvm-audio has already
+  # uploaded its artifact and the prebuilt-cache release will have
+  # libsndfile_1.2.2 available when openjdk-21 runs meson configure.
+  build-shards-jvm:
     if: always() && needs.validate.result == 'success'
     needs: [validate, build-shards]
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {name: jvm, roots: 'openjdk-21'}
+          - {name: maven, roots: 'maven'}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore completed package state
+        uses: actions/cache/restore@v4
+        with:
+          path: ocean-packages/build/package-builder/output
+          key: ${{ env.OCEAN_CACHE_PREFIX }}-${{ github.run_id }}-${{ matrix.name }}
+          restore-keys: |
+            ${{ env.OCEAN_CACHE_PREFIX }}-
+      - name: Restore baseline verified package artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ocean-packages/build/package-builder/output
+          if ! find ocean-packages/build/package-builder/output -name 'bash_*_aarch64.deb' | grep -q .; then
+            echo "Restoring baseline prebuilt packages from release..."
+            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+            tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
+            rm -f /tmp/restored-debs-43roots.tar.zst
+          fi
+      - name: Overlay jvm-audio shard artifact so libsndfile is available
+        uses: actions/download-artifact@v4
+        with:
+          name: ocean-debs-jvm-audio
+          path: /tmp/jvm-audio-art
+      - name: Extract jvm-audio debs into build output
+        run: |
+          tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/jvm-audio-art/ocean-debs-jvm-audio.tar.zst
+          echo "Staging libsndfile for openjdk-21 pkg-config:"
+          ls ocean-packages/build/package-builder/output/libsndfile*.deb 2>/dev/null || echo "(not found - will re-use prebuilt-cache)"
+      - name: Inventory restored packages
+        run: |
+          find ocean-packages/build/package-builder/output -type f -name '*.deb' -printf '%f\n' 2>/dev/null | sort -u | tee restored-${{ matrix.name }}.txt
+          echo "restored=$(wc -l < restored-${{ matrix.name }}.txt)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Reclaim runner disk and install package-build prerequisites
+        run: |
+          sudo rm -rf /opt/hostedtoolcache /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
+          docker system prune --all --force --volumes || true
+          sudo apt-get update
+          sudo apt-get install -y apt-utils dpkg-dev gnupg zstd jq
+      - name: Build only missing packages in ${{ matrix.name }} shard
+        id: compile
+        continue-on-error: true
+        env:
+          OCEAN_BUILD_ONLY: '1'
+          OCEAN_ROOT_PACKAGES: ${{ matrix.roots }}
+          OCEAN_SHARD_OUT: ${{ github.workspace }}/ocean-packages/build/shard-debs/${{ matrix.name }}
+        run: |
+          if ! ./ocean-packages/scripts/build-ocean-distribution.sh > /tmp/ocean-${{ matrix.name }}.log 2>&1; then
+            echo "## Failed shard: ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 800 /tmp/ocean-${{ matrix.name }}.log | tee failed-${{ matrix.name }}.log
+            exit 1
+          fi
+          tail -n 150 /tmp/ocean-${{ matrix.name }}.log
+      - name: Preserve verified sources after success or interruption
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ocean-packages/.cache/sources
+          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}-${{ matrix.name }}
+      - name: Preserve every completed package after success or interruption
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ocean-packages/build/package-builder/output
+          key: ${{ env.OCEAN_CACHE_PREFIX }}-${{ github.run_id }}-${{ matrix.name }}
+      - name: Collect completed packages even when a later root fails
+        if: always()
+        run: |
+          mkdir -p ocean-packages/build/shard-debs/${{ matrix.name }}
+          find ocean-packages/build/package-builder/output -type f \( -name '*_aarch64.deb' -o -name '*_all.deb' \) ! -name 'binutils-cross*' -size +0c -exec cp -f {} ocean-packages/build/shard-debs/${{ matrix.name }}/ \;
+      - name: Upload completed package shard
+        if: always()
+        run: |
+          tar -C ocean-packages/build/shard-debs/${{ matrix.name }} \
+            -I 'zstd -3 -T0' -cf ocean-debs-${{ matrix.name }}.tar.zst .
+          test -s ocean-debs-${{ matrix.name }}.tar.zst
+      - name: Preserve completed package shard as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-debs-${{ matrix.name }}
+          path: ocean-debs-${{ matrix.name }}.tar.zst
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Expose exact failed shard
+        if: steps.compile.outcome == 'failure'
+        run: |
+          echo '${{ matrix.name }} failed; completed .debs were preserved.' >&2
+          exit 1
+
+  assemble-distribution:
+    if: always() && needs.validate.result == 'success'
+    needs: [validate, build-shards, build-shards-jvm]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
