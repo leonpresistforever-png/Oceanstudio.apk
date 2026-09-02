@@ -76,12 +76,15 @@ jobs:
           restore-keys: |
             ${{ env.OCEAN_CACHE_PREFIX }}-
       - name: Restore baseline verified package artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ocean-packages/build/package-builder/output
           if ! find ocean-packages/build/package-builder/output -name 'bash_*_aarch64.deb' | grep -q .; then
             echo "Restoring 378 baseline prebuilt packages from release..."
-            curl -sL "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/prebuilt-cache/restored-debs-43roots.tar.zst" \
-              | tar -C ocean-packages/build/package-builder/output -I zstd -xf - 2>/dev/null || true
+            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+            tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
+            rm -f /tmp/restored-debs-43roots.tar.zst
           fi
       - name: Inventory restored run 60 packages
         run: |

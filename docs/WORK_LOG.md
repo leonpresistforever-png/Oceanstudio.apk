@@ -25,3 +25,17 @@
 4. **Workflow & Pipeline Verification**:
    - Validated catalog, packaging closure, and smoke test suites locally.
    - Updated repository URLs in `ocean-packages/config.env` and workflow files to match the new account.
+
+## [2026-09-02] - Signing Key Synchronization & Pipeline Resumption
+
+### Actions Completed:
+1. **Canonical Signing Key Synchronization**:
+   - Synchronized committed repository fingerprint and public key in `ocean-packages/keys/` with the canonical Ed25519 repository key (`DF7857C7D40149151DEAB8E98FBEEFDC907346A0`), matching the user-configured `OCEAN_REPOSITORY_SIGNING_KEY` secret.
+2. **Authenticated Baseline Package Restoration**:
+   - Updated `.github/workflows/ocean-distribution.yml` to use `gh release download` with `GH_TOKEN` to reliably restore all 378 baseline `.deb` packages (representing 43 completed roots) across all shard runners in the private repository.
+3. **Source Download & Dependency Order Fixes**:
+   - Patched `libplacebo` and `libx264` source URLs to use git clones, bypassing Cloudflare bot-protection download rejections.
+   - Preserved `binutils-cross` exclusion to prevent host x86_64 ELF contamination in strict AArch64 package verification.
+   - Resolved `pulseaudio` / `libsndfile` / `libmpg123` circular build dependency.
+4. **Local Verification**:
+   - Executed full test suite locally: catalog validation, catalog unit tests, minimal bootstrap dependency closure test, ocean-download fallback test, and pkg atomic lock test all passed with 0 errors.

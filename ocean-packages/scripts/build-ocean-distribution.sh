@@ -108,6 +108,16 @@ s = s.replace(
 )
 p.write_text(s)
 PY
+python3 - "$UPSTREAM/packages/libplacebo/build.sh" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+s = s.replace(
+    'TERMUX_PKG_SRCURL="https://code.videolan.org/videolan/libplacebo/-/archive/v${TERMUX_PKG_VERSION}/libplacebo-v${TERMUX_PKG_VERSION}.tar.gz"',
+    'TERMUX_PKG_SRCURL=git+https://code.videolan.org/videolan/libplacebo\nTERMUX_PKG_GIT_BRANCH=v${TERMUX_PKG_VERSION}'
+)
+p.write_text(s)
+PY
 # Each result is built from upstream source by Android NDK for the Ocean prefix.
 OCEAN_PACKAGE_PHASE=${OCEAN_PACKAGE_PHASE:-foundation}
 if [[ -n "${OCEAN_ROOT_PACKAGES:-}" ]]; then

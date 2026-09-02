@@ -4,6 +4,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd); TMP=$(mktemp -d); trap 'rm -rf "$TMP"
 make_deb() {
   local name=$1 depends=${2:-} dir="$TMP/$1"
   mkdir -p "$dir/DEBIAN" "$dir/data/data/studio.ocean.app/files/usr/share/$name"
+  chmod -R 755 "$TMP"
   cat > "$dir/DEBIAN/control" <<EOF
 Package: $name
 Version: 1.0

@@ -93,5 +93,5 @@ In accordance with the OceanStudio Master Architecture Handoff specification (Se
 2. **Repository for APT Hosting**: `leonpresistforever-png/Oceanstudio-packages` (Public).
 3. **Actions Secrets**:
    - `OCEAN_PACKAGES_PUBLISH_TOKEN`: Configured.
-   - `OCEAN_REPOSITORY_SIGNING_KEY`: Configured (Fingerprint `F19823BB8367AE6FF974B4D733EE780AA1C6B6C0`).
+   - `OCEAN_REPOSITORY_SIGNING_KEY`: Configured (Canonical Fingerprint `DF7857C7D40149151DEAB8E98FBEEFDC907346A0`).
 4. **Prebuilt Release Baseline**: Tag `prebuilt-cache` with `restored-debs-43roots.tar.zst` (378 debs / 262MB) published.

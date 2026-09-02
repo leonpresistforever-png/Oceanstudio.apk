@@ -7,11 +7,11 @@ BIN="$ROOT/bin"
 LOG="$ROOT/apt.log"
 mkdir -p "$PREFIX/var/run" "$BIN"
 
-cat > "$BIN/apt-get" <<'SH'
-#!/usr/bin/env bash
-printf '%s start %s\n' "$$" "$*" >> "$OCEAN_TEST_LOG"
-sleep "${OCEAN_TEST_SLEEP:-0}"
-printf '%s end %s\n' "$$" "$*" >> "$OCEAN_TEST_LOG"
+cat > "$BIN/apt-get" <<SH
+#!$(command -v bash || echo /usr/bin/env bash)
+printf '%s start %s\n' "\$\$" "\$*" >> "\$OCEAN_TEST_LOG"
+sleep "\${OCEAN_TEST_SLEEP:-0}"
+printf '%s end %s\n' "\$\$" "\$*" >> "\$OCEAN_TEST_LOG"
 SH
 chmod +x "$BIN/apt-get"
 for tool in apt-cache dpkg-query; do ln -s apt-get "$BIN/$tool"; done
