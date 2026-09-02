@@ -60,7 +60,9 @@ jobs:
         run: |
           mkdir -p ocean-packages/build/package-builder/output
           echo "Restoring baseline verified packages from prebuilt-cache release..."
-          gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+          for i in 1 2 3; do
+            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp && break || sleep 5
+          done
           tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
           rm -f /tmp/restored-debs-43roots.tar.zst
       - name: Inventory restored run 60 packages
@@ -156,7 +158,9 @@ jobs:
         run: |
           mkdir -p ocean-packages/build/package-builder/output
           echo "Restoring baseline prebuilt packages from release..."
-          gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp
+          for i in 1 2 3; do
+            gh release download prebuilt-cache -p "restored-debs-43roots.tar.zst" --repo "${{ github.repository }}" --dir /tmp && break || sleep 5
+          done
           tar -C ocean-packages/build/package-builder/output -I zstd -xf /tmp/restored-debs-43roots.tar.zst
           rm -f /tmp/restored-debs-43roots.tar.zst
       - name: Verify libsndfile is staged for openjdk-21 pkg-config
