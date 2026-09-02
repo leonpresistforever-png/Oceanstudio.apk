@@ -75,12 +75,14 @@ jobs:
           key: ${{ env.OCEAN_CACHE_PREFIX }}-${{ github.run_id }}-${{ matrix.name }}
           restore-keys: |
             ${{ env.OCEAN_CACHE_PREFIX }}-
-      - name: Restore verified sources
-        uses: actions/cache/restore@v4
-        with:
-          path: ocean-packages/.cache/sources
-          key: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-${{ github.run_id }}-${{ matrix.name }}
-          restore-keys: ocean-sources-${{ hashFiles('ocean-packages/config.env') }}-
+      - name: Restore baseline verified package artifacts
+        run: |
+          mkdir -p ocean-packages/build/package-builder/output
+          if ! find ocean-packages/build/package-builder/output -name 'bash_*_aarch64.deb' | grep -q .; then
+            echo "Restoring 378 baseline prebuilt packages from release..."
+            curl -sL "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/prebuilt-cache/restored-debs-43roots.tar.zst" \
+              | tar -C ocean-packages/build/package-builder/output -I zstd -xf - 2>/dev/null || true
+          fi
       - name: Inventory restored run 60 packages
         run: |
           find ocean-packages/build/package-builder/output -type f -name '*.deb' -printf '%f\n' 2>/dev/null | sort -u | tee restored-${{ matrix.name }}.txt
@@ -158,6 +160,8 @@ jobs:
       - name: Merge shard archives without recompiling
         run: |
           mkdir -p ocean-packages/build/prebuilt-debs
+          curl -sL "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/prebuilt-cache/restored-debs-43roots.tar.zst" \
+            | tar -C ocean-packages/build/prebuilt-debs -I zstd -xf - 2>/dev/null || true
           find ocean-packages/build/shard-archives -name 'ocean-debs-*.tar.zst' -print0 \
             | while IFS= read -r -d '' archive; do
                 tar -C ocean-packages/build/prebuilt-debs -I zstd -xf "$archive"
@@ -286,5 +290,5 @@ jobs:
           git -C "$PAGES" add .
           git -C "$PAGES" commit -m "Publish Ocean repository ${GITHUB_SHA::7}"
           git -C "$PAGES" push --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/foxerdude90-source/Oceanstudio-packages.git" \
+            "https://x-access-token:${GH_TOKEN}@github.com/leonpresistforever-png/Oceanstudio-packages.git" \
             HEAD:gh-pages

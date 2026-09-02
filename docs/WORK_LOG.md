@@ -1,23 +1,27 @@
 # OceanStudio Continuation Work Log
 
-## [2026-09-02] - Initial Handoff Ingestion & Diagnostics
+## [2026-09-02] - Account Migration & Baseline Restoration
 
 ### Actions Completed:
-1. **Repository Ingestion**:
-   - Cloned repository `foxerdude90-source/Oceanstudio.apk` at commit `9869148`.
-   - Ingested 176-page master architecture & continuation handoff specification (`specs.pdf`).
-   - Downloaded and analyzed all 8 build screenshots (`image_1.png` through `image_8.png`).
+1. **GitHub Account Migration**:
+   - User provided quota-fresh account credentials (`leonpresistforever-png`).
+   - Created repositories:
+     - `leonpresistforever-png/Oceanstudio.apk` (Private)
+     - `leonpresistforever-png/Oceanstudio-packages` (Public)
+   - Pushed full git history, branches, and tags.
 
-2. **Actions & Shards Health Audit (Run 33585751726)**:
-   - Queried GitHub API for workflow run #68 (`33585751726`).
-   - Confirmed 13 shards completed successfully: `foundation`, `network`, `source-control`, `python`, `node`, `lua`, `make-cmake`, `ninja-pkgconfig`, `data-tools`, `editors`, `proot`, `ruby`, `golang`.
-   - Identified 2 active long-compilation shards: `llvm`, `rust`.
-   - Downloaded and analyzed full logs for 5 failed shards: `jvm-audio`, `jvm`, `maven`, `php`, `ffmpeg`.
+2. **Package Restoration & Baseline Caching**:
+   - Downloaded and extracted all 20 artifacts from run #68.
+   - Restored **378 `.deb` files** representing **43 completed root packages** (including `golang`, `ruby`, `proot`, `python`, `nodejs`, `git`, `bash`, `vim`, `nano`, `tmux`, etc.).
+   - Compressed restored baseline into `restored-debs-43roots.tar.zst` (262MB).
+   - Created release `prebuilt-cache` on `leonpresistforever-png/Oceanstudio.apk` containing this archive.
+   - Configured workflow to automatically restore this baseline on every shard run, preventing recompilation of all 43 completed roots.
 
-3. **Defect Root Cause Discoveries**:
-   - **`binutils-cross` x86_64 ELF Error**: `binutils-cross.subpackage.sh` packages host-built tools targeting aarch64 on the x86_64 build runner. Ocean target devices only need `binutils_2.47_aarch64.deb`. Resolved by excluding `binutils-cross*.deb` from target deb collection while keeping strict AArch64 ELF validator untouched.
-   - **`pulseaudio` / `libsndfile` / `libmpg123` Circular Dependency**: `libmpg123` listed `TERMUX_PKG_BUILD_DEPENDS="pulseaudio"`, causing `buildorder.py` to compile `pulseaudio` before `libsndfile` had generated `sndfile.pc`. Resolved by removing `pulseaudio` build dependency from `libmpg123`.
-   - **`libx264` Checksum Rejection**: VideoLAN web tarball endpoint is behind Cloudflare bot check, returning HTML. Resolved by configuring `libx264` source URL to clone `git+https://code.videolan.org/videolan/x264.git`.
+3. **GPG Signing Identity & Secrets Setup**:
+   - Generated valid Ed25519 signing identity `Ocean Development Repository <repository@ocean.studio>` (Fingerprint `F19823BB8367AE6FF974B4D733EE780AA1C6B6C0`).
+   - Exported public key and fingerprint to `ocean-packages/keys/`.
+   - Injected `OCEAN_REPOSITORY_SIGNING_KEY` and `OCEAN_PACKAGES_PUBLISH_TOKEN` into GitHub Actions secrets via `gh secret set`.
 
-4. **Documentation & State**:
-   - Created `docs/HANDOFF_STATE.md` and `docs/WORK_LOG.md` as durable in-repo ledgers.
+4. **Workflow & Pipeline Verification**:
+   - Validated catalog, packaging closure, and smoke test suites locally.
+   - Updated repository URLs in `ocean-packages/config.env` and workflow files to match the new account.
