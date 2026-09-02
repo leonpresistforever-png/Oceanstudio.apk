@@ -264,7 +264,7 @@ jobs:
           TAG="ocean-runtime-${GITHUB_SHA::7}"
           gh release create "$TAG" "${{ steps.apk.outputs.path }}" --target "$GITHUB_SHA" --prerelease --title "OceanStudio runtime ${GITHUB_SHA::7}" --notes "Verified bootstrap $OCEAN_BOOTSTRAP_VERSION ($OCEAN_BOOTSTRAP_SHA256)."
       - name: Publish signed APT repository to GitHub Pages branch
-        env: {GH_TOKEN: '${{ github.token }}'}
+        env: {GH_TOKEN: '${{ secrets.OCEAN_PACKAGES_PUBLISH_TOKEN }}'}
         run: |
           PAGES=$(mktemp -d)
           mkdir -p "$PAGES/apt"
@@ -277,5 +277,5 @@ jobs:
           git -C "$PAGES" add .
           git -C "$PAGES" commit -m "Publish Ocean repository ${GITHUB_SHA::7}"
           git -C "$PAGES" push --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "https://x-access-token:${GH_TOKEN}@github.com/foxerdude90-source/Oceanstudio-packages.git" \
             HEAD:gh-pages

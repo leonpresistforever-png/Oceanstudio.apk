@@ -217,15 +217,15 @@ COUNT=$(tar -tf "$WORK/ocean-aarch64.tar"|wc -l)
 zstd -19 -T0 "$WORK/ocean-aarch64.tar" -o "$OUT/bootstrap/ocean-aarch64.tar.zst"
 ARCHIVE=$OUT/bootstrap/ocean-aarch64.tar.zst
 SHA=$(sha256sum "$ARCHIVE"|cut -d' ' -f1); SIZE=$(stat -c%s "$ARCHIVE"); FPR=$(gpg --with-colons --fingerprint "$OCEAN_REPO_SIGNING_KEY"|awk -F: '$1=="fpr"{print $10;exit}')
-python3 - "$OUT/bootstrap/ocean-aarch64.manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "$OUT/debs" <<'PY'
+python3 - "$OUT/bootstrap/ocean-aarch64.manifest.json" "$SHA" "$SIZE" "$COUNT" "$FPR" "$OUT/debs" "$OCEAN_REPOSITORY_URL" <<'PY'
 import json,os,pathlib,subprocess,sys
-p,sha,size,count,fpr,debs=sys.argv[1:]
+p,sha,size,count,fpr,debs,repository_url=sys.argv[1:]
 packages=[]
 for deb in sorted(pathlib.Path(debs).glob('*.deb')):
  def field(name): return subprocess.check_output(['dpkg-deb','-f',deb,name],text=True).strip()
  name,version,arch=field('Package'),field('Version'),field('Architecture')
  packages.append({'name':name,'version':version,'architecture':arch,'artifact':deb.name,'size':deb.stat().st_size})
-m={"bootstrapVersion":"1.0.1","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":[x['name'] for x in packages],"packages":packages,"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":"https://foxerdude90-source.github.io/Oceanstudio.apk/apt","repositoryKeyFingerprint":fpr}
+m={"bootstrapVersion":"1.0.1","architecture":"aarch64","packageName":"studio.ocean.app","prefix":"/data/data/studio.ocean.app/files/usr","archive":"ocean-aarch64.tar.zst","archiveSha256":sha,"archiveSize":int(size),"entryCount":int(count),"packageList":[x['name'] for x in packages],"packages":packages,"buildCommit":os.getenv("GITHUB_SHA","local"),"repositoryUrl":repository_url,"repositoryKeyFingerprint":fpr}
 open(p,'w').write(json.dumps(m,indent=2)+"\n")
 PY
 python3 "$ROOT/ocean-packages/scripts/verify-bootstrap.py" "$OUT/bootstrap/ocean-aarch64.manifest.json" "$ARCHIVE"
