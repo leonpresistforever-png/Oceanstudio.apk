@@ -57,7 +57,7 @@ public final class OceanBootstrapInstaller {
         } catch (IOException error) {
             throw error;
         } catch (Exception error) {
-            throw new IOException("Invalid Ocean bootstrap", error);
+            throw new IOException("Invalid Ocean bootstrap: " + (error.getMessage() != null ? error.getMessage() : error.toString()), error);
         }
     }
 

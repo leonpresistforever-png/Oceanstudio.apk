@@ -70,7 +70,16 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
     private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);status.setText(message);status.setVisibility(View.VISIBLE);failureActions.setVisibility(View.VISIBLE);}
     private void showDiagnosticLog(){startActivity(new Intent(this,OceanTerminalDiagnosticsActivity.class));}
     private void sendTerminalKey(int keyCode){long now=android.os.SystemClock.uptimeMillis();terminalView.onKeyDown(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_DOWN,keyCode,0));terminalView.onKeyUp(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_UP,keyCode,0));}
-    private static String safeMessage(Throwable error){return error.getMessage()==null?error.getClass().getSimpleName():error.getMessage();}
+    private static String safeMessage(Throwable error){
+        if(error==null)return "unknown error";
+        StringBuilder sb=new StringBuilder();Throwable curr=error;
+        while(curr!=null){
+            if(sb.length()>0)sb.append(" -> ");
+            sb.append(curr.getClass().getSimpleName()).append(": ").append(curr.getMessage()!=null?curr.getMessage():"");
+            curr=curr.getCause();
+        }
+        return sb.toString();
+    }
     private void write(String value){if(session==null)return;if(session.state()==TerminalSession.State.RUNNING&&"exit".equals(value.replace("\r","").trim()))TerminalDiagnosticBundle.markCritical(this,"EXIT_COMMAND_SENT");TerminalSession.WriteResult result=session.write(value);if(result==TerminalSession.WriteResult.NATIVE_WRITE_FAILED)status.setText(R.string.terminal_write_failed);else if(result==TerminalSession.WriteResult.SESSION_ALREADY_EXITED)TerminalDiagnosticBundle.log("session-state.log","late UI write safely rejected state="+session.state());}
     @Override public void onOutput(byte[] bytes,int length){byte[] copy=java.util.Arrays.copyOf(bytes,length);String value=new String(copy,StandardCharsets.UTF_8);if("C".equals(diagnosticMode)&&!scriptedExitSent){synchronized(diagnosticOutput){diagnosticOutput.append(value);if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);String normalized=diagnosticOutput.toString().replace("\r\n","\n");if(normalized.contains("\nOCEAN_PTY_OK\n")){scriptedExitSent=true;TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");terminalView.post(()->write("exit\r"));}}}runOnUiThread(()->{if(isFinishing()||isDestroyed()||emulatorSession==null)return;emulatorSession.feed(copy,copy.length);});}
     @Override public void onExit(int code){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){status.setText(getString(R.string.terminal_exited,code));status.setVisibility(View.VISIBLE);}});}

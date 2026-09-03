@@ -29,6 +29,17 @@ android {
     }
     buildFeatures { buildConfig true }
     externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt') } }
+    // Android AssetManager.open() cannot stream-decompress assets > 1 MB that are DEFLATED.
+    // The 17+ MB ocean bootstrap archive MUST be stored uncompressed, or installation silently fails.
+    // All native .so libraries must also be stored uncompressed for system linker mmap.
+    aaptOptions {
+        noCompress 'zst', 'tar', 'zstd', 'so', 'gz', 'br', 'bz2', 'lz4', 'xz'
+    }
+    packagingOptions {
+        // Keep .so files uncompressed in the APK so the system linker can mmap them directly.
+        // This is required for both extractNativeLibs=false and for reliable JNI loading.
+        jniLibs.useLegacyPackaging = false
+    }
     buildTypes {
         debug {
             buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "${(System.getenv('OCEAN_DEV_AUTH_BYPASS') ?: 'false').toBoolean()}"
