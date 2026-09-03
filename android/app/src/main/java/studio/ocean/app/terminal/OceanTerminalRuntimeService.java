@@ -148,7 +148,11 @@ public final class OceanTerminalRuntimeService extends Service {
     private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery) throws IOException {
         TerminalDiagnosticBundle.state("VALIDATING", "STARTING", "shell=" + shell + " recovery=" + recovery);
         long handle = NativePty.create(shell, argv, OceanEnvironment.create(this, shell), cwd.getAbsolutePath(), rows, columns, TerminalDiagnosticBundle.nativeLog(this).getAbsolutePath());
-        if (handle == 0) throw new IOException("PTY creation failed, errno=" + NativePty.lastErrno());
+        if (handle == 0) {
+            String detail = NativePty.lastError();
+            int err = NativePty.lastErrno();
+            throw new IOException("PTY start failed: " + (detail != null && !detail.isEmpty() && !"None".equals(detail) ? detail : ("errno=" + err)));
+        }
         TerminalSession session;
         try { session = new TerminalSession(this, handle, this::removeCompletedSession); }
         catch (Throwable error) { NativePty.signal(handle, 15); NativePty.close(handle); NativePty.waitExit(handle); NativePty.destroy(handle); throw new IOException("Cannot start PTY workers", error); }

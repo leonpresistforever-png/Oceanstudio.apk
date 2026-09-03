@@ -19,8 +19,11 @@ public final class OceanEnvironment {
         values.add("PATH=" + paths.prefix() + "/bin:/system/bin:/system/xbin");
         values.add("TERM=xterm-256color"); values.add("COLORTERM=truecolor");
         values.add("SHELL=" + shell); values.add("LANG=C.UTF-8");
-        values.add("ANDROID_ROOT=" + System.getenv("ANDROID_ROOT"));
-        values.add("ANDROID_DATA=" + System.getenv("ANDROID_DATA"));
+        values.add("LD_LIBRARY_PATH=" + paths.prefix() + "/lib");
+        String androidRoot = System.getenv("ANDROID_ROOT");
+        values.add("ANDROID_ROOT=" + (androidRoot != null && !androidRoot.isEmpty() ? androidRoot : "/system"));
+        String androidData = System.getenv("ANDROID_DATA");
+        values.add("ANDROID_DATA=" + (androidData != null && !androidData.isEmpty() ? androidData : "/data"));
         return values.toArray(new String[0]);
     }
 

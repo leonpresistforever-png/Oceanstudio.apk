@@ -322,7 +322,15 @@ public final class OceanBootstrapInstaller {
                     out.getFD().sync();
                 }
                 try {
-                    Os.chmod(target.getAbsolutePath(), entry.getMode() & 0777);
+                    int mode = entry.getMode() & 0777;
+                    if (logical.toString().startsWith("usr/bin/") || (mode & 0111) != 0) {
+                        mode |= 0755;
+                    } else if (logical.toString().startsWith("usr/lib/") && (entry.getName().endsWith(".so") || entry.getName().contains(".so."))) {
+                        mode |= 0755;
+                    } else {
+                        mode |= 0644;
+                    }
+                    Os.chmod(target.getAbsolutePath(), mode);
                 } catch (Exception error) {
                     throw new IOException("Cannot set archive mode", error);
                 }
@@ -340,7 +348,7 @@ public final class OceanBootstrapInstaller {
         for (int index = directoryModes.size() - 1; index >= 0; index--) {
             DirectoryMode mode = directoryModes.get(index);
             try {
-                Os.chmod(mode.directory.getAbsolutePath(), mode.mode);
+                Os.chmod(mode.directory.getAbsolutePath(), mode.mode | 0755);
             } catch (ErrnoException error) {
                 throw filesystemError("chmod archive directory", mode.directory, error);
             }
@@ -474,7 +482,10 @@ public final class OceanBootstrapInstaller {
     private static void validate(File prefix) throws IOException {
         for (String name : new String[]{"bash", "apt", "dpkg", "pkg"}) {
             File executable = new File(prefix, "bin/" + name);
-            if (!executable.isFile() || !executable.canExecute()) throw new IOException("Bootstrap missing " + name);
+            if (!executable.isFile()) throw new IOException("Bootstrap missing regular file: " + executable);
+            if (executable.length() == 0) throw new IOException("Bootstrap zero size executable: " + executable);
+            try { Os.chmod(executable.getAbsolutePath(), 0755); } catch (Exception ignored) {}
+            if (!executable.canExecute()) throw new IOException("Bootstrap cannot execute: " + executable);
         }
     }
 

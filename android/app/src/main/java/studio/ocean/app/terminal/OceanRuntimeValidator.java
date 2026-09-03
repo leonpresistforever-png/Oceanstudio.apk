@@ -29,17 +29,23 @@ public final class OceanRuntimeValidator {
         requireDirectory(paths.temp(), failures);
         File shell = new File(paths.prefix(), "bin/bash");
         if (!shell.isFile()) failures.add("bash is not a regular file: " + shell);
+        else if (shell.length() == 0) failures.add("bash has zero size: " + shell);
         else {
+            try { Os.chmod(shell.getAbsolutePath(), 0755); } catch (Exception ignored) {}
             if (!shell.canExecute()) failures.add("bash is not executable: " + shell);
             try {
                 StructStat stat=Os.stat(shell.getAbsolutePath());
-                TerminalStartupLog.stage("07", "bash size="+stat.st_size+" mode="+Integer.toOctalString(stat.st_mode));
+                TerminalStartupLog.stage("07", "bash size="+stat.st_size+" mode="+Integer.toOctalString(stat.st_mode)+" uid="+stat.st_uid);
             } catch(Exception error) { failures.add("bash stat failed: "+error); }
             validateAarch64Elf(shell, failures);
         }
         for (String name : new String[]{"apt","dpkg","pkg"}) {
             File executable=new File(paths.prefix(),"bin/"+name);
-            if (!executable.isFile() || !executable.canExecute()) failures.add(name+" missing or not executable");
+            if (!executable.isFile()) failures.add(name+" missing regular file: "+executable);
+            else {
+                try { Os.chmod(executable.getAbsolutePath(), 0755); } catch (Exception ignored) {}
+                if (!executable.canExecute()) failures.add(name+" not executable: "+executable);
+            }
         }
         String details=failures.isEmpty()?"Ocean runtime validation passed":String.join("; ",failures);
         TerminalStartupLog.stage("08", details);

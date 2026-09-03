@@ -6,6 +6,7 @@ public final class NativePty {
     private NativePty() {}
     public static native long create(String executable, String[] arguments, String[] environment, String cwd, int rows, int columns, String diagnosticPath);
     public static native int lastErrno();
+    public static native String lastError();
     public static native int read(long handle, byte[] buffer);
     public static native int write(long handle, byte[] buffer, int length);
     public static native int resize(long handle, int rows, int columns, int pixelWidth, int pixelHeight);
