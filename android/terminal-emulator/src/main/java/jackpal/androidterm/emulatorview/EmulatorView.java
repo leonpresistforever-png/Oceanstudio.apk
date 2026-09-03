@@ -511,6 +511,10 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
      * #setDensity setDensity} before using an <code>EmulatorView</code> created
      * using this constructor.
      */
+    public EmulatorView(Context context) {
+        this(context, null);
+    }
+
     public EmulatorView(Context context, AttributeSet attrs) {
         super(context, attrs);
         commonConstructor(context);

@@ -203,6 +203,8 @@ gpg --batch --export "$OCEAN_REPO_SIGNING_KEY" > "$OUT/ocean-repository.gpg"
 # Keep the APK bootstrap minimal as the signed online catalogue expands.
 mapfile -t BOOTSTRAP_DEBS < <(python3 "$ROOT/ocean-packages/scripts/bootstrap-closure.py" "$OUT/debs" --seed bash --seed apt --seed libcurl --seed ocean-pkg)
 for deb in "${BOOTSTRAP_DEBS[@]}"; do dpkg-deb -x "$deb" "$OUT/bootstrap/root"; done
+ln -sf bash "$OUT/bootstrap/root$OCEAN_PREFIX/bin/sh"
+chmod 755 "$OUT/bootstrap/root$OCEAN_PREFIX/lib/apt/methods/"* || true
 mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/sources.list.d" "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/keyrings" "$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg"
 # Bundle the signed minimal acceptance repository. The configured GitHub
 # Pages endpoint is not anonymously reachable while this repository remains
@@ -218,10 +220,19 @@ cat > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d/00-ocean-paths" <<EOF
 Dir "$OCEAN_PREFIX";
 Dir::Etc "etc/apt";
 Dir::State "var/lib/apt";
-Dir::State::status "var/lib/dpkg/status";
+Dir::State::status "$OCEAN_PREFIX/var/lib/dpkg/status";
 Dir::Cache "var/cache/apt";
 Dir::Log "var/log/apt";
 EOF
+cat > "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/apt.conf.d/01-ocean-options" <<EOF
+APT::Sandbox::User "";
+Acquire::Languages "none";
+Acquire::GzipIndexes "true";
+EOF
+mkdir -p "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/trusted.gpg.d"
+if [ -d /data/data/com.termux/files/usr/share/termux-keyring ]; then
+  cp /data/data/com.termux/files/usr/share/termux-keyring/*.gpg "$OUT/bootstrap/root$OCEAN_PREFIX/etc/apt/trusted.gpg.d/"
+fi
 # Register the packages whose payloads form the bootstrap. This is real dpkg
 # state derived from each .deb control archive, not hand-written package data.
 STATUS="$OUT/bootstrap/root$OCEAN_PREFIX/var/lib/dpkg/status"

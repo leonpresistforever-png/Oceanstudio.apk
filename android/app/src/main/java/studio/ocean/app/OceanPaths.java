@@ -26,7 +26,8 @@ public final class OceanPaths {
             new File(prefix(), "etc/apt/apt.conf.d"), new File(prefix(), "etc/apt/preferences.d"),
             new File(prefix(), "etc/apt/sources.list.d"), new File(prefix(), "var/lib/dpkg/info"),
             new File(prefix(), "var/lib/dpkg/triggers"), new File(prefix(), "var/lib/dpkg/updates"),
-            new File(prefix(), "var/lib/apt/lists"), new File(prefix(), "var/cache/apt/archives"),
+            new File(prefix(), "var/lib/apt/lists"), new File(prefix(), "var/lib/apt/lists/partial"),
+            new File(prefix(), "var/cache/apt/archives"), new File(prefix(), "var/cache/apt/archives/partial"),
             new File(prefix(), "var/log/apt") };
         for (File directory : directories) if (!directory.isDirectory() && !directory.mkdirs())
             throw new java.io.IOException("Cannot create " + directory);

@@ -71,6 +71,33 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
             outputView = findSafeView("terminal_output");
             inputView = findSafeView("terminal_input");
 
+            if (terminalView == null) {
+                try {
+                    terminalView = new EmulatorView(this);
+                    terminalView.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+                    terminalView.setFocusable(true);
+                    terminalView.setFocusableInTouchMode(true);
+                    if (outputView != null) {
+                        android.view.ViewParent parent = outputView.getParent();
+                        if (parent instanceof android.widget.ScrollView) {
+                            android.view.ViewParent scrollParent = parent.getParent();
+                            if (scrollParent instanceof android.view.ViewGroup) {
+                                android.view.ViewGroup vg = (android.view.ViewGroup) scrollParent;
+                                int index = vg.indexOfChild((android.view.View) parent);
+                                vg.removeView((android.view.View) parent);
+                                vg.addView(terminalView, index);
+                            }
+                        }
+                    }
+                    if (inputView != null) {
+                        inputView.setVisibility(View.GONE);
+                    }
+                } catch (Throwable t) {
+                    TerminalStartupLog.failure("Failed to create programmatic EmulatorView", t);
+                }
+            }
+
             safeClick("terminal_back", v->finish());
             safeClick("terminal_ctrl", v->{ if(terminalView!=null) terminalView.sendControlKey(); });
             safeClick("terminal_alt", v->{ if(terminalView!=null) terminalView.sendAltKey(); });

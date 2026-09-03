@@ -311,6 +311,9 @@ class TerminalEmulator {
     private int mEffect;
 
     private boolean mbKeypadApplicationMode;
+    private boolean mBracketedPasteMode;
+    public boolean isBracketedPasteMode() { return mBracketedPasteMode; }
+    public void setBracketedPasteMode(boolean value) { mBracketedPasteMode = value; }
 
     /** false == G0, true == G1 */
     private boolean mAlternateCharSet;
@@ -927,6 +930,9 @@ class TerminalEmulator {
             case 1:
                 mKeyListener.setCursorKeysApplicationMode(true);
                 break;
+            case 2004:
+                mBracketedPasteMode = true;
+                break;
             case 47:
             case 1047:
             case 1049:
@@ -945,6 +951,9 @@ class TerminalEmulator {
             switch (arg) {
             case 1:
                 mKeyListener.setCursorKeysApplicationMode(false);
+                break;
+            case 2004:
+                mBracketedPasteMode = false;
                 break;
             case 47:
             case 1047:
@@ -1194,6 +1203,16 @@ class TerminalEmulator {
             setCursorCol(Math.max(0, mCursorCol - getArg0(1)));
             break;
 
+        case 'E': // ESC [ Pn E - Cursor Next Line
+            setCursorRow(Math.min(mBottomMargin - 1, mCursorRow + getArg0(1)));
+            setCursorCol(0);
+            break;
+
+        case 'F': // ESC [ Pn F - Cursor Previous Line
+            setCursorRow(Math.max(mTopMargin, mCursorRow - getArg0(1)));
+            setCursorCol(0);
+            break;
+
         case 'G': // ESC [ Pn G - Cursor Horizontal Absolute
             setCursorCol(Math.min(Math.max(1, getArg0(1)), mColumns) - 1);
             break;
@@ -1217,6 +1236,7 @@ class TerminalEmulator {
                 break;
 
             case 2: // Clear all
+            case 3: // Clear all including scrollback
                 blockClear(0, 0, mColumns, mRows);
                 break;
 

@@ -334,7 +334,10 @@ public final class OceanBootstrapInstaller {
                 }
                 try {
                     int mode = entry.getMode() & 0777;
-                    if (logical.toString().startsWith("usr/bin/") || (mode & 0111) != 0) {
+                    if (logical.toString().startsWith("usr/bin/")
+                            || logical.toString().startsWith("usr/lib/apt/methods/")
+                            || logical.toString().startsWith("usr/libexec/")
+                            || (mode & 0111) != 0) {
                         mode |= 0755;
                     } else if (logical.toString().startsWith("usr/lib/") && (entry.getName().endsWith(".so") || entry.getName().contains(".so."))) {
                         mode |= 0755;
