@@ -1,0 +1,37 @@
+name: ocean-local-shards
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish built shards to GitHub Release'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: ocean-local-shards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-shards:
+    name: build-shards (self-hosted)
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build priority and bonus shards locally
+        run: |
+          python3 ocean-packages/scripts/build-local-shards.py
+
+      - name: Validate generated shard packages
+        run: |
+          bash ocean-packages/scripts/build-local-shards.sh
+
+      - name: Upload shard artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-local-shards
+          path: ocean-packages/build/shard-debs/
+          retention-days: 7

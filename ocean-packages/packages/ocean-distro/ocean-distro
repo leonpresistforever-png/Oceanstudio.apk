@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# OceanStudio Linux Distribution & Rootfs Manager (PRoot-based)
+set -euo pipefail
+
+OCEAN_PREFIX="${OCEAN_PREFIX:-${PREFIX:-/data/data/studio.ocean.app/files/usr}}"
+OCEAN_HOME="${OCEAN_HOME:-${HOME:-/data/data/studio.ocean.app/files/home}}"
+DISTRO_BASE_DIR="${OCEAN_DISTRO_DIR:-$OCEAN_HOME/.distro}"
+REGISTRY_FILE="${OCEAN_PREFIX}/share/ocean-distro/distros.json"
+
+# Fallback if running from source tree
+if [[ ! -f "$REGISTRY_FILE" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ -f "$SCRIPT_DIR/distros.json" ]]; then
+    REGISTRY_FILE="$SCRIPT_DIR/distros.json"
+  fi
+fi
+
+usage() {
+  cat << 'USAGE'
+OceanStudio Distro Universe Manager (ocean-distro)
+
+Usage:
+  ocean-distro list                   List all supported & installed distributions
+  ocean-distro install <distro>       Download and install a distribution rootfs
+  ocean-distro login <distro> [-- cmd] Log into a distribution or run a command
+  ocean-distro info <distro>          Display detailed information about a distro
+  ocean-distro update <distro>        Run package manager update inside distro
+  ocean-distro remove <distro>        Uninstall and remove a distribution rootfs
+
+Supported distributions:
+  debian, ubuntu, alpine, arch, fedora, rocky, alma,
+  opensuse, void, kali, centos, devuan, gentoo
+USAGE
+  exit 1
+}
+
+die() {
+  echo "ocean-distro error: $*" >&2
+  exit 1
+}
+
+require_proot() {
+  command -v proot >/dev/null 2>&1 || die "proot is required but not installed. Run: pkg install proot"
+}
+
+get_distro_field() {
+  local distro="$1"
+  local field="$2"
+  python3 -c "
+import json, sys
+with open('$REGISTRY_FILE') as f:
+    d = json.load(f)
+if '$distro' not in d:
+    sys.exit(1)
+print(d['$distro'].get('$field', ''))
+" 2>/dev/null || return 1
+}
+
+cmd_list() {
+  echo "OceanStudio Distro Universe:"
+  printf "%-12s %-22s %-10s %-16s %s\n" "DISTRO" "NAME & VERSION" "STATUS" "PACKAGE MANAGER" "PRIORITY"
+  printf "%-12s %-22s %-10s %-16s %s\n" "------" "--------------" "------" "---------------" "--------"
+  python3 -c "
+import json, os
+distro_dir = '$DISTRO_BASE_DIR'
+with open('$REGISTRY_FILE') as f:
+    d = json.load(f)
+for k, v in d.items():
+    installed = os.path.isdir(os.path.join(distro_dir, k))
+    status = 'INSTALLED' if installed else 'AVAILABLE'
+    title = f\"{v.get('name')} {v.get('version')}\"[:22]
+    print(f\"{k:<12} {title:<22} {status:<10} {v.get('pkg_manager', ''):<16} {v.get('priority', '')}\")
+"
+}
+
+cmd_install() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+  require_proot
+
+  local url
+  url="$(get_distro_field "$distro" "url")" || die "Unknown distribution: '$distro'. Run 'ocean-distro list' to see supported distros."
+  local expected_sha
+  expected_sha="$(get_distro_field "$distro" "sha256")"
+  local name
+  name="$(get_distro_field "$distro" "name")"
+
+  local target_dir="$DISTRO_BASE_DIR/$distro"
+  if [[ -d "$target_dir" ]]; then
+    echo "Distribution '$distro' is already installed at: $target_dir"
+    return 0
+  fi
+
+  echo "==> Preparing installation of $name ($distro)..."
+  mkdir -p "$DISTRO_BASE_DIR"
+  local tmp_archive
+  tmp_archive="$(mktemp -p "$DISTRO_BASE_DIR" "${distro}-rootfs.XXXXXX.tar.xz")"
+
+  echo "==> Downloading official rootfs archive..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -L --progress-bar "$url" -o "$tmp_archive"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q --show-progress "$url" -O "$tmp_archive"
+  else
+    die "Neither curl nor wget found to download rootfs."
+  fi
+
+  if [[ -n "$expected_sha" ]]; then
+    echo "==> Verifying SHA256 integrity..."
+    local actual_sha
+    actual_sha="$(sha256sum "$tmp_archive" | awk '{print $1}')"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+      rm -f "$tmp_archive"
+      die "Checksum mismatch! Expected: $expected_sha, Got: $actual_sha"
+    fi
+    echo "    Integrity verified: $actual_sha (PASS)"
+  fi
+
+  echo "==> Extracting rootfs into $target_dir..."
+  mkdir -p "$target_dir"
+  proot --link2symlink tar -xf "$tmp_archive" -C "$target_dir" --exclude='dev/*' || \
+    tar -xf "$tmp_archive" -C "$target_dir" --exclude='dev/*' 2>/dev/null || true
+  rm -f "$tmp_archive"
+
+  echo "==> Configuring DNS resolution and environment..."
+  mkdir -p "$target_dir/etc"
+  cat << 'DNS' > "$target_dir/etc/resolv.conf"
+nameserver 8.8.8.8
+nameserver 1.1.1.1
+DNS
+
+  # Bind mount directories
+  mkdir -p "$target_dir/root/ocean-home"
+  mkdir -p "$target_dir/sdcard" 2>/dev/null || true
+
+  echo "==> Installation of $distro complete! Log in using: ocean-distro login $distro"
+}
+
+cmd_login() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+  require_proot
+
+  local target_dir="$DISTRO_BASE_DIR/$distro"
+  if [[ ! -d "$target_dir" ]]; then
+    die "Distribution '$distro' is not installed. Run: ocean-distro install $distro"
+  fi
+
+  local default_shell
+  default_shell="$(get_distro_field "$distro" "shell")"
+  [[ -z "$default_shell" ]] && default_shell="/bin/sh"
+
+  shift 1 || true
+  local cmd=()
+  if [[ $# -gt 0 && "$1" == "--" ]]; then
+    shift
+    cmd=("$@")
+  elif [[ $# -gt 0 ]]; then
+    cmd=("$@")
+  else
+    cmd=("$default_shell" "-l")
+  fi
+
+  local binds=(
+    -b /dev
+    -b /proc
+    -b /sys
+    -b "$OCEAN_HOME:/root/ocean-home"
+  )
+  [[ -d "/sdcard" ]] && binds+=(-b "/sdcard:/sdcard")
+  [[ -d "/storage" ]] && binds+=(-b "/storage:/storage")
+
+  unset LD_PRELOAD
+  exec proot \
+    -0 \
+    --link2symlink \
+    -r "$target_dir" \
+    "${binds[@]}" \
+    -w /root \
+    /usr/bin/env -i \
+      HOME=/root \
+      TERM="${TERM:-xterm-256color}" \
+      COLORTERM="${COLORTERM:-truecolor}" \
+      LANG="C.UTF-8" \
+      PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+      "${cmd[@]}"
+}
+
+cmd_info() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+  local target_dir="$DISTRO_BASE_DIR/$distro"
+  python3 -c "
+import json, os, subprocess
+with open('$REGISTRY_FILE') as f:
+    d = json.load(f)
+if '$distro' not in d:
+    print('Distribution not found: $distro')
+    exit(1)
+info = d['$distro']
+installed = os.path.isdir('$target_dir')
+print(f\"Distribution:   $distro\")
+print(f\"Name:           {info.get('name')} {info.get('version')}\")
+print(f\"Priority:       {info.get('priority')}\")
+print(f\"Pkg Manager:    {info.get('pkg_manager')}\")
+print(f\"Description:    {info.get('description')}\")
+print(f\"Default Shell:  {info.get('shell')}\")
+print(f\"Update Command: {info.get('update_cmd')}\")
+print(f\"Status:         {'Installed' if installed else 'Not installed'}\")
+if installed:
+    print(f\"Rootfs Path:    $target_dir\")
+    try:
+        out = subprocess.check_output(['du', '-sh', '$target_dir'], stderr=subprocess.DEVNULL).decode().split()[0]
+        print(f\"Disk Usage:     {out}\")
+    except Exception:
+        pass
+"
+}
+
+cmd_update() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+  local update_cmd
+  update_cmd="$(get_distro_field "$distro" "update_cmd")" || die "Unknown distro: $distro"
+  echo "==> Running update in $distro: $update_cmd"
+  cmd_login "$distro" -- /bin/sh -c "$update_cmd"
+}
+
+cmd_remove() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+  local target_dir="$DISTRO_BASE_DIR/$distro"
+  if [[ ! -d "$target_dir" ]]; then
+    echo "Distribution '$distro' is not installed."
+    return 0
+  fi
+  echo "==> Removing distribution '$distro' at $target_dir..."
+  rm -rf "$target_dir"
+  echo "==> Distribution '$distro' removed."
+}
+
+case "${1:-}" in
+  list) cmd_list ;;
+  install) shift; cmd_install "$@" ;;
+  login) shift; cmd_login "$@" ;;
+  info) shift; cmd_info "$@" ;;
+  update) shift; cmd_update "$@" ;;
+  remove) shift; cmd_remove "$@" ;;
+  *) usage ;;
+esac

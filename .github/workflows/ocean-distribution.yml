@@ -7,8 +7,10 @@ on:
         required: true
         default: true
         type: boolean
-  push:
-    paths: ['ocean-packages/**', 'android/**', '.github/workflows/ocean-distribution.yml']
+# Disabled automatic push triggers while GitHub-hosted runner quota is exhausted.
+# Use local/self-hosted scripts or workflow_dispatch.
+# push:
+#   paths: ['ocean-packages/**', 'android/**', '.github/workflows/ocean-distribution.yml']
 permissions:
   actions: read
   contents: write

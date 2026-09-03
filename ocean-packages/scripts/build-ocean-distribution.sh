@@ -186,6 +186,11 @@ TOOLSROOT=$WORK/ocean-tools; mkdir -p "$TOOLSROOT/DEBIAN" "$TOOLSROOT$OCEAN_PREF
 cp "$ROOT/ocean-packages/packages/ocean-tools/control" "$TOOLSROOT/DEBIAN/control"
 install -m755 "$ROOT/ocean-packages/scripts/ocean-package-smoke-test" "$TOOLSROOT$OCEAN_PREFIX/bin/ocean-package-smoke-test"
 dpkg-deb --root-owner-group --build "$TOOLSROOT" "$OUT/debs/ocean-tools_1.0.0_all.deb"
+DISTROROOT=$WORK/ocean-distro; mkdir -p "$DISTROROOT/DEBIAN" "$DISTROROOT$OCEAN_PREFIX/bin" "$DISTROROOT$OCEAN_PREFIX/share/ocean-distro"
+cp "$ROOT/ocean-packages/packages/ocean-distro/control" "$DISTROROOT/DEBIAN/control"
+install -m755 "$ROOT/ocean-packages/packages/ocean-distro/ocean-distro" "$DISTROROOT$OCEAN_PREFIX/bin/ocean-distro"
+install -m644 "$ROOT/ocean-packages/packages/ocean-distro/distros.json" "$DISTROROOT$OCEAN_PREFIX/share/ocean-distro/distros.json"
+dpkg-deb --root-owner-group --build "$DISTROROOT" "$OUT/debs/ocean-distro_1.0.0_all.deb"
 cp "$OUT/debs"/*.deb "$OUT/repository/pool/main/"
 cd "$OUT/repository"; mkdir -p dists/stable/main/binary-aarch64
 apt-ftparchive packages pool/main > dists/stable/main/binary-aarch64/Packages
