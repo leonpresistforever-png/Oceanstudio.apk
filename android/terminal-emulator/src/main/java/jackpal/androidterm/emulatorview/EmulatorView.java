@@ -534,9 +534,11 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
     }
 
     private void commonConstructor(Context context) {
-        // TODO: See if we want to use the API level 11 constructor to get new flywheel feature.
         mScroller = new Scroller(context);
         mMouseTrackingFlingRunner.mScroller = new Scroller(context);
+        try {
+            mGestureDetector = new GestureDetector(context, this);
+        } catch (Throwable ignored) {}
     }
 
     /**
@@ -550,7 +552,11 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
         mBackgroundPaint = new Paint();
         mTopRow = 0;
         mLeftColumn = 0;
-        mGestureDetector = new GestureDetector(this);
+        if (mGestureDetector == null) {
+            try {
+                mGestureDetector = new GestureDetector(getContext(), this);
+            } catch (Throwable ignored) {}
+        }
         // mGestureDetector.setIsLongpressEnabled(false);
         setVerticalScrollBarEnabled(true);
         setFocusable(true);
@@ -1226,8 +1232,10 @@ public class EmulatorView extends View implements GestureDetector.OnGestureListe
     public boolean onTouchEvent(MotionEvent ev) {
         if (mIsSelectingText) {
             return onTouchEventWhileSelectingText(ev);
-        } else {
+        } else if (mGestureDetector != null) {
             return mGestureDetector.onTouchEvent(ev);
+        } else {
+            return false;
         }
     }
 
