@@ -57,6 +57,25 @@ public final class TerminalStartupLog {
     public static Thread.UncaughtExceptionHandler installCrashCapture() {
         Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         installedHandler = (thread, error) -> {
+            try {
+                StringWriter trace = new StringWriter();
+                error.printStackTrace(new PrintWriter(trace));
+                String crashText = "===== OCEAN UNCAUGHT EXCEPTION CRASH =====\n"
+                    + "Time: " + new java.util.Date() + "\n"
+                    + "Thread: " + thread.getName() + " (id=" + thread.getId() + ")\n"
+                    + "Exception: " + error.getClass().getName() + ": " + error.getMessage() + "\n"
+                    + "Last Stage: " + lastStage + "\n\n"
+                    + "Stack Trace:\n" + trace + "\n";
+                android.util.Log.e("OceanCrash", crashText);
+                if (appContext != null) {
+                    File crashFile = new File(new File(appContext.getFilesDir(), "logs"), "last-crash.log");
+                    crashFile.getParentFile().mkdirs();
+                    try (FileOutputStream out = new FileOutputStream(crashFile, false)) {
+                        out.write(crashText.getBytes(StandardCharsets.UTF_8));
+                        out.getFD().sync();
+                    }
+                }
+            } catch (Throwable ignored) {}
             TerminalDiagnosticBundle.javaCrash(thread,error);
             failure("uncaught thread=" + thread.getName() + " class=" + error.getClass().getName()
                 + " message=" + error.getMessage(), error);
