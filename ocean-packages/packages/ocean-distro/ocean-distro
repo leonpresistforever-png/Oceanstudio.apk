@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/data/data/studio.ocean.app/files/usr/bin/bash
 # OceanStudio Linux Distribution & Rootfs Manager (PRoot-based)
 set -euo pipefail
 
@@ -46,31 +46,41 @@ require_proot() {
 get_distro_field() {
   local distro="$1"
   local field="$2"
-  python3 -c "
-import json, sys
-with open('$REGISTRY_FILE') as f:
-    d = json.load(f)
-if '$distro' not in d:
-    sys.exit(1)
-print(d['$distro'].get('$field', ''))
-" 2>/dev/null || return 1
+  awk -v d="$distro" -v f="$field" '
+$0 ~ "\"" d "\":" { in_d=1; next }
+in_d && $0 ~ /^  \},?/ { in_d=0 }
+in_d && $0 ~ "\"" f "\":" {
+    gsub(/.*"[^"]+": *"|",? *$/, "")
+    print
+    exit
+}' "$REGISTRY_FILE"
 }
 
 cmd_list() {
   echo "OceanStudio Distro Universe:"
   printf "%-12s %-22s %-10s %-16s %s\n" "DISTRO" "NAME & VERSION" "STATUS" "PACKAGE MANAGER" "PRIORITY"
   printf "%-12s %-22s %-10s %-16s %s\n" "------" "--------------" "------" "---------------" "--------"
-  python3 -c "
-import json, os
-distro_dir = '$DISTRO_BASE_DIR'
-with open('$REGISTRY_FILE') as f:
-    d = json.load(f)
-for k, v in d.items():
-    installed = os.path.isdir(os.path.join(distro_dir, k))
-    status = 'INSTALLED' if installed else 'AVAILABLE'
-    title = f\"{v.get('name')} {v.get('version')}\"[:22]
-    print(f\"{k:<12} {title:<22} {status:<10} {v.get('pkg_manager', ''):<16} {v.get('priority', '')}\")
-"
+  
+  awk -v ddir="$DISTRO_BASE_DIR" '
+/^  "[a-z0-9_-]+": \{/ {
+  distro = $0
+  gsub(/^ *"/, "", distro)
+  gsub(/":.*$/, "", distro)
+  name = ""; ver = ""; pkg = ""; prio = ""
+}
+/"name":/ { gsub(/.*"name": *"|",? *$/, ""); name = $0 }
+/"version":/ { gsub(/.*"version": *"|",? *$/, ""); ver = $0 }
+/"pkg_manager":/ { gsub(/.*"pkg_manager": *"|",? *$/, ""); pkg = $0 }
+/"priority":/ { gsub(/.*"priority": *"|",? *$/, ""); prio = $0 }
+/^  \},?/ {
+  if (distro != "") {
+    title = substr(name " " ver, 1, 22)
+    status = "AVAILABLE"
+    printf "%-12s %-22s %-10s %-16s %s\n", distro, title, status, pkg, prio
+    distro = ""
+  }
+}
+' "$REGISTRY_FILE"
 }
 
 cmd_install() {
@@ -78,173 +88,172 @@ cmd_install() {
   [[ -z "$distro" ]] && usage
   require_proot
 
-  local url
-  url="$(get_distro_field "$distro" "url")" || die "Unknown distribution: '$distro'. Run 'ocean-distro list' to see supported distros."
-  local expected_sha
-  expected_sha="$(get_distro_field "$distro" "sha256")"
-  local name
-  name="$(get_distro_field "$distro" "name")"
+  local url sha shell_path
+  url=$(get_distro_field "$distro" "url")
+  sha=$(get_distro_field "$distro" "sha256")
+  shell_path=$(get_distro_field "$distro" "shell")
+
+  [[ -z "$url" ]] && die "Unknown distribution: '$distro'. Run 'ocean-distro list' to see available distros."
 
   local target_dir="$DISTRO_BASE_DIR/$distro"
   if [[ -d "$target_dir" ]]; then
-    echo "Distribution '$distro' is already installed at: $target_dir"
-    return 0
+    die "Distribution '$distro' is already installed at $target_dir. Remove first or run 'ocean-distro login $distro'."
   fi
 
-  echo "==> Preparing installation of $name ($distro)..."
   mkdir -p "$DISTRO_BASE_DIR"
-  local tmp_archive
-  tmp_archive="$(mktemp -p "$DISTRO_BASE_DIR" "${distro}-rootfs.XXXXXX.tar.xz")"
+  local temp_archive
+  temp_archive="$(mktemp "$DISTRO_BASE_DIR/${distro}-rootfs.XXXXXX")"
 
-  echo "==> Downloading official rootfs archive..."
+  echo "Downloading $distro rootfs..."
   if command -v curl >/dev/null 2>&1; then
-    curl -L --progress-bar "$url" -o "$tmp_archive"
+    curl -L --fail --progress-bar -o "$temp_archive" "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q --show-progress "$url" -O "$tmp_archive"
+    wget -O "$temp_archive" "$url"
   else
-    die "Neither curl nor wget found to download rootfs."
+    die "Neither curl nor wget available. Please install curl: pkg install curl"
   fi
 
-  if [[ -n "$expected_sha" ]]; then
-    echo "==> Verifying SHA256 integrity..."
+  if [[ -n "$sha" ]]; then
+    echo "Verifying checksum..."
     local actual_sha
-    actual_sha="$(sha256sum "$tmp_archive" | awk '{print $1}')"
-    if [[ "$actual_sha" != "$expected_sha" ]]; then
-      rm -f "$tmp_archive"
-      die "Checksum mismatch! Expected: $expected_sha, Got: $actual_sha"
+    actual_sha=$(sha256sum "$temp_archive" | awk '{print $1}')
+    if [[ "$actual_sha" != "$sha" ]]; then
+      rm -f "$temp_archive"
+      die "Checksum verification failed! Expected: $sha, Got: $actual_sha"
     fi
-    echo "    Integrity verified: $actual_sha (PASS)"
+    echo "Checksum verified: SHA256 matches."
   fi
 
-  echo "==> Extracting rootfs into $target_dir..."
+  echo "Extracting rootfs into $target_dir..."
   mkdir -p "$target_dir"
-  proot --link2symlink tar -xf "$tmp_archive" -C "$target_dir" --exclude='dev/*' || \
-    tar -xf "$tmp_archive" -C "$target_dir" --exclude='dev/*' 2>/dev/null || true
-  rm -f "$tmp_archive"
+  case "$url" in
+    *.tar.xz) tar -xf "$temp_archive" -C "$target_dir" ;;
+    *.tar.gz) tar -zxf "$temp_archive" -C "$target_dir" ;;
+    *.tar.zst) zstd -d -c "$temp_archive" | tar -xf - -C "$target_dir" ;;
+    *) tar -xf "$temp_archive" -C "$target_dir" ;;
+  esac
+  rm -f "$temp_archive"
 
-  echo "==> Configuring DNS resolution and environment..."
+  # Basic DNS setup inside guest
   mkdir -p "$target_dir/etc"
-  cat << 'DNS' > "$target_dir/etc/resolv.conf"
-nameserver 8.8.8.8
-nameserver 1.1.1.1
-DNS
+  echo "nameserver 1.1.1.1" > "$target_dir/etc/resolv.conf"
+  echo "nameserver 8.8.8.8" >> "$target_dir/etc/resolv.conf"
 
-  # Bind mount directories
-  mkdir -p "$target_dir/root/ocean-home"
-  mkdir -p "$target_dir/sdcard" 2>/dev/null || true
-
-  echo "==> Installation of $distro complete! Log in using: ocean-distro login $distro"
+  echo "Successfully installed $distro into $target_dir."
+  echo "Run 'ocean-distro login $distro' to start your session."
 }
 
 cmd_login() {
   local distro="${1:-}"
+  shift || true
   [[ -z "$distro" ]] && usage
   require_proot
 
   local target_dir="$DISTRO_BASE_DIR/$distro"
-  if [[ ! -d "$target_dir" ]]; then
-    die "Distribution '$distro' is not installed. Run: ocean-distro install $distro"
-  fi
+  [[ ! -d "$target_dir" ]] && die "Distribution '$distro' is not installed. Run 'ocean-distro install $distro' first."
 
-  local default_shell
-  default_shell="$(get_distro_field "$distro" "shell")"
-  [[ -z "$default_shell" ]] && default_shell="/bin/sh"
+  local shell_path
+  shell_path=$(get_distro_field "$distro" "shell")
+  shell_path="${shell_path:-/bin/sh}"
 
-  shift 1 || true
-  local cmd=()
-  if [[ $# -gt 0 && "$1" == "--" ]]; then
-    shift
-    cmd=("$@")
-  elif [[ $# -gt 0 ]]; then
-    cmd=("$@")
-  else
-    cmd=("$default_shell" "-l")
-  fi
+  local guest_user="root"
+  local guest_home="/root"
 
-  local binds=(
+  # Standard PRoot bind mounts for Android userland
+  local proot_args=(
+    proot
+    --link2symlink
+    -0
+    -r "$target_dir"
     -b /dev
     -b /proc
     -b /sys
-    -b "$OCEAN_HOME:/root/ocean-home"
+    -b "$OCEAN_HOME:/data/data/studio.ocean.app/files/home"
+    -w "$guest_home"
   )
-  [[ -d "/sdcard" ]] && binds+=(-b "/sdcard:/sdcard")
-  [[ -d "/storage" ]] && binds+=(-b "/storage:/storage")
 
-  unset LD_PRELOAD
-  exec proot \
-    -0 \
-    --link2symlink \
-    -r "$target_dir" \
-    "${binds[@]}" \
-    -w /root \
-    /usr/bin/env -i \
-      HOME=/root \
-      TERM="${TERM:-xterm-256color}" \
-      COLORTERM="${COLORTERM:-truecolor}" \
-      LANG="C.UTF-8" \
-      PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-      "${cmd[@]}"
+  # Export guest environment
+  export TERM="${TERM:-xterm-256color}"
+  export HOME="$guest_home"
+  export USER="$guest_user"
+  export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+  if [[ $# -gt 0 ]]; then
+    if [[ "$1" == "--" ]]; then
+      shift
+    fi
+    exec "${proot_args[@]}" "$@"
+  else
+    exec "${proot_args[@]}" "$shell_path"
+  fi
 }
 
 cmd_info() {
   local distro="${1:-}"
   [[ -z "$distro" ]] && usage
-  local target_dir="$DISTRO_BASE_DIR/$distro"
-  python3 -c "
-import json, os, subprocess
-with open('$REGISTRY_FILE') as f:
-    d = json.load(f)
-if '$distro' not in d:
-    print('Distribution not found: $distro')
-    exit(1)
-info = d['$distro']
-installed = os.path.isdir('$target_dir')
-print(f\"Distribution:   $distro\")
-print(f\"Name:           {info.get('name')} {info.get('version')}\")
-print(f\"Priority:       {info.get('priority')}\")
-print(f\"Pkg Manager:    {info.get('pkg_manager')}\")
-print(f\"Description:    {info.get('description')}\")
-print(f\"Default Shell:  {info.get('shell')}\")
-print(f\"Update Command: {info.get('update_cmd')}\")
-print(f\"Status:         {'Installed' if installed else 'Not installed'}\")
-if installed:
-    print(f\"Rootfs Path:    $target_dir\")
-    try:
-        out = subprocess.check_output(['du', '-sh', '$target_dir'], stderr=subprocess.DEVNULL).decode().split()[0]
-        print(f\"Disk Usage:     {out}\")
-    except Exception:
-        pass
-"
-}
 
-cmd_update() {
-  local distro="${1:-}"
-  [[ -z "$distro" ]] && usage
-  local update_cmd
-  update_cmd="$(get_distro_field "$distro" "update_cmd")" || die "Unknown distro: $distro"
-  echo "==> Running update in $distro: $update_cmd"
-  cmd_login "$distro" -- /bin/sh -c "$update_cmd"
+  local name ver prio pkg desc arch url
+  name=$(get_distro_field "$distro" "name")
+  [[ -z "$name" ]] && die "Unknown distribution: '$distro'"
+
+  ver=$(get_distro_field "$distro" "version")
+  prio=$(get_distro_field "$distro" "priority")
+  pkg=$(get_distro_field "$distro" "pkg_manager")
+  desc=$(get_distro_field "$distro" "description")
+  arch=$(get_distro_field "$distro" "arch")
+  url=$(get_distro_field "$distro" "url")
+
+  local installed="No"
+  [[ -d "$DISTRO_BASE_DIR/$distro" ]] && installed="Yes ($DISTRO_BASE_DIR/$distro)"
+
+  cat << INFO
+Distribution:    $distro
+Name:            $name $ver
+Architecture:    $arch
+Package Manager: $pkg
+Tier/Priority:   $prio
+Installed:       $installed
+Description:     $desc
+Source URL:      $url
+INFO
 }
 
 cmd_remove() {
   local distro="${1:-}"
   [[ -z "$distro" ]] && usage
+
   local target_dir="$DISTRO_BASE_DIR/$distro"
-  if [[ ! -d "$target_dir" ]]; then
-    echo "Distribution '$distro' is not installed."
-    return 0
-  fi
-  echo "==> Removing distribution '$distro' at $target_dir..."
+  [[ ! -d "$target_dir" ]] && die "Distribution '$distro' is not installed."
+
+  echo "Removing $distro ($target_dir)..."
+  chmod -R u+rwX "$target_dir" 2>/dev/null || true
   rm -rf "$target_dir"
-  echo "==> Distribution '$distro' removed."
+  echo "Successfully removed $distro."
 }
 
-case "${1:-}" in
-  list) cmd_list ;;
-  install) shift; cmd_install "$@" ;;
-  login) shift; cmd_login "$@" ;;
-  info) shift; cmd_info "$@" ;;
-  update) shift; cmd_update "$@" ;;
-  remove) shift; cmd_remove "$@" ;;
-  *) usage ;;
+cmd_update() {
+  local distro="${1:-}"
+  [[ -z "$distro" ]] && usage
+
+  local target_dir="$DISTRO_BASE_DIR/$distro"
+  [[ ! -d "$target_dir" ]] && die "Distribution '$distro' is not installed."
+
+  local update_cmd
+  update_cmd=$(get_distro_field "$distro" "update_cmd")
+  [[ -z "$update_cmd" ]] && die "No update command defined for $distro."
+
+  echo "Updating $distro with: $update_cmd"
+  cmd_login "$distro" -- /bin/sh -c "$update_cmd"
+}
+
+action="${1:-}"
+case "$action" in
+  list)           cmd_list ;;
+  install)        shift; cmd_install "$@" ;;
+  login)          shift; cmd_login "$@" ;;
+  info)           shift; cmd_info "$@" ;;
+  update)         shift; cmd_update "$@" ;;
+  remove|uninstall) shift; cmd_remove "$@" ;;
+  help|-h|--help) usage ;;
+  *)              usage ;;
 esac
