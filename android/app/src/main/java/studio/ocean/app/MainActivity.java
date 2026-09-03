@@ -20,6 +20,13 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.FrameLayout;
+import android.graphics.Typeface;
+import java.util.List;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,14 +44,20 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout sidebar; private View backdrop; private boolean drawerOpen;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private int loadingGeneration;
+    private OceanByokManager byokManager;
+    private OceanAgentRunner agentRunner;
+    private FrameLayout contentFrame;
+    private ScrollView chatScrollView;
+    private LinearLayout chatMessagesLayout;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         studio.ocean.app.terminal.PreviousProcessExit.capture(this);
-        if(studio.ocean.app.terminal.TerminalDiagnosticBundle.hasStartupCrash(this)) new AlertDialog.Builder(this).setTitle("Ocean Terminal crashed during PTY startup").setMessage("Complete evidence from the previous process was preserved.").setPositiveButton("Open full diagnostic",(d,w)->startActivity(new Intent(this,studio.ocean.app.terminal.OceanTerminalDiagnosticsActivity.class))).setNegativeButton("Later",null).show();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) { @Override public void handleOnBackPressed() { if (drawerOpen) closeDrawer(); else finish(); }});
         showLoading(() -> {
-            if (getSharedPreferences(PREFS,MODE_PRIVATE).contains(TOKEN)) { authState=AuthState.CONFIGURED_LOGGED_IN; showMain(); }
+            byokManager = new OceanByokManager(this);
+        agentRunner = new OceanAgentRunner(this);
+        if (getSharedPreferences(PREFS,MODE_PRIVATE).contains(TOKEN)) { authState=AuthState.CONFIGURED_LOGGED_IN; showMain(); }
             else { authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; showAuth(); }
         });
     }
@@ -103,14 +116,343 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMain() {
         setContentView(R.layout.activity_main); sidebar=findViewById(R.id.sidebar); backdrop=findViewById(R.id.drawer_backdrop);
-        findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer()); backdrop.setOnClickListener(v -> closeDrawer()); findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat()); findViewById(R.id.model_button).setOnClickListener(this::showModels);
+        findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer()); backdrop.setOnClickListener(v -> closeDrawer()); findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat());
+        
+        TextView modelBtn = findViewById(R.id.model_button);
+        if (byokManager != null) modelBtn.setText(byokManager.getModel());
+        modelBtn.setOnClickListener(v -> showByokPage());
+        findViewById(R.id.send_button).setOnClickListener(v -> submitAgentPrompt());
+
         bindGroup(R.id.group_workspace,R.id.workspace_children,R.id.chevron_workspace); bindGroup(R.id.group_agents,R.id.agents_children,R.id.chevron_agents); bindGroup(R.id.group_tools,R.id.tools_children,R.id.chevron_tools); bindGroup(R.id.group_connections,R.id.connections_children,R.id.chevron_connections);
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
         findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
+        
+        // Add BYOK Models link into sidebar Tools children
+        LinearLayout toolsChildren = findViewById(R.id.tools_children);
+        if (toolsChildren != null) {
+            TextView byokNav = new TextView(this);
+            byokNav.setText("BYOK Models & APIs");
+            byokNav.setTextColor(getColor(R.color.ocean_ink));
+            byokNav.setTextSize(14f);
+            byokNav.setPadding((int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density), (int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density));
+            byokNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_spark), null, null, null);
+            byokNav.setCompoundDrawablePadding((int)(12 * getResources().getDisplayMetrics().density));
+            byokNav.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
+            toolsChildren.addView(byokNav, 0);
+        }
+
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
         View skeleton=findViewById(R.id.home_skeleton), content=findViewById(R.id.home_content); content.post(() -> { skeleton.animate().alpha(0f).setDuration(220).withEndAction(() -> skeleton.setVisibility(View.GONE)).start(); content.animate().alpha(1f).translationY(0f).setDuration(260).start(); });
         View recentSkeleton=findViewById(R.id.recent_skeleton), recentEmpty=findViewById(R.id.no_recent_sessions); recentSkeleton.post(() -> { recentSkeleton.animate().alpha(0f).setDuration(180).withEndAction(() -> { recentSkeleton.setVisibility(View.GONE); recentEmpty.setAlpha(0f); recentEmpty.setVisibility(View.VISIBLE); recentEmpty.animate().alpha(1f).setDuration(180).start(); }).start(); });
+
+        initChatContainer();
+    }
+
+    private void initChatContainer() {
+        View homeContent = findViewById(R.id.home_content);
+        if (homeContent != null && homeContent.getParent() instanceof FrameLayout) {
+            contentFrame = (FrameLayout) homeContent.getParent();
+            chatScrollView = new ScrollView(this);
+            chatScrollView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            chatScrollView.setBackgroundColor(0xFFFFFFFF);
+            chatScrollView.setVisibility(View.GONE);
+
+            chatMessagesLayout = new LinearLayout(this);
+            chatMessagesLayout.setOrientation(LinearLayout.VERTICAL);
+            int pad = (int)(16 * getResources().getDisplayMetrics().density);
+            chatMessagesLayout.setPadding(pad, pad, pad, pad);
+            chatScrollView.addView(chatMessagesLayout, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            contentFrame.addView(chatScrollView);
+        }
+    }
+
+    private void showByokPage() {
+        if (contentFrame == null) initChatContainer();
+        findViewById(R.id.home_content).setVisibility(View.GONE);
+        if (chatScrollView != null) chatScrollView.setVisibility(View.GONE);
+
+        View oldByok = contentFrame.findViewWithTag("BYOK_VIEW");
+        if (oldByok != null) contentFrame.removeView(oldByok);
+
+        ((TextView)findViewById(R.id.screen_title)).setText("BYOK Services");
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setTag("BYOK_VIEW");
+        scroll.setBackgroundColor(0xFFFFFFFF);
+        scroll.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int)(24 * getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+
+        TextView title = new TextView(this);
+        title.setText("BYOK Models & Endpoints");
+        title.setTextSize(20f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(0xFF191817);
+        layout.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Configure your API keys for Google Gemini, Anthropic Claude, or OpenAI. The internal Ocean agent will use this model with direct terminal execution authority.");
+        sub.setTextSize(13f);
+        sub.setTextColor(0xFF7B7873);
+        sub.setPadding(0, 8, 0, 24);
+        layout.addView(sub);
+
+        TextView pLabel = new TextView(this);
+        pLabel.setText("SERVICE PROVIDER");
+        pLabel.setTextSize(12f);
+        pLabel.setTypeface(null, Typeface.BOLD);
+        pLabel.setTextColor(0xFF191817);
+        layout.addView(pLabel);
+
+        Spinner providerSpinner = new Spinner(this);
+        String[] providers = {"Google AI (Gemini)", "Anthropic (Claude)", "OpenAI", "Custom Endpoint"};
+        ArrayAdapter<String> pAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, providers);
+        providerSpinner.setAdapter(pAdapter);
+        layout.addView(providerSpinner);
+
+        TextView mLabel = new TextView(this);
+        mLabel.setText("ACTIVE MODEL");
+        mLabel.setTextSize(12f);
+        mLabel.setTypeface(null, Typeface.BOLD);
+        mLabel.setTextColor(0xFF191817);
+        mLabel.setPadding(0, 20, 0, 0);
+        layout.addView(mLabel);
+
+        Spinner modelSpinner = new Spinner(this);
+        layout.addView(modelSpinner);
+
+        providerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String prov = position == 0 ? OceanByokManager.PROVIDER_GOOGLE :
+                             position == 1 ? OceanByokManager.PROVIDER_ANTHROPIC :
+                             position == 2 ? OceanByokManager.PROVIDER_OPENAI : OceanByokManager.PROVIDER_CUSTOM;
+                List<String> models = byokManager.getModelsForProvider(prov);
+                ArrayAdapter<String> mAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, models);
+                modelSpinner.setAdapter(mAdapter);
+                String currentModel = byokManager.getModel();
+                int idx = models.indexOf(currentModel);
+                if (idx >= 0) modelSpinner.setSelection(idx);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        String curProv = byokManager.getProvider();
+        if (OceanByokManager.PROVIDER_ANTHROPIC.equals(curProv)) providerSpinner.setSelection(1);
+        else if (OceanByokManager.PROVIDER_OPENAI.equals(curProv)) providerSpinner.setSelection(2);
+        else if (OceanByokManager.PROVIDER_CUSTOM.equals(curProv)) providerSpinner.setSelection(3);
+        else providerSpinner.setSelection(0);
+
+        TextView kLabel = new TextView(this);
+        kLabel.setText("API KEY");
+        kLabel.setTextSize(12f);
+        kLabel.setTypeface(null, Typeface.BOLD);
+        kLabel.setTextColor(0xFF191817);
+        kLabel.setPadding(0, 20, 0, 4);
+        layout.addView(kLabel);
+
+        EditText keyInput = new EditText(this);
+        keyInput.setHint("AIzaSy... / sk-ant-... / sk-...");
+        keyInput.setText(byokManager.getApiKey());
+        keyInput.setBackgroundResource(R.drawable.composer_background);
+        keyInput.setPadding(20, 20, 20, 20);
+        keyInput.setTextSize(14f);
+        layout.addView(keyInput);
+
+        TextView bLabel = new TextView(this);
+        bLabel.setText("CUSTOM BASE URL (SCHEMA / ENDPOINT)");
+        bLabel.setTextSize(12f);
+        bLabel.setTypeface(null, Typeface.BOLD);
+        bLabel.setTextColor(0xFF191817);
+        bLabel.setPadding(0, 20, 0, 4);
+        layout.addView(bLabel);
+
+        EditText urlInput = new EditText(this);
+        urlInput.setText(byokManager.getBaseUrl());
+        urlInput.setBackgroundResource(R.drawable.composer_background);
+        urlInput.setPadding(20, 20, 20, 20);
+        urlInput.setTextSize(14f);
+        layout.addView(urlInput);
+
+        Button saveBtn = new Button(this);
+        saveBtn.setText("Save & Activate Model");
+        saveBtn.setTextColor(0xFFFFFFFF);
+        saveBtn.setBackgroundColor(0xFF191817);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int)(48 * getResources().getDisplayMetrics().density));
+        btnParams.topMargin = (int)(28 * getResources().getDisplayMetrics().density);
+        layout.addView(saveBtn, btnParams);
+
+        saveBtn.setOnClickListener(v -> {
+            int pPos = providerSpinner.getSelectedItemPosition();
+            String prov = pPos == 0 ? OceanByokManager.PROVIDER_GOOGLE :
+                          pPos == 1 ? OceanByokManager.PROVIDER_ANTHROPIC :
+                          pPos == 2 ? OceanByokManager.PROVIDER_OPENAI : OceanByokManager.PROVIDER_CUSTOM;
+            String mod = modelSpinner.getSelectedItem() != null ? modelSpinner.getSelectedItem().toString() : "gemini-3.7-flash";
+            String key = keyInput.getText().toString().trim();
+            String burl = urlInput.getText().toString().trim();
+
+            byokManager.saveConfig(prov, mod, key, burl);
+            ((TextView)findViewById(R.id.model_button)).setText(mod);
+            Toast.makeText(this, "BYOK Model " + mod + " activated!", Toast.LENGTH_SHORT).show();
+            contentFrame.removeView(scroll);
+            newChat();
+        });
+
+        scroll.addView(layout);
+        contentFrame.addView(scroll);
+    }
+
+    private void submitAgentPrompt() {
+        EditText promptInput = findViewById(R.id.prompt);
+        String prompt = promptInput.getText().toString().trim();
+        if (prompt.isEmpty()) return;
+        promptInput.setText("");
+
+        findViewById(R.id.home_content).setVisibility(View.GONE);
+        View byok = contentFrame != null ? contentFrame.findViewWithTag("BYOK_VIEW") : null;
+        if (byok != null) contentFrame.removeView(byok);
+        if (chatScrollView != null) chatScrollView.setVisibility(View.VISIBLE);
+
+        addUserMessageCard(prompt);
+
+        LinearLayout agentCard = createAgentResponseCard();
+        chatMessagesLayout.addView(agentCard);
+
+        TextView thoughtView = agentCard.findViewWithTag("THOUGHT_VIEW");
+        LinearLayout toolBox = agentCard.findViewWithTag("TOOL_BOX");
+        TextView toolHeader = agentCard.findViewWithTag("TOOL_HEADER");
+        TextView toolLogs = agentCard.findViewWithTag("TOOL_LOGS");
+        TextView responseView = agentCard.findViewWithTag("RESPONSE_VIEW");
+
+        chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+
+        agentRunner.processPrompt(prompt, new OceanAgentRunner.AgentCallback() {
+            @Override public void onThought(String thought) {
+                thoughtView.setVisibility(View.VISIBLE);
+                thoughtView.setText(thought);
+            }
+
+            @Override public void onToolStart(String toolName, String command) {
+                toolBox.setVisibility(View.VISIBLE);
+                toolHeader.setText("▶ " + toolName + " [" + command + "]");
+                toolLogs.setText("");
+                toolLogs.setVisibility(View.GONE);
+                toolHeader.setOnClickListener(v -> {
+                    boolean expand = toolLogs.getVisibility() != View.VISIBLE;
+                    toolLogs.setVisibility(expand ? View.VISIBLE : View.GONE);
+                    toolHeader.setText((expand ? "▼ " : "▶ ") + toolName + " [" + command + "]");
+                });
+            }
+
+            @Override public void onToolOutput(String outputChunk) {
+                toolLogs.append(outputChunk + "\n");
+                chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+            }
+
+            @Override public void onToolComplete(int exitCode) {
+                String cur = toolHeader.getText().toString();
+                if (exitCode == 0) {
+                    toolHeader.setText(cur + " ✔ exit 0");
+                    toolHeader.setTextColor(0xFF059669);
+                } else {
+                    toolHeader.setText(cur + " ✖ exit " + exitCode);
+                    toolHeader.setTextColor(0xFFDC2626);
+                    toolLogs.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override public void onResponse(String response) {
+                responseView.setVisibility(View.VISIBLE);
+                responseView.setText(response);
+                chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+            }
+
+            @Override public void onError(String error) {
+                responseView.setVisibility(View.VISIBLE);
+                responseView.setText("Error: " + error);
+                responseView.setTextColor(0xFFDC2626);
+            }
+        });
+    }
+
+    private void addUserMessageCard(String text) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setGravity(Gravity.END);
+        int pad = (int)(12 * getResources().getDisplayMetrics().density);
+        row.setPadding(0, pad, 0, pad);
+
+        TextView bubble = new TextView(this);
+        bubble.setText(text);
+        bubble.setTextColor(0xFF191817);
+        bubble.setTextSize(15f);
+        bubble.setBackgroundResource(R.drawable.composer_background);
+        bubble.setPadding(pad, pad, pad, pad);
+        row.addView(bubble);
+
+        chatMessagesLayout.addView(row);
+    }
+
+    private LinearLayout createAgentResponseCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundColor(0xFFFFFFFF);
+        int pad = (int)(14 * getResources().getDisplayMetrics().density);
+        card.setPadding(pad, pad, pad, pad);
+
+        TextView head = new TextView(this);
+        head.setText("Ocean Agent");
+        head.setTextSize(13f);
+        head.setTypeface(null, Typeface.BOLD);
+        head.setTextColor(0xFF18A9DF);
+        head.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_spark), null, null, null);
+        head.setCompoundDrawablePadding(12);
+        card.addView(head);
+
+        TextView thought = new TextView(this);
+        thought.setTag("THOUGHT_VIEW");
+        thought.setTextColor(0xFF6B7280);
+        thought.setTextSize(14f);
+        thought.setPadding(0, 10, 0, 10);
+        thought.setVisibility(View.GONE);
+        card.addView(thought);
+
+        LinearLayout toolBox = new LinearLayout(this);
+        toolBox.setTag("TOOL_BOX");
+        toolBox.setOrientation(LinearLayout.VERTICAL);
+        toolBox.setBackgroundResource(R.drawable.composer_background);
+        toolBox.setPadding(pad, pad, pad, pad);
+        toolBox.setVisibility(View.GONE);
+
+        TextView toolHeader = new TextView(this);
+        toolHeader.setTag("TOOL_HEADER");
+        toolHeader.setTextSize(13f);
+        toolHeader.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        toolHeader.setTextColor(0xFF1F2937);
+        toolBox.addView(toolHeader);
+
+        TextView toolLogs = new TextView(this);
+        toolLogs.setTag("TOOL_LOGS");
+        toolLogs.setTextSize(12f);
+        toolLogs.setTypeface(Typeface.MONOSPACE);
+        toolLogs.setTextColor(0xFF4B5563);
+        toolLogs.setPadding(0, 12, 0, 0);
+        toolBox.addView(toolLogs);
+
+        card.addView(toolBox);
+
+        TextView response = new TextView(this);
+        response.setTag("RESPONSE_VIEW");
+        response.setTextColor(0xFF191817);
+        response.setTextSize(15f);
+        response.setPadding(0, 10, 0, 0);
+        response.setVisibility(View.GONE);
+        card.addView(response);
+
+        return card;
     }
 
     private void bindGroup(int parentId,int childId,int chevronId) { findViewById(parentId).setOnClickListener(v -> animateAccordion(findViewById(childId),findViewById(chevronId))); }

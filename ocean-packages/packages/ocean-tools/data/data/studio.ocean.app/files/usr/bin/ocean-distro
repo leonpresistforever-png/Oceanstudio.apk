@@ -92,6 +92,8 @@ cmd_install() {
   url=$(get_distro_field "$distro" "url")
   sha=$(get_distro_field "$distro" "sha256")
   shell_path=$(get_distro_field "$distro" "shell")
+  local fallback_url
+  fallback_url=$(get_distro_field "$distro" "fallback_url")
 
   [[ -z "$url" ]] && die "Unknown distribution: '$distro'. Run 'ocean-distro list' to see available distros."
 
@@ -113,7 +115,7 @@ cmd_install() {
     die "Neither curl nor wget available. Please install curl: pkg install curl"
   fi
 
-  if [[ -n "$sha" ]]; then
+  if [[ -n "$sha" && "$sha" != "skip" ]]; then
     echo "Verifying checksum..."
     local actual_sha
     actual_sha=$(sha256sum "$temp_archive" | awk '{print $1}')
@@ -154,6 +156,8 @@ cmd_login() {
 
   local shell_path
   shell_path=$(get_distro_field "$distro" "shell")
+  local fallback_url
+  fallback_url=$(get_distro_field "$distro" "fallback_url")
   shell_path="${shell_path:-/bin/sh}"
 
   local guest_user="root"

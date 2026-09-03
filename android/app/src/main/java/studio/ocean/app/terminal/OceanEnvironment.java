@@ -27,6 +27,10 @@ public final class OceanEnvironment {
         values.add("SHELL=" + shell); values.add("LANG=C.UTF-8");
         if (!isRecovery && !"/system/bin/sh".equals(shell)) {
             values.add("LD_LIBRARY_PATH=" + paths.prefix() + "/lib");
+            java.io.File execHook = new java.io.File(paths.prefix(), "lib/libocean-exec.so");
+            if (execHook.exists()) {
+                values.add("LD_PRELOAD=" + execHook.getAbsolutePath());
+            }
         }
         String androidRoot = System.getenv("ANDROID_ROOT");
         values.add("ANDROID_ROOT=" + (androidRoot != null && !androidRoot.isEmpty() ? androidRoot : "/system"));
