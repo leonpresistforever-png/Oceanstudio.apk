@@ -40,6 +40,7 @@ public final class OceanTerminalRuntimeService extends Service {
     private final Handler main = new Handler(Looper.getMainLooper());
     private RuntimeState runtimeState = RuntimeState.UNINITIALIZED;
     private boolean installScheduled;
+    private OceanIpcServer ipcServer;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -47,6 +48,12 @@ public final class OceanTerminalRuntimeService extends Service {
         TerminalDiagnosticBundle.log("startup.log", "[J03] RuntimeService.onCreate");
         TerminalDiagnosticBundle.state("NEW", "CHECKING", "service created");
         TerminalStartupLog.stage("02", "OceanTerminalRuntimeService.onCreate");
+        try {
+            ipcServer = new OceanIpcServer(this);
+            ipcServer.start();
+        } catch (Throwable t) {
+            TerminalDiagnosticBundle.log("startup.log", "[IPC] Failed to start IPC server: " + t.getMessage());
+        }
     }
     @Override public IBinder onBind(Intent intent) {
         TerminalStartupLog.stage("03", "runtime service bound");
@@ -168,6 +175,10 @@ public final class OceanTerminalRuntimeService extends Service {
         if (empty) stopSelf();
     }
     @Override public void onDestroy() {
+        if (ipcServer != null) {
+            try { ipcServer.stop(); } catch (Throwable ignored) {}
+            ipcServer = null;
+        }
         TerminalSession[] active;
         synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); }
         for (TerminalSession session : active) session.close();
