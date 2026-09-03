@@ -226,6 +226,17 @@ public final class OceanBootstrapInstaller {
                 cleanupWarning(child);
             }
         }
+        File cacheDir = context.getCacheDir();
+        if (cacheDir != null) {
+            File[] cacheFiles = cacheDir.listFiles();
+            if (cacheFiles != null) {
+                for (File f : cacheFiles) {
+                    if (f.getName().startsWith("ocean-aarch64-") && f.getName().endsWith(".tar.zst")) {
+                        try { f.delete(); } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        }
     }
 
     private void cleanupWarning(File file) {
@@ -402,6 +413,7 @@ public final class OceanBootstrapInstaller {
             }
         }
         String relative = entry.getParent().relativize(resolved).toString();
+        if (relative.isEmpty()) relative = ".";
         TerminalStartupLog.stage("07L", "archive symlink entry=" + entry + " target=" + original
                 + " normalized=" + resolved + " installedTarget=" + relative
                 + " absolute=" + absolute + " containsParent=" + containsParent

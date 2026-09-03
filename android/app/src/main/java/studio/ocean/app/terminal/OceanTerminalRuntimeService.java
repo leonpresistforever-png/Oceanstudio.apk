@@ -73,7 +73,8 @@ public final class OceanTerminalRuntimeService extends Service {
             installScheduled = true;
             runtimeState = RuntimeState.CHECKING;
         }
-        startService(new Intent(this, OceanTerminalRuntimeService.class));
+        try { startService(new Intent(this, OceanTerminalRuntimeService.class)); }
+        catch (Throwable ignored) {}
         bootstrapWorker.execute(() -> {
             try { completeRequest(rows, columns, callback); }
             finally {
@@ -147,7 +148,7 @@ public final class OceanTerminalRuntimeService extends Service {
     }
     private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery) throws IOException {
         TerminalDiagnosticBundle.state("VALIDATING", "STARTING", "shell=" + shell + " recovery=" + recovery);
-        long handle = NativePty.create(shell, argv, OceanEnvironment.create(this, shell), cwd.getAbsolutePath(), rows, columns, TerminalDiagnosticBundle.nativeLog(this).getAbsolutePath());
+        long handle = NativePty.create(shell, argv, OceanEnvironment.create(this, shell, recovery), cwd.getAbsolutePath(), rows, columns, TerminalDiagnosticBundle.nativeLog(this).getAbsolutePath());
         if (handle == 0) {
             String detail = NativePty.lastError();
             int err = NativePty.lastErrno();

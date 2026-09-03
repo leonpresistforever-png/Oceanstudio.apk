@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import jackpal.androidterm.emulatorview.ColorScheme;
 import jackpal.androidterm.emulatorview.EmulatorView;
 import java.nio.charset.StandardCharsets;
-import studio.ocean.app.R;
 
 /** Native Ocean Terminal UI connected to a service-owned real PTY. */
 public final class OceanTerminalActivity extends AppCompatActivity implements TerminalSession.Listener {
@@ -31,7 +30,27 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         public void onServiceDisconnected(ComponentName n){bound=false;service=null;session=null;TerminalStartupLog.stage("17","runtime service disconnected");}
     };
     private TextView outputView; private android.widget.EditText inputView;
-    private void safeClick(int id, View.OnClickListener l){ View v = findViewById(id); if (v != null) v.setOnClickListener(l); }
+    private int resId(String name) {
+        try { return getResources().getIdentifier(name, "id", getPackageName()); }
+        catch (Throwable ignored) { return 0; }
+    }
+    @SuppressWarnings("unchecked")
+    private <T extends View> T findSafeView(String name) {
+        int id = resId(name);
+        return id != 0 ? (T) findViewById(id) : null;
+    }
+    private void safeClick(String name, View.OnClickListener l) {
+        View v = findSafeView(name);
+        if (v != null) v.setOnClickListener(l);
+    }
+    private String safeString(String name, String fallback, Object... args) {
+        try {
+            int id = getResources().getIdentifier(name, "string", getPackageName());
+            if (id != 0) return args.length > 0 ? getString(id, args) : getString(id);
+        } catch (Throwable ignored) {}
+        return fallback;
+    }
+
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
         try {
@@ -42,30 +61,33 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
             TerminalDiagnosticBundle.log("session-state.log","activeDiagnosticTest="+attemptName);
             TerminalStartupLog.initialize(this);
             previousCrashHandler=TerminalStartupLog.installCrashCapture();
-            setContentView(R.layout.activity_terminal);
-            status=findViewById(R.id.terminal_status);
-            terminalView=findViewById(R.id.terminal_emulator);
-            failureActions=findViewById(R.id.terminal_failure_actions);
-            outputView=findViewById(R.id.terminal_output);
-            inputView=findViewById(R.id.terminal_input);
 
-            safeClick(R.id.terminal_back, v->finish());
-            safeClick(R.id.terminal_ctrl, v->{ if(terminalView!=null) terminalView.sendControlKey(); });
-            safeClick(R.id.terminal_alt, v->{ if(terminalView!=null) terminalView.sendAltKey(); });
-            safeClick(R.id.terminal_ctrl_c, v->{ if(session!=null) write("\u0003"); });
-            safeClick(R.id.terminal_tab, v->write("\t"));
-            safeClick(R.id.terminal_escape, v->write("\u001b"));
-            safeClick(R.id.terminal_left, v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_LEFT));
-            safeClick(R.id.terminal_down, v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_DOWN));
-            safeClick(R.id.terminal_up, v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_UP));
-            safeClick(R.id.terminal_right, v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_RIGHT));
-            safeClick(R.id.terminal_home, v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_HOME));
-            safeClick(R.id.terminal_end, v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_END));
-            safeClick(R.id.terminal_page_up, v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_UP));
-            safeClick(R.id.terminal_page_down, v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_DOWN));
-            safeClick(R.id.terminal_retry, v->startOceanSession());
-            safeClick(R.id.terminal_details, v->showDiagnosticLog());
-            safeClick(R.id.terminal_recovery, v->startRecoverySession());
+            int layoutId = getResources().getIdentifier("activity_terminal", "layout", getPackageName());
+            if (layoutId != 0) setContentView(layoutId);
+
+            status = findSafeView("terminal_status");
+            terminalView = findSafeView("terminal_emulator");
+            failureActions = findSafeView("terminal_failure_actions");
+            outputView = findSafeView("terminal_output");
+            inputView = findSafeView("terminal_input");
+
+            safeClick("terminal_back", v->finish());
+            safeClick("terminal_ctrl", v->{ if(terminalView!=null) terminalView.sendControlKey(); });
+            safeClick("terminal_alt", v->{ if(terminalView!=null) terminalView.sendAltKey(); });
+            safeClick("terminal_ctrl_c", v->{ if(session!=null) write("\u0003"); });
+            safeClick("terminal_tab", v->write("\t"));
+            safeClick("terminal_escape", v->write("\u001b"));
+            safeClick("terminal_left", v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_LEFT));
+            safeClick("terminal_down", v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_DOWN));
+            safeClick("terminal_up", v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_UP));
+            safeClick("terminal_right", v->sendTerminalKey(KeyEvent.KEYCODE_DPAD_RIGHT));
+            safeClick("terminal_home", v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_HOME));
+            safeClick("terminal_end", v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_END));
+            safeClick("terminal_page_up", v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_UP));
+            safeClick("terminal_page_down", v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_DOWN));
+            safeClick("terminal_retry", v->startOceanSession());
+            safeClick("terminal_details", v->showDiagnosticLog());
+            safeClick("terminal_recovery", v->startRecoverySession());
 
             if (inputView != null) {
                 inputView.setOnEditorActionListener((v, actionId, event) -> {
@@ -116,7 +138,7 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         }
     }
     private void startOceanSession(){
-        if(service==null)return;if(failureActions!=null)failureActions.setVisibility(View.GONE);if(status!=null){status.setText(R.string.terminal_connecting);status.setVisibility(View.VISIBLE);}TerminalDiagnosticBundle.log("startup.log","[J07] createSession requested");
+        if(service==null)return;if(failureActions!=null)failureActions.setVisibility(View.GONE);if(status!=null){status.setText(safeString("terminal_connecting", "Connecting to Ocean Terminal..."));status.setVisibility(View.VISIBLE);}TerminalDiagnosticBundle.log("startup.log","[J07] createSession requested");
         TerminalSession candidate=service.firstRunning();if(candidate!=null){attach(candidate,true);return;}
         service.requestTerminalSession(24,80,new OceanTerminalRuntimeService.SessionCallback(){
             @Override public void onProgress(OceanTerminalRuntimeService.RuntimeState state,String detail,long completed,long total){if(isFinishing()||isDestroyed())return;String progress=total>0?"\n"+completed+" / "+total:"";if(status!=null){status.setText(detail+progress);status.setVisibility(View.VISIBLE);}}
@@ -175,9 +197,51 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         }
         return sb.toString();
     }
-    private void write(String value){if(session==null)return;if(session.state()==TerminalSession.State.RUNNING&&"exit".equals(value.replace("\r","").trim()))TerminalDiagnosticBundle.markCritical(this,"EXIT_COMMAND_SENT");TerminalSession.WriteResult result=session.write(value);if(result==TerminalSession.WriteResult.NATIVE_WRITE_FAILED)status.setText(R.string.terminal_write_failed);else if(result==TerminalSession.WriteResult.SESSION_ALREADY_EXITED)TerminalDiagnosticBundle.log("session-state.log","late UI write safely rejected state="+session.state());}
-    @Override public void onOutput(byte[] bytes,int length){byte[] copy=java.util.Arrays.copyOf(bytes,length);String value=new String(copy,StandardCharsets.UTF_8);if("C".equals(diagnosticMode)&&!scriptedExitSent){synchronized(diagnosticOutput){diagnosticOutput.append(value);if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);String normalized=diagnosticOutput.toString().replace("\r\n","\n");if(normalized.contains("\nOCEAN_PTY_OK\n")){scriptedExitSent=true;TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");terminalView.post(()->write("exit\r"));}}}runOnUiThread(()->{if(isFinishing()||isDestroyed()||emulatorSession==null)return;emulatorSession.feed(copy,copy.length);});}
-    @Override public void onExit(int code){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed()){status.setText(getString(R.string.terminal_exited,code));status.setVisibility(View.VISIBLE);}});}
+    private void write(String value){
+        if(session==null)return;
+        if(session.state()==TerminalSession.State.RUNNING&&"exit".equals(value.replace("\r","").trim()))TerminalDiagnosticBundle.markCritical(this,"EXIT_COMMAND_SENT");
+        TerminalSession.WriteResult result=session.write(value);
+        if(result==TerminalSession.WriteResult.NATIVE_WRITE_FAILED && status != null) {
+            status.setText(safeString("terminal_write_failed","Terminal write failed"));
+            status.setVisibility(View.VISIBLE);
+        } else if(result==TerminalSession.WriteResult.SESSION_ALREADY_EXITED) {
+            TerminalDiagnosticBundle.log("session-state.log","late UI write safely rejected state="+session.state());
+        }
+    }
+    @Override public void onOutput(byte[] bytes,int length){
+        byte[] copy=java.util.Arrays.copyOf(bytes,length);
+        String value=new String(copy,StandardCharsets.UTF_8);
+        if("C".equals(diagnosticMode)&&!scriptedExitSent){
+            synchronized(diagnosticOutput){
+                diagnosticOutput.append(value);
+                if(diagnosticOutput.length()>4096)diagnosticOutput.delete(0,diagnosticOutput.length()-4096);
+                String normalized=diagnosticOutput.toString().replace("\r\n","\n");
+                if(normalized.contains("\nOCEAN_PTY_OK\n")){
+                    scriptedExitSent=true;
+                    TerminalDiagnosticBundle.log("test-c-ocean-pty-ok.log","OCEAN_PTY_OK result line observed; sending exit exactly once; no later writes scheduled");
+                    if(terminalView!=null) terminalView.post(()->write("exit\r"));
+                    else write("exit\r");
+                }
+            }
+        }
+        runOnUiThread(()->{
+            if(isFinishing()||isDestroyed()) return;
+            if(emulatorSession!=null) emulatorSession.feed(copy,copy.length);
+            if(outputView!=null) {
+                outputView.append(value);
+                View p = (View) outputView.getParent();
+                if(p instanceof android.widget.ScrollView) ((android.widget.ScrollView) p).fullScroll(View.FOCUS_DOWN);
+            }
+        });
+    }
+    @Override public void onExit(int code){
+        runOnUiThread(()->{
+            if(!isFinishing()&&!isDestroyed()&&status!=null){
+                status.setText(safeString("terminal_exited","Process exited (" + code + ")", code));
+                status.setVisibility(View.VISIBLE);
+            }
+        });
+    }
     @Override protected void onResume(){super.onResume();if(terminalView!=null&&emulatorSession!=null)terminalView.onResume();}
     @Override protected void onPause(){if(terminalView!=null&&emulatorSession!=null)terminalView.onPause();super.onPause();}
     @Override protected void onDestroy(){if(session!=null)session.removeListener(this);if(emulatorSession!=null)emulatorSession.finish();if(bound)unbindService(connection);TerminalStartupLog.restoreCrashCapture(previousCrashHandler);super.onDestroy();}

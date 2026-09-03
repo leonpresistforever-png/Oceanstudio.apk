@@ -11,13 +11,15 @@ import studio.ocean.app.OceanPaths;
 public final class OceanRuntimeState {
     private OceanRuntimeState() {}
     public static boolean isInstalled(Context context) {
-        OceanPaths paths=new OceanPaths(context);
+        if (context == null) return false;
         try {
-            JSONObject marker=new JSONObject(new String(Files.readAllBytes(paths.runtimeMarker().toPath()),StandardCharsets.UTF_8));
-            return marker.optBoolean("verified",false) && "arm64-v8a".equals(marker.optString("abi"))
+            OceanPaths paths = new OceanPaths(context);
+            if (!paths.home().isDirectory()) return false;
+            JSONObject marker = new JSONObject(new String(Files.readAllBytes(paths.runtimeMarker().toPath()), StandardCharsets.UTF_8));
+            return marker.optBoolean("verified", false) && "arm64-v8a".equals(marker.optString("abi"))
                 && isPrefixMatching(paths.prefix(), marker.getString("prefix"))
-                && executable(paths,"bash") && executable(paths,"apt") && executable(paths,"dpkg") && executable(paths,"pkg");
-        } catch(Exception invalid){return false;}
+                && executable(paths, "bash") && executable(paths, "apt") && executable(paths, "dpkg") && executable(paths, "pkg");
+        } catch(Exception invalid) { return false; }
     }
     private static boolean isPrefixMatching(File prefix, String markerPrefix) {
         try {
