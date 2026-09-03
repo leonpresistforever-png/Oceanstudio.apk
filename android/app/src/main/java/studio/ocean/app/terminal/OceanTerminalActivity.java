@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.view.View;
 import android.view.KeyEvent;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import jackpal.androidterm.emulatorview.ColorScheme;
 import jackpal.androidterm.emulatorview.EmulatorView;
@@ -84,6 +85,21 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
                     status.setVisibility(View.VISIBLE);
                     status.setOnClickListener(v -> showDiagnosticLog());
                 }
+                try {
+                    java.io.File target = crashLog.isFile() && crashLog.length() > 0 ? crashLog : javaCrash;
+                    String crashPreview = new String(java.nio.file.Files.readAllBytes(target.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("⚠️ Previous Crash Report")
+                        .setMessage(crashPreview.length() > 600 ? crashPreview.substring(0, 600) + "\n\n[Full log available in Diagnostics]" : crashPreview)
+                        .setPositiveButton("View Full Diagnostic Logs", (d, w) -> showDiagnosticLog())
+                        .setNegativeButton("Copy Crash Log", (d, w) -> {
+                            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Ocean Crash Log", crashPreview));
+                            Toast.makeText(this, "Crash log copied to clipboard!", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNeutralButton("Dismiss", null)
+                        .show();
+                } catch (Throwable ignored) {}
             } else if (status != null) {
                 status.setOnClickListener(v -> showDiagnosticLog());
             }
@@ -124,7 +140,29 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
         }
         session.addListener(this);if(status!=null)status.setVisibility(View.GONE);
     }
-    private void showFailure(String message,Throwable error){TerminalStartupLog.failure(message,error);if(status!=null){status.setText(message+"\n(Tap here to view full diagnostic logs)");status.setVisibility(View.VISIBLE);status.setOnClickListener(v->showDiagnosticLog());}if(failureActions!=null)failureActions.setVisibility(View.VISIBLE);}
+    private void showFailure(String message,Throwable error){
+        TerminalStartupLog.failure(message,error);
+        if(status!=null){
+            status.setText(message+"\n(Tap here to view full diagnostic logs)");
+            status.setVisibility(View.VISIBLE);
+            status.setOnClickListener(v->showDiagnosticLog());
+        }
+        if(failureActions!=null) failureActions.setVisibility(View.VISIBLE);
+        try {
+            String fullErr = message + (error != null ? "\n\nDetails:\n" + safeMessage(error) : "");
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("⚠️ Ocean Terminal Error")
+                .setMessage(fullErr)
+                .setPositiveButton("View Diagnostic Logs", (d, w) -> showDiagnosticLog())
+                .setNegativeButton("Copy Error", (d, w) -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if(cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Terminal Error", fullErr));
+                    Toast.makeText(this, "Error copied to clipboard", Toast.LENGTH_SHORT).show();
+                })
+                .setNeutralButton("Dismiss", null)
+                .show();
+        } catch(Throwable ignored) {}
+    }
     private void showDiagnosticLog(){startActivity(new Intent(this,OceanTerminalDiagnosticsActivity.class));}
     private void sendTerminalKey(int keyCode){if(terminalView==null)return;long now=android.os.SystemClock.uptimeMillis();terminalView.onKeyDown(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_DOWN,keyCode,0));terminalView.onKeyUp(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_UP,keyCode,0));}
     private static String safeMessage(Throwable error){
