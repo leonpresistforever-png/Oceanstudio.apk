@@ -151,7 +151,7 @@
     "pkg_manager": "emerge, Portage",
     "arch": "arm64",
     "url": "https://distfiles.gentoo.org/releases/arm64/autobuilds/20260830T234553Z/stage3-arm64-openrc-20260830T234553Z.tar.xz",
-    "fallback_url": "https://distfiles.gentoo.org/releases/arm64/autobuilds/current-stage3-arm64-openrc/latest-stage3-arm64-openrc.txt",
+    "fallback_url": "https://gentoo.osuosl.org/releases/arm64/autobuilds/20260830T234553Z/stage3-arm64-openrc-20260830T234553Z.tar.xz",
     "sha256": "cac51286eb9935b538df3bc91a65ed821a1c4bb84a8274e7a06635e6a01c9349",
     "shell": "/bin/bash",
     "update_cmd": "emerge --sync && emerge -uDN @world",

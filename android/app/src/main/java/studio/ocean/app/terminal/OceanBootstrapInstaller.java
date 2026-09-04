@@ -104,6 +104,14 @@ public final class OceanBootstrapInstaller {
             extract(archive, staging, progress, manifest.optLong("entryCount", 0));
             TerminalStartupLog.stage("08", "bootstrap extraction complete");
             File candidate = new File(staging, "usr");
+            if (!candidate.exists()) {
+                File nested = new File(staging, "data/data/" + context.getPackageName() + "/files/usr");
+                if (nested.exists()) candidate = nested;
+                else {
+                    File nestedStudio = new File(staging, "data/data/studio.ocean.app/files/usr");
+                    if (nestedStudio.exists()) candidate = nestedStudio;
+                }
+            }
             TerminalStartupLog.stage("09", "staged runtime validation begin");
             progress.onProgress(Stage.VERIFYING_STAGING, "Verifying extracted runtime", 0, 0);
             validate(candidate);
@@ -378,6 +386,17 @@ public final class OceanBootstrapInstaller {
     private static Path normalizeArchivePath(String value, String kind) throws IOException {
         if (value == null || value.isEmpty() || value.indexOf('\0') >= 0) {
             throw new IOException("Unsafe archive " + kind + " path=" + value + " reason=empty-or-NUL");
+        }
+        while (value.startsWith("/")) {
+            value = value.substring(1);
+        }
+        if (value.startsWith("data/data/studio.ocean.app/files/")) {
+            value = value.substring("data/data/studio.ocean.app/files/".length());
+        } else if (value.startsWith("data/data/") && value.contains("/files/")) {
+            value = value.substring(value.indexOf("/files/") + "/files/".length());
+        }
+        if (value.isEmpty() || value.equals("data") || value.equals("data/data") || value.equals("data/data/studio.ocean.app")) {
+            return Paths.get("usr");
         }
         Path raw = Paths.get(value);
         Path normalized = raw.normalize();

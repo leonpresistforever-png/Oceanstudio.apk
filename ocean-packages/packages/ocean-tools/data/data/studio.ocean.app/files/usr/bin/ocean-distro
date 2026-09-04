@@ -107,12 +107,27 @@ cmd_install() {
   temp_archive="$(mktemp "$DISTRO_BASE_DIR/${distro}-rootfs.XXXXXX")"
 
   echo "Downloading $distro rootfs..."
-  if command -v curl >/dev/null 2>&1; then
-    curl -L --fail --progress-bar -o "$temp_archive" "$url"
-  elif command -v wget >/dev/null 2>&1; then
-    wget -O "$temp_archive" "$url"
-  else
-    die "Neither curl nor wget available. Please install curl: pkg install curl"
+  local dl_success=false
+  for try_url in "$url" "$fallback_url"; do
+    [[ -z "$try_url" ]] && continue
+    echo "Attempting download from $try_url..."
+    if command -v curl >/dev/null 2>&1; then
+      if curl -L --fail --progress-bar -o "$temp_archive" "$try_url"; then
+        dl_success=true
+        url="$try_url"
+        break
+      fi
+    elif command -v wget >/dev/null 2>&1; then
+      if wget -O "$temp_archive" "$try_url"; then
+        dl_success=true
+        url="$try_url"
+        break
+      fi
+    fi
+  done
+  if [[ "$dl_success" != true ]]; then
+    rm -f "$temp_archive"
+    die "Failed to download $distro rootfs from available mirrors."
   fi
 
   if [[ -n "$sha" && "$sha" != "skip" ]]; then
