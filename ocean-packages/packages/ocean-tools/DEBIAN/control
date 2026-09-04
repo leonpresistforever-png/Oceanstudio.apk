@@ -1,7 +1,7 @@
 Package: ocean-tools
 Version: 1.0.0
 Architecture: all
-Maintainer: OceanStudio
+Maintainer: OceanStudio <maintainer@ocean.studio>
 Depends: bash, apt, dpkg, coreutils, findutils, grep, sed, gawk, tar, gzip, zstd, less, which, patch, wget, openssl
 Section: utils
 Priority: optional

@@ -348,13 +348,16 @@ public class MainActivity extends AppCompatActivity {
 
             @Override public void onToolStart(String toolName, String command) {
                 toolBox.setVisibility(View.VISIBLE);
-                toolHeader.setText("▶ " + toolName + " [" + command + "]");
+                String displayCmd = command;
+                if (displayCmd.contains("/bin/")) displayCmd = displayCmd.substring(displayCmd.lastIndexOf("/bin/") + 5);
+                final String showCmd = displayCmd;
+                toolHeader.setText("▶ " + toolName + " [" + showCmd + "]");
                 toolLogs.setText("");
                 toolLogs.setVisibility(View.GONE);
                 toolHeader.setOnClickListener(v -> {
                     boolean expand = toolLogs.getVisibility() != View.VISIBLE;
                     toolLogs.setVisibility(expand ? View.VISIBLE : View.GONE);
-                    toolHeader.setText((expand ? "▼ " : "▶ ") + toolName + " [" + command + "]");
+                    toolHeader.setText((expand ? "▼ " : "▶ ") + toolName + " [" + showCmd + "]");
                 });
             }
 

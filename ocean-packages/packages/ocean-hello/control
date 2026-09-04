@@ -1,7 +1,7 @@
 Package: ocean-hello
 Version: 1.0.0
 Architecture: aarch64
-Maintainer: OceanStudio
+Maintainer: OceanStudio <maintainer@ocean.studio>
 Depends: bash
 Section: utils
 Priority: optional

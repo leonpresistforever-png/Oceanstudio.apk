@@ -1,7 +1,7 @@
 Package: ocean-distro
 Version: 1.0.0
 Architecture: all
-Maintainer: OceanStudio
+Maintainer: OceanStudio <maintainer@ocean.studio>
 Depends: proot, tar, zstd, xz-utils, gzip, bzip2, curl, ca-certificates
 Section: admin
 Priority: optional
