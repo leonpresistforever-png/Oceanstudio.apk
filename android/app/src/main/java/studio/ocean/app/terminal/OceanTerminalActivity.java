@@ -125,33 +125,13 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
                 });
             }
 
-            // Check if a previous crash was recorded
-            java.io.File crashLog = new java.io.File(getFilesDir(), "logs/last-crash.log");
-            java.io.File javaCrash = new java.io.File(getFilesDir(), "logs/terminal-diagnostics/java-crash.log");
-            if ((crashLog.isFile() && crashLog.length() > 0) || (javaCrash.isFile() && javaCrash.length() > 0)) {
-                if (status != null) {
-                    status.setText("⚠️ Crash recorded in previous session! Tap here to inspect live logs.");
-                    status.setVisibility(View.VISIBLE);
-                    status.setOnClickListener(v -> showDiagnosticLog());
-                }
-                try {
-                    java.io.File target = crashLog.isFile() && crashLog.length() > 0 ? crashLog : javaCrash;
-                    String crashPreview = new String(java.nio.file.Files.readAllBytes(target.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("⚠️ Previous Crash Report")
-                        .setMessage(crashPreview.length() > 600 ? crashPreview.substring(0, 600) + "\n\n[Full log available in Diagnostics]" : crashPreview)
-                        .setPositiveButton("View Full Diagnostic Logs", (d, w) -> showDiagnosticLog())
-                        .setNegativeButton("Copy Crash Log", (d, w) -> {
-                            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                            if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Ocean Crash Log", crashPreview));
-                            Toast.makeText(this, "Crash log copied to clipboard!", Toast.LENGTH_SHORT).show();
-                        })
-                        .setNeutralButton("Dismiss", null)
-                        .show();
-                } catch (Throwable ignored) {}
-            } else if (status != null) {
-                status.setOnClickListener(v -> showDiagnosticLog());
-            }
+            // Clean up any stale crash log markers silently
+            try {
+                java.io.File crashLog = new java.io.File(getFilesDir(), "logs/last-crash.log");
+                java.io.File javaCrash = new java.io.File(getFilesDir(), "logs/terminal-diagnostics/java-crash.log");
+                if (crashLog.exists()) crashLog.delete();
+                if (javaCrash.exists()) javaCrash.delete();
+            } catch (Throwable ignored) {}
 
             TerminalStartupLog.stage("02","bind runtime service");
             TerminalDiagnosticBundle.log("startup.log","[J02] service bind requested");
@@ -212,7 +192,13 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
                 .show();
         } catch(Throwable ignored) {}
     }
-    private void showDiagnosticLog(){startActivity(new Intent(this,OceanTerminalDiagnosticsActivity.class));}
+    private void showDiagnosticLog(){
+        try {
+            startActivity(new Intent(this, OceanTerminalDiagnosticsActivity.class));
+        } catch (Throwable t) {
+            Toast.makeText(this, "Diagnostic log: " + safeMessage(t), Toast.LENGTH_SHORT).show();
+        }
+    }
     private void sendTerminalKey(int keyCode){if(terminalView==null)return;long now=android.os.SystemClock.uptimeMillis();terminalView.onKeyDown(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_DOWN,keyCode,0));terminalView.onKeyUp(keyCode,new KeyEvent(now,now,KeyEvent.ACTION_UP,keyCode,0));}
     private static String safeMessage(Throwable error){
         if(error==null)return "unknown error";

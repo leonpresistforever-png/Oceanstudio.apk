@@ -141,6 +141,17 @@ public class MainActivity extends AppCompatActivity {
             toolsChildren.addView(byokNav, 0);
         }
 
+        // Also bind Models and Providers under Connections to showByokPage
+        LinearLayout connectionsChildren = findViewById(R.id.connections_children);
+        if (connectionsChildren != null) {
+            for (int i = 0; i < connectionsChildren.getChildCount(); i++) {
+                View child = connectionsChildren.getChildAt(i);
+                if (child instanceof TextView) {
+                    child.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
+                }
+            }
+        }
+
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
         View skeleton=findViewById(R.id.home_skeleton), content=findViewById(R.id.home_content); content.post(() -> { skeleton.animate().alpha(0f).setDuration(220).withEndAction(() -> skeleton.setVisibility(View.GONE)).start(); content.animate().alpha(1f).translationY(0f).setDuration(260).start(); });

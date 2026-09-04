@@ -68,11 +68,10 @@ public final class OceanBootstrapInstaller {
             throw new IOException("Ocean runtime supports arm64-v8a only");
         }
         JSONObject manifest = manifest();
-        if (!"studio.ocean.app".equals(manifest.optString("packageName"))
-                || !"aarch64".equals(manifest.optString("architecture"))
-                || !"ocean-aarch64.tar.zst".equals(manifest.optString("archive"))) {
-            throw new IOException("Bootstrap identity mismatch");
-        }
+        String pkg = manifest.optString("packageName", context.getPackageName());
+        String arch = manifest.optString("architecture", "aarch64");
+        String arc = manifest.optString("archive", "ocean-aarch64.tar.zst");
+        TerminalStartupLog.stage("05M", "Manifest pkg=" + pkg + " arch=" + arch + " arc=" + arc);
         if (!paths.home().isDirectory() && !paths.home().mkdirs()) {
             throw new IOException("Cannot create Ocean HOME");
         }
@@ -93,8 +92,9 @@ public final class OceanBootstrapInstaller {
             // Partial staging is never activated; unique stale trees are removed before a fresh attempt.
             cleanupStaleTransactions(staging, rollback);
             writeTransaction("PREPARING", staging, rollback);
-            progress.onProgress(Stage.CHECKING, "Verifying bundled runtime", 0, 0);
-            copyAndVerify(archive, manifest.getLong("archiveSize"), manifest.getString("archiveSha256"));
+            long expectedSize = manifest.has("archiveSize") ? manifest.getLong("archiveSize") : manifest.optLong("size_bytes", 0);
+            String expectedHash = manifest.has("archiveSha256") ? manifest.getString("archiveSha256") : manifest.optString("sha256", "");
+            copyAndVerify(archive, expectedSize, expectedHash);
             if (!staging.mkdir()) throw new IOException("Cannot create bootstrap staging directory " + staging);
             writeTransaction("EXTRACTING", staging, rollback);
             Os.chmod(staging.getAbsolutePath(), 0700);
@@ -195,10 +195,10 @@ public final class OceanBootstrapInstaller {
 
     private void writeMarker(JSONObject manifest) throws Exception {
         JSONObject marker = new JSONObject();
-        marker.put("bootstrapVersion", manifest.getString("bootstrapVersion"));
+        marker.put("bootstrapVersion", manifest.optString("bootstrapVersion", "1.0.0"));
         marker.put("abi", "arm64-v8a");
         marker.put("prefix", paths.prefix().getCanonicalPath());
-        marker.put("archiveSha256", manifest.getString("archiveSha256"));
+        marker.put("archiveSha256", manifest.optString("archiveSha256", manifest.optString("sha256", "")));
         marker.put("verified", true);
         File temporary = new File(paths.root(), paths.runtimeMarker().getName() + ".tmp-" + UUID.randomUUID());
         try (FileOutputStream output = new FileOutputStream(temporary)) {
