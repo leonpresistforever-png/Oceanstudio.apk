@@ -441,21 +441,6 @@ JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_waitExit(JNIEnv 
     return code;
 }
 
-JNIEXPORT jint JNICALL Java_studio_ocean_app_terminal_NativePty_pollExit(JNIEnv *env, jclass type, jlong handle) {
-    (void)env; (void)type;
-    ocean_pty *p = (ocean_pty *)(intptr_t)handle;
-    if (!p) return -EINVAL;
-    int known = atomic_load(&p->exit_status);
-    if (known >= 0) return known;
-    int status;
-    pid_t result = waitpid(p->pid, &status, WNOHANG);
-    if (result == 0) return -1;
-    if (result < 0) return -errno;
-    int code = WIFEXITED(status) ? WEXITSTATUS(status) : WIFSIGNALED(status) ? 128 + WTERMSIG(status) : 255;
-    atomic_store(&p->exit_status, code);
-    return code;
-}
-
 JNIEXPORT void JNICALL Java_studio_ocean_app_terminal_NativePty_signal(JNIEnv *env, jclass type, jlong handle, jint signal) {
     (void)env; (void)type;
     ocean_pty *p = (ocean_pty *)(intptr_t)handle;

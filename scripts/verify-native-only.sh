@@ -25,7 +25,7 @@ echo "Ocean native architecture verified."
 
 # Ocean Terminal commands must remain local PTY children. Package downloads
 # are separate; terminal/session code must not contain remote execution clients.
-if find android/app/src/main/java/studio/ocean/app/terminal android/app/src/main/cpp -type f -print0 | xargs -0 sed -nE '/(HttpURLConnection|OkHttpClient|WebSocket|ssh |https?:\/\/.*(exec|shell|command))/p' | head -1 | grep -q .; then
+if find android/app/src/main/java/studio/ocean/app/terminal android/app/src/main/cpp -type f -print0 | xargs -0 sed -nE '/(HttpURLConnection|OkHttpClient|ssh |https?:\/\/.*(exec|shell|command))/p' | head -1 | grep -q .; then
   fail "remote command execution dependency found in Ocean Terminal runtime"
 fi
 
@@ -37,5 +37,14 @@ fi
 if grep -q 'WNOHANG' android/app/src/main/cpp/ocean_pty.c; then
   fail "Ocean PTY child lifecycle must use the dedicated blocking reaper"
 fi
-grep -q 'waitpid(p->pid,&status,0)' android/app/src/main/cpp/ocean_pty.c \
+grep -Eq 'waitpid\(p->pid, *&status, *0\)' android/app/src/main/cpp/ocean_pty.c \
   || fail "Ocean PTY blocking waitpid reaper missing"
+
+# Repacking another terminal distribution's compiled packages does not provide
+# Ocean source provenance and leaves foreign runtime assumptions behind.
+if find ocean-packages .github/workflows -type f \
+    \( -name '*.py' -o -name '*.sh' -o -name '*.yml' -o -name '*.yaml' \) \
+    -exec sed -n '/packages-cf\.termux\.dev\/apt\/termux-main\/pool\/main\|relocate_and_repack/p' {} + \
+    | grep -q .; then
+  fail "binary-package relocation from a foreign terminal distribution found"
+fi

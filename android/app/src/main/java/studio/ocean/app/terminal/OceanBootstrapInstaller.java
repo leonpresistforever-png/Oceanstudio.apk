@@ -386,20 +386,30 @@ public final class OceanBootstrapInstaller {
         DirectoryMode(File directory, int mode) { this.directory = directory; this.mode = mode; }
     }
 
-    private static Path normalizeArchivePath(String value, String kind) throws IOException {
+    static Path normalizeArchivePath(String value, String kind) throws IOException {
         if (value == null || value.isEmpty() || value.indexOf('\0') >= 0) {
             throw new IOException("Unsafe archive " + kind + " path=" + value + " reason=empty-or-NUL");
         }
         while (value.startsWith("/")) {
             value = value.substring(1);
         }
-        if (value.startsWith("data/data/studio.ocean.app/files/")) {
-            value = value.substring("data/data/studio.ocean.app/files/".length());
-        } else if (value.startsWith("data/data/") && value.contains("/files/")) {
-            value = value.substring(value.indexOf("/files/") + "/files/".length());
+        // Tar directory records conventionally end in '/'. Normalize that syntax before
+        // comparing structural ancestors, otherwise the legitimate top-level `data/`
+        // record is rejected even though its children are under Ocean's prefix.
+        while (value.endsWith("/") && value.length() > 1) {
+            value = value.substring(0, value.length() - 1);
         }
-        if (value.isEmpty() || value.equals("data") || value.equals("data/data") || value.equals("data/data/studio.ocean.app")) {
+        final String archiveFiles = "data/data/studio.ocean.app/files";
+        if (value.equals("data") || value.equals("data/data")
+                || value.equals("data/data/studio.ocean.app") || value.equals(archiveFiles)) {
             return Paths.get("usr");
+        }
+        if (value.startsWith(archiveFiles + "/")) {
+            value = value.substring((archiveFiles + "/").length());
+        } else if (value.startsWith("data/data/")) {
+            // Never relocate another application's archive into Ocean's private files.
+            throw new IOException("Unsafe archive " + kind + " path=" + value
+                    + " reason=foreign-application-prefix");
         }
         Path raw = Paths.get(value);
         Path normalized = raw.normalize();
