@@ -8,7 +8,9 @@ metadata, executable, symlink, config or repo contains:
 - packages-cf.termux.dev
 - TERMUX_PREFIX
 """
-import sys, pathlib, subprocess, re
+import argparse
+import pathlib
+import sys
 
 FORBIDDEN = [
     b"/data/data/com.termux",
@@ -30,11 +32,27 @@ def check_file(path: pathlib.Path, label: str):
     except Exception as e:
         errors.append(f"[{label}] Could not read {path}: {e}")
 
-root = pathlib.Path("/data/data/com.termux/files/home/Oceanstudio.apk")
-bootstrap_dir = root / "ocean-packages/build/work/clean_bootstrap/data/data/studio.ocean.app/files/usr"
-repo_dir = pathlib.Path("/data/data/com.termux/files/home/ocean-apt-repo/apt")
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--bootstrap-prefix",
+    type=pathlib.Path,
+    default=pathlib.Path("ocean-packages/build/work/clean_bootstrap/data/data/studio.ocean.app/files/usr"),
+)
+parser.add_argument(
+    "--repository",
+    type=pathlib.Path,
+    default=pathlib.Path("ocean-packages/build/out/repository/apt"),
+)
+args = parser.parse_args()
+bootstrap_dir = args.bootstrap_prefix.resolve()
+repo_dir = args.repository.resolve()
 
 print("=== RUNNING HARD NO-TERMUX REGRESSION AUDIT ===")
+
+if not bootstrap_dir.is_dir():
+    errors.append(f"[Bootstrap] Expected extracted prefix is missing: {bootstrap_dir}")
+if not repo_dir.is_dir():
+    errors.append(f"[Repository] Expected repository is missing: {repo_dir}")
 
 # 1. Audit APT sources
 sources = list((bootstrap_dir / "etc/apt").rglob("*"))
