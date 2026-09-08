@@ -1,0 +1,29 @@
+name: Publish committed OceanStudio APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag
+        required: true
+        default: ocean-runtime-cbf151c-local
+
+permissions:
+  contents: write
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and upload committed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          APK=releases/OceanStudio-debug-cbf151c.apk
+          sha256sum --check releases/OceanStudio-debug-cbf151c.apk.sha256
+          gh release upload "$TAG" "$APK" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
