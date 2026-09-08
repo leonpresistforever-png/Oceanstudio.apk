@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-import hashlib,json,pathlib,posixpath,subprocess,sys,tarfile,tempfile
+import hashlib,json,pathlib,posixpath,shutil,subprocess,sys,tarfile,tempfile
 manifest_path,archive_path=map(pathlib.Path,sys.argv[1:3]); m=json.loads(manifest_path.read_text()); data=archive_path.read_bytes()
 assert m['packageName']=='studio.ocean.app' and m['prefix']=='/data/data/studio.ocean.app/files/usr'
 assert m['architecture']=='aarch64' and m['archiveSize']==len(data)
 assert m['archiveSha256']==hashlib.sha256(data).hexdigest()
 with tempfile.NamedTemporaryFile(suffix='.tar') as expanded:
- subprocess.run(['zstd','-q','-d','-c',archive_path],stdout=expanded,check=True); expanded.flush()
+ if shutil.which('zstd'):
+  subprocess.run(['zstd','-q','-d','-c',archive_path],stdout=expanded,check=True)
+ else:
+  try: import zstandard
+  except ImportError as error: raise RuntimeError('zstd or the Python zstandard module is required') from error
+  with archive_path.open('rb') as compressed, zstandard.ZstdDecompressor().stream_reader(compressed) as stream:
+   shutil.copyfileobj(stream,expanded)
+ expanded.flush()
  tar=tarfile.open(expanded.name)
  names=set(tar.getnames()); assert len(names)==m['entryCount']
  for path in ('usr/bin/bash','usr/bin/apt','usr/bin/dpkg','usr/bin/pkg'): assert path in names, path

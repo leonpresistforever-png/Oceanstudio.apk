@@ -95,6 +95,20 @@ def run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
     return subprocess.run([str(x) for x in args], check=True, text=True, **kwargs)
 
 
+def compress_zstd(source: Path, destination: Path) -> None:
+    """Compress reproducibly with the CLI, or python-zstandard on lean hosts."""
+    if shutil.which("zstd"):
+        run("zstd", "-19", "-T0", "-f", source, "-o", destination)
+        return
+    try:
+        import zstandard
+    except ImportError as error:
+        raise RuntimeError("zstd or the Python zstandard module is required") from error
+    compressor = zstandard.ZstdCompressor(level=19, threads=-1)
+    with source.open("rb") as input_file, destination.open("wb") as output_file:
+        compressor.copy_stream(input_file, output_file)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
@@ -166,7 +180,16 @@ def main() -> int:
         (prefix / "var/lib/apt/lists/partial").mkdir(parents=True, exist_ok=True)
         (prefix / "var/cache/apt/archives/partial").mkdir(parents=True, exist_ok=True)
         (prefix / "var/log/apt").mkdir(parents=True, exist_ok=True)
-        (prefix / "etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
+        # Repository packages may carry their upstream default source files.
+        # A hydrated Ocean runtime must trust and address only Ocean's signed
+        # repository, so replace inherited source and keyring configuration.
+        apt_etc = prefix / "etc/apt"
+        for inherited in (apt_etc / "sources.list", apt_etc / "sources.list.d", apt_etc / "trusted.gpg.d", apt_etc / "keyrings"):
+            if inherited.is_dir():
+                shutil.rmtree(inherited)
+            elif inherited.exists() or inherited.is_symlink():
+                inherited.unlink()
+        (apt_etc / "keyrings").mkdir(parents=True, exist_ok=True)
         shutil.copy2(key, prefix / "etc/apt/keyrings/ocean.gpg")
         sources = prefix / "etc/apt/sources.list.d"
         sources.mkdir(parents=True, exist_ok=True)
@@ -201,7 +224,7 @@ def main() -> int:
             tar.add(prefix, arcname="usr", recursive=True, filter=reproducible)
         with tarfile.open(tar_path) as tar:
             archive_entries = len(set(tar.getnames()))
-        run("zstd", "-19", "-T0", "-f", tar_path, "-o", archive)
+        compress_zstd(tar_path, archive)
         manifest = {
             "bootstrapVersion": "1.0.2",
             "architecture": "aarch64",

@@ -4,9 +4,9 @@
   "packageName": "studio.ocean.app",
   "prefix": "/data/data/studio.ocean.app/files/usr",
   "archive": "ocean-aarch64.tar.zst",
-  "archiveSha256": "4807234c4497db0d9d3d9c35db7b0b33b32a8058a32042801b96ed05a35ef1f7",
-  "archiveSize": 17522259,
-  "entryCount": 3774,
+  "archiveSha256": "33e7de333d928728a53c301e8b680f4193c3a8d00c023e3bff4de0de5f04f93b",
+  "archiveSize": 17466116,
+  "entryCount": 3773,
   "packageList": [
     "apt",
     "attr",
