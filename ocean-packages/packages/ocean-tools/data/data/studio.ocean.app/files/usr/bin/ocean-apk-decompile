@@ -1,0 +1,31 @@
+#!/data/data/studio.ocean.app/files/usr/bin/bash
+set -euo pipefail
+apk="${1:-}"
+out="${2:-}"
+if [[ -z "$apk" ]]; then
+  echo "Usage: ocean-apk-decompile <app.apk> [output-dir]"
+  exit 1
+fi
+if [[ ! -f "$apk" ]]; then
+  echo "Error: APK file '$apk' not found" >&2
+  exit 1
+fi
+if [[ -z "$out" ]]; then
+  out="${apk%.apk}_decompiled"
+fi
+mkdir -p "$out"
+echo "Extracting APK structure to $out..."
+unzip -q -o "$apk" -d "$out"
+echo "Disassembling DEX files to smali..."
+for dex in "$out"/classes*.dex; do
+  if [[ -f "$dex" ]]; then
+    name="$(basename "$dex" .dex)"
+    echo "Disassembling $name..."
+    if command -v baksmali >/dev/null 2>&1; then
+      baksmali d -o "$out/smali_$name" "$dex" || true
+    elif command -v d2j-baksmali >/dev/null 2>&1; then
+      d2j-baksmali -f -o "$out/smali_$name" "$dex" || true
+    fi
+  fi
+done
+echo "Decompilation complete in $out"
