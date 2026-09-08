@@ -1,0 +1,7 @@
+plugins { id 'com.android.library' }
+
+android {
+    namespace 'jackpal.androidterm.emulatorview'
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig { minSdk 28 }
+}

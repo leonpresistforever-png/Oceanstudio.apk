@@ -1,0 +1,5944 @@
+[
+  {
+    "package": "aapt",
+    "version": "16.0.0.4-2",
+    "architecture": "aarch64",
+    "sha256": "16350e82221a224e1e2f19ecb3555e76e9dd3274b55407d3157f0ecd44055290",
+    "repositoryPath": "pool/main/aapt.deb",
+    "dependencies": "fmt, libc++, libexpat, libpng, libzopfli, zlib",
+    "executables": [
+      "aapt",
+      "zipalign"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "abseil-cpp",
+    "version": "20260526.0",
+    "architecture": "aarch64",
+    "sha256": "14fe953ada5b3c86c337d080dd8e40072e9cfa53480709e8b051a3dea0c9d635",
+    "repositoryPath": "pool/main/abseil-cpp_20260526.0_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "alsa-lib",
+    "version": "1.2.16.1",
+    "architecture": "aarch64",
+    "sha256": "1aea36d21754fe1167f10f81489bee80a3fc1d665db5fd20615464f6b6c45729",
+    "repositoryPath": "pool/main/alsa-lib_1.2.16.1_aarch64.deb",
+    "dependencies": "libandroid-sysv-semaphore, libandroid-shmem",
+    "executables": [
+      "aserver"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "aom-tools",
+    "version": "3.15.0",
+    "architecture": "aarch64",
+    "sha256": "faa85cc5c1e9ff42cdb4887e132690b9a1e7144912b623f06584165c44ec6fdc",
+    "repositoryPath": "pool/main/aom-tools_3.15.0_aarch64.deb",
+    "dependencies": "libc++, libaom (= 3.15.0)",
+    "executables": [
+      "aomdec",
+      "aomenc"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apache2",
+    "version": "1:2.4.68",
+    "architecture": "aarch64",
+    "sha256": "03b7549eebdd6a644dc0e413fa8da30f45332b2e04929619eee96e1a0a41d50f",
+    "repositoryPath": "pool/main/apache2_1:2.4.68_aarch64.deb",
+    "dependencies": "apr, apr-util, libandroid-support, libcrypt, libnghttp2, libuuid, openssl, pcre2, zlib",
+    "executables": [
+      "ab",
+      "apachectl",
+      "apxs",
+      "checkgid",
+      "dbmmanage",
+      "envvars",
+      "envvars-std",
+      "fcgistarter",
+      "htcacheclean",
+      "htdbm",
+      "htdigest",
+      "htpasswd",
+      "httpd",
+      "httxt2dbm",
+      "logresolve",
+      "rotatelogs",
+      "suexec"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apksigner",
+    "version": "37.0.0",
+    "architecture": "all",
+    "sha256": "1f56b347de2057691f263379db28ebfc95aae8a6af40869289a4f1a7b1d54669",
+    "repositoryPath": "pool/main/apksigner.deb",
+    "dependencies": "openjdk-21",
+    "executables": [
+      "apksigner"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apr-static",
+    "version": "1.7.6-2",
+    "architecture": "aarch64",
+    "sha256": "0af79cf20e3023ee15eed1c233e95e061ac1dc7e2d8fd72f14b29b82dab6d946",
+    "repositoryPath": "pool/main/apr-static_1.7.6-2_aarch64.deb",
+    "dependencies": "apr (= 1.7.6-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apr-util-static",
+    "version": "1.6.5",
+    "architecture": "aarch64",
+    "sha256": "84a5ce2899afe37c40669ad1df5bc801b410b189f03a797381525a108a8115f0",
+    "repositoryPath": "pool/main/apr-util-static_1.6.5_aarch64.deb",
+    "dependencies": "apr-util (= 1.6.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apr-util",
+    "version": "1.6.5",
+    "architecture": "aarch64",
+    "sha256": "27363171d103b6ae415d58eac95accb5c1b660d87eb6a9910e57452de47b3ed5",
+    "repositoryPath": "pool/main/apr-util_1.6.5_aarch64.deb",
+    "dependencies": "apr, libcrypt, libexpat, libiconv, libuuid",
+    "executables": [
+      "apu-1-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apr",
+    "version": "1.7.6-2",
+    "architecture": "aarch64",
+    "sha256": "82f754a5b627b884eb5744cff2ddbe631b52654f071c4e2912f025a170f98a69",
+    "repositoryPath": "pool/main/apr_1.7.6-2_aarch64.deb",
+    "dependencies": "libuuid",
+    "executables": [
+      "apr-1-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apt-ftparchive",
+    "version": "2.8.1-2",
+    "architecture": "aarch64",
+    "sha256": "91acc3d3e6f00566153f9731b92025f149dc8f63a4b878471c3d3d258f130f1c",
+    "repositoryPath": "pool/main/apt-ftparchive_2.8.1-2_aarch64.deb",
+    "dependencies": "libdb, apt (= 2.8.1-2)",
+    "executables": [
+      "apt-ftparchive"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apt-transport-tor",
+    "version": "2.8.1-2",
+    "architecture": "all",
+    "sha256": "fd44d0144282f6810211ef5a5eda8d1481e22b891d80784c00a28e13187e6b37",
+    "repositoryPath": "pool/main/apt-transport-tor_2.8.1-2_all.deb",
+    "dependencies": "tor, apt (= 2.8.1-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "apt",
+    "version": "2.8.1-2",
+    "architecture": "aarch64",
+    "sha256": "ea3b5c375da6e1fdafb6955839a9b6b8acc4446218f6ea61ecffac918b10c855",
+    "repositoryPath": "pool/main/apt_2.8.1-2_aarch64.deb",
+    "dependencies": "coreutils, dpkg, findutils, gpgv, grep, libandroid-glob, libbz2, libc++, libiconv, libgcrypt, libgnutls, liblz4, liblzma, sed, xxhash, zlib, zstd",
+    "executables": [
+      "apt",
+      "apt-cache",
+      "apt-config",
+      "apt-get",
+      "apt-key",
+      "apt-mark"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "aria2",
+    "version": "1.37.0-3",
+    "architecture": "aarch64",
+    "sha256": "0309bbe1658549e897fff08cbe99375087affe0b2fc00772104d8e07fe191be3",
+    "repositoryPath": "pool/main/aria2_1.37.0-3_aarch64.deb",
+    "dependencies": "libc++, c-ares, openssl, libxml2, zlib",
+    "executables": [
+      "aria2c"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "attr-static",
+    "version": "2.6.0",
+    "architecture": "aarch64",
+    "sha256": "6fb4c846a3a54bc2e211b68e70e96c44ab8d5250d1219a7cbc3f12981982e4ff",
+    "repositoryPath": "pool/main/attr-static_2.6.0_aarch64.deb",
+    "dependencies": "attr (= 2.6.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "attr",
+    "version": "2.6.0",
+    "architecture": "aarch64",
+    "sha256": "5bfafd5fda725743ac2be92f15b04bd3e915b28f0f2d1fb198dd995d3dd28337",
+    "repositoryPath": "pool/main/attr_2.6.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "attr",
+      "getfattr",
+      "setfattr"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "bash-completion",
+    "version": "2.18.0",
+    "architecture": "all",
+    "sha256": "d46ee95cfb59ae6d163215eba7dc20b441729eac557092258ff5cfb1b39e41ff",
+    "repositoryPath": "pool/main/bash-completion_2.18.0_all.deb",
+    "dependencies": "bash",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "bash",
+    "version": "5.3.15",
+    "architecture": "aarch64",
+    "sha256": "e68ed58d65151ba5c6c6762b07b3ea7c42534e184da0f0fc2551663c8e155477",
+    "repositoryPath": "pool/main/bash_5.3.15_aarch64.deb",
+    "dependencies": "libandroid-support, libiconv, readline (>= 8.3)",
+    "executables": [
+      "bash"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "binutils",
+    "version": "2.47",
+    "architecture": "aarch64",
+    "sha256": "e49e1816262356f77f01bf33e75fb3b04876d5409a304dec156144ab507dcbca",
+    "repositoryPath": "pool/main/binutils_2.47_aarch64.deb",
+    "dependencies": "libc++, zlib, zstd",
+    "executables": [
+      "as",
+      "elfedit",
+      "gaddr2line",
+      "gar",
+      "gc++filt",
+      "gnm",
+      "gobjcopy",
+      "gobjdump",
+      "gprof",
+      "granlib",
+      "greadelf",
+      "gsize",
+      "gstrings",
+      "gstrip",
+      "ld.bfd"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "blk-utils",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "04361a6295d9885e69ef3510fb3cf65a774f3ca3e8c01742cfc95f37958bb795",
+    "repositoryPath": "pool/main/blk-utils_2.42.1-4_aarch64.deb",
+    "dependencies": "libblkid, libmount, libsmartcols, libuuid",
+    "executables": [
+      "blkdiscard",
+      "blkid",
+      "blkzone",
+      "findfs",
+      "fsck",
+      "lsblk",
+      "mkswap",
+      "partx",
+      "swaplabel",
+      "wipefs"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "brotli",
+    "version": "1.2.0",
+    "architecture": "aarch64",
+    "sha256": "1d50ef31e6aad29fad1dc189f6a576aed7c3ec59153e172f3ee68201ab0a934e",
+    "repositoryPath": "pool/main/brotli_1.2.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "brotli"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "bsdtar",
+    "version": "3.8.9",
+    "architecture": "aarch64",
+    "sha256": "3ce598b6947fc8756fef80c1d860c1e0daa72cc8d2f230fb8675743a2041c223",
+    "repositoryPath": "pool/main/bsdtar_3.8.9_aarch64.deb",
+    "dependencies": "libarchive (= 3.8.9)",
+    "executables": [
+      "bsdcat",
+      "bsdcpio",
+      "bsdtar",
+      "bsdunzip"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "bzip2",
+    "version": "1.0.8-8",
+    "architecture": "aarch64",
+    "sha256": "8ddefbeb11ab08f0f283bbd24274684f7ded76812a78198ddab1b420d3d3da27",
+    "repositoryPath": "pool/main/bzip2_1.0.8-8_aarch64.deb",
+    "dependencies": "libbz2 (= 1.0.8-8)",
+    "executables": [
+      "bzdiff",
+      "bzdiff",
+      "bzgrep",
+      "bzip2",
+      "bzip2recover",
+      "bzmore",
+      "bzmore"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "c-ares",
+    "version": "1.34.8",
+    "architecture": "aarch64",
+    "sha256": "57de061fea9ddfe135119cce6e481fa2b3ed55e3809ca46212158eb2e8efca33",
+    "repositoryPath": "pool/main/c-ares_1.34.8_aarch64.deb",
+    "dependencies": "resolv-conf",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ca-certificates-java",
+    "version": "1:2026.07.16",
+    "architecture": "all",
+    "sha256": "d59014f54dc550d210b083dec6c7adfec4b6ddad05c5eba55349ebe5be919ac5",
+    "repositoryPath": "pool/main/ca-certificates-java_1:2026.07.16_all.deb",
+    "dependencies": "ca-certificates (= 1:2026.07.16)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ca-certificates",
+    "version": "1:2026.07.16",
+    "architecture": "all",
+    "sha256": "258373cd25df8d4c971decc25fa76b779b447e4fd4d4ce3046829ca2231c6adc",
+    "repositoryPath": "pool/main/ca-certificates_1:2026.07.16_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "caddy",
+    "version": "2.11.4",
+    "architecture": "aarch64",
+    "sha256": "562def363df4b643f18a5613aa6de563d7f0877ee8cb09c82412ab87c5ff2849",
+    "repositoryPath": "pool/main/caddy.deb",
+    "dependencies": "",
+    "executables": [
+      "caddy"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "capstone-static",
+    "version": "5.0.9",
+    "architecture": "aarch64",
+    "sha256": "5a90a602a411de03c9b9769eca3406441ff9cb7818f604275dd455d43fe2a040",
+    "repositoryPath": "pool/main/capstone-static_5.0.9_aarch64.deb",
+    "dependencies": "capstone (= 5.0.9)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "capstone",
+    "version": "5.0.9",
+    "architecture": "aarch64",
+    "sha256": "1de1d50a14f3decd359d21bb0085c321bdfd5435daa8655ab9428d50ee2832bf",
+    "repositoryPath": "pool/main/capstone_5.0.9_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "cstool"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "check-static",
+    "version": "0.15.2-3",
+    "architecture": "aarch64",
+    "sha256": "1c83e6fadfcc25a03b6ac50ef206f0472fdbaea9734e4127ad5e8df7f866cb28",
+    "repositoryPath": "pool/main/check-static_0.15.2-3_aarch64.deb",
+    "dependencies": "check (= 0.15.2-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "check",
+    "version": "0.15.2-3",
+    "architecture": "aarch64",
+    "sha256": "677a69cb6bb36114d7ef072ceac2adedf548bacb84dd09ab6eb2b9787fd950d4",
+    "repositoryPath": "pool/main/check_0.15.2-3_aarch64.deb",
+    "dependencies": "libtool, pkg-config, texinfo",
+    "executables": [
+      "checkmk"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "clang",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "4a5d9e1742cbc622a6026da6079521a1c915ff841c7bb16044ae16a91466f46e",
+    "repositoryPath": "pool/main/clang_21.1.8-3_aarch64.deb",
+    "dependencies": "libcompiler-rt, lld, llvm, ndk-sysroot, libllvm (= 21.1.8-3)",
+    "executables": [
+      "aarch64-linux-android-clang",
+      "aarch64-linux-android-clang++",
+      "aarch64-linux-android-cpp",
+      "aarch64-linux-android-g++",
+      "aarch64-linux-android-gcc",
+      "analyze-build",
+      "clang-21",
+      "clang-apply-replacements",
+      "clang-change-namespace",
+      "clang-check",
+      "clang-doc",
+      "clang-extdef-mapping",
+      "clang-format",
+      "clang-include-cleaner",
+      "clang-include-fixer",
+      "clang-installapi",
+      "clang-linker-wrapper",
+      "clang-move",
+      "clang-nvlink-wrapper",
+      "clang-offload-bundler",
+      "clang-offload-packager",
+      "clang-query",
+      "clang-refactor",
+      "clang-reorder-fields",
+      "clang-repl",
+      "clang-scan-deps",
+      "clang-sycl-linker",
+      "clang-tblgen",
+      "clang-tidy",
+      "clangd",
+      "diagtool",
+      "find-all-symbols",
+      "git-clang-format",
+      "hmaptool",
+      "intercept-build",
+      "modularize",
+      "offload-arch",
+      "pp-trace",
+      "run-clang-tidy",
+      "scan-build",
+      "scan-build-py",
+      "scan-view"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "cmake-curses-gui",
+    "version": "4.4.3",
+    "architecture": "aarch64",
+    "sha256": "5723179266063e9bda1e1f58cfd462f7e56ee005bd578a83267a973515f1a7ce",
+    "repositoryPath": "pool/main/cmake-curses-gui_4.4.3_aarch64.deb",
+    "dependencies": "ncurses-ui-libs, cmake (= 4.4.3)",
+    "executables": [
+      "ccmake"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "cmake",
+    "version": "4.4.3",
+    "architecture": "aarch64",
+    "sha256": "1df5fb5c93b233d710b57cab7b3cd2da789e2a5b084682a598c7af2634b6c841",
+    "repositoryPath": "pool/main/cmake_4.4.3_aarch64.deb",
+    "dependencies": "libarchive, libc++, libcurl, libexpat, jsoncpp, libuv, rhash, zlib",
+    "executables": [
+      "cmake",
+      "cpack",
+      "ctest"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "cmocka",
+    "version": "2.0.2",
+    "architecture": "aarch64",
+    "sha256": "622b5090d6832ff85a6cee999e02c450cc0818c6ce2d21971fd7fc61c42a48ef",
+    "repositoryPath": "pool/main/cmocka_2.0.2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "composer",
+    "version": "2.10.3",
+    "architecture": "all",
+    "sha256": "7375761272548f256602cfd40c1513cfaf236865270c9ba1d49d8f05ec04c6a5",
+    "repositoryPath": "pool/main/composer_2.10.3_all.deb",
+    "dependencies": "php",
+    "executables": [
+      "composer"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "coreutils",
+    "version": "9.11-1",
+    "architecture": "aarch64",
+    "sha256": "21e8ff2f2f68707c6513f50bd781a3434157f3bcff700d0146276df23b4b13ac",
+    "repositoryPath": "pool/main/coreutils_9.11-1_aarch64.deb",
+    "dependencies": "libandroid-selinux, libandroid-support, libgmp, libiconv, openssl (>= 1:3.5.0-1)",
+    "executables": [
+      "coreutils"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "curl",
+    "version": "8.21.0",
+    "architecture": "aarch64",
+    "sha256": "8419452993bf4a45aee9231a271d40db3bbf7c226cac5d2e50fef74ff30ab4a2",
+    "repositoryPath": "pool/main/curl_8.21.0_aarch64.deb",
+    "dependencies": "libcurl (= 8.21.0)",
+    "executables": [
+      "curl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "db",
+    "version": "18.1.40-6",
+    "architecture": "aarch64",
+    "sha256": "12775330d03d2ac63f6b0782bd7444b67483d677a867011844f8c48039867022",
+    "repositoryPath": "pool/main/db_18.1.40-6_aarch64.deb",
+    "dependencies": "libdb (= 18.1.40-6)",
+    "executables": [
+      "db_archive",
+      "db_checkpoint",
+      "db_convert",
+      "db_deadlock",
+      "db_dump",
+      "db_hotbackup",
+      "db_load",
+      "db_log_verify",
+      "db_printlog",
+      "db_recover",
+      "db_replicate",
+      "db_stat",
+      "db_tuner",
+      "db_upgrade",
+      "db_verify"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dbus",
+    "version": "1.16.2-3",
+    "architecture": "aarch64",
+    "sha256": "49ea326e7574bc471507ba564d74a43bdafa50e0fc0e4cc0632d904179dd34d8",
+    "repositoryPath": "pool/main/dbus_1.16.2-3_aarch64.deb",
+    "dependencies": "libexpat, libx11",
+    "executables": [
+      "dbus-cleanup-sockets",
+      "dbus-daemon",
+      "dbus-launch",
+      "dbus-monitor",
+      "dbus-run-session",
+      "dbus-send",
+      "dbus-test-tool",
+      "dbus-update-activation-environment",
+      "dbus-uuidgen"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "diffutils",
+    "version": "3.12-2",
+    "architecture": "aarch64",
+    "sha256": "d9a6a743fc9e53b39e256b12f21a23e6bef07f0ea8aa62e93fd6e96555d18bc7",
+    "repositoryPath": "pool/main/diffutils_3.12-2_aarch64.deb",
+    "dependencies": "libiconv",
+    "executables": [
+      "cmp",
+      "diff",
+      "diff3",
+      "sdiff"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dnsutils",
+    "version": "9.20.27-1",
+    "architecture": "aarch64",
+    "sha256": "d0ca9cf13ef72aa46575163b3037bff105fb9a53dca7fbd6cf6b4b51fd5de82d",
+    "repositoryPath": "pool/main/dnsutils_9.20.27-1_aarch64.deb",
+    "dependencies": "cmocka, json-c, krb5, libandroid-execinfo, libandroid-glob, libcap, libnghttp2, liburcu, libuv, libxml2, openssl, readline, resolv-conf, zlib",
+    "executables": [
+      "arpaname",
+      "ddns-confgen",
+      "delv",
+      "dig",
+      "dnssec-cds",
+      "dnssec-dsfromkey",
+      "dnssec-importkey",
+      "dnssec-keyfromlabel",
+      "dnssec-keygen",
+      "dnssec-ksr",
+      "dnssec-revoke",
+      "dnssec-settime",
+      "dnssec-signzone",
+      "dnssec-verify",
+      "host",
+      "mdig",
+      "named",
+      "named-checkconf",
+      "named-checkzone",
+      "named-compilezone",
+      "named-journalprint",
+      "named-rrchecker",
+      "nsec3hash",
+      "nslookup",
+      "nsupdate",
+      "rndc",
+      "rndc-confgen",
+      "tsig-keygen"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "docbook-xml",
+    "version": "5.1-1",
+    "architecture": "all",
+    "sha256": "72cb988b5649a2cf8d868cc49920077c6f0ff8bf50b8a60e6fe1e3a803e69404",
+    "repositoryPath": "pool/main/docbook-xml_5.1-1_all.deb",
+    "dependencies": "libxml2-utils",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "docbook-xsl",
+    "version": "1.79.2-4",
+    "architecture": "all",
+    "sha256": "a9a21b994979b5d1fe87f00b01941f60c621ef8c05c70fd6b54a5cfbd2c3f5b6",
+    "repositoryPath": "pool/main/docbook-xsl_1.79.2-4_all.deb",
+    "dependencies": "docbook-xml (>= 5.1), libxml2-utils, xsltproc",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "doxygen",
+    "version": "1.18.0",
+    "architecture": "aarch64",
+    "sha256": "f17edd4e6cc714561aa19565e2fa3d3cb35ef2589469e1490796d63759175a72",
+    "repositoryPath": "pool/main/doxygen_1.18.0_aarch64.deb",
+    "dependencies": "libc++, libiconv",
+    "executables": [
+      "doxygen",
+      "doxyparse"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dpkg-perl",
+    "version": "1.22.6-5",
+    "architecture": "all",
+    "sha256": "0407e93a7d9a8d4ef84b2bb647d9148010e29b9b5401e7fe9cb84e2a2c92205f",
+    "repositoryPath": "pool/main/dpkg-perl_1.22.6-5_all.deb",
+    "dependencies": "perl, clang, make, dpkg (= 1.22.6-5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dpkg-scanpackages",
+    "version": "1.22.6-5",
+    "architecture": "all",
+    "sha256": "18f258caa37f149ea23c4524dd4a32ab434dbb6b0c97f26ee0e70f51a7547e3f",
+    "repositoryPath": "pool/main/dpkg-scanpackages_1.22.6-5_all.deb",
+    "dependencies": "dpkg-perl, dpkg (= 1.22.6-5)",
+    "executables": [
+      "dpkg-scanpackages"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dpkg",
+    "version": "1.22.6-5",
+    "architecture": "aarch64",
+    "sha256": "5317a62043d5446222833e18fb719a4a71c09db1d9c152fb8d8840bf3e255aa3",
+    "repositoryPath": "pool/main/dpkg_1.22.6-5_aarch64.deb",
+    "dependencies": "bzip2, coreutils, diffutils, gzip, less, libbz2, liblzma, libmd, tar, xz-utils, zlib, zstd",
+    "executables": [
+      "dpkg",
+      "dpkg-buildapi",
+      "dpkg-buildtree",
+      "dpkg-deb",
+      "dpkg-divert",
+      "dpkg-fsys-usrunmess",
+      "dpkg-query",
+      "dpkg-realpath",
+      "dpkg-split",
+      "dpkg-trigger",
+      "start-stop-daemon",
+      "update-alternatives"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dropbear",
+    "version": "2026.94",
+    "architecture": "aarch64",
+    "sha256": "62816823e2d2f5fd2947764cfe6300c65abe6826528cc5968e29e1899e22e081",
+    "repositoryPath": "pool/main/dropbear_2026.94_aarch64.deb",
+    "dependencies": "termux-auth, zlib",
+    "executables": [
+      "dropbearmulti",
+      "dropbearmulti",
+      "dropbearmulti",
+      "dropbearmulti",
+      "dropbearmulti",
+      "dropbearmulti"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "dx",
+    "version": "1:1.16-7",
+    "architecture": "all",
+    "sha256": "751344b9a53d72473fbee7c9796ee3e601bedec17de5f62124d7f5c398de3d93",
+    "repositoryPath": "pool/main/dx.deb",
+    "dependencies": "",
+    "executables": [
+      "dx",
+      "dx-merge"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ecj",
+    "version": "1:4.12-5",
+    "architecture": "all",
+    "sha256": "20e136b1279eae0262b566a528f549b56a41e35999ac1a94f7b469be79a73094",
+    "repositoryPath": "pool/main/ecj.deb",
+    "dependencies": "",
+    "executables": [
+      "ecj",
+      "ecj-24"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fdisk",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "a53922cc9f47e4ef378cf3ae4d9e3e551e0790cc41f1607e28ac1d2967c793bb",
+    "repositoryPath": "pool/main/fdisk_2.42.1-4_aarch64.deb",
+    "dependencies": "libfdisk, libmount, ncurses, readline, libsmartcols",
+    "executables": [
+      "cfdisk",
+      "fdisk",
+      "sfdisk"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "file",
+    "version": "5.48-3",
+    "architecture": "aarch64",
+    "sha256": "e56ba4a1111874c2c614170492f6e2dfee62438e57b09a73340706ce4b5aad99",
+    "repositoryPath": "pool/main/file_5.48-3_aarch64.deb",
+    "dependencies": "libmagic (= 5.48-3)",
+    "executables": [
+      "file"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "findutils",
+    "version": "4.10.0-1",
+    "architecture": "aarch64",
+    "sha256": "1d3a469142e4994ad3bc7a01ae3f3a9b22c2fe1a97ce80e040788f681dc7818b",
+    "repositoryPath": "pool/main/findutils_4.10.0-1_aarch64.deb",
+    "dependencies": "libandroid-support",
+    "executables": [
+      "find",
+      "xargs"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "flac",
+    "version": "1.5.0-1",
+    "architecture": "aarch64",
+    "sha256": "51f499f0b68288e5ae8bdd60cbb1c0904c972d60eb55f79f4c749924989b6299",
+    "repositoryPath": "pool/main/flac_1.5.0-1_aarch64.deb",
+    "dependencies": "libflac (= 1.5.0-1)",
+    "executables": [
+      "flac",
+      "metaflac"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fontconfig-static",
+    "version": "2.18.3",
+    "architecture": "aarch64",
+    "sha256": "b70dcd4ee3d97f2c2dabf1006b9b6034f64092846f5ef20f50e1a071f4e9e8be",
+    "repositoryPath": "pool/main/fontconfig-static_2.18.3_aarch64.deb",
+    "dependencies": "fontconfig (= 2.18.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fontconfig-utils",
+    "version": "2.18.3",
+    "architecture": "aarch64",
+    "sha256": "fa39f39e88e24cfadc0520fde36cafcedbbfce45c9e3f7803adc648688d2c8b8",
+    "repositoryPath": "pool/main/fontconfig-utils_2.18.3_aarch64.deb",
+    "dependencies": "fontconfig (= 2.18.3)",
+    "executables": [
+      "fc-cache",
+      "fc-cat",
+      "fc-conflist",
+      "fc-list",
+      "fc-match",
+      "fc-pattern",
+      "fc-query",
+      "fc-scan",
+      "fc-validate"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fontconfig",
+    "version": "2.18.3",
+    "architecture": "aarch64",
+    "sha256": "4776d321a10724316d3c553629e6bd64c669e710d82293d0d352d3c9c22cea25",
+    "repositoryPath": "pool/main/fontconfig_2.18.3_aarch64.deb",
+    "dependencies": "freetype, libexpat, ttf-dejavu",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "freetype-static",
+    "version": "2.14.3",
+    "architecture": "aarch64",
+    "sha256": "3abd546d49b6361c7a766c35ee9f6d1b815c0abe674d6fbdfb15cf516cd24858",
+    "repositoryPath": "pool/main/freetype-static_2.14.3_aarch64.deb",
+    "dependencies": "freetype (= 2.14.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "freetype",
+    "version": "2.14.3",
+    "architecture": "aarch64",
+    "sha256": "c7ea6a3c4154dc4cf4ed737e94b89cb65ec43041e9f459480b9bdb5994416965",
+    "repositoryPath": "pool/main/freetype_2.14.3_aarch64.deb",
+    "dependencies": "brotli, libbz2, libpng, zlib",
+    "executables": [
+      "freetype-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fribidi-static",
+    "version": "1.0.16-1",
+    "architecture": "aarch64",
+    "sha256": "0b1f73fd7acee781628d1cf74c1d7516da36b2361626584f26b716fdc15b6a32",
+    "repositoryPath": "pool/main/fribidi-static_1.0.16-1_aarch64.deb",
+    "dependencies": "fribidi (= 1.0.16-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fribidi",
+    "version": "1.0.16-1",
+    "architecture": "aarch64",
+    "sha256": "534b1c6845139b9e01c5ba317eb58bd6870f3529b4336798ecc75186678e0cf0",
+    "repositoryPath": "pool/main/fribidi_1.0.16-1_aarch64.deb",
+    "dependencies": "glib",
+    "executables": [
+      "fribidi"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "fzf",
+    "version": "0.74.3",
+    "architecture": "aarch64",
+    "sha256": "e6ebcd5091daded63a87f63bf5b765aa7df47c3dda69c55e51335af66133b47c",
+    "repositoryPath": "pool/main/fzf_0.74.3_aarch64.deb",
+    "dependencies": "bash, findutils, ncurses-utils",
+    "executables": [
+      "fzf",
+      "fzf-tmux"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "g-ir-scanner",
+    "version": "1.86.0-2",
+    "architecture": "aarch64",
+    "sha256": "00e558c99d06c2caa2a094073e2a17a1b09ee500eecc488156a895ebfb934191",
+    "repositoryPath": "pool/main/g-ir-scanner_1.86.0-2_aarch64.deb",
+    "dependencies": "ldd, python, gobject-introspection (= 1.86.0-2)",
+    "executables": [
+      "g-ir-scanner"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "game-music-emu-static",
+    "version": "0.6.5",
+    "architecture": "aarch64",
+    "sha256": "8b8fd588e8a7cdd9b47802683cec92004e7713d8c79607af9d772e20c09700ce",
+    "repositoryPath": "pool/main/game-music-emu-static_0.6.5_aarch64.deb",
+    "dependencies": "game-music-emu (= 0.6.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "game-music-emu",
+    "version": "0.6.5",
+    "architecture": "aarch64",
+    "sha256": "cb7a0703920336982b738c1b01edd019447a240a6b73528b6f9e76b3ab5f1265",
+    "repositoryPath": "pool/main/game-music-emu_0.6.5_aarch64.deb",
+    "dependencies": "libc++, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gawk-static",
+    "version": "5.3.2",
+    "architecture": "aarch64",
+    "sha256": "c52e978e3f16954150cfe675c602d55eba4ab80c09dcc683ffc49440bd3e05ad",
+    "repositoryPath": "pool/main/gawk-static_5.3.2_aarch64.deb",
+    "dependencies": "gawk (= 5.3.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gawk",
+    "version": "5.3.2",
+    "architecture": "aarch64",
+    "sha256": "bb0a8791abfe939e88b9bd5e997503072ddc9cac22a7954d7d381591cf4797e1",
+    "repositoryPath": "pool/main/gawk_5.3.2_aarch64.deb",
+    "dependencies": "libandroid-support, libgmp, libmpfr, readline",
+    "executables": [
+      "gawk"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gdb",
+    "version": "16.3-4",
+    "architecture": "aarch64",
+    "sha256": "e5bb3fe0164419a5d1dc11c5b636c25af2e5d2eb5aa85257b373d89dbc7cca94",
+    "repositoryPath": "pool/main/gdb.deb",
+    "dependencies": "guile, libc++, libexpat, libgmp, libiconv, liblzma, libmpfr, libthread-db, ncurses, python, readline, zlib, zstd",
+    "executables": [
+      "gcore",
+      "gdb",
+      "gdb-add-index",
+      "gstack"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gdbm-static",
+    "version": "1.26-1",
+    "architecture": "aarch64",
+    "sha256": "bd56cfc1d451bc58d9f00191cc177cfc9aae077da8e48036d9c396446c396805",
+    "repositoryPath": "pool/main/gdbm-static_1.26-1_aarch64.deb",
+    "dependencies": "gdbm (= 1.26-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gdbm",
+    "version": "1.26-1",
+    "architecture": "aarch64",
+    "sha256": "135d0d2e68133e61062a9ee2465e264186ae87fe34b4234c0933097462bddb83",
+    "repositoryPath": "pool/main/gdbm_1.26-1_aarch64.deb",
+    "dependencies": "readline",
+    "executables": [
+      "gdbm_dump",
+      "gdbm_load",
+      "gdbmtool"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gdk-pixbuf",
+    "version": "2.44.8",
+    "architecture": "aarch64",
+    "sha256": "2da3754653236ebe14579f35cd943f4f01a97cda99ff9f36cb27c35bac4be98d",
+    "repositoryPath": "pool/main/gdk-pixbuf_2.44.8_aarch64.deb",
+    "dependencies": "glib, libpng, libtiff, libjpeg-turbo, zstd",
+    "executables": [
+      "gdk-pixbuf-csource",
+      "gdk-pixbuf-pixdata",
+      "gdk-pixbuf-query-loaders"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gh",
+    "version": "2.98.0",
+    "architecture": "aarch64",
+    "sha256": "883a532474e5998809bac814febb8364a322baff5f371bf8d03513baef96de88",
+    "repositoryPath": "pool/main/gh_2.98.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "gh"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "giflib-static",
+    "version": "5.2.2-2",
+    "architecture": "aarch64",
+    "sha256": "cadd49885ccc2c1b1156b2b1b1a6eeecdfd1c7b621ee62098382b0766f3a8403",
+    "repositoryPath": "pool/main/giflib-static_5.2.2-2_aarch64.deb",
+    "dependencies": "giflib (= 5.2.2-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "giflib-utils",
+    "version": "5.2.2-2",
+    "architecture": "aarch64",
+    "sha256": "3ca474a37df9aaa021a62b06980674da443285ab2af11ab028adc20b70c3fc4d",
+    "repositoryPath": "pool/main/giflib-utils_5.2.2-2_aarch64.deb",
+    "dependencies": "giflib (= 5.2.2-2)",
+    "executables": [
+      "gif2rgb",
+      "gifbuild",
+      "gifclrmp",
+      "giffix",
+      "giftext",
+      "giftool"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "giflib",
+    "version": "5.2.2-2",
+    "architecture": "aarch64",
+    "sha256": "cffba4cef9f83c581bf47fe07ab112c1739d9835b25289ccb774180f3e450fe4",
+    "repositoryPath": "pool/main/giflib_5.2.2-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "git-gitk",
+    "version": "2.55.0",
+    "architecture": "aarch64",
+    "sha256": "a76847f52b3fb38f233c22a292331253cd408765de198473ae131116b865e1f9",
+    "repositoryPath": "pool/main/git-gitk_2.55.0_aarch64.deb",
+    "dependencies": "tk, git (= 2.55.0)",
+    "executables": [
+      "gitk"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "git-gui",
+    "version": "2.55.0",
+    "architecture": "aarch64",
+    "sha256": "dd0dd1ca35237dbe717b5d5d86f2e754b2a911d2155bc68fdfa532fd869f66af",
+    "repositoryPath": "pool/main/git-gui_2.55.0_aarch64.deb",
+    "dependencies": "tk, git (= 2.55.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "git-svn",
+    "version": "2.55.0",
+    "architecture": "all",
+    "sha256": "90389eb711ec8a556175b94b62ef21d03ab8bd1cd3d34139cb7e3b202ec43837",
+    "repositoryPath": "pool/main/git-svn_2.55.0_all.deb",
+    "dependencies": "subversion-perl, git (= 2.55.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "git",
+    "version": "2.55.0",
+    "architecture": "aarch64",
+    "sha256": "c901c7cdda106ec69fbfef545095c7bc54aab70ff55aab2c56eabb418e7552af",
+    "repositoryPath": "pool/main/git_2.55.0_aarch64.deb",
+    "dependencies": "libcurl, libexpat, libiconv, less, openssl, pcre2, zlib",
+    "executables": [
+      "git",
+      "git-cvsserver",
+      "git-shell",
+      "scalar",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git-cvsserver",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git-shell",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "git",
+      "scalar"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "glib-cross",
+    "version": "2.88.3",
+    "architecture": "all",
+    "sha256": "09b268d322dcb8469e2feb2e02fc783a28ca6bc0ea60b5e3dfb27a0de5d51ade",
+    "repositoryPath": "pool/main/glib-cross_2.88.3_all.deb",
+    "dependencies": "glib (= 2.88.3)",
+    "executables": [
+      "gapplication",
+      "gdbus",
+      "gdbus-codegen",
+      "gi-compile-repository",
+      "gi-decompile-typelib",
+      "gi-inspect-typelib",
+      "gio",
+      "gio-querymodules",
+      "glib-compile-resources",
+      "glib-compile-schemas",
+      "glib-genmarshal",
+      "glib-gettextize",
+      "glib-mkenums",
+      "gobject-query",
+      "gresource",
+      "gsettings",
+      "gtester",
+      "gtester-report"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "glib",
+    "version": "2.88.3",
+    "architecture": "aarch64",
+    "sha256": "c6d5737c874a8609f3a08247391fde747bfcdfd006eb7361af865c6107938483",
+    "repositoryPath": "pool/main/glib_2.88.3_aarch64.deb",
+    "dependencies": "libandroid-support, libffi, libiconv, pcre2, resolv-conf, zlib, python",
+    "executables": [
+      "gapplication",
+      "gdbus",
+      "gdbus-codegen",
+      "gi-compile-repository",
+      "gi-decompile-typelib",
+      "gi-inspect-typelib",
+      "gio",
+      "gio-querymodules",
+      "glib-compile-resources",
+      "glib-compile-schemas",
+      "glib-genmarshal",
+      "glib-mkenums",
+      "gobject-query",
+      "gresource",
+      "gsettings",
+      "gtester"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "glslang",
+    "version": "16.5.0",
+    "architecture": "aarch64",
+    "sha256": "b75cf2e9324e01dd973715bc9db9521a97a16879bd90c5e91273f180ba2ff8c8",
+    "repositoryPath": "pool/main/glslang_16.5.0_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [
+      "glslang"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gnupg",
+    "version": "2.5.17",
+    "architecture": "aarch64",
+    "sha256": "e5e321896c94085326f7536f46b1d27d6a0ad0d54d83e7a4bd9f98565bbd33b6",
+    "repositoryPath": "pool/main/gnupg_2.5.17_aarch64.deb",
+    "dependencies": "libassuan, libbz2, libgcrypt, libgnutls, libgpg-error, libksba, libnpth, libsqlite, readline, pinentry, resolv-conf, zlib",
+    "executables": [
+      "addgnupghome",
+      "applygnupgdefaults",
+      "dirmngr",
+      "dirmngr-client",
+      "gpg",
+      "gpg-agent",
+      "gpg-authcode-sign.sh",
+      "gpg-card",
+      "gpg-connect-agent",
+      "gpg-mail-tube",
+      "gpg-wks-client",
+      "gpgconf",
+      "gpgparsemail",
+      "gpgscm",
+      "gpgsm",
+      "gpgsplit",
+      "gpgtar",
+      "kbxutil",
+      "watchgnupg"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gnutls",
+    "version": "3.8.13-1",
+    "architecture": "aarch64",
+    "sha256": "3fb560584e62460071a5add7acd67403b29885ea2103952bc435cbb3fc5798dd",
+    "repositoryPath": "pool/main/gnutls_3.8.13-1_aarch64.deb",
+    "dependencies": "libgnutls (= 3.8.13-1)",
+    "executables": [
+      "certtool",
+      "danetool",
+      "gnutls-cli",
+      "gnutls-cli-debug",
+      "gnutls-serv",
+      "ocsptool",
+      "p11tool",
+      "psktool"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gobject-introspection",
+    "version": "1.86.0-2",
+    "architecture": "aarch64",
+    "sha256": "bfcf731485e662d790d114362be741b46b4bc626c3ecb7ea3dfcca9fccf38092",
+    "repositoryPath": "pool/main/gobject-introspection_1.86.0-2_aarch64.deb",
+    "dependencies": "glib, libffi",
+    "executables": [
+      "g-ir-annotation-tool",
+      "g-ir-compiler",
+      "g-ir-generate",
+      "g-ir-inspect"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "golang-doc",
+    "version": "3:1.27.0",
+    "architecture": "aarch64",
+    "sha256": "a39735063b9c5dc7438cfc2153666358137970e255f70be7b59b4b5cadedf879",
+    "repositoryPath": "pool/main/golang-doc_3:1.27.0_aarch64.deb",
+    "dependencies": "golang (= 3:1.27.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "golang",
+    "version": "3:1.27.0",
+    "architecture": "aarch64",
+    "sha256": "90e26b9c022ed0dc1714487d328c2d93ba54d50c9e4832cfa0d3e8431b81c8fe",
+    "repositoryPath": "pool/main/golang_3:1.27.0_aarch64.deb",
+    "dependencies": "clang",
+    "executables": [
+      "go",
+      "gofmt",
+      "go",
+      "gofmt"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gpgv",
+    "version": "2.5.17",
+    "architecture": "aarch64",
+    "sha256": "7df95df0abec3cb1ad9c947c113f049fd8e10a801d095e5d8a57292c3fed1007",
+    "repositoryPath": "pool/main/gpgv_2.5.17_aarch64.deb",
+    "dependencies": "libassuan, libbz2, libgcrypt, libgpg-error, libnpth, zlib",
+    "executables": [
+      "gpgv"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gradle",
+    "version": "1:9.7.1",
+    "architecture": "all",
+    "sha256": "e8df9fe10be7783a80b58527917ac15120b6762acccc7b92fd7da1a13df2493f",
+    "repositoryPath": "pool/main/gradle_9.7.1_all.deb",
+    "dependencies": "openjdk-21",
+    "executables": [
+      "gradle",
+      "gradle"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "grep",
+    "version": "3.12-3",
+    "architecture": "aarch64",
+    "sha256": "637103090cdc4c2975a73949623a01f235e3633cece71ab926add185cf09b4dd",
+    "repositoryPath": "pool/main/grep_3.12-3_aarch64.deb",
+    "dependencies": "libandroid-support, pcre2",
+    "executables": [
+      "egrep",
+      "fgrep",
+      "grep"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "gzip",
+    "version": "1.14-1",
+    "architecture": "aarch64",
+    "sha256": "2440b634d1bafc87b4021a520ed19df05917219532eea715720a28f61d404bf1",
+    "repositoryPath": "pool/main/gzip_1.14-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "gunzip",
+      "gzexe",
+      "gzip",
+      "uncompress",
+      "zcat",
+      "zcmp",
+      "zdiff",
+      "zegrep",
+      "zfgrep",
+      "zforce",
+      "zgrep",
+      "zmore",
+      "znew"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "harfbuzz-icu",
+    "version": "14.4.0",
+    "architecture": "aarch64",
+    "sha256": "c9bb4904eb5d50718a8c8d245170b0a3348af5de9cb95e4ec7dc4fe0c1755c0e",
+    "repositoryPath": "pool/main/harfbuzz-icu_14.4.0_aarch64.deb",
+    "dependencies": "libicu, harfbuzz (= 14.4.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "harfbuzz-utils",
+    "version": "14.4.0",
+    "architecture": "aarch64",
+    "sha256": "b2b3e709e9c20c6a2b9c2e893186227dbff23cad4b30fc478e6d58f21c5364e8",
+    "repositoryPath": "pool/main/harfbuzz-utils_14.4.0_aarch64.deb",
+    "dependencies": "harfbuzz (= 14.4.0)",
+    "executables": [
+      "hb-info",
+      "hb-raster",
+      "hb-shape",
+      "hb-subset",
+      "hb-vector",
+      "hb-view"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "harfbuzz",
+    "version": "14.4.0",
+    "architecture": "aarch64",
+    "sha256": "7b98b05371e411f1eddd5f61e895383edc8596153ee170aaa8b908254f4180e0",
+    "repositoryPath": "pool/main/harfbuzz_14.4.0_aarch64.deb",
+    "dependencies": "freetype, glib, libcairo, libgraphite",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "iconv",
+    "version": "1.18-1",
+    "architecture": "aarch64",
+    "sha256": "30d7a621e196d1a6946421f972241f01720c2024a4573e46987bb4e970eb81bc",
+    "repositoryPath": "pool/main/iconv_1.18-1_aarch64.deb",
+    "dependencies": "libiconv (= 1.18-1)",
+    "executables": [
+      "iconv"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "icu-devtools",
+    "version": "78.3",
+    "architecture": "aarch64",
+    "sha256": "4eda0ee6f84f8d6c15f0caeee9eaafa079f7de0ed09cc9ea77a83532a117bd4f",
+    "repositoryPath": "pool/main/icu-devtools_78.3_aarch64.deb",
+    "dependencies": "libicu (= 78.3)",
+    "executables": [
+      "derb",
+      "escapesrc",
+      "genbrk",
+      "genccode",
+      "gencfu",
+      "gencmn",
+      "gencnval",
+      "gendict",
+      "gennorm2",
+      "genrb",
+      "gensprep",
+      "icu-config",
+      "icuexportdata",
+      "icuinfo",
+      "icupkg",
+      "makeconv",
+      "pkgdata",
+      "uconv"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "imath",
+    "version": "3.2.2",
+    "architecture": "aarch64",
+    "sha256": "65766fb10e6f4a59e1a2b98565096bc2833a8dc38196d3e263414a0cafb7b618",
+    "repositoryPath": "pool/main/imath_3.2.2_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "iperf3-static",
+    "version": "3.21",
+    "architecture": "aarch64",
+    "sha256": "dd64c15fff02e7f48d003aeecd8f37d28eb01ed8e70ecb2ec3106769ae4ddf09",
+    "repositoryPath": "pool/main/iperf3-static_3.21_aarch64.deb",
+    "dependencies": "iperf3 (= 3.21)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "iperf3",
+    "version": "3.21",
+    "architecture": "aarch64",
+    "sha256": "32c2c9d81f396e2f2f09c8706a781ea9b3ad7ea47cfe4a66d244ed3b2bf7c3fa",
+    "repositoryPath": "pool/main/iperf3_3.21_aarch64.deb",
+    "dependencies": "openssl",
+    "executables": [
+      "iperf3"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "jq-static",
+    "version": "1.8.2",
+    "architecture": "aarch64",
+    "sha256": "88ff6db808599ebb4fe28031ac665fe6e090cbb0d1f45a36435812d88399f4be",
+    "repositoryPath": "pool/main/jq-static_1.8.2_aarch64.deb",
+    "dependencies": "jq (= 1.8.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "jq",
+    "version": "1.8.2",
+    "architecture": "aarch64",
+    "sha256": "d915d058d4ff9861a04ec75278809835212480e62ccb59da1768d444ac2b6bdb",
+    "repositoryPath": "pool/main/jq_1.8.2_aarch64.deb",
+    "dependencies": "oniguruma",
+    "executables": [
+      "jq"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "json-c-static",
+    "version": "0.19",
+    "architecture": "aarch64",
+    "sha256": "ba176a96db05ef6935b8559ad270e29eb20f0d76fb4ad8a57caeea8424139089",
+    "repositoryPath": "pool/main/json-c-static_0.19_aarch64.deb",
+    "dependencies": "json-c (= 0.19)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "json-c",
+    "version": "0.19",
+    "architecture": "aarch64",
+    "sha256": "7afdc506f0440c4d91374786149ca38bccb4875b77887c74bdd8644f67ce8889",
+    "repositoryPath": "pool/main/json-c_0.19_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "jsoncpp-static",
+    "version": "1.9.8",
+    "architecture": "aarch64",
+    "sha256": "54a8f270a1088bcb5ee95ea9395f871bc52177f33d4b333ad00fc62667698aa1",
+    "repositoryPath": "pool/main/jsoncpp-static_1.9.8_aarch64.deb",
+    "dependencies": "jsoncpp (= 1.9.8)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "jsoncpp",
+    "version": "1.9.8",
+    "architecture": "aarch64",
+    "sha256": "f8fc320f02792511c38dcfc8871211e2d310803514f605dc72a9165b2d01b94c",
+    "repositoryPath": "pool/main/jsoncpp_1.9.8_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "kotlin",
+    "version": "2.4.10",
+    "architecture": "all",
+    "sha256": "2f0fc913cc9013e9aa4b43f58e1814af0182903be554b26f5dd743e2f50bee8c",
+    "repositoryPath": "pool/main/kotlin_2.4.10_all.deb",
+    "dependencies": "openjdk-21",
+    "executables": [
+      "kapt",
+      "kotlin",
+      "kotlinc",
+      "kotlinc-js",
+      "kotlinc-jvm",
+      "kotlinc-wasm",
+      "kotlinr",
+      "kapt",
+      "kotlin",
+      "kotlinc",
+      "kotlinc-js",
+      "kotlinc-jvm",
+      "kotlinc-wasm",
+      "kotlinr"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "krb5",
+    "version": "1.22.2",
+    "architecture": "aarch64",
+    "sha256": "24c08aa3a37970317d4cf89a25dc85fa801953f15751ca85bbdad9b4fb3e1830",
+    "repositoryPath": "pool/main/krb5_1.22.2_aarch64.deb",
+    "dependencies": "libandroid-support, libandroid-glob, libresolv-wrapper, readline, openssl, libdb",
+    "executables": [
+      "compile_et",
+      "gss-client",
+      "gss-server",
+      "k5srvutil",
+      "kadmin",
+      "kadmin.local",
+      "kadmind",
+      "kdb5_util",
+      "kdestroy",
+      "kinit",
+      "klist",
+      "kpasswd",
+      "kprop",
+      "kpropd",
+      "kproplog",
+      "krb5-config",
+      "krb5-send-pr",
+      "krb5kdc",
+      "ksu",
+      "kswitch",
+      "ktutil",
+      "kvno",
+      "sclient",
+      "sim_client",
+      "sim_server",
+      "sserver",
+      "uuclient",
+      "uuserver"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lame",
+    "version": "3.100-7",
+    "architecture": "aarch64",
+    "sha256": "957f751f45df1a86496d1484d4fac19b6e5a07d5e2e76ebc10ada2e11d7ac177",
+    "repositoryPath": "pool/main/lame_3.100-7_aarch64.deb",
+    "dependencies": "ncurses, libmp3lame (= 3.100-7)",
+    "executables": [
+      "lame"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ldd",
+    "version": "0.3-2",
+    "architecture": "aarch64",
+    "sha256": "38145354c0ab17b1959dfaee185b7c3aa7632cd8c1cfc316ad0bbe9ad5b3d52b",
+    "repositoryPath": "pool/main/ldd_0.3-2_aarch64.deb",
+    "dependencies": "bash, binutils",
+    "executables": [
+      "ldd"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ldns-static",
+    "version": "1.8.4-1",
+    "architecture": "aarch64",
+    "sha256": "9e442b9ed6d1a22c67d35241252347585fc66e69fd78aa66945c42859a6dcc2f",
+    "repositoryPath": "pool/main/ldns-static_1.8.4-1_aarch64.deb",
+    "dependencies": "ldns (= 1.8.4-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ldns",
+    "version": "1.8.4-1",
+    "architecture": "aarch64",
+    "sha256": "651f2ae8127fe911fff5631ed3fc83a23ca85974919cd4383b0b75efa7d2fc95",
+    "repositoryPath": "pool/main/ldns_1.8.4-1_aarch64.deb",
+    "dependencies": "openssl, resolv-conf",
+    "executables": [
+      "drill",
+      "ldns-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "less",
+    "version": "704",
+    "architecture": "aarch64",
+    "sha256": "7108839d02b9c264ba6be7b541d893e8bf8afc99142bee90ab1ae0393bfb8ff6",
+    "repositoryPath": "pool/main/less_704_aarch64.deb",
+    "dependencies": "ncurses, pcre2",
+    "executables": [
+      "less",
+      "lesskey"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libacl-static",
+    "version": "2.4.0",
+    "architecture": "aarch64",
+    "sha256": "5f2f28e9ec0f0f95ae303058cb328aca16578bb7350191e55d1ea4a3aa504a54",
+    "repositoryPath": "pool/main/libacl-static_2.4.0_aarch64.deb",
+    "dependencies": "libacl (= 2.4.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libacl",
+    "version": "2.4.0",
+    "architecture": "aarch64",
+    "sha256": "1d43e8fd73becc163f9d34b006a0f06c751afb15d35ca0af581e753074da1bc0",
+    "repositoryPath": "pool/main/libacl_2.4.0_aarch64.deb",
+    "dependencies": "attr",
+    "executables": [
+      "chacl",
+      "getfacl",
+      "setfacl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-execinfo-static",
+    "version": "0.1-3",
+    "architecture": "aarch64",
+    "sha256": "b1b0544f8811142c752ff67fef17b0caa2d120ed7be58ae38bd18e1316987225",
+    "repositoryPath": "pool/main/libandroid-execinfo-static_0.1-3_aarch64.deb",
+    "dependencies": "libandroid-execinfo (= 0.1-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-execinfo",
+    "version": "0.1-3",
+    "architecture": "aarch64",
+    "sha256": "5f35f9003409a2b297b2faf97d53dcc474ac9a5e5667ed62a77398ba8e0f02c5",
+    "repositoryPath": "pool/main/libandroid-execinfo_0.1-3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-glob-static",
+    "version": "0.6-3",
+    "architecture": "aarch64",
+    "sha256": "c26d3a1caaa702921cbccdece1cc0fc7710b54fafd012368aa836e3be1cb6110",
+    "repositoryPath": "pool/main/libandroid-glob-static_0.6-3_aarch64.deb",
+    "dependencies": "libandroid-glob (= 0.6-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-glob",
+    "version": "0.6-3",
+    "architecture": "aarch64",
+    "sha256": "7860276bde1be27dbb7b872a9bc5339b43a477de841348e803895fbe17b2a77e",
+    "repositoryPath": "pool/main/libandroid-glob_0.6-3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-posix-semaphore-static",
+    "version": "0.1-4",
+    "architecture": "aarch64",
+    "sha256": "3d791f9b1f8e56a778c01fce31f5804a1dce626d2edd1209f52cf046b4cf6ab6",
+    "repositoryPath": "pool/main/libandroid-posix-semaphore-static_0.1-4_aarch64.deb",
+    "dependencies": "libandroid-posix-semaphore (= 0.1-4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-posix-semaphore",
+    "version": "0.1-4",
+    "architecture": "aarch64",
+    "sha256": "e24cc100c09f9b64e90032f7d766ab42eb41c6adf6e010357fcd719081c47e48",
+    "repositoryPath": "pool/main/libandroid-posix-semaphore_0.1-4_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-selinux",
+    "version": "14.0.0.11-1",
+    "architecture": "aarch64",
+    "sha256": "a58f9456280427331737c72c6b86904e4f1643c41f6cee19b9ed09656447e28c",
+    "repositoryPath": "pool/main/libandroid-selinux_14.0.0.11-1_aarch64.deb",
+    "dependencies": "pcre2",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-shmem-static",
+    "version": "0.7",
+    "architecture": "aarch64",
+    "sha256": "b4a10d345034342de775318ceaf2d0377e85232ca298c7348e53486821e26200",
+    "repositoryPath": "pool/main/libandroid-shmem-static_0.7_aarch64.deb",
+    "dependencies": "libandroid-shmem (= 0.7)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-shmem",
+    "version": "0.7",
+    "architecture": "aarch64",
+    "sha256": "f00a1d6160ab8b75917361a6006775d56ddc3b856c258d4d0ae7ae1520b69d72",
+    "repositoryPath": "pool/main/libandroid-shmem_0.7_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-spawn-static",
+    "version": "0.3",
+    "architecture": "aarch64",
+    "sha256": "932c530408ddb9087a77261e21087e065bf246de59d192d64280aa2c2b7ee577",
+    "repositoryPath": "pool/main/libandroid-spawn-static_0.3_aarch64.deb",
+    "dependencies": "libandroid-spawn (= 0.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-spawn",
+    "version": "0.3",
+    "architecture": "aarch64",
+    "sha256": "75f02b9c07586f0d73b773d6e463f65cf5c5546c026c824205e494bb300f94f3",
+    "repositoryPath": "pool/main/libandroid-spawn_0.3_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-stub",
+    "version": "29-2",
+    "architecture": "aarch64",
+    "sha256": "a12f037b84f22ef16e373ae5d30fa0fc46fcf68e4fd19bea0304b4158a6629f9",
+    "repositoryPath": "pool/main/libandroid-stub_29-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-support-static",
+    "version": "29-1",
+    "architecture": "aarch64",
+    "sha256": "63f913550fb8802f83baced8fda0bf6499ab9898868cbb83e1d23e686eb65ef3",
+    "repositoryPath": "pool/main/libandroid-support-static_29-1_aarch64.deb",
+    "dependencies": "libandroid-support (= 29-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-support",
+    "version": "29-1",
+    "architecture": "aarch64",
+    "sha256": "ea40bc4c4a8db191f3c2aac12d21dd5cc8d2c1925409fc8da9b4e3247af3239f",
+    "repositoryPath": "pool/main/libandroid-support_29-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-sysv-semaphore-static",
+    "version": "0.1-1",
+    "architecture": "aarch64",
+    "sha256": "63572346cb67367bc92c3a3317717777ab3fc18d2f0f46bfc2afb021f1b7316f",
+    "repositoryPath": "pool/main/libandroid-sysv-semaphore-static_0.1-1_aarch64.deb",
+    "dependencies": "libandroid-sysv-semaphore (= 0.1-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-sysv-semaphore",
+    "version": "0.1-1",
+    "architecture": "aarch64",
+    "sha256": "705c87f6f6b945d2ddc3e708ef32d07e7b24181faeff73eaec6af4c40ff83994",
+    "repositoryPath": "pool/main/libandroid-sysv-semaphore_0.1-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-utimes-static",
+    "version": "0.4",
+    "architecture": "aarch64",
+    "sha256": "e23d2d256119c76da7d0f8557c9e2cc6946c9c4e4bea8e1e758e55d70218373f",
+    "repositoryPath": "pool/main/libandroid-utimes-static_0.4_aarch64.deb",
+    "dependencies": "libandroid-utimes (= 0.4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libandroid-utimes",
+    "version": "0.4",
+    "architecture": "aarch64",
+    "sha256": "7516da5522414334870f26d8ae6bc52562471a9761afea44f791615df0e7f24d",
+    "repositoryPath": "pool/main/libandroid-utimes_0.4_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libaom-static",
+    "version": "3.15.0",
+    "architecture": "aarch64",
+    "sha256": "77311d49c09db1b6e9c4945be26f7f725f19950c0c9705c5a7b54bdfdb0997ee",
+    "repositoryPath": "pool/main/libaom-static_3.15.0_aarch64.deb",
+    "dependencies": "libaom (= 3.15.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libaom",
+    "version": "3.15.0",
+    "architecture": "aarch64",
+    "sha256": "67fec8c21610f4bfd2ddff643cf90190236c3593cded293d26fdea266f4b2bd0",
+    "repositoryPath": "pool/main/libaom_3.15.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libarchive-static",
+    "version": "3.8.9",
+    "architecture": "aarch64",
+    "sha256": "aab53217b192aea8c2b6486ede04815b8b13d274acfa619369796591e89c3009",
+    "repositoryPath": "pool/main/libarchive-static_3.8.9_aarch64.deb",
+    "dependencies": "libarchive (= 3.8.9)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libarchive",
+    "version": "3.8.9",
+    "architecture": "aarch64",
+    "sha256": "48de054f764b617cc93e28fb96859e0213ff81e56bf2fe8a6c5c68d231d8dace",
+    "repositoryPath": "pool/main/libarchive_3.8.9_aarch64.deb",
+    "dependencies": "libbz2, libiconv, liblzma, libxml2, openssl, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libass-static",
+    "version": "0.17.5",
+    "architecture": "aarch64",
+    "sha256": "61927be3baddeacd712de013ea10dd541236c9cfac51218195dffa908e73e36b",
+    "repositoryPath": "pool/main/libass-static_0.17.5_aarch64.deb",
+    "dependencies": "libass (= 0.17.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libass",
+    "version": "0.17.5",
+    "architecture": "aarch64",
+    "sha256": "97a3273186576242b21c68f17da6afd0db7e89165329e62b6b266138459b450d",
+    "repositoryPath": "pool/main/libass_0.17.5_aarch64.deb",
+    "dependencies": "fontconfig, fribidi, glib, harfbuzz",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libassuan-static",
+    "version": "3.0.2-1",
+    "architecture": "aarch64",
+    "sha256": "b92b48489581312b45c62a10cd04a0ec1929d2772cc87e89f4fca266d329a312",
+    "repositoryPath": "pool/main/libassuan-static_3.0.2-1_aarch64.deb",
+    "dependencies": "libassuan (= 3.0.2-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libassuan",
+    "version": "3.0.2-1",
+    "architecture": "aarch64",
+    "sha256": "5f717e0fe44ab024b015686bb99ed2bdfdf02d870edba3c4c0c6e4636353f7f5",
+    "repositoryPath": "pool/main/libassuan_3.0.2-1_aarch64.deb",
+    "dependencies": "libgpg-error",
+    "executables": [
+      "libassuan-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libavif",
+    "version": "1.4.2",
+    "architecture": "aarch64",
+    "sha256": "b6de76a343bc0208e09046535a4e465a25c7a6a3c4621024449420eb48e26265",
+    "repositoryPath": "pool/main/libavif_1.4.2_aarch64.deb",
+    "dependencies": "libaom, libc++, libdav1d, libjpeg-turbo, libpng, libwebp, librav1e, svt-av1",
+    "executables": [
+      "avifdec",
+      "avifenc",
+      "avifgainmaputil"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libblkid",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "afb267b2a881526a20d01c50038740e99df3c20454511701d706325c5689ff23",
+    "repositoryPath": "pool/main/libblkid_2.42.1-4_aarch64.deb",
+    "dependencies": "libandroid-posix-semaphore",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbluray-static",
+    "version": "1.5.0",
+    "architecture": "aarch64",
+    "sha256": "e04a123f6e207da3b40b0ab0c209bab2baf23c4594c7970c0044591a6a9f4653",
+    "repositoryPath": "pool/main/libbluray-static_1.5.0_aarch64.deb",
+    "dependencies": "libbluray (= 1.5.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbluray-utils",
+    "version": "1.5.0",
+    "architecture": "aarch64",
+    "sha256": "79a30a265ff2766b22379e43c3c889e0c807ea9af46f949d5bdaafc96ce7273f",
+    "repositoryPath": "pool/main/libbluray-utils_1.5.0_aarch64.deb",
+    "dependencies": "libbluray (= 1.5.0)",
+    "executables": [
+      "bd_info",
+      "bd_list_titles",
+      "bd_splice"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbluray",
+    "version": "1.5.0",
+    "architecture": "aarch64",
+    "sha256": "dc2488de24210d2df5623b9963f5e82a995c093a769c14de32d52fc77bda2abc",
+    "repositoryPath": "pool/main/libbluray_1.5.0_aarch64.deb",
+    "dependencies": "fontconfig, freetype, libudfread, libxml2",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbs2b-static",
+    "version": "3.1.0-2",
+    "architecture": "aarch64",
+    "sha256": "7f0aab1bff1272498d99748896c04a6d09001652ef34aecdbdf40b0740bfe7f6",
+    "repositoryPath": "pool/main/libbs2b-static_3.1.0-2_aarch64.deb",
+    "dependencies": "libbs2b (= 3.1.0-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbs2b",
+    "version": "3.1.0-2",
+    "architecture": "aarch64",
+    "sha256": "f4b6e20f44d08463588cb71e222eeee66bf3513b1d999248e5841572d4ca3aea",
+    "repositoryPath": "pool/main/libbs2b_3.1.0-2_aarch64.deb",
+    "dependencies": "libc++, libsndfile",
+    "executables": [
+      "bs2bconvert",
+      "bs2bstream"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libbz2",
+    "version": "1.0.8-8",
+    "architecture": "aarch64",
+    "sha256": "9d98caa9d2015ead33db39136d3117de9abd1977038e0fd0a1ecc3964fac23f8",
+    "repositoryPath": "pool/main/libbz2_1.0.8-8_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libc++",
+    "version": "29",
+    "architecture": "aarch64",
+    "sha256": "c24f5137ff995c9badef966b319829ec2cd5e4c83d5b0f702a76554c6d09aff7",
+    "repositoryPath": "pool/main/libc++_29_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcairo",
+    "version": "1.18.4-2",
+    "architecture": "aarch64",
+    "sha256": "6d5df0516e6c74214a3723b19af4f18bd4bdb5f6338fbb5b8aa3964258e3628a",
+    "repositoryPath": "pool/main/libcairo_1.18.4-2_aarch64.deb",
+    "dependencies": "fontconfig, freetype, glib, libandroid-shmem, libandroid-execinfo, liblzo, libpixman, libpng, libx11, libxcb, libxext, libxrender, zlib",
+    "executables": [
+      "cairo-trace"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcap-ng-static",
+    "version": "2:0.9.5",
+    "architecture": "aarch64",
+    "sha256": "b380ba713acbb5511005961f1abb5206ee31d80d335aef1f4fd481fc97267b1a",
+    "repositoryPath": "pool/main/libcap-ng-static_2:0.9.5_aarch64.deb",
+    "dependencies": "libcap-ng (= 2:0.9.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcap-ng",
+    "version": "2:0.9.5",
+    "architecture": "aarch64",
+    "sha256": "7b80a629645d38e64c12a476a55ef559b5c1fc8ba21de83ea9a57f6864434d3e",
+    "repositoryPath": "pool/main/libcap-ng_2:0.9.5_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "filecap",
+      "netcap",
+      "pscap"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcap-static",
+    "version": "2.69-1",
+    "architecture": "aarch64",
+    "sha256": "c74960c1624906b9e1ae2d3e3f36232c5cc4a426459c9e8b2adf53e90c6fe283",
+    "repositoryPath": "pool/main/libcap-static_2.69-1_aarch64.deb",
+    "dependencies": "libcap (= 2.69-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcap",
+    "version": "2.69-1",
+    "architecture": "aarch64",
+    "sha256": "5b9802dfbf5aff6154ac07f98887723f9edb22acdf8f2e665f090090b80bc7a9",
+    "repositoryPath": "pool/main/libcap_2.69-1_aarch64.deb",
+    "dependencies": "attr",
+    "executables": [
+      "capsh",
+      "getcap",
+      "getpcaps",
+      "setcap"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcompiler-rt",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "7c651f15deb17fb97952bb0467f00d30b4c8d417ab1adf455f3e9d094f51a2e0",
+    "repositoryPath": "pool/main/libcompiler-rt_21.1.8-3_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [
+      "asan_device_setup",
+      "hwasan_symbolize"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcrypt",
+    "version": "0.2-6",
+    "architecture": "aarch64",
+    "sha256": "4f1b55a4bffcc5e67155fa104ae217c516853b467995452f625b754c5b5ed872",
+    "repositoryPath": "pool/main/libcrypt_0.2-6_aarch64.deb",
+    "dependencies": "openssl",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcurl-static",
+    "version": "8.21.0",
+    "architecture": "aarch64",
+    "sha256": "d15993efc628316431654b998886ec6a8b2a0a3c9823c8a80db1d003990be0b2",
+    "repositoryPath": "pool/main/libcurl-static_8.21.0_aarch64.deb",
+    "dependencies": "libcurl (= 8.21.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libcurl",
+    "version": "8.21.0",
+    "architecture": "aarch64",
+    "sha256": "ae4b45b749dfe6ad1a45c3ea0e93ab5eaeb5df99129aa0e1db9788702e865b76",
+    "repositoryPath": "pool/main/libcurl_8.21.0_aarch64.deb",
+    "dependencies": "libnghttp2, libnghttp3, libngtcp2, libssh2, openssl (>= 1:3.2.1-1), zlib",
+    "executables": [
+      "curl-config",
+      "wcurl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdav1d",
+    "version": "1.5.4",
+    "architecture": "aarch64",
+    "sha256": "727f03ddbac71923138d892f173ec7b458d7f47b9afafd91ecb0fb31e2b8e0f2",
+    "repositoryPath": "pool/main/libdav1d_1.5.4_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "dav1d"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdb-static",
+    "version": "18.1.40-6",
+    "architecture": "aarch64",
+    "sha256": "9a8711696c82ab8f21b4ac4923ce8c68fd108f18deb675a7eb33379b0e1233e2",
+    "repositoryPath": "pool/main/libdb-static_18.1.40-6_aarch64.deb",
+    "dependencies": "libdb (= 18.1.40-6)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdb",
+    "version": "18.1.40-6",
+    "architecture": "aarch64",
+    "sha256": "e004ef3332e66fe7a27dea9d1cdb6f761d421e75ccf204545bc5e86ec9899bb7",
+    "repositoryPath": "pool/main/libdb_18.1.40-6_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libde265",
+    "version": "1.1.1",
+    "architecture": "aarch64",
+    "sha256": "8f5a365f5cfdc4596be2bf5aaca06d5a79e470698e90022403dd6e6409be8443",
+    "repositoryPath": "pool/main/libde265_1.1.1_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [
+      "dec265"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdvdnav-static",
+    "version": "7.0.0",
+    "architecture": "aarch64",
+    "sha256": "33174a1423171721c664b279743458fcb5a2465c6c16a3ff4da3573514e2f1b7",
+    "repositoryPath": "pool/main/libdvdnav-static_7.0.0_aarch64.deb",
+    "dependencies": "libdvdnav (= 7.0.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdvdnav",
+    "version": "7.0.0",
+    "architecture": "aarch64",
+    "sha256": "89678013c27515fa1ef28b539e8b258c8727c46d8fcc4ada1699853b7a87eb58",
+    "repositoryPath": "pool/main/libdvdnav_7.0.0_aarch64.deb",
+    "dependencies": "libdvdread",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdvdread-static",
+    "version": "7.1.1",
+    "architecture": "aarch64",
+    "sha256": "f623774433fc4cfcf6fc6faaa40d595c66c5045afdb80ac05c696d68aaf59e56",
+    "repositoryPath": "pool/main/libdvdread-static_7.1.1_aarch64.deb",
+    "dependencies": "libdvdread (= 7.1.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libdvdread",
+    "version": "7.1.1",
+    "architecture": "aarch64",
+    "sha256": "10a1c07f3512d1d0cb20d1922b29412240db5d169269cc57a9e7778216de4204",
+    "repositoryPath": "pool/main/libdvdread_7.1.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libedit-static",
+    "version": "20260512-3.1-0",
+    "architecture": "aarch64",
+    "sha256": "7a0a1ab505762dd3dc2e72242ef10986a1e2cf6db83259c2304b70e00d7226a1",
+    "repositoryPath": "pool/main/libedit-static_20260512-3.1-0_aarch64.deb",
+    "dependencies": "libedit (= 20260512-3.1-0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libedit",
+    "version": "20260512-3.1-0",
+    "architecture": "aarch64",
+    "sha256": "b5f33476e8cebe6e9e356ce3caaecd374495c7d7701794fb6d0d66b9f8b7fea6",
+    "repositoryPath": "pool/main/libedit_20260512-3.1-0_aarch64.deb",
+    "dependencies": "ncurses",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libevent",
+    "version": "2.1.13",
+    "architecture": "aarch64",
+    "sha256": "ef2f78105a6997109f15b7ecc8b3bc710b3d010fff572fb546cd779435183639",
+    "repositoryPath": "pool/main/libevent_2.1.13_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libexpat-static",
+    "version": "2.8.3",
+    "architecture": "aarch64",
+    "sha256": "db2a7fbc38046ea167b5c75a39464f3fb004512dd31d0ba2df135c1a43a37e81",
+    "repositoryPath": "pool/main/libexpat-static_2.8.3_aarch64.deb",
+    "dependencies": "libexpat (= 2.8.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libexpat",
+    "version": "2.8.3",
+    "architecture": "aarch64",
+    "sha256": "9872342b8c3b50ceb376ebc36affd4b53cf0a4118bf5b71d91b228b2f2e7f37f",
+    "repositoryPath": "pool/main/libexpat_2.8.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libfdisk",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "3009ee2b29156a3f2319474f6f530c47ec57d1d4368ad8a053bbdeb10248e51a",
+    "repositoryPath": "pool/main/libfdisk_2.42.1-4_aarch64.deb",
+    "dependencies": "libblkid, libuuid",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libffi-static",
+    "version": "3.5.2",
+    "architecture": "aarch64",
+    "sha256": "22723c40d269ae3913fdb632d484c2ef180f5abef4913fe021b14ded4cd6d806",
+    "repositoryPath": "pool/main/libffi-static_3.5.2_aarch64.deb",
+    "dependencies": "libffi (= 3.5.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libffi",
+    "version": "3.5.2",
+    "architecture": "aarch64",
+    "sha256": "b06ab14fe6cbe73988db612ceafcbe9d48402ffb5a32039dbcd662f4c82cfdbb",
+    "repositoryPath": "pool/main/libffi_3.5.2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libflac-static",
+    "version": "1.5.0-1",
+    "architecture": "aarch64",
+    "sha256": "2f10478229b996928f99555ded6a6be9312491ad94c849eafd2573c4f963d38f",
+    "repositoryPath": "pool/main/libflac-static_1.5.0-1_aarch64.deb",
+    "dependencies": "libflac (= 1.5.0-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libflac",
+    "version": "1.5.0-1",
+    "architecture": "aarch64",
+    "sha256": "f13ff55acfeeaba5e34f67b29481372b71c94cc4b4c68926dc518bd1d314064a",
+    "repositoryPath": "pool/main/libflac_1.5.0-1_aarch64.deb",
+    "dependencies": "libc++, libogg",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgcrypt-static",
+    "version": "1.12.2",
+    "architecture": "aarch64",
+    "sha256": "d546fe29a2391268f1d66f2abc3ba8a387466441d148ce23b86d613a9e963f11",
+    "repositoryPath": "pool/main/libgcrypt-static_1.12.2_aarch64.deb",
+    "dependencies": "libgcrypt (= 1.12.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgcrypt",
+    "version": "1.12.2",
+    "architecture": "aarch64",
+    "sha256": "6c516d49d10c058efc745ff5f39a2b55a210d5f089512ac056cd488840f36259",
+    "repositoryPath": "pool/main/libgcrypt_1.12.2_aarch64.deb",
+    "dependencies": "libgpg-error",
+    "executables": [
+      "dumpsexp",
+      "hmac256",
+      "libgcrypt-config",
+      "mpicalc"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgd-static",
+    "version": "1:2.3.3-7",
+    "architecture": "aarch64",
+    "sha256": "5063236a6943f1ebd441e409b910c731ec3602f51b74fe0d69eaa2c326bdc132",
+    "repositoryPath": "pool/main/libgd-static_1:2.3.3-7_aarch64.deb",
+    "dependencies": "libgd (= 1:2.3.3-7)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgd",
+    "version": "1:2.3.3-7",
+    "architecture": "aarch64",
+    "sha256": "5bf249cabba8f009cb748721cb861816bd8209e672e652c5fcc007426262420a",
+    "repositoryPath": "pool/main/libgd_1:2.3.3-7_aarch64.deb",
+    "dependencies": "fontconfig, freetype, libavif, libheif, libiconv, libjpeg-turbo, libpng, libtiff, libwebp, zlib",
+    "executables": [
+      "annotate",
+      "bdftogd",
+      "gd2copypal",
+      "gd2togif",
+      "gd2topng",
+      "gdcmpgif",
+      "gdparttopng",
+      "gdtopng",
+      "giftogd2",
+      "pngtogd",
+      "pngtogd2",
+      "webpng"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libglvnd-dev",
+    "version": "1.7.0-1",
+    "architecture": "all",
+    "sha256": "0d5f3e405f12f7956615f13e0c5d7e99349e13774050b322b2a1d6d90d360fc5",
+    "repositoryPath": "pool/main/libglvnd-dev_1.7.0-1_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libglvnd",
+    "version": "1.7.0-1",
+    "architecture": "aarch64",
+    "sha256": "8641091b24599ade7d5aaa6ecf57cf5b46a3ad974e9b250667a1adba02f8e3e0",
+    "repositoryPath": "pool/main/libglvnd_1.7.0-1_aarch64.deb",
+    "dependencies": "libc++, libx11, libxext",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgmp-static",
+    "version": "6.3.0-2",
+    "architecture": "aarch64",
+    "sha256": "9b4f30a388b643590bb64361c5cfecc51b77b4e6d90b164a4e915d1e2cbdff8a",
+    "repositoryPath": "pool/main/libgmp-static_6.3.0-2_aarch64.deb",
+    "dependencies": "libgmp (= 6.3.0-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgmp",
+    "version": "6.3.0-2",
+    "architecture": "aarch64",
+    "sha256": "d5b28cc414389dda87384923ce2389863dd13d4b32c6e9e4586935550baee8b0",
+    "repositoryPath": "pool/main/libgmp_6.3.0-2_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgnutls-static",
+    "version": "3.8.13-1",
+    "architecture": "aarch64",
+    "sha256": "04674d1e8753bf9eca629922f0a960643d869fd92de437b4600ad20d655732f8",
+    "repositoryPath": "pool/main/libgnutls-static_3.8.13-1_aarch64.deb",
+    "dependencies": "libgnutls (= 3.8.13-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgnutls",
+    "version": "3.8.13-1",
+    "architecture": "aarch64",
+    "sha256": "3b5c9ac50d58860551cab835c7e244c944b73ada07fee2e82f309b45102f7cd0",
+    "repositoryPath": "pool/main/libgnutls_3.8.13-1_aarch64.deb",
+    "dependencies": "libc++, libgmp, libnettle, ca-certificates, libidn2, libtasn1, libunbound, libunistring, p11-kit, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgpg-error-static",
+    "version": "1.61",
+    "architecture": "aarch64",
+    "sha256": "0b4a7bc1384a6a045c6a9d4305d0c71db78fc82563be575c109476452b6fb683",
+    "repositoryPath": "pool/main/libgpg-error-static_1.61_aarch64.deb",
+    "dependencies": "libgpg-error (= 1.61)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgpg-error",
+    "version": "1.61",
+    "architecture": "aarch64",
+    "sha256": "823f9ff5b43b98903a377e5b0d43cff305d139e9121562e1a734e514eab3835e",
+    "repositoryPath": "pool/main/libgpg-error_1.61_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "gpg-error",
+      "gpg-error-config",
+      "gpgrt-config",
+      "yat2m"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libgraphite",
+    "version": "1.3.15",
+    "architecture": "aarch64",
+    "sha256": "439afd66e79adffe1ad04d1b461acb1589cc4975dc8e8b3e1849632244d862f8",
+    "repositoryPath": "pool/main/libgraphite_1.3.15_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libheif-progs",
+    "version": "1.23.2",
+    "architecture": "aarch64",
+    "sha256": "628619cf55592d54d2ca8ef44863ffdcdc6ffae2dca8954dac5393d14b66e92a",
+    "repositoryPath": "pool/main/libheif-progs_1.23.2_aarch64.deb",
+    "dependencies": "libjpeg-turbo, libpng, libheif (= 1.23.2)",
+    "executables": [
+      "heif-dec",
+      "heif-enc",
+      "heif-info",
+      "heif-thumbnailer"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libheif",
+    "version": "1.23.2",
+    "architecture": "aarch64",
+    "sha256": "0c6bb867dea12499b763ec53f744fabe77001130ad9b48bf8aee371237913685",
+    "repositoryPath": "pool/main/libheif_1.23.2_aarch64.deb",
+    "dependencies": "gdk-pixbuf, glib, libaom, libc++, libdav1d, libde265, librav1e, libx264, libx265",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libiconv-static",
+    "version": "1.18-1",
+    "architecture": "aarch64",
+    "sha256": "b67dfec567492bf1726b2f4bb42fc9e235d4f1938c91c6876aeb04ee6a53cb24",
+    "repositoryPath": "pool/main/libiconv-static_1.18-1_aarch64.deb",
+    "dependencies": "libiconv (= 1.18-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libiconv",
+    "version": "1.18-1",
+    "architecture": "aarch64",
+    "sha256": "bcc6f4bff3f76b686edc0223facb4a52dcda851435313598dce21d88713cb98b",
+    "repositoryPath": "pool/main/libiconv_1.18-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libicu-static",
+    "version": "78.3",
+    "architecture": "aarch64",
+    "sha256": "52aaf8fb14d43b1d227bcd0d20ca281f64e476e5dbd132df97dd66c0e9372c98",
+    "repositoryPath": "pool/main/libicu-static_78.3_aarch64.deb",
+    "dependencies": "libicu (= 78.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libicu",
+    "version": "78.3",
+    "architecture": "aarch64",
+    "sha256": "5bb26a8c4048fcb5929321d4cd2fb70f7826a40af54794198bc97001870ff311",
+    "repositoryPath": "pool/main/libicu_78.3_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libidn2-static",
+    "version": "2.3.8-1",
+    "architecture": "aarch64",
+    "sha256": "5d6281aafe3eb9563768cf4127f2d6d169199080ed4028b9750b4063dfbe4b0e",
+    "repositoryPath": "pool/main/libidn2-static_2.3.8-1_aarch64.deb",
+    "dependencies": "libidn2 (= 2.3.8-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libidn2",
+    "version": "2.3.8-1",
+    "architecture": "aarch64",
+    "sha256": "f92616e2e038c7fa5a4f8db6e860f1697931bd1b21019b2c911749794a50b35b",
+    "repositoryPath": "pool/main/libidn2_2.3.8-1_aarch64.deb",
+    "dependencies": "libandroid-support, libiconv, libunistring",
+    "executables": [
+      "idn2"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjansi",
+    "version": "2.4.3",
+    "architecture": "aarch64",
+    "sha256": "f9f134d61b7c9b1c0b21008e2088e2cb6bb8e397dd8b9fffac71528eb271296f",
+    "repositoryPath": "pool/main/libjansi_2.4.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjpeg-turbo-progs",
+    "version": "3.2.0",
+    "architecture": "aarch64",
+    "sha256": "bec640e96ec91d996aace86af42ae96971d371546d8b204d68534dcb00eae2b0",
+    "repositoryPath": "pool/main/libjpeg-turbo-progs_3.2.0_aarch64.deb",
+    "dependencies": "libjpeg-turbo (= 3.2.0)",
+    "executables": [
+      "cjpeg",
+      "djpeg",
+      "jpegtran",
+      "rdjpgcom",
+      "tjbench",
+      "wrjpgcom"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjpeg-turbo-static",
+    "version": "3.2.0",
+    "architecture": "aarch64",
+    "sha256": "f2d6d0b5c683eb5c6e9447f77b22030a6d964a29f85fcbdfc692de44da9be57a",
+    "repositoryPath": "pool/main/libjpeg-turbo-static_3.2.0_aarch64.deb",
+    "dependencies": "libjpeg-turbo (= 3.2.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjpeg-turbo",
+    "version": "3.2.0",
+    "architecture": "aarch64",
+    "sha256": "7bce3c4caba4eb1db73b224b9c18c46475feb515dfbbc50fbbcd54644602acda",
+    "repositoryPath": "pool/main/libjpeg-turbo_3.2.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjxl-progs",
+    "version": "0.12.0",
+    "architecture": "aarch64",
+    "sha256": "5dab69c290c8e86a8eacad269d26036e33bd16cf29821a913c06ed021a6b9f47",
+    "repositoryPath": "pool/main/libjxl-progs_0.12.0_aarch64.deb",
+    "dependencies": "giflib, imath, libandroid-glob, libandroid-spawn, libjpeg-turbo, libpng, libwebp, openexr, libjxl (= 0.12.0)",
+    "executables": [
+      "benchmark_xl",
+      "cjxl",
+      "djxl",
+      "jxlinfo",
+      "jxltran"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libjxl",
+    "version": "0.12.0",
+    "architecture": "aarch64",
+    "sha256": "454a1a907bbbb1fcf2ca910f0c9b4ca28e112b797e46956d78e0cda2a704d72f",
+    "repositoryPath": "pool/main/libjxl_0.12.0_aarch64.deb",
+    "dependencies": "brotli, giflib, glib, libc++, libffi, libiconv, libjpeg-turbo, libpng, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libksba-static",
+    "version": "1.8.1",
+    "architecture": "aarch64",
+    "sha256": "c6e3940a7d466b610c923665714360c7456bf372676a075d817bb5858d66fdd3",
+    "repositoryPath": "pool/main/libksba-static_1.8.1_aarch64.deb",
+    "dependencies": "libksba (= 1.8.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libksba",
+    "version": "1.8.1",
+    "architecture": "aarch64",
+    "sha256": "ffcd10c234b85f22e2be2d828657172e100dd9e9eaba0161cb6dea1b80968132",
+    "repositoryPath": "pool/main/libksba_1.8.1_aarch64.deb",
+    "dependencies": "libgpg-error",
+    "executables": [
+      "ksba-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libllvm-static",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "82da9a423640dddf6e284887273f8a40ccd2f9a21c85af0888b297dd891e6035",
+    "repositoryPath": "pool/main/libllvm-static_21.1.8-3_aarch64.deb",
+    "dependencies": "libllvm (= 21.1.8-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libllvm",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "ff4349ef628b5952dfd1104039dc784f981320290382ba162f6ee660b0c64d66",
+    "repositoryPath": "pool/main/libllvm_21.1.8-3_aarch64.deb",
+    "dependencies": "libc++, libffi, libxml2, ncurses, zlib, zstd",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libltdl",
+    "version": "2.6.2",
+    "architecture": "aarch64",
+    "sha256": "1cb5aa03150d06ec7da7702053e8c857884d42d7b42d5865b92b3ed391d38dd5",
+    "repositoryPath": "pool/main/libltdl_2.6.2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liblz4",
+    "version": "1.10.0-1",
+    "architecture": "aarch64",
+    "sha256": "8ccacdb965671efa0a1ccee3534bac94b368c752e9e1560b0282b240caafbf47",
+    "repositoryPath": "pool/main/liblz4_1.10.0-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liblzma-static",
+    "version": "5.8.3",
+    "architecture": "aarch64",
+    "sha256": "4eb5bd223d447cf98694aad30f13977698cc4c3e590219edc6487dc658545a44",
+    "repositoryPath": "pool/main/liblzma-static_5.8.3_aarch64.deb",
+    "dependencies": "liblzma (= 5.8.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liblzma",
+    "version": "5.8.3",
+    "architecture": "aarch64",
+    "sha256": "ff9b990f23922ef1dfcacf925ec0c313f6a6b5924ddcb48849411918b1588c2c",
+    "repositoryPath": "pool/main/liblzma_5.8.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liblzo-static",
+    "version": "2.10-5",
+    "architecture": "aarch64",
+    "sha256": "658af574ce8b62969b908d7d48a4d55c690b4bf666c580aedc821ec8108ce57a",
+    "repositoryPath": "pool/main/liblzo-static_2.10-5_aarch64.deb",
+    "dependencies": "liblzo (= 2.10-5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liblzo",
+    "version": "2.10-5",
+    "architecture": "aarch64",
+    "sha256": "2b405e8aa7fd34ada1fe90dfc0f12a80f351835fef9fca5d0eee532743ab1c2e",
+    "repositoryPath": "pool/main/liblzo_2.10-5_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmagic-static",
+    "version": "5.48-3",
+    "architecture": "aarch64",
+    "sha256": "c74bc93fefd73764e835c3b5617b0f4feb1a416834af7486ea5c2b36b0d34cf7",
+    "repositoryPath": "pool/main/libmagic-static_5.48-3_aarch64.deb",
+    "dependencies": "libmagic (= 5.48-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmagic",
+    "version": "5.48-3",
+    "architecture": "aarch64",
+    "sha256": "c1e4cd4a86e2c7528fc3f5a83ec0acde84bdc77780b57590a99cb68fd15b64ac",
+    "repositoryPath": "pool/main/libmagic_5.48-3_aarch64.deb",
+    "dependencies": "zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmd-static",
+    "version": "1.1.0-1",
+    "architecture": "aarch64",
+    "sha256": "ed4082b456a2ec57b8cd4dbf452972365b806a18e3b723430543e62c9a1eff11",
+    "repositoryPath": "pool/main/libmd-static_1.1.0-1_aarch64.deb",
+    "dependencies": "libmd (= 1.1.0-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmd",
+    "version": "1.1.0-1",
+    "architecture": "aarch64",
+    "sha256": "1f4a3f74ac11817751c80426d0b44068eb072bf06c689c972a015e41a80dab86",
+    "repositoryPath": "pool/main/libmd_1.1.0-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmount",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "ac7b46f473c0e69f4ab9349627fc68e62f10285baf0cb8e589b10fe450d5b940",
+    "repositoryPath": "pool/main/libmount_2.42.1-4_aarch64.deb",
+    "dependencies": "libblkid, libsmartcols",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmp3lame-static",
+    "version": "3.100-7",
+    "architecture": "aarch64",
+    "sha256": "0d80304877b3f55d7a2bda2dd2e6e927c503c077f153fdf05f0adf87ca68f0d5",
+    "repositoryPath": "pool/main/libmp3lame-static_3.100-7_aarch64.deb",
+    "dependencies": "libmp3lame (= 3.100-7)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmp3lame",
+    "version": "3.100-7",
+    "architecture": "aarch64",
+    "sha256": "e9ac599d284bf88b4f2cf2b80a7bced1060edb09ddd00ef7aaf1f59cfce97eeb",
+    "repositoryPath": "pool/main/libmp3lame_3.100-7_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmpfr-static",
+    "version": "4.2.1-1",
+    "architecture": "aarch64",
+    "sha256": "e39c71df0054d7c1806adaebddd22205f3ac575374702af99cfcbe3411afd46c",
+    "repositoryPath": "pool/main/libmpfr-static_4.2.1-1_aarch64.deb",
+    "dependencies": "libmpfr (= 4.2.1-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmpfr",
+    "version": "4.2.1-1",
+    "architecture": "aarch64",
+    "sha256": "c1f892cbfb78242cf80b299a9fe78e6dcc004bd74433d5a423b658b7e2d0e2e1",
+    "repositoryPath": "pool/main/libmpfr_4.2.1-1_aarch64.deb",
+    "dependencies": "libgmp",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmpg123-static",
+    "version": "1.33.5",
+    "architecture": "aarch64",
+    "sha256": "e8556bebc063c2c6705728afdbb6156f140a79869a1aced99f5d4befe2f6b741",
+    "repositoryPath": "pool/main/libmpg123-static_1.33.5_aarch64.deb",
+    "dependencies": "libmpg123 (= 1.33.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmpg123",
+    "version": "1.33.5",
+    "architecture": "aarch64",
+    "sha256": "e73659cdd177bde7559e61c809bf49c42aedbe97c80bb03dfa65ddaf7144a4a5",
+    "repositoryPath": "pool/main/libmpg123_1.33.5_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmysofa-static",
+    "version": "1.3.5",
+    "architecture": "aarch64",
+    "sha256": "19223e74d7c77e22efb2d36e51612cd43aa4f7f8660b8547885938247502028d",
+    "repositoryPath": "pool/main/libmysofa-static_1.3.5_aarch64.deb",
+    "dependencies": "libmysofa (= 1.3.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libmysofa",
+    "version": "1.3.5",
+    "architecture": "aarch64",
+    "sha256": "71446f66c971e4de5cb31130c9ed32221e7fc45cde7ee6eeb2ba2651a1b8f4b0",
+    "repositoryPath": "pool/main/libmysofa_1.3.5_aarch64.deb",
+    "dependencies": "zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnettle-static",
+    "version": "4.0+really3.10.2",
+    "architecture": "aarch64",
+    "sha256": "295ca0a2b1fc7715a58906e3d73e74a1105132265de8675b80818ccf7bf456e1",
+    "repositoryPath": "pool/main/libnettle-static_4.0+really3.10.2_aarch64.deb",
+    "dependencies": "libnettle (= 4.0+really3.10.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnettle",
+    "version": "4.0+really3.10.2",
+    "architecture": "aarch64",
+    "sha256": "eecfab3dedf56fa230bd3198d9dd9854577ac0b06cecccad35f8b1fb870e1b1d",
+    "repositoryPath": "pool/main/libnettle_4.0+really3.10.2_aarch64.deb",
+    "dependencies": "libgmp",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnghttp2-static",
+    "version": "1.70.0",
+    "architecture": "aarch64",
+    "sha256": "40ae9d3e99a02e6a06e17056533501746e072ff86358ad7f96e10c725962a405",
+    "repositoryPath": "pool/main/libnghttp2-static_1.70.0_aarch64.deb",
+    "dependencies": "libnghttp2 (= 1.70.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnghttp2",
+    "version": "1.70.0",
+    "architecture": "aarch64",
+    "sha256": "2fd8a218fc30635b8e1c845804a735a1d4087faaa443f4ebd392e645cad7e914",
+    "repositoryPath": "pool/main/libnghttp2_1.70.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnghttp3-static",
+    "version": "1.18.0",
+    "architecture": "aarch64",
+    "sha256": "5e6b642788df61ce205877dc8668768d0d321390539f6208021acde96b55e7a1",
+    "repositoryPath": "pool/main/libnghttp3-static_1.18.0_aarch64.deb",
+    "dependencies": "libnghttp3 (= 1.18.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnghttp3",
+    "version": "1.18.0",
+    "architecture": "aarch64",
+    "sha256": "5cec4c3ef6d77e4afa416b622c5c274bc52ee2dd63e7a27f7bdce9d172f00f6f",
+    "repositoryPath": "pool/main/libnghttp3_1.18.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libngtcp2-static",
+    "version": "1.25.0",
+    "architecture": "aarch64",
+    "sha256": "2f2aa01205948d94f6a1750c8ad852129c6b4d2b087fa97adf0e89ff94db87fa",
+    "repositoryPath": "pool/main/libngtcp2-static_1.25.0_aarch64.deb",
+    "dependencies": "libngtcp2 (= 1.25.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libngtcp2",
+    "version": "1.25.0",
+    "architecture": "aarch64",
+    "sha256": "864a1f657dce980da1f950044ea4d8dc70b5a6da3effe7998f7ed1b8e99d19d9",
+    "repositoryPath": "pool/main/libngtcp2_1.25.0_aarch64.deb",
+    "dependencies": "openssl",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnpth-static",
+    "version": "1.6-3",
+    "architecture": "aarch64",
+    "sha256": "5b4da0081c5d6a403cec0ecdfa8a50cba8783caaeec1ab18ecb0651e79059e5c",
+    "repositoryPath": "pool/main/libnpth-static_1.6-3_aarch64.deb",
+    "dependencies": "libnpth (= 1.6-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libnpth",
+    "version": "1.6-3",
+    "architecture": "aarch64",
+    "sha256": "789679a9a9e4d864a829309a7a67bc8a70a4b730c017e7d0b3e271d033437f66",
+    "repositoryPath": "pool/main/libnpth_1.6-3_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "npth-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libogg-static",
+    "version": "1.3.6-1",
+    "architecture": "aarch64",
+    "sha256": "fb7abc32b46a0494ce323b89c6aaa44f77b8b1ac0a4b31a2d48a03d1620a5b9d",
+    "repositoryPath": "pool/main/libogg-static_1.3.6-1_aarch64.deb",
+    "dependencies": "libogg (= 1.3.6-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libogg",
+    "version": "1.3.6-1",
+    "architecture": "aarch64",
+    "sha256": "825864ed17d05908a248c61fea779e91547f57aad7e4c270a89259314057c6e1",
+    "repositoryPath": "pool/main/libogg_1.3.6-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopencore-amr-static",
+    "version": "0.1.6-1",
+    "architecture": "aarch64",
+    "sha256": "93250dde821eec204183bf9e7eb7f55bbd34c1a302555f0a7e7b6e3fc73ad116",
+    "repositoryPath": "pool/main/libopencore-amr-static_0.1.6-1_aarch64.deb",
+    "dependencies": "libopencore-amr (= 0.1.6-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopencore-amr",
+    "version": "0.1.6-1",
+    "architecture": "aarch64",
+    "sha256": "3bd965c78e1610cccab441730ec2ffde3544f42934bea4141a31b4f0141e5b08",
+    "repositoryPath": "pool/main/libopencore-amr_0.1.6-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopenmpt-static",
+    "version": "0.8.9",
+    "architecture": "aarch64",
+    "sha256": "3f7a8045b8454111b75534662dddd30fbca922433eae95f61e259e235d8f2ccf",
+    "repositoryPath": "pool/main/libopenmpt-static_0.8.9_aarch64.deb",
+    "dependencies": "libopenmpt (= 0.8.9)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopenmpt",
+    "version": "0.8.9",
+    "architecture": "aarch64",
+    "sha256": "10f82e1933faac8a0bb8bb9ddc72f89439f406178cf84663af6ae65fd299645e",
+    "repositoryPath": "pool/main/libopenmpt_0.8.9_aarch64.deb",
+    "dependencies": "libc++, libvorbis, libmpg123, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopus-static",
+    "version": "1.6.1",
+    "architecture": "aarch64",
+    "sha256": "1dfafd8235936300964a71c4c74a72d7bd6316ebffd0487d237841db2d007ae4",
+    "repositoryPath": "pool/main/libopus-static_1.6.1_aarch64.deb",
+    "dependencies": "libopus (= 1.6.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libopus",
+    "version": "1.6.1",
+    "architecture": "aarch64",
+    "sha256": "952c21960ba0d070269389da88db55a93623f2e35f62c88a870b2596ee0bf31b",
+    "repositoryPath": "pool/main/libopus_1.6.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpixman",
+    "version": "0.46.4-1",
+    "architecture": "aarch64",
+    "sha256": "2006f5a284780c028bc045814d69f960a818e10ddbb5ca030add57e300ea46f1",
+    "repositoryPath": "pool/main/libpixman_0.46.4-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpng-static",
+    "version": "1.6.58",
+    "architecture": "aarch64",
+    "sha256": "3ab34f2586bc1a4903e205a13d7d82e32f18de574f11971486a199d120e598a4",
+    "repositoryPath": "pool/main/libpng-static_1.6.58_aarch64.deb",
+    "dependencies": "libpng (= 1.6.58)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpng",
+    "version": "1.6.58",
+    "architecture": "aarch64",
+    "sha256": "4972faae458095be839f50a18a212b7fdd944ae18c34c57f7c43422c2427ef90",
+    "repositoryPath": "pool/main/libpng_1.6.58_aarch64.deb",
+    "dependencies": "zlib",
+    "executables": [
+      "libpng16-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpolly",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "29ae41499c943fa6371e1fbb9b0d4fc1161332921fc5e005f8e72ba7d431d456",
+    "repositoryPath": "pool/main/libpolly_21.1.8-3_aarch64.deb",
+    "dependencies": "libllvm (= 21.1.8-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpopt-static",
+    "version": "1.19-3",
+    "architecture": "aarch64",
+    "sha256": "8f68949c962322a0193f262a98a4d1c35d6f99ce30d99a4abc1190be15b4a4a6",
+    "repositoryPath": "pool/main/libpopt-static_1.19-3_aarch64.deb",
+    "dependencies": "libpopt (= 1.19-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libpopt",
+    "version": "1.19-3",
+    "architecture": "aarch64",
+    "sha256": "2e57ab57f11a256645ac784711865ed9df16317347ff3f7660bb8a8a192a624b",
+    "repositoryPath": "pool/main/libpopt_1.19-3_aarch64.deb",
+    "dependencies": "libandroid-glob",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "librav1e-static",
+    "version": "0.8.1",
+    "architecture": "aarch64",
+    "sha256": "bcfed37f467d649c0052dc312cf10109d1f6993f26ed42f14727b88a1ed60bbc",
+    "repositoryPath": "pool/main/librav1e-static_0.8.1_aarch64.deb",
+    "dependencies": "librav1e (= 0.8.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "librav1e",
+    "version": "0.8.1",
+    "architecture": "aarch64",
+    "sha256": "9e5b374c2fef7bc7b4b05f47aa012b4b6f3b8f6bf115af44dc32a096b36c4b06",
+    "repositoryPath": "pool/main/librav1e_0.8.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libresolv-wrapper",
+    "version": "1.1.7-6",
+    "architecture": "aarch64",
+    "sha256": "fe03f14d9b36b519287e7c3d161d42afbe66b3eaa6236d49e5a5ec9493c5530f",
+    "repositoryPath": "pool/main/libresolv-wrapper_1.1.7-6_aarch64.deb",
+    "dependencies": "resolv-conf",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsasl-static",
+    "version": "2.1.28-3",
+    "architecture": "aarch64",
+    "sha256": "b373e23be5496f756f680974a40f89a0e9831b0a016a72605d21470c032d4b76",
+    "repositoryPath": "pool/main/libsasl-static_2.1.28-3_aarch64.deb",
+    "dependencies": "libsasl (= 2.1.28-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsasl",
+    "version": "2.1.28-3",
+    "architecture": "aarch64",
+    "sha256": "3531c0bf17a35f6e153b2e49408ea4d3e86f4c5975c04043c2618dc5e59fbc56",
+    "repositoryPath": "pool/main/libsasl_2.1.28-3_aarch64.deb",
+    "dependencies": "libcrypt",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsmartcols",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "a8ae0ff484ad3b97e0baee00900213cd7263bbf15270ceeb81383a50f89a62b1",
+    "repositoryPath": "pool/main/libsmartcols_2.42.1-4_aarch64.deb",
+    "dependencies": "libandroid-posix-semaphore",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsndfile-static",
+    "version": "1.2.2-3",
+    "architecture": "aarch64",
+    "sha256": "d5c0767c1d027819a69de9be520f179616bc2a51e4a4816aab35e014cf4d6f92",
+    "repositoryPath": "pool/main/libsndfile-static_1.2.2-3_aarch64.deb",
+    "dependencies": "libsndfile (= 1.2.2-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsndfile",
+    "version": "1.2.2-3",
+    "architecture": "aarch64",
+    "sha256": "45831748da4aa8b75ef678f7b96a3a7bf33fe3b9c29f7b7fa31bb6df2a6f64e3",
+    "repositoryPath": "pool/main/libsndfile_1.2.2-3_aarch64.deb",
+    "dependencies": "libflac, libmp3lame, libmpg123, libogg, libopus, libvorbis",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsodium-static",
+    "version": "1.0.22-1",
+    "architecture": "aarch64",
+    "sha256": "534099976c1dab6636869196ee75a12d308e3943c33aa81ec516ddb44ef3eb40",
+    "repositoryPath": "pool/main/libsodium-static_1.0.22-1_aarch64.deb",
+    "dependencies": "libsodium (= 1.0.22-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsodium",
+    "version": "1.0.22-1",
+    "architecture": "aarch64",
+    "sha256": "42cebc6819c7433228f9cc4ac88ede7c6b88daa085787060e152dd666c212595",
+    "repositoryPath": "pool/main/libsodium_1.0.22-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsoxr",
+    "version": "0.1.3-8",
+    "architecture": "aarch64",
+    "sha256": "d547e6d58416b59e13fde02c74187c5aaf7688c322aab6dadeb4d569c815deae",
+    "repositoryPath": "pool/main/libsoxr_0.1.3-8_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsqlite-static",
+    "version": "3.53.4",
+    "architecture": "aarch64",
+    "sha256": "f69017ed9c18979cacf9531890b09e3d9865d806866f11198af857e50c1ddb23",
+    "repositoryPath": "pool/main/libsqlite-static_3.53.4_aarch64.deb",
+    "dependencies": "libsqlite (= 3.53.4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsqlite-tcl",
+    "version": "3.53.4",
+    "architecture": "aarch64",
+    "sha256": "b26863bf5a483d82284f64bfe33152810068ddc0d9edfcae728aa410cca1e51e",
+    "repositoryPath": "pool/main/libsqlite-tcl_3.53.4_aarch64.deb",
+    "dependencies": "tcl, libsqlite (= 3.53.4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libsqlite",
+    "version": "3.53.4",
+    "architecture": "aarch64",
+    "sha256": "2b497c657332b2492048a9a3df08bc0f0e1cd1b355b6e1fab8e1886f1d5db796",
+    "repositoryPath": "pool/main/libsqlite_3.53.4_aarch64.deb",
+    "dependencies": "zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libssh2-static",
+    "version": "1.11.1-2",
+    "architecture": "aarch64",
+    "sha256": "a953e3b0d638e4893cd73a81953275530e96a58bd68b1721d9b32e9ad7dea560",
+    "repositoryPath": "pool/main/libssh2-static_1.11.1-2_aarch64.deb",
+    "dependencies": "libssh2 (= 1.11.1-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libssh2",
+    "version": "1.11.1-2",
+    "architecture": "aarch64",
+    "sha256": "4925ae4b05e75a19214e733eaf9160e0eee461edaf2f7f839942b3360915fe34",
+    "repositoryPath": "pool/main/libssh2_1.11.1-2_aarch64.deb",
+    "dependencies": "openssl, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtalloc-static",
+    "version": "2.4.3",
+    "architecture": "aarch64",
+    "sha256": "850a424d16a426eb85e9ab1c6f69669759a1218ced2e7a4b268327bd72545841",
+    "repositoryPath": "pool/main/libtalloc-static_2.4.3_aarch64.deb",
+    "dependencies": "libtalloc (= 2.4.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtalloc",
+    "version": "2.4.3",
+    "architecture": "aarch64",
+    "sha256": "d799cf93970a1c32af7868fd52424343ee16a85bd01cc4150da632ecb2cce39a",
+    "repositoryPath": "pool/main/libtalloc_2.4.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtasn1-static",
+    "version": "4.21.0",
+    "architecture": "aarch64",
+    "sha256": "1fa82fd6cd70e143eaf14c9263efeb7423dceac267b9a0dc4ee20146bfa832ba",
+    "repositoryPath": "pool/main/libtasn1-static_4.21.0_aarch64.deb",
+    "dependencies": "libtasn1 (= 4.21.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtasn1",
+    "version": "4.21.0",
+    "architecture": "aarch64",
+    "sha256": "40c118383a141e5451b8eb8a4b31b73e47d2e7d4af2ac147a05f4e960b048229",
+    "repositoryPath": "pool/main/libtasn1_4.21.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "asn1Coding",
+      "asn1Decoding",
+      "asn1Parser"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtiff-static",
+    "version": "4.7.2",
+    "architecture": "aarch64",
+    "sha256": "3a11c4b62fb3d6bf6eaa130153f6e2f2f43ff8201bf29669d04037a8e38b7030",
+    "repositoryPath": "pool/main/libtiff-static_4.7.2_aarch64.deb",
+    "dependencies": "libtiff (= 4.7.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtiff-utils",
+    "version": "4.7.2",
+    "architecture": "aarch64",
+    "sha256": "7b8437110db2b503f0b12f76064344fff756f8513d3bcc276f22c4432e362e99",
+    "repositoryPath": "pool/main/libtiff-utils_4.7.2_aarch64.deb",
+    "dependencies": "libtiff (= 4.7.2)",
+    "executables": [
+      "fax2ps",
+      "fax2tiff",
+      "pal2rgb",
+      "ppm2tiff",
+      "raw2tiff",
+      "tiff2bw",
+      "tiff2pdf",
+      "tiff2ps",
+      "tiff2rgba",
+      "tiffcmp",
+      "tiffcp",
+      "tiffcrop",
+      "tiffdither",
+      "tiffdump",
+      "tiffinfo",
+      "tiffmedian",
+      "tiffset",
+      "tiffsplit"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtiff",
+    "version": "4.7.2",
+    "architecture": "aarch64",
+    "sha256": "fd5b0e73b43fd6fd3c4907011d3be938eb7dd41d4e7d6b3bc02cd9230c9da87a",
+    "repositoryPath": "pool/main/libtiff_4.7.2_aarch64.deb",
+    "dependencies": "libc++, libjpeg-turbo, liblzma, zlib, zstd",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libtool",
+    "version": "2.6.2",
+    "architecture": "aarch64",
+    "sha256": "155f22a32caff8676aa996aad883442ea7ba66cd48471eaa68e6ead168fee62a",
+    "repositoryPath": "pool/main/libtool_2.6.2_aarch64.deb",
+    "dependencies": "bash, grep, sed, libltdl",
+    "executables": [
+      "libtool",
+      "libtool-next-version",
+      "libtoolize"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libudfread-static",
+    "version": "1.2.0",
+    "architecture": "aarch64",
+    "sha256": "2d1d51b4d47820d705baa64fa0be474b600fbfbc895041c6772f66ced18178bc",
+    "repositoryPath": "pool/main/libudfread-static_1.2.0_aarch64.deb",
+    "dependencies": "libudfread (= 1.2.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libudfread",
+    "version": "1.2.0",
+    "architecture": "aarch64",
+    "sha256": "2cee59974a0bbcf8b9362d0e7200aa6a5a5bf29a2edb7cb549fa1ca73f271b23",
+    "repositoryPath": "pool/main/libudfread_1.2.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libunbound-static",
+    "version": "1.26.0",
+    "architecture": "aarch64",
+    "sha256": "9cbfdc5fa6032ed0f815f2f8f6603ea16a1d1798b3391b2269af0edc887ceba9",
+    "repositoryPath": "pool/main/libunbound-static_1.26.0_aarch64.deb",
+    "dependencies": "libunbound (= 1.26.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libunbound",
+    "version": "1.26.0",
+    "architecture": "aarch64",
+    "sha256": "c73205dce788a00bcb763d0ca9389885597536442209e0dfbba31d7d100f59f8",
+    "repositoryPath": "pool/main/libunbound_1.26.0_aarch64.deb",
+    "dependencies": "libevent, libnghttp2, libngtcp2, openssl, resolv-conf",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libunistring-static",
+    "version": "1.4.2",
+    "architecture": "aarch64",
+    "sha256": "b0228fcfb6f25294bb3f071bf9577a788ce2094c2ae61567f30234f25c185393",
+    "repositoryPath": "pool/main/libunistring-static_1.4.2_aarch64.deb",
+    "dependencies": "libunistring (= 1.4.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libunistring",
+    "version": "1.4.2",
+    "architecture": "aarch64",
+    "sha256": "2dab8c26beb690618447fef3eef29f9658aaf747b1c720af971723ae0258b509",
+    "repositoryPath": "pool/main/libunistring_1.4.2_aarch64.deb",
+    "dependencies": "libandroid-support, libiconv",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liburcu-static",
+    "version": "0.15.6",
+    "architecture": "aarch64",
+    "sha256": "7fd5bc00fe61978112d17844cb7b23f7910c094d2aad6ab111c86c4e6e6f7328",
+    "repositoryPath": "pool/main/liburcu-static_0.15.6_aarch64.deb",
+    "dependencies": "liburcu (= 0.15.6)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "liburcu",
+    "version": "0.15.6",
+    "architecture": "aarch64",
+    "sha256": "75b80d8d7bc818a8e173f08981223701ac6a7b883960a3e49378ef938809e520",
+    "repositoryPath": "pool/main/liburcu_0.15.6_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libusb-static",
+    "version": "1.0.30",
+    "architecture": "aarch64",
+    "sha256": "c1a3d2c0a02ca8e27540f9d156dfc174b934a475af1c4b81d056ec8b31e29bed",
+    "repositoryPath": "pool/main/libusb-static_1.0.30_aarch64.deb",
+    "dependencies": "libusb (= 1.0.30)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libusb",
+    "version": "1.0.30",
+    "architecture": "aarch64",
+    "sha256": "92a59107e2e2b7d4c7ad13094543b39367dd633fb4cc9cfe6f134500d7d0cfad",
+    "repositoryPath": "pool/main/libusb_1.0.30_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libuuid",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "2c4379d4d9af2afb7356b49af80fd5d04e94780a67ee4643596a8424cde07101",
+    "repositoryPath": "pool/main/libuuid_2.42.1-4_aarch64.deb",
+    "dependencies": "libandroid-posix-semaphore",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libuv-static",
+    "version": "1.52.1",
+    "architecture": "aarch64",
+    "sha256": "9d4754af4a0af3a4bfc8d590992122662a0b162bd9232b8ce042c87174928e52",
+    "repositoryPath": "pool/main/libuv-static_1.52.1_aarch64.deb",
+    "dependencies": "libuv (= 1.52.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libuv",
+    "version": "1.52.1",
+    "architecture": "aarch64",
+    "sha256": "b8e5bbf1a83ed9b34bdafbe880855c1cec0b07d72f4b8f1921fa412b3485db77",
+    "repositoryPath": "pool/main/libuv_1.52.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libvorbis-static",
+    "version": "1.3.7-4",
+    "architecture": "aarch64",
+    "sha256": "321b82826152a3cde706bf682def24469983989096c0e9e17a43472f06a756b1",
+    "repositoryPath": "pool/main/libvorbis-static_1.3.7-4_aarch64.deb",
+    "dependencies": "libvorbis (= 1.3.7-4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libvorbis",
+    "version": "1.3.7-4",
+    "architecture": "aarch64",
+    "sha256": "eba08d7a15132b67cf8930a31a99966d09087c36d68ddbc9df327779f99cfc95",
+    "repositoryPath": "pool/main/libvorbis_1.3.7-4_aarch64.deb",
+    "dependencies": "libogg",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libwebp",
+    "version": "1.6.0-1",
+    "architecture": "aarch64",
+    "sha256": "5e3625b0def2c081acbe1134206177c51c2a9b6add4d5227020267384fd80df9",
+    "repositoryPath": "pool/main/libwebp_1.6.0-1_aarch64.deb",
+    "dependencies": "giflib, libjpeg-turbo, libpng, libtiff, zlib",
+    "executables": [
+      "cwebp",
+      "dwebp",
+      "gif2webp",
+      "img2webp",
+      "webpinfo",
+      "webpmux"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libwebrtc-audio-processing",
+    "version": "1.3-5",
+    "architecture": "aarch64",
+    "sha256": "20532db771b2cc749218e36c1a46d250de18458e1abd7894fa3aca552589b1f3",
+    "repositoryPath": "pool/main/libwebrtc-audio-processing_1.3-5_aarch64.deb",
+    "dependencies": "libc++, abseil-cpp",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx11-static",
+    "version": "1.8.13-1",
+    "architecture": "aarch64",
+    "sha256": "4584848f8c2a8e5d931432d7b5a64ea91b0d3c9ae503870c36e6383f8a0d886d",
+    "repositoryPath": "pool/main/libx11-static_1.8.13-1_aarch64.deb",
+    "dependencies": "libx11 (= 1.8.13-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx11",
+    "version": "1.8.13-1",
+    "architecture": "aarch64",
+    "sha256": "3b1fd1bd871beab5d72bbf5303d24c423cc6790f4253241abc4c3d540510cbcf",
+    "repositoryPath": "pool/main/libx11_1.8.13-1_aarch64.deb",
+    "dependencies": "libandroid-support, libxcb, xorgproto",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx264-static",
+    "version": "1:0.164.3191-1",
+    "architecture": "aarch64",
+    "sha256": "055f23bd03eb753a325335f5181d4e5c3698558fa8f30f66c19c4c6051b2a526",
+    "repositoryPath": "pool/main/libx264-static_1:0.164.3191-1_aarch64.deb",
+    "dependencies": "libx264 (= 1:0.164.3191-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx264",
+    "version": "1:0.164.3191-1",
+    "architecture": "aarch64",
+    "sha256": "2ee5c8236e77849c4a2e7572fa169cc7b627a5d0e9b811c49a7c690707ec23f8",
+    "repositoryPath": "pool/main/libx264_1:0.164.3191-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx265-static",
+    "version": "4.3",
+    "architecture": "aarch64",
+    "sha256": "0d7a3c0f38330e8fae7917e8ea8a15651752a555f4991e2e1601131d06e3eea9",
+    "repositoryPath": "pool/main/libx265-static_4.3_aarch64.deb",
+    "dependencies": "libx265 (= 4.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libx265",
+    "version": "4.3",
+    "architecture": "aarch64",
+    "sha256": "0d970b27bb36cb4afddda7dc2a8decb3968bd829742a049c72ab7170932bd064",
+    "repositoryPath": "pool/main/libx265_4.3_aarch64.deb",
+    "dependencies": "libandroid-posix-semaphore, libc++",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxau",
+    "version": "1.0.12-2",
+    "architecture": "aarch64",
+    "sha256": "e9b80aea16f996df35b007d050368fe860db53b342c93668e2112799a961c68e",
+    "repositoryPath": "pool/main/libxau_1.0.12-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxcb-static",
+    "version": "1.17.0-1",
+    "architecture": "aarch64",
+    "sha256": "e15571551f3398226e3c3284f7621877fdc3995da277fa680af12d040eb05daa",
+    "repositoryPath": "pool/main/libxcb-static_1.17.0-1_aarch64.deb",
+    "dependencies": "libxcb (= 1.17.0-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxcb",
+    "version": "1.17.0-1",
+    "architecture": "aarch64",
+    "sha256": "1c115ba0d78dc40407e465ddd07cb098f3a4b0c016f57e432f8812386164828b",
+    "repositoryPath": "pool/main/libxcb_1.17.0-1_aarch64.deb",
+    "dependencies": "libxau, libxdmcp",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxdmcp-static",
+    "version": "1.1.5-2",
+    "architecture": "aarch64",
+    "sha256": "06f2b5707f727eb9afd9f8498088af23aff337a4b50144d8ac8cfe34b98a1765",
+    "repositoryPath": "pool/main/libxdmcp-static_1.1.5-2_aarch64.deb",
+    "dependencies": "libxdmcp (= 1.1.5-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxdmcp",
+    "version": "1.1.5-2",
+    "architecture": "aarch64",
+    "sha256": "0413e36c64f132561fbab2da9d3ffe23307292928ba34cece84841868434d4fb",
+    "repositoryPath": "pool/main/libxdmcp_1.1.5-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxext-static",
+    "version": "1.3.7",
+    "architecture": "aarch64",
+    "sha256": "8dd8ef5f95757e1a6cd2b0589097f0347863cda010c5bcdb0b5b9a163130b349",
+    "repositoryPath": "pool/main/libxext-static_1.3.7_aarch64.deb",
+    "dependencies": "libxext (= 1.3.7)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxext",
+    "version": "1.3.7",
+    "architecture": "aarch64",
+    "sha256": "fd659052a278850846ff6fc4621a692963ede9c299bf9f24b8d4a8b03f33c66d",
+    "repositoryPath": "pool/main/libxext_1.3.7_aarch64.deb",
+    "dependencies": "libx11",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxft-static",
+    "version": "2.3.9-1",
+    "architecture": "aarch64",
+    "sha256": "3d53bb0ea72dd6005bf8aa801aba06a9c7c5cbb14f2a6cfdae665fef88bab0a5",
+    "repositoryPath": "pool/main/libxft-static_2.3.9-1_aarch64.deb",
+    "dependencies": "libxft (= 2.3.9-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxft",
+    "version": "2.3.9-1",
+    "architecture": "aarch64",
+    "sha256": "02df1e533096a31941c3d270b9bbf22cf6252e3c3cbb1f7bdc4a23f79982f9cb",
+    "repositoryPath": "pool/main/libxft_2.3.9-1_aarch64.deb",
+    "dependencies": "fontconfig, freetype, libx11, libxrender",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxml2-python",
+    "version": "2.15.3-2",
+    "architecture": "aarch64",
+    "sha256": "210e1b87f97d7993d4ef53831c36d3867e0ea7a6ca857de150e89c32c5b6dad3",
+    "repositoryPath": "pool/main/libxml2-python_2.15.3-2_aarch64.deb",
+    "dependencies": "python, libxml2 (= 2.15.3-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxml2-utils",
+    "version": "2.15.3-2",
+    "architecture": "aarch64",
+    "sha256": "5d9d1e9434953ff61f46285d9d2d1fb74895c5b8ab0b9532b62be6ac8ebe7089",
+    "repositoryPath": "pool/main/libxml2-utils_2.15.3-2_aarch64.deb",
+    "dependencies": "readline, libxml2 (= 2.15.3-2)",
+    "executables": [
+      "xmlcatalog",
+      "xmllint"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxml2",
+    "version": "2.15.3-2",
+    "architecture": "aarch64",
+    "sha256": "158d3e0f93955181d83a8527f1316533ecdb3c853269cd4cd2cd8c26febe4265",
+    "repositoryPath": "pool/main/libxml2_2.15.3-2_aarch64.deb",
+    "dependencies": "libandroid-glob, libiconv, libicu, zlib",
+    "executables": [
+      "xml2-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxrender",
+    "version": "0.9.12-1",
+    "architecture": "aarch64",
+    "sha256": "6410ef53a420f64cfaf2c834bcf0193538d70dcb45257ce81bfcc514e8b8c5e2",
+    "repositoryPath": "pool/main/libxrender_0.9.12-1_aarch64.deb",
+    "dependencies": "libx11",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxslt",
+    "version": "1.1.45-1",
+    "architecture": "aarch64",
+    "sha256": "e0135879dcf68a61b42a4392fec33e5a6b520d9bba0054f462344830b12f45d7",
+    "repositoryPath": "pool/main/libxslt_1.1.45-1_aarch64.deb",
+    "dependencies": "libgcrypt, libgpg-error, libxml2, libandroid-glob",
+    "executables": [
+      "xslt-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxss-static",
+    "version": "1.2.5",
+    "architecture": "aarch64",
+    "sha256": "072cf152726c1fab1df757123db4b5a56399acf08704082eb70fc934d138f25c",
+    "repositoryPath": "pool/main/libxss-static_1.2.5_aarch64.deb",
+    "dependencies": "libxss (= 1.2.5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libxss",
+    "version": "1.2.5",
+    "architecture": "aarch64",
+    "sha256": "cf93f90271590efe58dba8e549fb50fc123ed2fb510d3eb87f723998253032b5",
+    "repositoryPath": "pool/main/libxss_1.2.5_aarch64.deb",
+    "dependencies": "libx11, libxau, libxcb, libxdmcp, libxext",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libyaml-static",
+    "version": "0.2.5-5",
+    "architecture": "aarch64",
+    "sha256": "21b193e1c630adb3f8b943798ce43b8ee89509c7a62dac531d06d7b10820e588",
+    "repositoryPath": "pool/main/libyaml-static_0.2.5-5_aarch64.deb",
+    "dependencies": "libyaml (= 0.2.5-5)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libyaml",
+    "version": "0.2.5-5",
+    "architecture": "aarch64",
+    "sha256": "dd8f5ec8b17af2ee98cd8b3b4a12fc01cf32809ac85daf0d559b1ecc1e67bf74",
+    "repositoryPath": "pool/main/libyaml_0.2.5-5_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "libzip",
+    "version": "1.11.4-1",
+    "architecture": "aarch64",
+    "sha256": "e3ef5bce4f5686730e469319d1039f5e5c2f1f2f3eae03e3e96708ae7ec2a3d5",
+    "repositoryPath": "pool/main/libzip_1.11.4-1_aarch64.deb",
+    "dependencies": "libbz2, liblzma, openssl, zlib, zstd",
+    "executables": [
+      "zipcmp",
+      "zipmerge",
+      "ziptool"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "littlecms-static",
+    "version": "2.19.1",
+    "architecture": "aarch64",
+    "sha256": "7691fc4104f38f88aeb9969256a8e9d682d2840abd14898aa105b75df0a6dd5d",
+    "repositoryPath": "pool/main/littlecms-static_2.19.1_aarch64.deb",
+    "dependencies": "littlecms (= 2.19.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "littlecms-utils",
+    "version": "2.19.1",
+    "architecture": "aarch64",
+    "sha256": "9f855dd733b08d4f218ab294ffddae16755a8f6d797fda608d3f53f2eea59988",
+    "repositoryPath": "pool/main/littlecms-utils_2.19.1_aarch64.deb",
+    "dependencies": "libjpeg-turbo, libtiff, littlecms (= 2.19.1)",
+    "executables": [
+      "jpgicc",
+      "linkicc",
+      "psicc",
+      "tificc",
+      "transicc"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "littlecms",
+    "version": "2.19.1",
+    "architecture": "aarch64",
+    "sha256": "9ba00a79ac83a1855a1ef2ba78c4533d9013d89f00a0798f131a1925840b8b3e",
+    "repositoryPath": "pool/main/littlecms_2.19.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lld",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "725f436b370b8ecb86898d57c4441f8b573b6a58c80990b4cf90c8ef7f69f250",
+    "repositoryPath": "pool/main/lld_21.1.8-3_aarch64.deb",
+    "dependencies": "libllvm (= 21.1.8-3)",
+    "executables": [
+      "lld"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lldb",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "e42db4b0c1dd7db9f26d69ce700e847375fdc6243ecbec7834b7d58216a8ca24",
+    "repositoryPath": "pool/main/lldb_21.1.8-3_aarch64.deb",
+    "dependencies": "clang, libandroid-spawn, libc++, libedit, libxml2, python, ncurses-ui-libs, libllvm (= 21.1.8-3)",
+    "executables": [
+      "lldb",
+      "lldb-argdumper",
+      "lldb-dap",
+      "lldb-instr",
+      "lldb-server",
+      "lldb-argdumper"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "llvm-tools",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "a3f8c2ad2fb3d3ce260067ddfbc541e966e5e3049a99f3eb15a13d6fbcdffa08",
+    "repositoryPath": "pool/main/llvm-tools_21.1.8-3_aarch64.deb",
+    "dependencies": "libc++, ncurses, zlib, zstd",
+    "executables": [
+      "FileCheck",
+      "UnicodeNameMappingGenerator",
+      "count",
+      "lli-child-target",
+      "llvm-PerfectShuffle",
+      "llvm-jitlink-executor",
+      "llvm-test-mustache-spec",
+      "not",
+      "obj2yaml",
+      "yaml-bench",
+      "yaml2obj"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "llvm",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "efdb009e61048521b31f471755da7035d37061018af6bee20b6604edcb547551",
+    "repositoryPath": "pool/main/llvm_21.1.8-3_aarch64.deb",
+    "dependencies": "libllvm (= 21.1.8-3)",
+    "executables": [
+      "bugpoint",
+      "dsymutil",
+      "llc",
+      "lli",
+      "llvm-ar",
+      "llvm-as",
+      "llvm-bcanalyzer",
+      "llvm-c-test",
+      "llvm-cat",
+      "llvm-cfi-verify",
+      "llvm-cgdata",
+      "llvm-config",
+      "llvm-cov",
+      "llvm-ctxprof-util",
+      "llvm-cvtres",
+      "llvm-cxxdump",
+      "llvm-cxxfilt",
+      "llvm-cxxmap",
+      "llvm-debuginfo-analyzer",
+      "llvm-debuginfod",
+      "llvm-debuginfod-find",
+      "llvm-diff",
+      "llvm-dis",
+      "llvm-dwarfdump",
+      "llvm-dwarfutil",
+      "llvm-dwp",
+      "llvm-exegesis",
+      "llvm-extract",
+      "llvm-gsymutil",
+      "llvm-ifs",
+      "llvm-jitlink",
+      "llvm-libtool-darwin",
+      "llvm-link",
+      "llvm-lipo",
+      "llvm-lto",
+      "llvm-lto2",
+      "llvm-mc",
+      "llvm-mca",
+      "llvm-ml",
+      "llvm-modextract",
+      "llvm-mt",
+      "llvm-nm",
+      "llvm-objcopy",
+      "llvm-objdump",
+      "llvm-opt-report",
+      "llvm-pdbutil",
+      "llvm-profdata",
+      "llvm-profgen",
+      "llvm-rc",
+      "llvm-readobj",
+      "llvm-readtapi",
+      "llvm-reduce",
+      "llvm-remarkutil",
+      "llvm-rtdyld",
+      "llvm-sim",
+      "llvm-size",
+      "llvm-split",
+      "llvm-stress",
+      "llvm-strings",
+      "llvm-symbolizer",
+      "llvm-tblgen",
+      "llvm-tli-checker",
+      "llvm-undname",
+      "llvm-xray",
+      "opt",
+      "reduce-chunk-list",
+      "sancov",
+      "sanstats",
+      "split-file",
+      "verify-uselistorder"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lua54-static",
+    "version": "5.4.8-10",
+    "architecture": "aarch64",
+    "sha256": "d96465856baa928cea4953e9f11401d433d8b62808d65faa1931bcef2cdbe235",
+    "repositoryPath": "pool/main/lua54-static_5.4.8-10_aarch64.deb",
+    "dependencies": "lua54 (= 5.4.8-10)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lua54",
+    "version": "5.4.8-10",
+    "architecture": "aarch64",
+    "sha256": "6a8ced67890ad2bba8d3ae928215c1a7cbad66a930365b1012254ff1b6b9c38a",
+    "repositoryPath": "pool/main/lua54_5.4.8-10_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "lua5.4",
+      "luac5.4"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "luajit-static",
+    "version": "1:2.1.1787165859+g1ee778a",
+    "architecture": "aarch64",
+    "sha256": "13ac17f6229ed6f21b80d36e572692091a0c9026f0dd934a0f76a169cb632e03",
+    "repositoryPath": "pool/main/luajit-static_1:2.1.1787165859+g1ee778a_aarch64.deb",
+    "dependencies": "luajit (= 1:2.1.1787165859+g1ee778a)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "luajit",
+    "version": "1:2.1.1787165859+g1ee778a",
+    "architecture": "aarch64",
+    "sha256": "d01c958bc75b712263c3d3fd6ca05174bafd2178d7644ca9b920f36f17ebba04",
+    "repositoryPath": "pool/main/luajit_1:2.1.1787165859+g1ee778a_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "luajit"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "lz4",
+    "version": "1.10.0-1",
+    "architecture": "aarch64",
+    "sha256": "50884de608b46dea6b9e323edb3d7511ae032b1d28513a319fac24265faf33bb",
+    "repositoryPath": "pool/main/lz4_1.10.0-1_aarch64.deb",
+    "dependencies": "liblz4 (= 1.10.0-1)",
+    "executables": [
+      "lz4"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "make",
+    "version": "4.4.1-1",
+    "architecture": "aarch64",
+    "sha256": "e6540298ae652223c4ab66afa65b9205be8fb71c763518906e529961cd4a7f55",
+    "repositoryPath": "pool/main/make_4.4.1-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "make"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "maven",
+    "version": "3.9.16",
+    "architecture": "all",
+    "sha256": "17284c0c7ccb74bdd9e46af45da265d75e682173830411fba707b0612af935dc",
+    "repositoryPath": "pool/main/maven_3.9.16_all.deb",
+    "dependencies": "libjansi (>= 2.4.0-1), openjdk-21",
+    "executables": [
+      "m2.conf",
+      "mvn",
+      "mvnDebug",
+      "mvnyjp",
+      "mvn",
+      "mvnDebug",
+      "mvnyjp"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "micro",
+    "version": "2.0.15-2",
+    "architecture": "aarch64",
+    "sha256": "618e2a2db8330333305990401a56377bd8457002ee04a7af2a4af620a4dcdda0",
+    "repositoryPath": "pool/main/micro_2.0.15-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "micro"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "mlir",
+    "version": "21.1.8-3",
+    "architecture": "aarch64",
+    "sha256": "778e6d8292781c786656e2dc548b42080fe3a4dfb424c5f082499bf578d0eece",
+    "repositoryPath": "pool/main/mlir_21.1.8-3_aarch64.deb",
+    "dependencies": "libc++, ncurses, libllvm (= 21.1.8-3)",
+    "executables": [
+      "mlir-cat",
+      "mlir-linalg-ods-yaml-gen",
+      "mlir-lsp-server",
+      "mlir-minimal-opt",
+      "mlir-minimal-opt-canonicalize",
+      "mlir-opt",
+      "mlir-pdll",
+      "mlir-pdll-lsp-server",
+      "mlir-query",
+      "mlir-reduce",
+      "mlir-rewrite",
+      "mlir-runner",
+      "mlir-tblgen",
+      "mlir-transform-opt",
+      "mlir-translate",
+      "tblgen-lsp-server",
+      "tblgen-to-irdl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "mount-utils",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "d6110579d7e4c0c61809d7524d9f6530f916712cba88184e8da167c0f09ec321",
+    "repositoryPath": "pool/main/mount-utils_2.42.1-4_aarch64.deb",
+    "dependencies": "libblkid, libsmartcols, libmount",
+    "executables": [
+      "findmnt",
+      "fstrim",
+      "lslocks",
+      "mount",
+      "swapoff",
+      "swapon",
+      "umount"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "mpg123",
+    "version": "1.33.5",
+    "architecture": "aarch64",
+    "sha256": "b51c626b4436b57eaf5f59ffaccf6073b766e7e86e4df4da2bbb84c689169af9",
+    "repositoryPath": "pool/main/mpg123_1.33.5_aarch64.deb",
+    "dependencies": "pulseaudio, libmpg123 (= 1.33.5)",
+    "executables": [
+      "mpg123",
+      "mpg123-id3dump",
+      "mpg123-strip",
+      "out123"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "nano",
+    "version": "9.2-1",
+    "architecture": "aarch64",
+    "sha256": "58b13066e4f05c1a8363a7918e7a009fdd7b56043463593d45b6d255f319ff98",
+    "repositoryPath": "pool/main/nano_9.2-1_aarch64.deb",
+    "dependencies": "libandroid-support, ncurses, libmagic",
+    "executables": [
+      "nano"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ncurses-static",
+    "version": "6.6.20260307+really6.5.20250830",
+    "architecture": "aarch64",
+    "sha256": "a2423526f5ca05c54ea1f87c243478cfd777458e7695cf61c29db73acf8536e8",
+    "repositoryPath": "pool/main/ncurses-static_6.6.20260307+really6.5.20250830_aarch64.deb",
+    "dependencies": "ncurses (= 6.6.20260307+really6.5.20250830)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ncurses-ui-libs-static",
+    "version": "6.6.20260307+really6.5.20250830",
+    "architecture": "aarch64",
+    "sha256": "3ce8aace27a02577feb0844239171704981fde89b148bb62e162805832fdf67d",
+    "repositoryPath": "pool/main/ncurses-ui-libs-static_6.6.20260307+really6.5.20250830_aarch64.deb",
+    "dependencies": "ncurses-ui-libs, ncurses (= 6.6.20260307+really6.5.20250830)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ncurses-ui-libs",
+    "version": "6.6.20260307+really6.5.20250830",
+    "architecture": "aarch64",
+    "sha256": "c1383f9b12ae5c6b5fa333ec8b005dea798799865b83d6b35b009354fa5fb19e",
+    "repositoryPath": "pool/main/ncurses-ui-libs_6.6.20260307+really6.5.20250830_aarch64.deb",
+    "dependencies": "ncurses (= 6.6.20260307+really6.5.20250830)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ncurses-utils",
+    "version": "6.6.20260307+really6.5.20250830",
+    "architecture": "aarch64",
+    "sha256": "81166915f332a8d9e24f054d6c5f0789564a52b3943e9e4c7f677dad08caf6fc",
+    "repositoryPath": "pool/main/ncurses-utils_6.6.20260307+really6.5.20250830_aarch64.deb",
+    "dependencies": "ncurses (= 6.6.20260307+really6.5.20250830)",
+    "executables": [
+      "infocmp",
+      "tabs",
+      "tic",
+      "toe",
+      "tput"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ncurses",
+    "version": "6.6.20260307+really6.5.20250830",
+    "architecture": "aarch64",
+    "sha256": "c1ed2f6d121708ecbaa231012079813fe12ffbe9ca6bfe9c5cf5c30bb8e85b19",
+    "repositoryPath": "pool/main/ncurses_6.6.20260307+really6.5.20250830_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "clear",
+      "ncursesw6-config",
+      "tset"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ndk-sysroot",
+    "version": "29-2",
+    "architecture": "aarch64",
+    "sha256": "8728e2f50d9d8e37ec76723048dd8287c8fd972d72fe73f6907a15d823cfe4be",
+    "repositoryPath": "pool/main/ndk-sysroot_29-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "nettle",
+    "version": "4.0+really3.10.2",
+    "architecture": "aarch64",
+    "sha256": "a8663d7dc0d694c5b9b8343f9152893b3e2cfa436aaa9185e05d7d571e9d9c96",
+    "repositoryPath": "pool/main/nettle_4.0+really3.10.2_aarch64.deb",
+    "dependencies": "libnettle (= 4.0+really3.10.2)",
+    "executables": [
+      "nettle-hash",
+      "nettle-lfib-stream",
+      "nettle-pbkdf2",
+      "pkcs1-conv",
+      "sexp-conv"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ninja",
+    "version": "1.13.2",
+    "architecture": "aarch64",
+    "sha256": "e233f2d9a9058b82c4faccfcea4096a426b65fec1ee3f8f4b74d2439e9da6636",
+    "repositoryPath": "pool/main/ninja.deb",
+    "dependencies": "libandroid-spawn, libc++",
+    "executables": [
+      "ninja"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ninja",
+    "version": "1.13.2",
+    "architecture": "aarch64",
+    "sha256": "cd174a8a14b2f9262a5b046dd960bfca8d66d0ef47d923d5c6ddea2a52ed950c",
+    "repositoryPath": "pool/main/ninja_1.13.2_aarch64.deb",
+    "dependencies": "libandroid-spawn, libc++",
+    "executables": [
+      "ninja"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "nodejs",
+    "version": "26.4.0-1",
+    "architecture": "aarch64",
+    "sha256": "b93a261ccbe149e14c4e7f2d5b08799be57b933db3fb247569b6e475ae60888b",
+    "repositoryPath": "pool/main/nodejs_26.4.0-1_aarch64.deb",
+    "dependencies": "libc++, openssl, c-ares, libicu, libsqlite, zlib, libffi",
+    "executables": [
+      "node"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "npm",
+    "version": "11.19.1",
+    "architecture": "all",
+    "sha256": "8a0e85923734bae8f27d8aae865ab37ab7c708b0d691ffba25244218851d46f0",
+    "repositoryPath": "pool/main/npm_11.19.1_all.deb",
+    "dependencies": "nodejs | nodejs-lts",
+    "executables": [
+      "node-gyp-bin/node-gyp",
+      "node-gyp-bin/node-gyp.cmd",
+      "npm-cli.js",
+      "npm-prefix.js",
+      "npx-cli.js",
+      "actual.js",
+      "audit.js",
+      "funding.js",
+      "ideal.js",
+      "index.js",
+      "lib/logging.js",
+      "lib/options.js",
+      "lib/print-tree.js",
+      "lib/timers.js",
+      "license.js",
+      "prune.js",
+      "reify.js",
+      "shrinkwrap.js",
+      "virtual.js",
+      "index.js",
+      "cssesc",
+      "node-gyp.js",
+      "nopt.js",
+      "index.js",
+      "qrcode-terminal.js",
+      "semver.js",
+      "which.js",
+      "npm-cli.js",
+      "npx-cli.js"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ocean-distro",
+    "version": "1.0.0",
+    "architecture": "all",
+    "sha256": "a70bab86684740a55e2e2ac1f9fd32121d7851c8d80d83872dcd44fd022aea94",
+    "repositoryPath": "pool/main/ocean-distro_1.0.0_all.deb",
+    "dependencies": "proot, tar, zstd, xz-utils, gzip, bzip2, curl, ca-certificates",
+    "executables": [
+      "ocean-distro"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "oniguruma-static",
+    "version": "6.9.10-1",
+    "architecture": "aarch64",
+    "sha256": "ad1a445a6bcaf8896ea03398fb421e7b04697cad69c4dee0e845aa9e3f51df5a",
+    "repositoryPath": "pool/main/oniguruma-static_6.9.10-1_aarch64.deb",
+    "dependencies": "oniguruma (= 6.9.10-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "oniguruma",
+    "version": "6.9.10-1",
+    "architecture": "aarch64",
+    "sha256": "7cffa9a4ee09e1cd528c07cdcbb70a5b9fa22d388d262cb19d7ba5b73167c91a",
+    "repositoryPath": "pool/main/oniguruma_6.9.10-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "onig-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openexr",
+    "version": "3.4.4",
+    "architecture": "aarch64",
+    "sha256": "051d5880c491aef83a3c4fb9547abf684e3b1991ae94cb5ac0e907a3779a1782",
+    "repositoryPath": "pool/main/openexr_3.4.4_aarch64.deb",
+    "dependencies": "imath, libc++, zlib",
+    "executables": [
+      "exr2aces",
+      "exrenvmap",
+      "exrheader",
+      "exrinfo",
+      "exrmakepreview",
+      "exrmaketiled",
+      "exrmanifest",
+      "exrmetrics",
+      "exrmultipart",
+      "exrmultiview",
+      "exrstdattr"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openjdk-21",
+    "version": "21.0.12",
+    "architecture": "aarch64",
+    "sha256": "cf49cc111e21f48a27cea4cad16b2993c5d354255957c70c09aee70781e0795c",
+    "repositoryPath": "pool/main/openjdk-21_21.0.12_aarch64.deb",
+    "dependencies": "libandroid-shmem, libandroid-spawn, libiconv, libjpeg-turbo, zlib, littlecms, alsa-plugins",
+    "executables": [
+      "jar",
+      "jarsigner",
+      "java",
+      "javac",
+      "javadoc",
+      "javap",
+      "jcmd",
+      "jconsole",
+      "jdb",
+      "jdeprscan",
+      "jdeps",
+      "jfr",
+      "jhsdb",
+      "jimage",
+      "jinfo",
+      "jlink",
+      "jmap",
+      "jmod",
+      "jpackage",
+      "jps",
+      "jrunscript",
+      "jshell",
+      "jstack",
+      "jstat",
+      "jstatd",
+      "jwebserver",
+      "keytool",
+      "rmiregistry",
+      "serialver"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openldap-static",
+    "version": "2.7.0",
+    "architecture": "aarch64",
+    "sha256": "4d8dc6b27d408704c3b8bc70490e06d87982bca9cec28386e612a77112f05c69",
+    "repositoryPath": "pool/main/openldap-static_2.7.0_aarch64.deb",
+    "dependencies": "openldap (= 2.7.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openldap",
+    "version": "2.7.0",
+    "architecture": "aarch64",
+    "sha256": "c0558979e2cd7f4778ab36013d18697a31d9d9512b3152f0e54084c07581a73d",
+    "repositoryPath": "pool/main/openldap_2.7.0_aarch64.deb",
+    "dependencies": "libsasl, libuuid, openssl",
+    "executables": [
+      "ldapcompare",
+      "ldapdelete",
+      "ldapexop",
+      "ldapmodify",
+      "ldapmodrdn",
+      "ldappasswd",
+      "ldapsearch",
+      "ldapurl",
+      "ldapvc",
+      "ldapwhoami"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openmpt123",
+    "version": "0.8.9",
+    "architecture": "aarch64",
+    "sha256": "33935f9082505796a970ad2f868dbcb03f174cbd583d99a838a545b8ed84b0f9",
+    "repositoryPath": "pool/main/openmpt123_0.8.9_aarch64.deb",
+    "dependencies": "libflac, libsndfile, pulseaudio, libopenmpt (= 0.8.9)",
+    "executables": [
+      "openmpt123"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openssh-sftp-server",
+    "version": "10.5p1",
+    "architecture": "aarch64",
+    "sha256": "4b5bfecc737e290c1e8213cb114460393dc081d4927df1734924e86c8b300614",
+    "repositoryPath": "pool/main/openssh-sftp-server_10.5p1_aarch64.deb",
+    "dependencies": "libandroid-support",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openssh",
+    "version": "10.5p1",
+    "architecture": "aarch64",
+    "sha256": "38ee1932b0a6610b8b6e95ef32aeec50eb9925ee865b3e44aef40064305a6dd5",
+    "repositoryPath": "pool/main/openssh_10.5p1_aarch64.deb",
+    "dependencies": "krb5, ldns, libandroid-support, libedit, openssh-sftp-server, openssl, termux-auth, zlib",
+    "executables": [
+      "scp",
+      "sftp",
+      "ssh",
+      "ssh-add",
+      "ssh-agent",
+      "ssh-copy-id",
+      "ssh-keygen",
+      "ssh-keyscan",
+      "sshd"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openssl-static",
+    "version": "1:3.6.3",
+    "architecture": "aarch64",
+    "sha256": "aa2a3c0d5f4aa8e4bc1de99348980c422d8df2b0684ac60cf722aa700d4d4bfb",
+    "repositoryPath": "pool/main/openssl-static_1:3.6.3_aarch64.deb",
+    "dependencies": "openssl (= 1:3.6.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openssl-tool",
+    "version": "1:3.6.3",
+    "architecture": "aarch64",
+    "sha256": "aa01fb813bcfb582fabd0cebfacaae42802d24cef939bd342c86437940822fac",
+    "repositoryPath": "pool/main/openssl-tool_1:3.6.3_aarch64.deb",
+    "dependencies": "openssl (= 1:3.6.3)",
+    "executables": [
+      "add-trusted-certificate",
+      "openssl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "openssl",
+    "version": "1:3.6.3",
+    "architecture": "aarch64",
+    "sha256": "9446c6512029983c42fdef272da04cf6e530093cfcc7c05e079de7071a552f95",
+    "repositoryPath": "pool/main/openssl_1:3.6.3_aarch64.deb",
+    "dependencies": "ca-certificates, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "p11-kit",
+    "version": "0.26.5",
+    "architecture": "aarch64",
+    "sha256": "a349e24c3941b1b9e2c2d5ce3a2bb8b322d3a62235548dae47385083be334672",
+    "repositoryPath": "pool/main/p11-kit_0.26.5_aarch64.deb",
+    "dependencies": "libffi, libtasn1",
+    "executables": [
+      "p11-kit",
+      "trust"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "patch",
+    "version": "2.8-1",
+    "architecture": "aarch64",
+    "sha256": "603c7876106b658fd66932447481647dd3138f9bf747dff9b1f40aedf4375ede",
+    "repositoryPath": "pool/main/patch_2.8-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "patch"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pcre2-static",
+    "version": "10.47",
+    "architecture": "aarch64",
+    "sha256": "4303171744525343e370140818ccdf59b460e8b30ad2f0b7772950452b523895",
+    "repositoryPath": "pool/main/pcre2-static_10.47_aarch64.deb",
+    "dependencies": "pcre2 (= 10.47)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pcre2",
+    "version": "10.47",
+    "architecture": "aarch64",
+    "sha256": "60f3de206e497c27e8520b85e81cce444d12ceab7b414ae195552e19fd64afcf",
+    "repositoryPath": "pool/main/pcre2_10.47_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "pcre2-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pcre2grep",
+    "version": "10.47",
+    "architecture": "aarch64",
+    "sha256": "e7875953b0b3cc848995bf891fa1cf64c3ae1be93521b362fe6902d2a98b1475",
+    "repositoryPath": "pool/main/pcre2grep_10.47_aarch64.deb",
+    "dependencies": "pcre2 (= 10.47)",
+    "executables": [
+      "pcre2grep"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "perl",
+    "version": "5.42.2",
+    "architecture": "aarch64",
+    "sha256": "152f0d8d0e497703a90eb78deae05dc55f5856ea36aea1641e714f996dd60bf3",
+    "repositoryPath": "pool/main/perl_5.42.2_aarch64.deb",
+    "dependencies": "libandroid-utimes",
+    "executables": [
+      "corelist",
+      "cpan",
+      "enc2xs",
+      "encguess",
+      "h2ph",
+      "h2xs",
+      "instmodsh",
+      "json_pp",
+      "libnetcfg",
+      "perl",
+      "perldoc",
+      "perlivp",
+      "perlthanks",
+      "piconv",
+      "pl2pm",
+      "pod2html",
+      "pod2man",
+      "pod2text",
+      "pod2usage",
+      "podchecker",
+      "prove",
+      "ptar",
+      "ptardiff",
+      "ptargrep",
+      "shasum",
+      "splain",
+      "streamzip",
+      "xsubpp",
+      "zipdetails"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-apache-ldap",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "c2a4e8457ceabce800a6e8be805c10b96de3bc056ad8a864dd44a3d7fd06fbfd",
+    "repositoryPath": "pool/main/php-apache-ldap_8.5.1_aarch64.deb",
+    "dependencies": "openldap, php-apache, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-apache-pgsql",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "0fa5a4dd4564083059ffa1f89ddc72817c5090b3f263c37d1699d4082ac1eb39",
+    "repositoryPath": "pool/main/php-apache-pgsql_8.5.1_aarch64.deb",
+    "dependencies": "php-apache, postgresql, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-apache-sodium",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "0345f0583382efc447170558fd21f8773b08b77522e147126d584bb6341d7fd7",
+    "repositoryPath": "pool/main/php-apache-sodium_8.5.1_aarch64.deb",
+    "dependencies": "libsodium, php-apache, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-apache",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "adec43326f18fc39a3145e2db9ae9c30a3935f6ba2905d3e00abca70cf6a902d",
+    "repositoryPath": "pool/main/php-apache_8.5.1_aarch64.deb",
+    "dependencies": "apache2, apr-util, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-fpm",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "9bd50d2d0cc7872771528a04f008a6439b074c5fe84f9366a31a605c4585f444",
+    "repositoryPath": "pool/main/php-fpm_8.5.1_aarch64.deb",
+    "dependencies": "php (= 8.5.1)",
+    "executables": [
+      "php-fpm"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-gd",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "78b93a63615baf1b30256b2f2b51e4603e33ee84aea1da9bb009d9d284031791",
+    "repositoryPath": "pool/main/php-gd_8.5.1_aarch64.deb",
+    "dependencies": "libgd, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-ldap",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "cb3c3f02ee0ca23e05c33d53dcda08d888bc197035dee15ed5812ad13d238ec5",
+    "repositoryPath": "pool/main/php-ldap_8.5.1_aarch64.deb",
+    "dependencies": "openldap, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-pgsql",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "2393eac699e16472d36d6de90e9a04c254db18fd430d7515e34ad575c05f5094",
+    "repositoryPath": "pool/main/php-pgsql_8.5.1_aarch64.deb",
+    "dependencies": "postgresql, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php-sodium",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "afa9ed5b910299360f3415b59d6a91e6bf72992b0ef0d39e4e527756d91d7d0c",
+    "repositoryPath": "pool/main/php-sodium_8.5.1_aarch64.deb",
+    "dependencies": "libsodium, php (= 8.5.1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "php",
+    "version": "8.5.1",
+    "architecture": "aarch64",
+    "sha256": "79f07242cacac08d3381b65f50cfd19c01d9e26f3765e16e69e2786635c8b8f0",
+    "repositoryPath": "pool/main/php_8.5.1_aarch64.deb",
+    "dependencies": "capstone, libandroid-glob, libandroid-support, libbz2, libc++, libcurl, libffi, libgmp, libiconv, libicu, libresolv-wrapper, libsqlite, libxml2, libxslt, libzip, oniguruma, openssl, pcre2, readline, tidy, zlib",
+    "executables": [
+      "php",
+      "php-cgi",
+      "php-config",
+      "phpdbg",
+      "phpize"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pinentry",
+    "version": "1.3.3",
+    "architecture": "aarch64",
+    "sha256": "f18635136c4dcfc794b92d48d535321ae79de9a7434dc0ba1f88c84245f4d683",
+    "repositoryPath": "pool/main/pinentry_1.3.3_aarch64.deb",
+    "dependencies": "libandroid-support, libassuan, libgpg-error, libiconv, ncurses",
+    "executables": [
+      "pinentry-curses",
+      "pinentry-tty"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pip",
+    "version": "25.0",
+    "architecture": "all",
+    "sha256": "472bf136ac47224481b89fd0a0f5bd7877c490b1b4502768bc2fe4054121a397",
+    "repositoryPath": "pool/main/pip_25.0_all.deb",
+    "dependencies": "python, python-ensurepip-wheels",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pkg-config",
+    "version": "0.29.2-3",
+    "architecture": "aarch64",
+    "sha256": "2ccc31288d40a563d3a42c65be29326e6923cb1b93208f16f1bbd8f6979a8659",
+    "repositoryPath": "pool/main/pkg-config_0.29.2-3_aarch64.deb",
+    "dependencies": "glib",
+    "executables": [
+      "pkg-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "postgresql-static",
+    "version": "18.2",
+    "architecture": "aarch64",
+    "sha256": "d4178cf856237330aeab94ff77a6f139434f188fe160dc36a15fbf7aed31887b",
+    "repositoryPath": "pool/main/postgresql-static_18.2_aarch64.deb",
+    "dependencies": "postgresql (= 18.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "postgresql",
+    "version": "18.2",
+    "architecture": "aarch64",
+    "sha256": "038cbf0d8f97ed4df1bf7ead61b909c95278be60ea2a86716803c8c0289544d0",
+    "repositoryPath": "pool/main/postgresql_18.2_aarch64.deb",
+    "dependencies": "libandroid-execinfo, libandroid-shmem, libicu, libuuid, libxml2, openssl, readline, zlib",
+    "executables": [
+      "clusterdb",
+      "createdb",
+      "createuser",
+      "dropdb",
+      "dropuser",
+      "initdb",
+      "pg_amcheck",
+      "pg_archivecleanup",
+      "pg_basebackup",
+      "pg_checksums",
+      "pg_combinebackup",
+      "pg_config",
+      "pg_controldata",
+      "pg_createsubscriber",
+      "pg_ctl",
+      "pg_dump",
+      "pg_dumpall",
+      "pg_isready",
+      "pg_receivewal",
+      "pg_recvlogical",
+      "pg_resetwal",
+      "pg_restore",
+      "pg_rewind",
+      "pg_test_fsync",
+      "pg_test_timing",
+      "pg_upgrade",
+      "pg_verifybackup",
+      "pg_waldump",
+      "pg_walsummary",
+      "pgbench",
+      "postgres",
+      "psql",
+      "reindexdb",
+      "vacuumdb"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "proot",
+    "version": "5.1.107.92",
+    "architecture": "aarch64",
+    "sha256": "ffdb54bef5737995af5d0b5944d336f878f77b7efde1436ebc7f131dcb86b254",
+    "repositoryPath": "pool/main/proot_5.1.107.92_aarch64.deb",
+    "dependencies": "libandroid-shmem, libtalloc",
+    "executables": [
+      "proot",
+      "termux-chroot"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pulseaudio-glib",
+    "version": "17.0-4",
+    "architecture": "aarch64",
+    "sha256": "2c610b708b24b35e4578b5ce79f02a9aad374eac9069f4132d12fefe70000094",
+    "repositoryPath": "pool/main/pulseaudio-glib_17.0-4_aarch64.deb",
+    "dependencies": "glib, pulseaudio (= 17.0-4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pulseaudio",
+    "version": "17.0-4",
+    "architecture": "aarch64",
+    "sha256": "936bbfe5474dd62ce0b5b1321f671a3c22da19a854cefc28357f656110f7deaa",
+    "repositoryPath": "pool/main/pulseaudio_17.0-4_aarch64.deb",
+    "dependencies": "dbus, libandroid-stub, libandroid-execinfo, libandroid-glob, libc++, libltdl, libsndfile, libsoxr, libwebrtc-audio-processing, speexdsp",
+    "executables": [
+      "pa-info",
+      "pacat",
+      "pacmd",
+      "pactl",
+      "pasuspender",
+      "pulseaudio"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "python-ensurepip-wheels",
+    "version": "3.14.6-1",
+    "architecture": "all",
+    "sha256": "f28ae08fb4b2e14367bb24772a36a01f3408dbdc119a203286eefec54d8ee6b4",
+    "repositoryPath": "pool/main/python-ensurepip-wheels_3.14.6-1_all.deb",
+    "dependencies": "python (= 3.14.6-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "python-static",
+    "version": "3.14.6-1",
+    "architecture": "aarch64",
+    "sha256": "0e6386379fbf2ec9879797bb9cef423346b93fdc161f4955a5efd6e866ea00f9",
+    "repositoryPath": "pool/main/python-static_3.14.6-1_aarch64.deb",
+    "dependencies": "python (= 3.14.6-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "python-tkinter",
+    "version": "3.14.6-1",
+    "architecture": "aarch64",
+    "sha256": "371e69aabfc34de8dadbdeccb2b7f33114cf2f09e82354787df13276b22766c8",
+    "repositoryPath": "pool/main/python-tkinter_3.14.6-1_aarch64.deb",
+    "dependencies": "tcl, tk, python (= 3.14.6-1)",
+    "executables": [
+      "idle3.14"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "python-xcbgen",
+    "version": "1.17.0-3",
+    "architecture": "all",
+    "sha256": "56033071454dda5ed13b6f018c4479b61cec4ddc82360cbaf037460a75832969",
+    "repositoryPath": "pool/main/python-xcbgen_1.17.0-3_all.deb",
+    "dependencies": "xcb-proto (= 1.17.0-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "python",
+    "version": "3.14.6-1",
+    "architecture": "aarch64",
+    "sha256": "e25ac3a89c102f5ccce66184432375ad2d872d121c9f3a85debbd434b07b6c2e",
+    "repositoryPath": "pool/main/python_3.14.6-1_aarch64.deb",
+    "dependencies": "gdbm, libandroid-posix-semaphore, libandroid-support, libbz2, libcrypt, libexpat, libffi, liblzma, libsqlite, ncurses, ncurses-ui-libs, openssl, readline, zlib, zstd",
+    "executables": [
+      "py3clean",
+      "py3compile",
+      "pydoc3.14",
+      "python3.14",
+      "python3.14-config"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pyunbound",
+    "version": "1.26.0",
+    "architecture": "aarch64",
+    "sha256": "6f61bd896967b4ee1723f5202171561b75457dcc11deea3444fbcefd5489fbcd",
+    "repositoryPath": "pool/main/pyunbound_1.26.0_aarch64.deb",
+    "dependencies": "python, libunbound (= 1.26.0)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "pzstd",
+    "version": "1.5.7-1",
+    "architecture": "aarch64",
+    "sha256": "aff26018219da1b8b6dc3e2ea9440efd20178fc19530bf61bf9f8fa9340340b2",
+    "repositoryPath": "pool/main/pzstd_1.5.7-1_aarch64.deb",
+    "dependencies": "libc++, zstd (= 1.5.7-1)",
+    "executables": [
+      "pzstd"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "rav1e",
+    "version": "0.8.1",
+    "architecture": "aarch64",
+    "sha256": "216c1c7cff5e72862161390343d6f5e838625d94b1e953e96c5dc8251f9c96c5",
+    "repositoryPath": "pool/main/rav1e_0.8.1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "rav1e"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "readline-static",
+    "version": "8.3.3",
+    "architecture": "aarch64",
+    "sha256": "f64a73bf1f4db3f83deefec6b54c801a1dad5e0962ad18b70f1936b27dc6bb8a",
+    "repositoryPath": "pool/main/readline-static_8.3.3_aarch64.deb",
+    "dependencies": "readline (= 8.3.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "readline",
+    "version": "8.3.3",
+    "architecture": "aarch64",
+    "sha256": "6f5b682251e15e0ed33defacadaa2a811357041597d341f3ca9aca73f6254999",
+    "repositoryPath": "pool/main/readline_8.3.3_aarch64.deb",
+    "dependencies": "libandroid-support, ncurses",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "resolv-conf",
+    "version": "1.3",
+    "architecture": "aarch64",
+    "sha256": "42b25b0742ba98bbeab506212f25fc5aa42cf856762ecfb1678685426b82cbff",
+    "repositoryPath": "pool/main/resolv-conf_1.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "rhash-static",
+    "version": "1.4.6-1",
+    "architecture": "aarch64",
+    "sha256": "cc0b3099bd55d428a50ae82c7f583c803fb4b18abd6dcc6868f262efdbcf0bf0",
+    "repositoryPath": "pool/main/rhash-static_1.4.6-1_aarch64.deb",
+    "dependencies": "rhash (= 1.4.6-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "rhash",
+    "version": "1.4.6-1",
+    "architecture": "aarch64",
+    "sha256": "abe9ec7929bb1ca362428075d09f1cf94177014b8a04e93af6fe7eefdc2ce8f1",
+    "repositoryPath": "pool/main/rhash_1.4.6-1_aarch64.deb",
+    "dependencies": "openssl",
+    "executables": [
+      "rhash"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "rsync",
+    "version": "3.5.0-1",
+    "architecture": "aarch64",
+    "sha256": "bb20d63357e3b913e2421415ff2552e64bfcd4b23199967fefd8c98a4dac240c",
+    "repositoryPath": "pool/main/rsync_3.5.0-1_aarch64.deb",
+    "dependencies": "libiconv, liblz4, libpopt, openssh | dropbear, openssl, openssl-tool, xxhash, zlib, zstd",
+    "executables": [
+      "rsync",
+      "rsync-ssl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ruby-ri",
+    "version": "3.4.1-2",
+    "architecture": "all",
+    "sha256": "ea3a985a06d90376ff07d202c7dd3608ea06d7e50072305d0d3536291ff81284",
+    "repositoryPath": "pool/main/ruby-ri_3.4.1-2_all.deb",
+    "dependencies": "ruby (= 3.4.1-2)",
+    "executables": [
+      "ri"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ruby",
+    "version": "3.4.1-2",
+    "architecture": "aarch64",
+    "sha256": "2ce22b43f70eb0cd8d7ae323db1e2371aaeb6b63f8389dda6d017bffd7d3ddc0",
+    "repositoryPath": "pool/main/ruby_3.4.1-2_aarch64.deb",
+    "dependencies": "libandroid-execinfo, libandroid-support, libffi, libgmp, readline, openssl, libyaml, zlib",
+    "executables": [
+      "bundle",
+      "bundler",
+      "erb",
+      "gem",
+      "irb",
+      "racc",
+      "rake",
+      "rbs",
+      "rdbg",
+      "rdoc",
+      "ruby",
+      "syntax_suggest",
+      "typeprof",
+      "console.tt",
+      "setup.tt",
+      "console",
+      "setup",
+      "console",
+      "setup",
+      "console",
+      "setup",
+      "console",
+      "setup",
+      "racc",
+      "console",
+      "setup",
+      "console",
+      "setup",
+      "console",
+      "setup",
+      "typeprof"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "rust",
+    "version": "1.98.0",
+    "architecture": "aarch64",
+    "sha256": "a9a3495619a9674e92cad657821ec441e73373f9e0883c039d84d156faf9b980",
+    "repositoryPath": "pool/main/rust_1.98.0_aarch64.deb",
+    "dependencies": "clang, libandroid-execinfo, libc++, libllvm (<< 22), lld, openssl, zlib, rust-std-aarch64-linux-android",
+    "executables": [
+      "cargo",
+      "cargo-clippy",
+      "cargo-fmt",
+      "clippy-driver",
+      "rust-gdb",
+      "rust-gdbgui",
+      "rust-lldb",
+      "rustc",
+      "rustdoc",
+      "rustfmt",
+      "rust-objcopy"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "scdaemon",
+    "version": "2.5.17",
+    "architecture": "aarch64",
+    "sha256": "7278499706641e9ffc4f52ff2f114276f81ce7e93f84760d1f24d6dcb5412e20",
+    "repositoryPath": "pool/main/scdaemon_2.5.17_aarch64.deb",
+    "dependencies": "libgcrypt, libksba, libgpg-error, libassuan, libnpth, libusb, gnupg (= 2.5.17)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "sed",
+    "version": "4.9-2",
+    "architecture": "aarch64",
+    "sha256": "766b5b22d7561f4f623be097a8a753466d1d96cab692462f03a6f32611370268",
+    "repositoryPath": "pool/main/sed_4.9-2_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "sed"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "serf-static",
+    "version": "1.3.10-2",
+    "architecture": "aarch64",
+    "sha256": "f418a153e58b519b5e558b52eb2986c019f8ff8c2419d72bd799bff4886bbf9d",
+    "repositoryPath": "pool/main/serf-static_1.3.10-2_aarch64.deb",
+    "dependencies": "serf (= 1.3.10-2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "serf",
+    "version": "1.3.10-2",
+    "architecture": "aarch64",
+    "sha256": "33877b4f3c3e36f2e19fd23b5b36820a5a6d29489bb2388d8a9ce5a031ace27d",
+    "repositoryPath": "pool/main/serf_1.3.10-2_aarch64.deb",
+    "dependencies": "apr, apr-util, openssl, zlib",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "socat",
+    "version": "1.8.1.3",
+    "architecture": "aarch64",
+    "sha256": "9c8e5510b08285e3282507b12e82d238123231e0c839e4546be049dcbfe48fc6",
+    "repositoryPath": "pool/main/socat_1.8.1.3_aarch64.deb",
+    "dependencies": "openssl, readline",
+    "executables": [
+      "filan",
+      "procan",
+      "socat-broker.sh",
+      "socat-chain.sh",
+      "socat-mux.sh",
+      "socat1"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "speexdsp-static",
+    "version": "1.2.1-1",
+    "architecture": "aarch64",
+    "sha256": "1811d3cd41cc0b6e5e3ec52fce8a33caf40dec7efc47d4e6bbb3d0539a28d2f3",
+    "repositoryPath": "pool/main/speexdsp-static_1.2.1-1_aarch64.deb",
+    "dependencies": "speexdsp (= 1.2.1-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "speexdsp",
+    "version": "1.2.1-1",
+    "architecture": "aarch64",
+    "sha256": "49bc5b25805f59e5884a705823093229589c875da887dda679525d633e48d6ee",
+    "repositoryPath": "pool/main/speexdsp_1.2.1-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "spirv-headers",
+    "version": "1.4.357.0",
+    "architecture": "all",
+    "sha256": "72a2f3c874a347800e9e6a2160ee99c8a6ec891f22f1de9d2c8511872319c2cf",
+    "repositoryPath": "pool/main/spirv-headers_1.4.357.0_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "spirv-tools",
+    "version": "1.4.357.0",
+    "architecture": "aarch64",
+    "sha256": "5da44f30ed9adf20a168c7e4a52297a109a36ae805279ae3690fd3ec0d30591f",
+    "repositoryPath": "pool/main/spirv-tools_1.4.357.0_aarch64.deb",
+    "dependencies": "libc++",
+    "executables": [
+      "spirv-as",
+      "spirv-cfg",
+      "spirv-diff",
+      "spirv-dis",
+      "spirv-lesspipe.sh",
+      "spirv-link",
+      "spirv-lint",
+      "spirv-opt",
+      "spirv-reduce",
+      "spirv-val"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "sqlite",
+    "version": "3.53.4",
+    "architecture": "aarch64",
+    "sha256": "b52331bc0b0cb406039900c0a9244af8b536bd71e61612f15d9016f7097e27f6",
+    "repositoryPath": "pool/main/sqlite_3.53.4_aarch64.deb",
+    "dependencies": "readline, zlib",
+    "executables": [
+      "sqlite3"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "strace",
+    "version": "7.2",
+    "architecture": "aarch64",
+    "sha256": "98995b3373c763979a63ebdd15654edc04df1eb103a39d5d8f874a876fc564af",
+    "repositoryPath": "pool/main/strace.deb",
+    "dependencies": "libdw",
+    "executables": [
+      "strace",
+      "strace-log-merge"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "subversion-perl-static",
+    "version": "1.14.5-3",
+    "architecture": "aarch64",
+    "sha256": "bd99e3d4f61a102c88aef5873688dd3751b9542f36c34b01add39ef485068077",
+    "repositoryPath": "pool/main/subversion-perl-static_1.14.5-3_aarch64.deb",
+    "dependencies": "subversion-perl, subversion (= 1.14.5-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "subversion-perl",
+    "version": "1.14.5-3",
+    "architecture": "aarch64",
+    "sha256": "bfe18b3ce925b20bc05109c7eb111137b935a60bed8a9c066bd06adc5f992f7f",
+    "repositoryPath": "pool/main/subversion-perl_1.14.5-3_aarch64.deb",
+    "dependencies": "perl, subversion (= 1.14.5-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "subversion-static",
+    "version": "1.14.5-3",
+    "architecture": "aarch64",
+    "sha256": "29d41b5b4c290d4055304d049230e530f78cf31461b85c476e1d8caf00ec4502",
+    "repositoryPath": "pool/main/subversion-static_1.14.5-3_aarch64.deb",
+    "dependencies": "subversion (= 1.14.5-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "subversion",
+    "version": "1.14.5-3",
+    "architecture": "aarch64",
+    "sha256": "ad0185897903764497133492f1608a48e5baa3fee27e9b2251164c8a619f9de4",
+    "repositoryPath": "pool/main/subversion_1.14.5-3_aarch64.deb",
+    "dependencies": "apr, apr-util, serf, libexpat, libsqlite, liblz4, utf8proc, zlib, libmagic",
+    "executables": [
+      "svn",
+      "svnadmin",
+      "svnbench",
+      "svndumpfilter",
+      "svnfsfs",
+      "svnlook",
+      "svnmucc",
+      "svnrdump",
+      "svnserve",
+      "svnsync",
+      "svnversion"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "svt-av1",
+    "version": "4.2.0",
+    "architecture": "aarch64",
+    "sha256": "86866932b886d4a501b40535ca75fe77d6fe91b269fa1ecbd20dc133312257dd",
+    "repositoryPath": "pool/main/svt-av1_4.2.0_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "SvtAv1EncApp"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "swig",
+    "version": "4.5.0",
+    "architecture": "aarch64",
+    "sha256": "175c51fe893f2d7b8ad4f19bd4f348a40ab5822dd26edab4bdcb4d81c41efb3c",
+    "repositoryPath": "pool/main/swig_4.5.0_aarch64.deb",
+    "dependencies": "libc++, pcre2, zlib",
+    "executables": [
+      "ccache-swig",
+      "swig"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tar",
+    "version": "1.35-3",
+    "architecture": "aarch64",
+    "sha256": "ebd272536b33b0205c92a5d464b6ce32597454573e0d336c01b2bfdd8379e309",
+    "repositoryPath": "pool/main/tar_1.35-3_aarch64.deb",
+    "dependencies": "libacl, libandroid-glob, libandroid-selinux, libiconv",
+    "executables": [
+      "tar"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tcl",
+    "version": "8.6.16",
+    "architecture": "aarch64",
+    "sha256": "6a9f1fd47e5ee327993016f4c9470d8cba2a8f3063bda9a058c6ebe58e4339a0",
+    "repositoryPath": "pool/main/tcl_8.6.16_aarch64.deb",
+    "dependencies": "zlib",
+    "executables": [
+      "tclsh8.6"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "termux-auth",
+    "version": "1.5.0-1",
+    "architecture": "aarch64",
+    "sha256": "965693a2460039cc07558aa550effee2af6bb6032c680bce7b565bd83811dd74",
+    "repositoryPath": "pool/main/termux-auth_1.5.0-1_aarch64.deb",
+    "dependencies": "openssl",
+    "executables": [
+      "passwd",
+      "pwlogin"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "texinfo",
+    "version": "7.3",
+    "architecture": "aarch64",
+    "sha256": "9bb5bc82d43fcfea2b8d634325fca2a32635aa0b1d20b59320f8f3708dc44dd4",
+    "repositoryPath": "pool/main/texinfo_7.3_aarch64.deb",
+    "dependencies": "gawk, libiconv, ncurses, perl",
+    "executables": [
+      "info",
+      "install-info",
+      "pdftexi2dvi",
+      "pod2texi",
+      "texi2any",
+      "texi2dvi",
+      "texi2pdf",
+      "texindex"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tidy-static",
+    "version": "5.9.14-next-3",
+    "architecture": "aarch64",
+    "sha256": "a6e8262b4d4f0551a93f2ddf31c9855c290b810f015015d8b3a27e1a677752db",
+    "repositoryPath": "pool/main/tidy-static_5.9.14-next-3_aarch64.deb",
+    "dependencies": "tidy (= 5.9.14-next-3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tidy",
+    "version": "5.9.14-next-3",
+    "architecture": "aarch64",
+    "sha256": "d15399c2069fb48dd8e69f40e5cdc6e3b96b700ce6d745f1fae9425ae9e4fb73",
+    "repositoryPath": "pool/main/tidy_5.9.14-next-3_aarch64.deb",
+    "dependencies": "libxslt",
+    "executables": [
+      "tidy"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tk",
+    "version": "8.6.14-1",
+    "architecture": "aarch64",
+    "sha256": "07c2e8549946ae787f694f4a2ad4efa4733af22c2f11a6cbcc60726e6388d799",
+    "repositoryPath": "pool/main/tk_8.6.14-1_aarch64.deb",
+    "dependencies": "fontconfig, libx11, libxft, libxss, tcl",
+    "executables": [
+      "wish8.6"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tmux",
+    "version": "3.7c",
+    "architecture": "aarch64",
+    "sha256": "8621c71bce4f0079e77a331731b824a9a16d5975e8b4603a023152e677ab7a17",
+    "repositoryPath": "pool/main/tmux_3.7c_aarch64.deb",
+    "dependencies": "ncurses, libevent, libandroid-support, libandroid-glob",
+    "executables": [
+      "tmux"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "tor",
+    "version": "0.4.9.11",
+    "architecture": "aarch64",
+    "sha256": "62e84a4f26356adb249af9597c0e888fd88e156356653976b9a788fd4032d6db",
+    "repositoryPath": "pool/main/tor_0.4.9.11_aarch64.deb",
+    "dependencies": "libevent, liblzma, openssl, resolv-conf, zlib",
+    "executables": [
+      "tor",
+      "tor-gencert",
+      "tor-print-ed-signing-cert",
+      "tor-resolve",
+      "torify"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "traceroute",
+    "version": "2.1.6-1",
+    "architecture": "aarch64",
+    "sha256": "62611990ab4656fe1d6053ea09ffc01bebabee76c4f448882ca2d40e8f1f0dfe",
+    "repositoryPath": "pool/main/traceroute_2.1.6-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "traceroute"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "ttf-dejavu",
+    "version": "2.37-8",
+    "architecture": "all",
+    "sha256": "de21e4b37cd2ef0361a071561921a296fa6d93fb91ca7ce58df57d0e8936c5df",
+    "repositoryPath": "pool/main/ttf-dejavu_2.37-8_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "unbound",
+    "version": "1.26.0",
+    "architecture": "aarch64",
+    "sha256": "4d51cf5ddf91b6d6e81be4eaca32bb556c9809da4c82081e5b3038b230acee9c",
+    "repositoryPath": "pool/main/unbound_1.26.0_aarch64.deb",
+    "dependencies": "libexpat, libunbound (= 1.26.0)",
+    "executables": [
+      "unbound",
+      "unbound-anchor",
+      "unbound-checkconf",
+      "unbound-control",
+      "unbound-control-setup",
+      "unbound-host"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "update-info-dir",
+    "version": "7.3",
+    "architecture": "all",
+    "sha256": "80833b976b024a13702f33cf1280d89e3ce60fc424f3c0d699d35260a3bcc44e",
+    "repositoryPath": "pool/main/update-info-dir_7.3_all.deb",
+    "dependencies": "texinfo (= 7.3)",
+    "executables": [
+      "update-info-dir"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "utf8proc-static",
+    "version": "2.11.3",
+    "architecture": "aarch64",
+    "sha256": "4f79cd5c8c5672666addcaf159283a2f52341e4863c7bc87ec3f7e42257a3b10",
+    "repositoryPath": "pool/main/utf8proc-static_2.11.3_aarch64.deb",
+    "dependencies": "utf8proc (= 2.11.3)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "utf8proc",
+    "version": "2.11.3",
+    "architecture": "aarch64",
+    "sha256": "9e593e0e8ab0e16c818491d613a86fd93dee6d28365b6c10b3ac848ab266b8ce",
+    "repositoryPath": "pool/main/utf8proc_2.11.3_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "util-linux-static",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "428d776ac0be11f0c63c4a8d5c9848dc88d0be66012744a9da461ac62d4b2a6f",
+    "repositoryPath": "pool/main/util-linux-static_2.42.1-4_aarch64.deb",
+    "dependencies": "util-linux (= 2.42.1-4)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "util-linux",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "e5ed96aa786f773eda6e8641e63f31c5fcf3172d19f14d00ff24492c30ffa1eb",
+    "repositoryPath": "pool/main/util-linux_2.42.1-4_aarch64.deb",
+    "dependencies": "libandroid-glob, libandroid-posix-semaphore, libcap-ng, libsmartcols, ncurses, zlib",
+    "executables": [
+      "addpart",
+      "bits",
+      "blkpr",
+      "blockdev",
+      "cal",
+      "chcpu",
+      "choom",
+      "chrt",
+      "col",
+      "colcrt",
+      "colrm",
+      "column",
+      "coresched",
+      "ctrlaltdel",
+      "delpart",
+      "dmesg",
+      "enosys",
+      "exch",
+      "fadvise",
+      "fallocate",
+      "fincore",
+      "flock",
+      "fsck.cramfs",
+      "fsck.minix",
+      "fsfreeze",
+      "getopt",
+      "hardlink",
+      "hexdump",
+      "hwclock",
+      "ionice",
+      "irqtop",
+      "isosize",
+      "ldattach",
+      "look",
+      "losetup",
+      "lsclocks",
+      "lscpu",
+      "lsfd",
+      "lsipc",
+      "lsirq",
+      "lsns",
+      "mcookie",
+      "mkfs",
+      "mkfs.bfs",
+      "mkfs.cramfs",
+      "mkfs.minix",
+      "more",
+      "namei",
+      "nsenter",
+      "pipesz",
+      "prlimit",
+      "readprofile",
+      "rename",
+      "renice",
+      "resizepart",
+      "rev",
+      "rtcwake",
+      "script",
+      "scriptlive",
+      "scriptreplay",
+      "setarch",
+      "setpgid",
+      "setpriv",
+      "setsid",
+      "setterm",
+      "taskset",
+      "uclampset",
+      "ul",
+      "unshare",
+      "waitpid",
+      "wdctl",
+      "whereis",
+      "zramctl"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "uuid-utils",
+    "version": "2.42.1-4",
+    "architecture": "aarch64",
+    "sha256": "8d068f947cef2e631ce12d588b0eb9af326e9c315e4357c6adc1f966cd620264",
+    "repositoryPath": "pool/main/uuid-utils_2.42.1-4_aarch64.deb",
+    "dependencies": "libsmartcols, libuuid",
+    "executables": [
+      "uuidd",
+      "uuidgen",
+      "uuidparse"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "vim",
+    "version": "9.2.1000",
+    "architecture": "aarch64",
+    "sha256": "2e58978f0f81181d2e8f7fec930f17e257346e135931153673d5dfc242ea0137",
+    "repositoryPath": "pool/main/vim_9.2.1000_aarch64.deb",
+    "dependencies": "libiconv, libsodium, ncurses",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "vulkan-headers",
+    "version": "1.4.361",
+    "architecture": "all",
+    "sha256": "0dedb7dd7a337ead09bc1a9b81d4fe55369aa88ef7d294e973d2ca8fc2b0d262",
+    "repositoryPath": "pool/main/vulkan-headers_1.4.361_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "vulkan-icd",
+    "version": "0.1-1",
+    "architecture": "all",
+    "sha256": "89d668bb566d41f878d2bf66a2f75b337a311755c9fe8828d4b026a2b7e9d2b5",
+    "repositoryPath": "pool/main/vulkan-icd_0.1-1_all.deb",
+    "dependencies": "mesa-vulkan-icd-swrast | mesa-vulkan-icd-freedreno | mesa-vulkan-icd-virtio | swiftshader",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "wget",
+    "version": "1.25.0-1",
+    "architecture": "aarch64",
+    "sha256": "7691551dc8358b8cd39f8cbe25fea314aa179770027de299b6768fc4fe01dcbc",
+    "repositoryPath": "pool/main/wget_1.25.0-1_aarch64.deb",
+    "dependencies": "libandroid-support, libiconv, libidn2, libuuid, openssl, pcre2, zlib",
+    "executables": [
+      "wget"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "which",
+    "version": "2.25",
+    "architecture": "aarch64",
+    "sha256": "0a39f076ef63644838478971a47784e41b926394fb40d6b70211ebfe0da7a9ac",
+    "repositoryPath": "pool/main/which_2.25_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "which"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "x264",
+    "version": "1:0.164.3191-1",
+    "architecture": "aarch64",
+    "sha256": "a91df826b1125411841c6c072ae5572141cf1c8e0ff1aa9633d433b44982cadc",
+    "repositoryPath": "pool/main/x264_1:0.164.3191-1_aarch64.deb",
+    "dependencies": "libx264 (= 1:0.164.3191-1)",
+    "executables": [
+      "x264"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "x265",
+    "version": "4.3",
+    "architecture": "aarch64",
+    "sha256": "66c56bd42d4b575eba969fee92b55a9b8d588ba9778c49b2ab9a871dff59589b",
+    "repositoryPath": "pool/main/x265_4.3_aarch64.deb",
+    "dependencies": "libx265 (= 4.3)",
+    "executables": [
+      "x265"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xcb-proto",
+    "version": "1.17.0-3",
+    "architecture": "all",
+    "sha256": "869eb4d4443b718e9a5c10171788ab67f4356e87ae33ce7972fb59542d1b9f82",
+    "repositoryPath": "pool/main/xcb-proto_1.17.0-3_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xorg-util-macros",
+    "version": "1.20.2",
+    "architecture": "all",
+    "sha256": "5039173b97b90b377284ccdac8d59fb59aefe8222834062b981f88f23777c8e2",
+    "repositoryPath": "pool/main/xorg-util-macros_1.20.2_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xorgproto",
+    "version": "2025.1",
+    "architecture": "all",
+    "sha256": "115a75f97f9824ea0d4995343be2eb8e159dbecf3683bc5c1630983a39be287d",
+    "repositoryPath": "pool/main/xorgproto_2025.1_all.deb",
+    "dependencies": "xorg-util-macros",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xsltproc",
+    "version": "1.1.45-1",
+    "architecture": "aarch64",
+    "sha256": "d072aa05964b5187d0fcf0aa79b15efd798fd64e6c1ef64ad2d0390662967813",
+    "repositoryPath": "pool/main/xsltproc_1.1.45-1_aarch64.deb",
+    "dependencies": "libxslt (= 1.1.45-1)",
+    "executables": [
+      "xsltproc"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xtrans",
+    "version": "1.6.0",
+    "architecture": "all",
+    "sha256": "c91f77435f10bef2f937b77fccde93f73e60b97dd52979a2b5093f4d40835536",
+    "repositoryPath": "pool/main/xtrans_1.6.0_all.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xxd",
+    "version": "9.2.1000",
+    "architecture": "aarch64",
+    "sha256": "d010de221965575d492f8fca93c8d865d1ca383d905655769cd002013a2c7e12",
+    "repositoryPath": "pool/main/xxd_9.2.1000_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "xxd"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xxhash-static",
+    "version": "0.8.3-1",
+    "architecture": "aarch64",
+    "sha256": "80c997969654821af0575ffb00199931b21e0d669587fb664e2278a0b62f3f5d",
+    "repositoryPath": "pool/main/xxhash-static_0.8.3-1_aarch64.deb",
+    "dependencies": "xxhash (= 0.8.3-1)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xxhash",
+    "version": "0.8.3-1",
+    "architecture": "aarch64",
+    "sha256": "d4514e578efbb81e36f657f9a2774a830e28f921b49570b9832e6c6339ae8b5b",
+    "repositoryPath": "pool/main/xxhash_0.8.3-1_aarch64.deb",
+    "dependencies": "",
+    "executables": [
+      "xxhsum"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "xz-utils",
+    "version": "5.8.3",
+    "architecture": "aarch64",
+    "sha256": "81828ed4c9f1b2ea81b6101f8a11b44263c393ef487b340e366c2a2d4b7e9cdd",
+    "repositoryPath": "pool/main/xz-utils_5.8.3_aarch64.deb",
+    "dependencies": "liblzma (= 5.8.3)",
+    "executables": [
+      "lzmadec",
+      "lzmainfo",
+      "xz",
+      "xzdec",
+      "xzdiff",
+      "xzgrep",
+      "xzless",
+      "xzmore"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "zlib-static",
+    "version": "1.3.2",
+    "architecture": "aarch64",
+    "sha256": "b9ce506feee76795c9b8e77e8cae04bdca0b80e6e232a7d7196f03113056deda",
+    "repositoryPath": "pool/main/zlib-static_1.3.2_aarch64.deb",
+    "dependencies": "zlib (= 1.3.2)",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "zlib",
+    "version": "1.3.2",
+    "architecture": "aarch64",
+    "sha256": "d6dd2558e8400453fa70334451eebe10c2403e5134bc0efc64dbc760d8008eac",
+    "repositoryPath": "pool/main/zlib_1.3.2_aarch64.deb",
+    "dependencies": "",
+    "executables": [],
+    "status": "PUBLISHED_AND_INDEXED"
+  },
+  {
+    "package": "zstd",
+    "version": "1.5.7-1",
+    "architecture": "aarch64",
+    "sha256": "17100dc507f35d77c1d46458d8178fefc4edf4325711baad019b258ce2d339fb",
+    "repositoryPath": "pool/main/zstd_1.5.7-1_aarch64.deb",
+    "dependencies": "liblzma, zlib",
+    "executables": [
+      "zstd",
+      "zstdgrep",
+      "zstdless"
+    ],
+    "status": "PUBLISHED_AND_INDEXED"
+  }
+]

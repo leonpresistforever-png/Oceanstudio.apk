@@ -1,0 +1,402 @@
+{
+  "bootstrapVersion": "1.0.2",
+  "architecture": "aarch64",
+  "packageName": "studio.ocean.app",
+  "prefix": "/data/data/studio.ocean.app/files/usr",
+  "archive": "ocean-aarch64.tar.zst",
+  "archiveSha256": "4807234c4497db0d9d3d9c35db7b0b33b32a8058a32042801b96ed05a35ef1f7",
+  "archiveSize": 17522259,
+  "entryCount": 3774,
+  "packageList": [
+    "apt",
+    "attr",
+    "bash",
+    "bzip2",
+    "ca-certificates",
+    "coreutils",
+    "diffutils",
+    "dpkg",
+    "findutils",
+    "gpgv",
+    "grep",
+    "gzip",
+    "less",
+    "libacl",
+    "libandroid-glob",
+    "libandroid-selinux",
+    "libandroid-support",
+    "libassuan",
+    "libbz2",
+    "libc++",
+    "libcurl",
+    "libevent",
+    "libffi",
+    "libgcrypt",
+    "libgmp",
+    "libgnutls",
+    "libgpg-error",
+    "libiconv",
+    "libidn2",
+    "liblz4",
+    "liblzma",
+    "libmd",
+    "libnettle",
+    "libnghttp2",
+    "libnghttp3",
+    "libngtcp2",
+    "libnpth",
+    "libssh2",
+    "libtasn1",
+    "libunbound",
+    "libunistring",
+    "ncurses",
+    "ocean-hello",
+    "ocean-pkg",
+    "openssl",
+    "p11-kit",
+    "pcre2",
+    "readline",
+    "resolv-conf",
+    "sed",
+    "tar",
+    "xxhash",
+    "xz-utils",
+    "zlib",
+    "zstd"
+  ],
+  "packages": [
+    {
+      "name": "apt",
+      "version": "2.8.1-2",
+      "sha256": "928490fccb27d661b23dd601d6fc735509f608cd5e11a58c5f1bd6849f15f6df",
+      "artifact": "apt_2.8.1-2_aarch64.deb"
+    },
+    {
+      "name": "attr",
+      "version": "2.6.0",
+      "sha256": "e9bac48f43f592721d9f6476a77651ba79ca7c9d9ba89d41219fa1abfd7dfdf1",
+      "artifact": "attr_2.6.0_aarch64.deb"
+    },
+    {
+      "name": "bash",
+      "version": "5.3.15",
+      "sha256": "6bf5b1a43d94d07fde8b0aa57bcd3a5fd934923e9f1976ec485f4212726679b0",
+      "artifact": "bash_5.3.15_aarch64.deb"
+    },
+    {
+      "name": "bzip2",
+      "version": "1.0.8-8",
+      "sha256": "b0fd52f746806d2490963c130aa9e84d091db94f865fc0d9cce5e7f417ab30ff",
+      "artifact": "bzip2_1.0.8-8_aarch64.deb"
+    },
+    {
+      "name": "ca-certificates",
+      "version": "1:2026.07.16",
+      "sha256": "1fef6f4fefa5ab03fa5e3c718bb283ef9c1505fbab029102ef711de170d0c9b3",
+      "artifact": "ca-certificates_1:2026.07.16_all.deb"
+    },
+    {
+      "name": "coreutils",
+      "version": "9.11-1",
+      "sha256": "be2b1a67144490999c8e0272fac4c1172e90c79ded77115f5d99171759523cc1",
+      "artifact": "coreutils_9.11-1_aarch64.deb"
+    },
+    {
+      "name": "diffutils",
+      "version": "3.12-2",
+      "sha256": "5b43a30f6694186c92b38ba56095b078ed0605f05e7637a9938634e2bc72a4ed",
+      "artifact": "diffutils_3.12-2_aarch64.deb"
+    },
+    {
+      "name": "dpkg",
+      "version": "1.22.6-5",
+      "sha256": "e98c1a073256bdfb000783de35270f4c3a1d10f35ba8b26492099844e2d3dca7",
+      "artifact": "dpkg_1.22.6-5_aarch64.deb"
+    },
+    {
+      "name": "findutils",
+      "version": "4.10.0-1",
+      "sha256": "19ebda4c258f20370dccb1c854e049ce80049e075e19d6046606e03e3cfc42cf",
+      "artifact": "findutils_4.10.0-1_aarch64.deb"
+    },
+    {
+      "name": "gpgv",
+      "version": "2.5.17",
+      "sha256": "b4dd967c32741e47e24d79ec3f46197b431790477422e07e5bf5e7f35e69940f",
+      "artifact": "gpgv_2.5.17_aarch64.deb"
+    },
+    {
+      "name": "grep",
+      "version": "3.12-3",
+      "sha256": "99e659f9d6be625aec585a8fe3bea593ebeed24034cebf25b7da26ee2002dd38",
+      "artifact": "grep_3.12-3_aarch64.deb"
+    },
+    {
+      "name": "gzip",
+      "version": "1.14-1",
+      "sha256": "5c96e9e567ae682a83a509d548af3ef1e055946cfa9c598dee2467a9d8ba2ba2",
+      "artifact": "gzip_1.14-1_aarch64.deb"
+    },
+    {
+      "name": "less",
+      "version": "704",
+      "sha256": "08f87a8677a3ede32a4aede89453ce7d6851528486f681e400e0548e84edbb6b",
+      "artifact": "less_704_aarch64.deb"
+    },
+    {
+      "name": "libacl",
+      "version": "2.4.0",
+      "sha256": "52d1c1b85d6f78f5e53023db31fb177bb86237c6c02c4c5554c1faa3f762da9d",
+      "artifact": "libacl_2.4.0_aarch64.deb"
+    },
+    {
+      "name": "libandroid-glob",
+      "version": "0.6-3",
+      "sha256": "7ef2ac11f80c7588c3e5bb1b61732300ed0e6b820ddfa07016ce398a1bfdcccd",
+      "artifact": "libandroid-glob_0.6-3_aarch64.deb"
+    },
+    {
+      "name": "libandroid-selinux",
+      "version": "14.0.0.11-1",
+      "sha256": "25db1daf1e122c7ec45ccc333abf1c6748191426ca5215a7b4656abf99c71b77",
+      "artifact": "libandroid-selinux_14.0.0.11-1_aarch64.deb"
+    },
+    {
+      "name": "libandroid-support",
+      "version": "29-1",
+      "sha256": "bd9dd4b340d27d9bb25c61c2c765cbd71a015d394d76403bd4153fd584739791",
+      "artifact": "libandroid-support_29-1_aarch64.deb"
+    },
+    {
+      "name": "libassuan",
+      "version": "3.0.2-1",
+      "sha256": "7d6be1049af8c3679fc96922fbccc3f7ac00b6e3f7f6f9a1abaa8ad0a503779c",
+      "artifact": "libassuan_3.0.2-1_aarch64.deb"
+    },
+    {
+      "name": "libbz2",
+      "version": "1.0.8-8",
+      "sha256": "6e7e10900511d89ebf3440940f6eb5db0d5ab393b5d594b380d4499684eee523",
+      "artifact": "libbz2_1.0.8-8_aarch64.deb"
+    },
+    {
+      "name": "libc++",
+      "version": "29",
+      "sha256": "d45e20afba6f989ab16704d1ae67292859898ec7bc792c2ae2ee276888cec3c0",
+      "artifact": "libc++_29_aarch64.deb"
+    },
+    {
+      "name": "libcurl",
+      "version": "8.21.0",
+      "sha256": "f5d0d9278740d3ebcb032335c4d96ebe6fc64e8dc72d2c979d3ce1b6667e2667",
+      "artifact": "libcurl_8.21.0_aarch64.deb"
+    },
+    {
+      "name": "libevent",
+      "version": "2.1.13",
+      "sha256": "1158dfeda1c55a5892fab0d8de4b47e49ef4eb71a817e5a4d6aa486bbf43b8e8",
+      "artifact": "libevent_2.1.13_aarch64.deb"
+    },
+    {
+      "name": "libffi",
+      "version": "3.5.2",
+      "sha256": "ad50ea6f1d5bf37fd84cf8a44133af2a71960dc4920df51e1fdbbb8c1a3fbe3b",
+      "artifact": "libffi_3.5.2_aarch64.deb"
+    },
+    {
+      "name": "libgcrypt",
+      "version": "1.12.2",
+      "sha256": "2ad6ecc86c0b92250d146d11e1b9176b614ac5611a6872c6ffd6540837230418",
+      "artifact": "libgcrypt_1.12.2_aarch64.deb"
+    },
+    {
+      "name": "libgmp",
+      "version": "6.3.0-2",
+      "sha256": "7e0d792ea6811714cd69b74e1a1f0c254263d24ea461c352d6b6d58b38336d0e",
+      "artifact": "libgmp_6.3.0-2_aarch64.deb"
+    },
+    {
+      "name": "libgnutls",
+      "version": "3.8.13-1",
+      "sha256": "d09e4fb1eaa68f5028617cb954a747b673dfb4d325eef6202eb3f94e0866cb54",
+      "artifact": "libgnutls_3.8.13-1_aarch64.deb"
+    },
+    {
+      "name": "libgpg-error",
+      "version": "1.61",
+      "sha256": "a20626d7f6842824d7d02118778cdac00c673b39da9d7799ec1701fec34525b4",
+      "artifact": "libgpg-error_1.61_aarch64.deb"
+    },
+    {
+      "name": "libiconv",
+      "version": "1.18-1",
+      "sha256": "0ff02f71c6ceb1e681de13dad83999655eba44a872ddbd7e452218970081a2d4",
+      "artifact": "libiconv_1.18-1_aarch64.deb"
+    },
+    {
+      "name": "libidn2",
+      "version": "2.3.8-1",
+      "sha256": "d1439007f5e5eb86a81bc2c190c8fae8b2456a3043b8e640179b338abbf054a4",
+      "artifact": "libidn2_2.3.8-1_aarch64.deb"
+    },
+    {
+      "name": "liblz4",
+      "version": "1.10.0-1",
+      "sha256": "96ddb1bfd38f3fa2975541bee26785ce3b6de2c8c8393c57af41c3b466cf10a3",
+      "artifact": "liblz4_1.10.0-1_aarch64.deb"
+    },
+    {
+      "name": "liblzma",
+      "version": "5.8.3",
+      "sha256": "354271813af6a9fc933e9c2c04ad8351626192e90f6ec24f039002534d9ce81f",
+      "artifact": "liblzma_5.8.3_aarch64.deb"
+    },
+    {
+      "name": "libmd",
+      "version": "1.1.0-1",
+      "sha256": "3bf7bc8dd1ecaefc5c0dafee3487af5a17cecbf08e7c60f88ed454cdfbe9f77c",
+      "artifact": "libmd_1.1.0-1_aarch64.deb"
+    },
+    {
+      "name": "libnettle",
+      "version": "4.0+really3.10.2",
+      "sha256": "b67ad0862251ccd24ef7c5babc8d501413a8f27628ef5a7a0992683dc3d6c2f5",
+      "artifact": "libnettle_4.0+really3.10.2_aarch64.deb"
+    },
+    {
+      "name": "libnghttp2",
+      "version": "1.70.0",
+      "sha256": "1e6c22e951c25824f5d406b186cfbef470f0dccba8d77da1784bc59462ca21fd",
+      "artifact": "libnghttp2_1.70.0_aarch64.deb"
+    },
+    {
+      "name": "libnghttp3",
+      "version": "1.18.0",
+      "sha256": "9d5aa6728930fd6629e8b2ea9bfb190f544b2745128a3a60cade7dc9f81a81b8",
+      "artifact": "libnghttp3_1.18.0_aarch64.deb"
+    },
+    {
+      "name": "libngtcp2",
+      "version": "1.25.0",
+      "sha256": "607567a8ce359a00ce4922b0fed8ef2c5eb471863d135e40af975f7a5706911d",
+      "artifact": "libngtcp2_1.25.0_aarch64.deb"
+    },
+    {
+      "name": "libnpth",
+      "version": "1.6-3",
+      "sha256": "a0e609f664e005bd11d63933a133a560c275d1c3cd3f8efa7ff68d841c74ea37",
+      "artifact": "libnpth_1.6-3_aarch64.deb"
+    },
+    {
+      "name": "libssh2",
+      "version": "1.11.1-2",
+      "sha256": "c8ed0f305677a5557275c4defed6299e67ecf7127bf79aeaa70821e12abd3607",
+      "artifact": "libssh2_1.11.1-2_aarch64.deb"
+    },
+    {
+      "name": "libtasn1",
+      "version": "4.21.0",
+      "sha256": "08b67882ee618638b6bb2d530f1083fa61e28bed4b4e5e295d1c0a92fcb666b0",
+      "artifact": "libtasn1_4.21.0_aarch64.deb"
+    },
+    {
+      "name": "libunbound",
+      "version": "1.26.0",
+      "sha256": "4ae356e4ca7f609b93ef899262d8877b959761d94591343bf2ba9a6deae010e1",
+      "artifact": "libunbound_1.26.0_aarch64.deb"
+    },
+    {
+      "name": "libunistring",
+      "version": "1.4.2",
+      "sha256": "233da6b86aa869b07a569d3d6d8db6029df21d98f7fe72d98e2cdd31752a2fc1",
+      "artifact": "libunistring_1.4.2_aarch64.deb"
+    },
+    {
+      "name": "ncurses",
+      "version": "6.6.20260307+really6.5.20250830",
+      "sha256": "cdf540c34c947b7d9f1af7bfb84e4950427858dcbb085f26afa1f6516a3566c3",
+      "artifact": "ncurses_6.6.20260307+really6.5.20250830_aarch64.deb"
+    },
+    {
+      "name": "ocean-hello",
+      "version": "1.0.0",
+      "sha256": "cb29a588d9652884d4cea092dc260a4fdb7a0354905e6397097d5461d0ea1029",
+      "artifact": "ocean-hello_1.0.0_aarch64.deb"
+    },
+    {
+      "name": "ocean-pkg",
+      "version": "1.1.0",
+      "sha256": "8167b504378127ee6755be956b7ff0703d61853103419f06affc9bba818f7b69",
+      "artifact": "ocean-pkg_1.1.0_all.deb"
+    },
+    {
+      "name": "openssl",
+      "version": "1:3.6.3",
+      "sha256": "94e700dec8b1ca491e12e0fc88eb7046ea67d910fa2f6fdbc30ecce3f7d7024b",
+      "artifact": "openssl_1:3.6.3_aarch64.deb"
+    },
+    {
+      "name": "p11-kit",
+      "version": "0.26.5",
+      "sha256": "d364a2e02d1e15d08eb6a64ad55788730b294e1a81587d52a083039f3f30add6",
+      "artifact": "p11-kit_0.26.5_aarch64.deb"
+    },
+    {
+      "name": "pcre2",
+      "version": "10.47",
+      "sha256": "bdd31b1210d3373bbb5c8dae4848fc0e1abaa755d6f9a5e398c39849bd5a0503",
+      "artifact": "pcre2_10.47_aarch64.deb"
+    },
+    {
+      "name": "readline",
+      "version": "8.3.3",
+      "sha256": "e681abf20e1cc6ffa1e294a5fad6d5a7947dc4000c3cd1df6d102fae6002a41c",
+      "artifact": "readline_8.3.3_aarch64.deb"
+    },
+    {
+      "name": "resolv-conf",
+      "version": "1.3",
+      "sha256": "8f6c007c65a513e712c718136360bbd4a271e36600cc18fe67f3fd3416fc8814",
+      "artifact": "resolv-conf_1.3_aarch64.deb"
+    },
+    {
+      "name": "sed",
+      "version": "4.9-2",
+      "sha256": "38081a29540278bd402efe7dc4600b88d3b52cd6d8c912ddcf6bc8cb2fec8e10",
+      "artifact": "sed_4.9-2_aarch64.deb"
+    },
+    {
+      "name": "tar",
+      "version": "1.35-3",
+      "sha256": "d70440289bdf35b1632bc440bda4b8e18711dac7c16385e219069441a02bc18a",
+      "artifact": "tar_1.35-3_aarch64.deb"
+    },
+    {
+      "name": "xxhash",
+      "version": "0.8.3-1",
+      "sha256": "5252a8257af80f597f068556b595f138e0a7ff664f0250546be62bbe558e9728",
+      "artifact": "xxhash_0.8.3-1_aarch64.deb"
+    },
+    {
+      "name": "xz-utils",
+      "version": "5.8.3",
+      "sha256": "a7e4bccc55373075797b2ff29d92ff4b41e674776b6186fd7bbcb28c54c710c7",
+      "artifact": "xz-utils_5.8.3_aarch64.deb"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2",
+      "sha256": "15d4d2aca89e1888cc5eeaa6d1c4a6b21ee420b90e98d8f131e3515ca4eff658",
+      "artifact": "zlib_1.3.2_aarch64.deb"
+    },
+    {
+      "name": "zstd",
+      "version": "1.5.7-1",
+      "sha256": "6d085428fe832ca40e9a9e1f86cb05df7410d373bc0d4bcf2800b7bccb62db9d",
+      "artifact": "zstd_1.5.7-1_aarch64.deb"
+    }
+  ],
+  "buildCommit": "local-signed-repository-hydration",
+  "repositoryUrl": "https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/main/apt",
+  "repositoryKeyFingerprint": "09D45DD2CDC37BD4F9BC2C458EC15431CA5542E2"
+}

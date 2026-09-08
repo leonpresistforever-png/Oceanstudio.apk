@@ -1,7 +1,8 @@
 ext {
-    minSdkVersion = 23
+    minSdkVersion = 28
     compileSdkVersion = 35
-    targetSdkVersion = 35
+    // Intentional for Ocean Terminal's writable-prefix executable model.
+    targetSdkVersion = 28
     androidxAppCompatVersion = '1.7.0'
     coreSplashScreenVersion = '1.0.1'
     junitVersion = '4.13.2'

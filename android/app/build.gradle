@@ -1,8 +1,18 @@
 apply plugin: 'com.android.application'
 
+// AppCompat/Core transitively request different Kotlin stdlib generations.
+// Keep every compatibility artifact on one generation to prevent duplicate classes.
+configurations.configureEach {
+    resolutionStrategy.force(
+            'org.jetbrains.kotlin:kotlin-stdlib:1.8.22',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22')
+}
+
 android {
     namespace "studio.ocean.app"
     compileSdk rootProject.ext.compileSdkVersion
+    ndkVersion "27.0.12077973"
     defaultConfig {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -10,9 +20,34 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters 'arm64-v8a' }
+        buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${System.getenv('OCEAN_FIREBASE_API_KEY') ?: ''}\""
+        buildConfigField "String", "OCEAN_BUILD_COMMIT", "\"${System.getenv('OCEAN_BUILD_COMMIT') ?: 'local'}\""
+        buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
+        buildConfigField "String", "OCEAN_BOOTSTRAP_VERSION", "\"${System.getenv('OCEAN_BOOTSTRAP_VERSION') ?: 'not-bundled'}\""
+        buildConfigField "String", "OCEAN_BOOTSTRAP_SHA256", "\"${System.getenv('OCEAN_BOOTSTRAP_SHA256') ?: 'not-bundled'}\""
+    }
+    buildFeatures { buildConfig true }
+    externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt') } }
+    // Android AssetManager.open() cannot stream-decompress assets > 1 MB that are DEFLATED.
+    // The 17+ MB ocean bootstrap archive MUST be stored uncompressed, or installation silently fails.
+    // All native .so libraries must also be stored uncompressed for system linker mmap.
+    aaptOptions {
+        noCompress 'zst', 'tar', 'zstd', 'so', 'gz', 'br', 'bz2', 'lz4', 'xz'
+    }
+    packagingOptions {
+        // Keep .so files uncompressed in the APK so the system linker can mmap them directly.
+        // This is required for both extractNativeLibs=false and for reliable JNI loading.
+        jniLibs.useLegacyPackaging = false
     }
     buildTypes {
+        debug {
+            // Debug APKs always expose the visibly labelled testing-only entry.
+            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "true"
+        }
         release {
+            // Hard-disabled regardless of environment: release builds never contain the bypass.
+            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "false"
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -20,8 +55,15 @@ android {
 }
 
 dependencies {
+    implementation project(':terminal-emulator')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "org.apache.commons:commons-compress:1.27.1"
+    // The default Maven artifact is a desktop JAR whose native payload lives
+    // under /linux/aarch64 and is not packaged as an Android JNI library.
+    // Select the Android AAR so Gradle installs the bionic arm64 library under
+    // lib/arm64-v8a/ and System.loadLibrary can resolve it on first bootstrap.
+    implementation "com.github.luben:zstd-jni:1.5.6-9@aar"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

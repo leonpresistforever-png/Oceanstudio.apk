@@ -1,0 +1,90 @@
+{
+  "architecture": "aarch64",
+  "target_prefix": "/data/data/studio.ocean.app/files/usr",
+  "packages": [
+    {
+      "name": "ocean-distro_1.0.0_all.deb",
+      "size_bytes": 5328,
+      "sha256": "a70bab86684740a55e2e2ac1f9fd32121d7851c8d80d83872dcd44fd022aea94",
+      "shard": "distro"
+    },
+    {
+      "name": "maven_3.9.16_all.deb",
+      "size_bytes": 9248424,
+      "sha256": "17284c0c7ccb74bdd9e46af45da265d75e682173830411fba707b0612af935dc",
+      "shard": "maven"
+    },
+    {
+      "name": "openjdk-21_21.0.12_aarch64.deb",
+      "size_bytes": 106207076,
+      "sha256": "cf49cc111e21f48a27cea4cad16b2993c5d354255957c70c09aee70781e0795c",
+      "shard": "jvm"
+    },
+    {
+      "name": "rust_1.98.0_aarch64.deb",
+      "size_bytes": 125357488,
+      "sha256": "a9a3495619a9674e92cad657821ec441e73373f9e0883c039d84d156faf9b980",
+      "shard": "rust"
+    },
+    {
+      "name": "gradle_9.7.1_all.deb",
+      "size_bytes": 151233718,
+      "sha256": "e8df9fe10be7783a80b58527917ac15120b6762acccc7b92fd7da1a13df2493f",
+      "shard": "jvm"
+    },
+    {
+      "name": "kotlin_2.4.10_all.deb",
+      "size_bytes": 86973416,
+      "sha256": "2f0fc913cc9013e9aa4b43f58e1814af0182903be554b26f5dd743e2f50bee8c",
+      "shard": "jvm"
+    },
+    {
+      "name": "apksigner.deb",
+      "size_bytes": 1077018,
+      "sha256": "1f56b347de2057691f263379db28ebfc95aae8a6af40869289a4f1a7b1d54669",
+      "shard": "android-tools"
+    },
+    {
+      "name": "dx.deb",
+      "size_bytes": 1436524,
+      "sha256": "751344b9a53d72473fbee7c9796ee3e601bedec17de5f62124d7f5c398de3d93",
+      "shard": "android-tools"
+    },
+    {
+      "name": "ecj.deb",
+      "size_bytes": 7220890,
+      "sha256": "20e136b1279eae0262b566a528f549b56a41e35999ac1a94f7b469be79a73094",
+      "shard": "android-tools"
+    },
+    {
+      "name": "aapt.deb",
+      "size_bytes": 662082,
+      "sha256": "16350e82221a224e1e2f19ecb3555e76e9dd3274b55407d3157f0ecd44055290",
+      "shard": "android-tools"
+    },
+    {
+      "name": "ninja.deb",
+      "size_bytes": 115562,
+      "sha256": "e233f2d9a9058b82c4faccfcea4096a426b65fec1ee3f8f4b74d2439e9da6636",
+      "shard": "cpp-dev"
+    },
+    {
+      "name": "strace.deb",
+      "size_bytes": 582918,
+      "sha256": "98995b3373c763979a63ebdd15654edc04df1eb103a39d5d8f874a876fc564af",
+      "shard": "debug-tools"
+    },
+    {
+      "name": "gdb.deb",
+      "size_bytes": 5629872,
+      "sha256": "e5bb3fe0164419a5d1dc11c5b636c25af2e5d2eb5aa85257b373d89dbc7cca94",
+      "shard": "debug-tools"
+    },
+    {
+      "name": "caddy.deb",
+      "size_bytes": 17894410,
+      "sha256": "562def363df4b643f18a5613aa6de563d7f0877ee8cb09c82412ab87c5ff2849",
+      "shard": "cloud-devops"
+    }
+  ]
+}
