@@ -1,25 +1,26 @@
 package studio.ocean.app;
 
 import android.content.Context;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import studio.ocean.app.terminal.OceanEnvironment;
+import studio.ocean.app.terminal.OceanTerminalRuntimeService;
 
 public final class OceanAgentRunner {
+
+    public interface ConnectionCallback { void onSuccess(); void onFailure(String error); }
 
     public interface AgentCallback {
         void onThought(String thought);
@@ -31,13 +32,11 @@ public final class OceanAgentRunner {
     }
 
     private final Context context;
-    private final OceanPaths paths;
     private final OceanByokManager byokManager;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public OceanAgentRunner(Context context) {
         this.context = context.getApplicationContext();
-        this.paths = new OceanPaths(this.context);
         this.byokManager = new OceanByokManager(this.context);
     }
 
@@ -65,10 +64,8 @@ public final class OceanAgentRunner {
             }
 
             // Normal conversational agent flow: NEVER execute conversational text in shell
-            if (!byokManager.hasApiKey()) {
-                mainHandler.post(() -> callback.onThought("Ocean Agent reasoning locally..."));
-                String localResponse = generateLocalAssistantResponse(trimmed);
-                mainHandler.post(() -> callback.onResponse(localResponse));
+            if (!byokManager.isVerified()) {
+                mainHandler.post(() -> callback.onResponse("No conversation model is connected. Open BYOK Models & APIs, enter the provider model identifier and API key, then run Save & Test Connection."));
                 return;
             }
 
@@ -87,20 +84,6 @@ public final class OceanAgentRunner {
                     responseText = callOpenAI(byokManager.getApiKey(), byokManager.getBaseUrl(), model, trimmed);
                 }
 
-                // Check if response contains an internal tool command like ```bash ocean-... ```
-                Pattern pattern = Pattern.compile("```(?:bash|sh)\\s*\\n([\\s\\S]*?)```");
-                Matcher matcher = pattern.matcher(responseText);
-                if (matcher.find()) {
-                    String toolCmd = matcher.group(1).trim();
-                    if (toolCmd.startsWith("ocean-") || toolCmd.startsWith("pkg ") || toolCmd.startsWith("apt ")) {
-                        mainHandler.post(() -> callback.onThought("Executing recommended tool internally: " + toolCmd));
-                        String toolOutput = executeInternalCommandSilently(toolCmd);
-                        if (!toolOutput.isEmpty()) {
-                            responseText += "\n\n**Internal Execution Result:**\n```\n" + toolOutput + "\n```";
-                        }
-                    }
-                }
-
                 final String finalResp = responseText;
                 mainHandler.post(() -> callback.onResponse(finalResp));
 
@@ -108,24 +91,22 @@ public final class OceanAgentRunner {
                 final String err = e.getMessage() != null ? e.getMessage() : e.toString();
                 mainHandler.post(() -> {
                     callback.onThought("API connection: " + err);
-                    callback.onResponse("I couldn't reach the model API (" + err + "). Please check your API key and network connection under Tools ➔ BYOK Models.\n\nIn the meantime, I can assist you with Ocean OS commands and setup locally!");
+                    callback.onResponse("The provider request failed: " + err + ". Check the API key, model identifier, endpoint, and network connection under BYOK Models & APIs.");
                 });
             }
         }).start();
     }
 
-    private String generateLocalAssistantResponse(String prompt) {
-        String lower = prompt.toLowerCase();
-        if (lower.contains("hello") || lower.contains("hi") || lower.contains("hey")) {
-            return "Hello! I am your Ocean OS AI Assistant.\n\nI can help you build apps, run development toolchains (Python, Node.js, Clang, Rust, Go), install Linux distributions (Gentoo, Ubuntu, Debian, Arch, Alpine), and manage packages with `ocean-pkg`.\n\nTo connect to Google Gemini, Claude, or OpenAI models for unrestricted AI reasoning, open the sidebar and select **Tools ➔ BYOK Models** to enter your API key.\n\nHow can I help you today?";
-        }
-        if (lower.contains("distro") || lower.contains("gentoo") || lower.contains("ubuntu") || lower.contains("arch") || lower.contains("debian")) {
-            return "Ocean OS supports running full Linux distributions using `ocean-distro` in proot user-space.\n\nAvailable distributions include:\n• **Gentoo** (`ocean-distro install gentoo`)\n• **Ubuntu** (`ocean-distro install ubuntu`)\n• **Debian** (`ocean-distro install debian`)\n• **Arch Linux** (`ocean-distro install archlinux`)\n• **Alpine Linux** (`ocean-distro install alpine`)\n\nYou can launch or manage them from the Terminal or directly from the Distro manager in the sidebar.";
-        }
-        if (lower.contains("package") || lower.contains("pkg") || lower.contains("apt") || lower.contains("install")) {
-            return "You can install packages in Ocean OS using `ocean-pkg` or `apt`:\n• `ocean-pkg install <pkg>` or `pkg install <pkg>`\n• `ocean-pkg search <query>`\n• `ocean-pkg update`\n\nAll 460 core packages are pre-indexed and hosted on the official Ocean Package Archive.";
-        }
-        return "I received your message: \"" + prompt + "\"\n\nI am your local Ocean Assistant. To enable full generative AI reasoning and direct code generation, please configure your **Gemini**, **Anthropic Claude**, or **OpenAI** API key in the sidebar under **Tools ➔ BYOK Models**.\n\nIf you would like to run a terminal command directly, simply prefix it with `$` (e.g. `$ ocean-info` or `$ ls -la`).";
+    public void testConnection(ConnectionCallback callback) {
+        new Thread(() -> { try { String response=callConfiguredModel("Reply with exactly: OCEAN_CONNECTION_OK");if(response==null||response.trim().isEmpty())throw new IllegalStateException("Provider returned an empty response");mainHandler.post(callback::onSuccess); }
+            catch(Exception error){String message=error.getMessage()==null?error.toString():error.getMessage();mainHandler.post(()->callback.onFailure(message));} },"ocean-byok-connection-test").start();
+    }
+
+    private String callConfiguredModel(String prompt) throws Exception {
+        String provider=byokManager.getProvider(), model=byokManager.getModel();
+        if(OceanByokManager.PROVIDER_GOOGLE.equals(provider))return callGoogleGemini(byokManager.getApiKey(),model,prompt);
+        if(OceanByokManager.PROVIDER_ANTHROPIC.equals(provider))return callAnthropicClaude(byokManager.getApiKey(),model,prompt);
+        return callOpenAI(byokManager.getApiKey(),byokManager.getBaseUrl(),model,prompt);
     }
 
     private String callGoogleGemini(String apiKey, String model, String prompt) throws Exception {
@@ -276,101 +257,23 @@ public final class OceanAgentRunner {
         }
     }
 
-    private String executeInternalCommandSilently(String command) {
-        try {
-            String shell = paths.prefix() + "/bin/bash";
-            if (!new File(shell).exists()) shell = paths.prefix() + "/bin/sh";
-            if (!new File(shell).exists()) shell = "/system/bin/sh";
-
-            ProcessBuilder pb = new ProcessBuilder(shell, "-c", command);
-            pb.directory(paths.home());
-            pb.redirectErrorStream(true);
-
-            Map<String, String> env = pb.environment();
-            String[] envArr = OceanEnvironment.create(context, shell);
-            for (String e : envArr) {
-                int idx = e.indexOf('=');
-                if (idx > 0) env.put(e.substring(0, idx), e.substring(idx + 1));
-            }
-
-            Process proc = pb.start();
-            StringBuilder sb = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-                String line;
-                int count = 0;
-                while ((line = reader.readLine()) != null && count < 20) {
-                    sb.append(line).append("\n");
-                    count++;
-                }
-            }
-            proc.waitFor(15, TimeUnit.SECONDS);
-            if (proc.isAlive()) proc.destroyForcibly();
-            return sb.toString().trim();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
     public void executeTerminalCommand(String command, AgentCallback callback) {
         mainHandler.post(() -> callback.onToolStart("terminal", command));
-
-        try {
-            String shell = paths.prefix() + "/bin/bash";
-            if (!new File(shell).exists()) {
-                shell = paths.prefix() + "/bin/sh";
-            }
-            if (!new File(shell).exists()) {
-                shell = "/system/bin/sh";
-            }
-
-            ProcessBuilder pb = new ProcessBuilder(shell, "-c", command);
-            pb.directory(paths.home());
-            pb.redirectErrorStream(true);
-
-            Map<String, String> env = pb.environment();
-            String[] envArr = OceanEnvironment.create(context, shell);
-            for (String e : envArr) {
-                int idx = e.indexOf('=');
-                if (idx > 0) {
-                    env.put(e.substring(0, idx), e.substring(idx + 1));
-                }
-            }
-
-            Process proc = pb.start();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    final String l = line;
-                    mainHandler.post(() -> callback.onToolOutput(l));
-                }
-            }
-
-            boolean completed = proc.waitFor(30, TimeUnit.SECONDS);
-            if (!completed) {
-                proc.destroyForcibly();
-                mainHandler.post(() -> {
-                    callback.onToolComplete(124);
-                    callback.onResponse("Command execution timed out after 30 seconds.");
+        Intent intent=new Intent(context,OceanTerminalRuntimeService.class);
+        context.startService(intent);
+        ServiceConnection connection=new ServiceConnection(){
+            private boolean released;
+            private void release(){if(!released){released=true;try{context.unbindService(this);}catch(Exception ignored){}}}
+            @Override public void onServiceConnected(ComponentName name,IBinder binder){
+                OceanTerminalRuntimeService service=((OceanTerminalRuntimeService.LocalBinder)binder).service();
+                service.requestCommand(command,new OceanTerminalRuntimeService.CommandCallback(){
+                    @Override public void onOutput(byte[] bytes,int length){callback.onToolOutput(new String(bytes,0,length,StandardCharsets.UTF_8));}
+                    @Override public void onExit(int code){callback.onToolComplete(code);callback.onResponse(code==0?"Command completed successfully.":"Command exited with code "+code+".");release();}
+                    @Override public void onFailure(Throwable error){callback.onError("Terminal service error: "+error.getMessage());callback.onToolComplete(-1);release();}
                 });
-                return;
             }
-
-            int exitCode = proc.exitValue();
-            mainHandler.post(() -> {
-                callback.onToolComplete(exitCode);
-                if (exitCode == 0) {
-                    callback.onResponse("Command executed successfully.");
-                } else {
-                    callback.onResponse("Command exited with code " + exitCode + ".");
-                }
-            });
-
-        } catch (Exception e) {
-            final String err = e.getMessage() != null ? e.getMessage() : e.toString();
-            mainHandler.post(() -> {
-                callback.onError("Execution error: " + err);
-                callback.onToolComplete(-1);
-            });
-        }
+            @Override public void onServiceDisconnected(ComponentName name){release();}
+        };
+        if(!context.bindService(intent,connection,Context.BIND_AUTO_CREATE)){callback.onError("Ocean Terminal service is unavailable.");callback.onToolComplete(-1);}
     }
 }

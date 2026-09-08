@@ -25,6 +25,11 @@ public final class OceanTerminalRuntimeService extends Service {
         void onReady(TerminalSession session);
         void onFailure(Throwable error);
     }
+    public interface CommandCallback {
+        void onOutput(byte[] bytes, int length);
+        void onExit(int exitCode);
+        void onFailure(Throwable error);
+    }
     public final class LocalBinder extends Binder {
         public OceanTerminalRuntimeService service() { return OceanTerminalRuntimeService.this; }
     }
@@ -151,6 +156,27 @@ public final class OceanTerminalRuntimeService extends Service {
                 TerminalSession session = createDiagnosticOceanSession(rows, columns);
                 main.post(() -> callback.onReady(session));
             } catch (Throwable error) { main.post(() -> callback.onFailure(error)); }
+        });
+    }
+    /** Runs an agent-approved command through the same native PTY/runtime owner as the terminal UI. */
+    public void requestCommand(String command, CommandCallback callback) {
+        bootstrapWorker.execute(() -> {
+            try {
+                OceanPaths paths=new OceanPaths(this);
+                if(!OceanRuntimeState.isInstalled(this))new OceanBootstrapInstaller(this).install();
+                paths.ensureDirectoryContract(); OceanRuntimeValidator.validate(paths).requireValid();
+                File shell=new File(paths.prefix(),"bin/bash");
+                TerminalSession session=startSession(shell.getAbsolutePath(),new String[]{shell.getAbsolutePath(),"-lc",command},paths.home(),24,80,false);
+                session.addListener(new TerminalSession.Listener(){
+                    @Override public void onOutput(byte[] bytes,int length){
+                        // TerminalSession reuses its native read buffer. Copy before crossing
+                        // threads so a later PTY read cannot corrupt agent tool output.
+                        byte[] output=java.util.Arrays.copyOf(bytes,length);
+                        main.post(()->callback.onOutput(output,output.length));
+                    }
+                    @Override public void onExit(int exitCode){main.post(()->callback.onExit(exitCode));}
+                });
+            } catch(Throwable error){main.post(()->callback.onFailure(error));}
         });
     }
     private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery) throws IOException {
