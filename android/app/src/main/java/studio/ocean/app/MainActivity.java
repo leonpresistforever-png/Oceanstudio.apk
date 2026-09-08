@@ -11,7 +11,6 @@ import android.util.Patterns;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.UnderlineSpan;
-import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +26,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.graphics.Typeface;
+import java.util.List;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer()); backdrop.setOnClickListener(v -> closeDrawer()); findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat());
         
         TextView modelBtn = findViewById(R.id.model_button);
-        if (byokManager != null) modelBtn.setText(byokManager.isVerified()?byokManager.getModel():"Configure model");
+        if (byokManager != null) modelBtn.setText(byokManager.getModel());
         modelBtn.setOnClickListener(v -> showByokPage());
         findViewById(R.id.send_button).setOnClickListener(v -> submitAgentPrompt());
 
@@ -206,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Configure a conversation provider. Ocean reports Connected only after a real authenticated API request succeeds. Terminal tools run separately through Ocean's native runtime service.");
+        sub.setText("Configure your API keys for Google Gemini, Anthropic Claude, or OpenAI. The internal Ocean agent will use this model with direct terminal execution authority.");
         sub.setTextSize(13f);
         sub.setTextColor(0xFF7B7873);
         sub.setPadding(0, 8, 0, 24);
@@ -233,12 +233,23 @@ public class MainActivity extends AppCompatActivity {
         mLabel.setPadding(0, 20, 0, 0);
         layout.addView(mLabel);
 
-        EditText modelInput = new EditText(this);
-        modelInput.setHint("Provider model identifier");
-        modelInput.setText(byokManager.getModel());
-        modelInput.setBackgroundResource(R.drawable.composer_background);
-        modelInput.setPadding(20,20,20,20);
-        layout.addView(modelInput);
+        Spinner modelSpinner = new Spinner(this);
+        layout.addView(modelSpinner);
+
+        providerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String prov = position == 0 ? OceanByokManager.PROVIDER_GOOGLE :
+                             position == 1 ? OceanByokManager.PROVIDER_ANTHROPIC :
+                             position == 2 ? OceanByokManager.PROVIDER_OPENAI : OceanByokManager.PROVIDER_CUSTOM;
+                List<String> models = byokManager.getModelsForProvider(prov);
+                ArrayAdapter<String> mAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, models);
+                modelSpinner.setAdapter(mAdapter);
+                String currentModel = byokManager.getModel();
+                int idx = models.indexOf(currentModel);
+                if (idx >= 0) modelSpinner.setSelection(idx);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
 
         String curProv = byokManager.getProvider();
         if (OceanByokManager.PROVIDER_ANTHROPIC.equals(curProv)) providerSpinner.setSelection(1);
@@ -257,7 +268,6 @@ public class MainActivity extends AppCompatActivity {
         EditText keyInput = new EditText(this);
         keyInput.setHint("AIzaSy... / sk-ant-... / sk-...");
         keyInput.setText(byokManager.getApiKey());
-        keyInput.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         keyInput.setBackgroundResource(R.drawable.composer_background);
         keyInput.setPadding(20, 20, 20, 20);
         keyInput.setTextSize(14f);
@@ -277,27 +287,9 @@ public class MainActivity extends AppCompatActivity {
         urlInput.setPadding(20, 20, 20, 20);
         urlInput.setTextSize(14f);
         layout.addView(urlInput);
-        providerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-            @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){
-                String old=urlInput.getText().toString();
-                if(old.isEmpty()||old.contains("generativelanguage.googleapis.com")||old.contains("api.anthropic.com")||old.contains("api.openai.com")){
-                    if(position==0)urlInput.setText("https://generativelanguage.googleapis.com");
-                    else if(position==1)urlInput.setText("https://api.anthropic.com/v1");
-                    else if(position==2)urlInput.setText("https://api.openai.com/v1");
-                    else urlInput.setText("");
-                }
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent){}
-        });
-
-        TextView connectionStatus = new TextView(this);
-        connectionStatus.setText(byokManager.isVerified()?"Connected · last configuration verified":"Not connected");
-        connectionStatus.setTextColor(byokManager.isVerified()?0xFF18794E:0xFF7B7873);
-        connectionStatus.setPadding(0,20,0,0);
-        layout.addView(connectionStatus);
 
         Button saveBtn = new Button(this);
-        saveBtn.setText("Save & Test Connection");
+        saveBtn.setText("Save & Activate Model");
         saveBtn.setTextColor(0xFFFFFFFF);
         saveBtn.setBackgroundColor(0xFF191817);
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int)(48 * getResources().getDisplayMetrics().density));
@@ -309,17 +301,15 @@ public class MainActivity extends AppCompatActivity {
             String prov = pPos == 0 ? OceanByokManager.PROVIDER_GOOGLE :
                           pPos == 1 ? OceanByokManager.PROVIDER_ANTHROPIC :
                           pPos == 2 ? OceanByokManager.PROVIDER_OPENAI : OceanByokManager.PROVIDER_CUSTOM;
-            String mod = modelInput.getText().toString().trim();
+            String mod = modelSpinner.getSelectedItem() != null ? modelSpinner.getSelectedItem().toString() : "gemini-3.7-flash";
             String key = keyInput.getText().toString().trim();
             String burl = urlInput.getText().toString().trim();
 
-            try { byokManager.saveConfig(prov,mod,key,burl); }
-            catch(Exception error){ connectionStatus.setText(error.getMessage());connectionStatus.setTextColor(0xFFB3261E);return; }
-            saveBtn.setEnabled(false); connectionStatus.setText("Testing authenticated provider request…");
-            agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback(){
-                @Override public void onSuccess(){runOnUiThread(()->{byokManager.markVerified();saveBtn.setEnabled(true);connectionStatus.setText("Connected · authenticated request succeeded");connectionStatus.setTextColor(0xFF18794E);((TextView)findViewById(R.id.model_button)).setText(mod);});}
-                @Override public void onFailure(String error){runOnUiThread(()->{saveBtn.setEnabled(true);connectionStatus.setText("Not connected · "+error);connectionStatus.setTextColor(0xFFB3261E);});}
-            });
+            byokManager.saveConfig(prov, mod, key, burl);
+            ((TextView)findViewById(R.id.model_button)).setText(mod);
+            Toast.makeText(this, "BYOK Model " + mod + " activated!", Toast.LENGTH_SHORT).show();
+            contentFrame.removeView(scroll);
+            newChat();
         });
 
         scroll.addView(layout);

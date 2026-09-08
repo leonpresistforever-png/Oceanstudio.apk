@@ -42,8 +42,7 @@ android {
     }
     buildTypes {
         debug {
-            // Debug APKs always expose the visibly labelled testing-only entry.
-            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "true"
+            buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "${(System.getenv('OCEAN_DEV_AUTH_BYPASS') ?: 'false').toBoolean()}"
         }
         release {
             // Hard-disabled regardless of environment: release builds never contain the bypass.
