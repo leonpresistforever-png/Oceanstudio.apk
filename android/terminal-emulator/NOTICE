@@ -1,0 +1,4 @@
+OceanStudio vendors the Android Terminal Emulator emulatorview library from
+https://github.com/jackpal/Android-Terminal-Emulator (Apache License 2.0).
+Copyright notices remain in the source files. Ocean-specific integration lives
+in the app module; no Termux application, prefix, or runtime dependency is used.
