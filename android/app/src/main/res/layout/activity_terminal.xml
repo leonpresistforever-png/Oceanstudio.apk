@@ -10,6 +10,7 @@
         <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent" android:background="#FF1C1C19" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="6dp">
             <Button android:id="@+id/terminal_ctrl" style="@style/OceanTerminalKey" android:text="CTRL" />
             <Button android:id="@+id/terminal_alt" style="@style/OceanTerminalKey" android:text="ALT" />
+            <Button android:id="@+id/terminal_ctrl_c" style="@style/OceanTerminalKey" android:text="CTRL-C" />
             <Button android:id="@+id/terminal_escape" style="@style/OceanTerminalKey" android:text="ESC" />
             <Button android:id="@+id/terminal_tab" style="@style/OceanTerminalKey" android:text="TAB" />
             <Button android:id="@+id/terminal_left" style="@style/OceanTerminalKey" android:text="←" />
@@ -20,6 +21,10 @@
             <Button android:id="@+id/terminal_end" style="@style/OceanTerminalKey" android:text="END" />
             <Button android:id="@+id/terminal_page_up" style="@style/OceanTerminalKey" android:text="PGUP" />
             <Button android:id="@+id/terminal_page_down" style="@style/OceanTerminalKey" android:text="PGDN" />
+            <Button android:id="@+id/terminal_slash" style="@style/OceanTerminalKey" android:text="/" />
+            <Button android:id="@+id/terminal_dash" style="@style/OceanTerminalKey" android:text="-" />
+            <Button android:id="@+id/terminal_pipe" style="@style/OceanTerminalKey" android:text="|" />
+            <Button android:id="@+id/terminal_tilde" style="@style/OceanTerminalKey" android:text="~" />
         </LinearLayout>
     </HorizontalScrollView>
     <LinearLayout android:id="@+id/terminal_failure_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal" android:padding="6dp" android:visibility="gone">

@@ -112,6 +112,10 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
             safeClick("terminal_end", v->sendTerminalKey(KeyEvent.KEYCODE_MOVE_END));
             safeClick("terminal_page_up", v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_UP));
             safeClick("terminal_page_down", v->sendTerminalKey(KeyEvent.KEYCODE_PAGE_DOWN));
+            safeClick("terminal_slash", v->write("/"));
+            safeClick("terminal_dash", v->write("-"));
+            safeClick("terminal_pipe", v->write("|"));
+            safeClick("terminal_tilde", v->write("~"));
             safeClick("terminal_retry", v->startOceanSession());
             safeClick("terminal_details", v->showDiagnosticLog());
             safeClick("terminal_recovery", v->startRecoverySession());
