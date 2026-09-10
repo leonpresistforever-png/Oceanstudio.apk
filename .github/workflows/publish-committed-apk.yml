@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag
+        description: Stable release tag (created when missing)
         required: true
-        default: ocean-runtime-cbf151c-local
+        default: oceanstudio-latest
 
 permissions:
   contents: write
@@ -17,13 +17,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Verify and upload committed APK
+      - name: Verify and publish committed APK
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: |
-          APK=releases/OceanStudio-debug-cbf151c.apk
-          sha256sum --check releases/OceanStudio-debug-cbf151c.apk.sha256
-          gh release upload "$TAG" "$APK" \
+          set -euo pipefail
+          APK=releases/OceanStudio-latest-debug.apk
+          CHECKSUM="$APK.sha256"
+          sha256sum --check "$CHECKSUM"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "OceanStudio latest debug APK" \
+              --notes "Locally compiled and checksum-verified OceanStudio debug APK."
+          fi
+          gh release upload "$TAG" "$APK" "$CHECKSUM" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest
