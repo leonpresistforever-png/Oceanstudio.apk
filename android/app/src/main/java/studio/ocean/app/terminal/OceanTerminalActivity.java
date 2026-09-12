@@ -11,6 +11,9 @@ import android.view.KeyEvent;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import jackpal.androidterm.emulatorview.ColorScheme;
 import jackpal.androidterm.emulatorview.EmulatorView;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 public final class OceanTerminalActivity extends AppCompatActivity implements TerminalSession.Listener {
     private TextView status; private EmulatorView terminalView; private OceanEmulatorSession emulatorSession; private TerminalSession session;
     private OceanTerminalRuntimeService service; private boolean bound;
+    private boolean keyboardVisible; private boolean toolsVisible = true;
     private View failureActions; private Thread.UncaughtExceptionHandler previousCrashHandler;
     private String diagnosticMode;private boolean scriptedExitSent;private final StringBuilder diagnosticOutput=new StringBuilder();
     private final ServiceConnection connection=new ServiceConnection(){
@@ -70,6 +74,19 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
             failureActions = findSafeView("terminal_failure_actions");
             outputView = findSafeView("terminal_output");
             inputView = findSafeView("terminal_input");
+            toolsVisible = state == null || state.getBoolean("terminal_tools_visible", true);
+            safeClick("terminal_keyboard", v -> toggleKeyboard());
+            safeClick("terminal_tools", v -> { toolsVisible = !toolsVisible; updateTools(); });
+            updateTools();
+            View root = findSafeView("terminal_root");
+            if (root != null) {
+                ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+                    keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+                    updateKeyboardButton();
+                    return insets;
+                });
+                ViewCompat.requestApplyInsets(root);
+            }
 
             if (terminalView == null) {
                 try {
@@ -167,8 +184,10 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
     private void attach(TerminalSession candidate,boolean installed){
         if(session!=null)session.removeListener(this);if(emulatorSession!=null)emulatorSession.finish();session=candidate;
         if(terminalView!=null){
-            emulatorSession=new OceanEmulatorSession();emulatorSession.attachTransport(session);emulatorSession.setColorScheme(new ColorScheme(0xffe9e8e3,0xff11110f,0xff11110f,0xffd8d6cf));
+            ColorScheme colors = new ColorScheme(0xffe6edf1, 0xff0b1319, 0xff0b1319, 0xff8cdbc6);
+            emulatorSession=new OceanEmulatorSession();emulatorSession.attachTransport(session);emulatorSession.setColorScheme(colors);
             terminalView.setDensity(getResources().getDisplayMetrics());terminalView.attachSession(emulatorSession);terminalView.setTextSize(14);terminalView.setUseCookedIME(true);terminalView.setAltSendsEsc(true);terminalView.setTermType("xterm-256color");
+            terminalView.setColorScheme(colors);
             terminalView.requestFocus();terminalView.onResume();
         }
         session.addListener(this);if(status!=null)status.setVisibility(View.GONE);
@@ -258,6 +277,39 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
                 status.setVisibility(View.VISIBLE);
             }
         });
+    }
+    private void toggleKeyboard() {
+        if (terminalView == null) return;
+        WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(terminalView);
+        boolean visible = insets != null ? insets.isVisible(WindowInsetsCompat.Type.ime()) : keyboardVisible;
+        WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), terminalView);
+        if (visible) controller.hide(WindowInsetsCompat.Type.ime());
+        else {
+            terminalView.requestFocus();
+            terminalView.post(() -> controller.show(WindowInsetsCompat.Type.ime()));
+        }
+    }
+    private void updateKeyboardButton() {
+        View button = findSafeView("terminal_keyboard");
+        if (button == null) return;
+        button.setSelected(keyboardVisible);
+        button.setContentDescription(safeString(keyboardVisible ? "terminal_hide_keyboard" : "terminal_show_keyboard",
+                keyboardVisible ? "Hide keyboard" : "Show keyboard"));
+        button.setAlpha(keyboardVisible ? 1f : 0.8f);
+    }
+    private void updateTools() {
+        View shortcuts = findSafeView("terminal_shortcuts");
+        if (shortcuts != null) shortcuts.setVisibility(toolsVisible ? View.VISIBLE : View.GONE);
+        View button = findSafeView("terminal_tools");
+        if (button != null) {
+            button.setSelected(toolsVisible);
+            button.setContentDescription(safeString(toolsVisible ? "terminal_hide_tools" : "terminal_show_tools",
+                    toolsVisible ? "Hide terminal shortcuts" : "Show terminal shortcuts"));
+        }
+    }
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("terminal_tools_visible", toolsVisible);
+        super.onSaveInstanceState(state);
     }
     @Override protected void onResume(){super.onResume();if(terminalView!=null&&emulatorSession!=null)terminalView.onResume();}
     @Override protected void onPause(){if(terminalView!=null&&emulatorSession!=null)terminalView.onPause();super.onPause();}

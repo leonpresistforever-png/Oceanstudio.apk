@@ -1,0 +1,46 @@
+<resources>
+    <color name="terminal_chrome">#101A21</color>
+    <color name="terminal_canvas">#0B1319</color>
+    <color name="terminal_text">#E6EDF1</color>
+    <color name="terminal_muted">#94A5AF</color>
+    <color name="terminal_accent">#8CDBC6</color>
+    <color name="terminal_border">#24353F</color>
+    <string name="terminal_local_session">LOCAL SESSION</string>
+    <string name="terminal_shell_badge">&gt;_</string>
+    <string name="terminal_tools">Tools</string>
+    <string name="terminal_keyboard">Keyboard</string>
+    <string name="terminal_show_keyboard">Show keyboard</string>
+    <string name="terminal_hide_keyboard">Hide keyboard</string>
+    <string name="terminal_show_tools">Show terminal shortcuts</string>
+    <string name="terminal_hide_tools">Hide terminal shortcuts</string>
+    <string name="terminal_key_left">Left arrow</string>
+    <string name="terminal_key_right">Right arrow</string>
+    <string name="terminal_key_up">Up arrow</string>
+    <string name="terminal_key_down">Down arrow</string>
+    <style name="OceanTerminalTheme" parent="AppTheme">
+        <item name="android:statusBarColor">@color/terminal_chrome</item>
+        <item name="android:navigationBarColor">@color/terminal_chrome</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">@color/terminal_chrome</item>
+        <item name="colorAccent">@color/terminal_accent</item>
+    </style>
+    <style name="OceanTerminalChip" parent="OceanTerminalKey">
+        <item name="android:background">@drawable/terminal_key_background</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:layout_marginHorizontal">3dp</item>
+        <item name="android:minWidth">52dp</item>
+        <item name="android:paddingHorizontal">12dp</item>
+        <item name="android:textColor">@color/terminal_text</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:focusable">false</item>
+    </style>
+    <style name="OceanTerminalAction" parent="OceanTerminalKey">
+        <item name="android:textColor">@color/terminal_accent</item>
+        <item name="android:paddingHorizontal">12dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:focusable">false</item>
+    </style>
+</resources>

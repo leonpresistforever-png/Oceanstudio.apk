@@ -19,6 +19,7 @@ import subprocess
 import tarfile
 import tempfile
 import urllib.request
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -109,11 +110,50 @@ def compress_zstd(source: Path, destination: Path) -> None:
         compressor.copy_stream(input_file, output_file)
 
 
+def verify_catalog_index(release: str, compressed: bytes) -> bytes:
+    """Bind Packages.gz to the authenticated InRelease, not merely to HTTPS."""
+    in_sha256 = False
+    for line in release.splitlines():
+        if line == "SHA256:":
+            in_sha256 = True
+            continue
+        if in_sha256 and line and not line[0].isspace():
+            break
+        fields = line.split()
+        if in_sha256 and len(fields) == 3 and fields[2] == "main/binary-aarch64/Packages.gz":
+            if hashlib.sha256(compressed).hexdigest() != fields[0] or len(compressed) != int(fields[1]):
+                raise RuntimeError("Packages.gz does not match the signed repository index")
+            return gzip.decompress(compressed)
+    raise RuntimeError("Signed repository is missing the Packages.gz SHA-256")
+
+
+def write_catalog(output: Path, repository: str, inrelease: Path, compressed: Path,
+                  key: Path, packages: bytes) -> str:
+    parsed = urllib.parse.urlsplit(repository)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.query or parsed.fragment or parsed.username:
+        raise RuntimeError("Ocean package repository must be a plain HTTPS URL")
+    prefix = (parsed.netloc + parsed.path.rstrip("/")).replace("_", "%5f").replace("/", "_") + "_dists_stable_"
+    output.mkdir(parents=True, exist_ok=True)
+    values = {"format": "1", "repository_url": repository, "list_prefix": prefix,
+              "package_count": str(len(paragraphs(packages.decode()))),
+              "packages_sha256": hashlib.sha256(packages).hexdigest()}
+    # Android asset packaging strips .gz suffixes; retain gzip bytes under .bin.
+    for name, source in (("InRelease", inrelease), ("Packages.gz.bin", compressed), ("ocean.gpg", key)):
+        data = source.read_bytes()
+        (output / name).write_bytes(data)
+        values[name + "_sha256"] = hashlib.sha256(data).hexdigest()
+    (output / "catalog.properties").write_text("".join(f"{k}={v}\n" for k, v in values.items()))
+    return prefix
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository-url", default="https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/main/apt")
     parser.add_argument("--seed", action="append", default=[])
+    parser.add_argument("--catalog-only", action="store_true")
+    parser.add_argument("--catalog-output", type=Path,
+                        default=ROOT / "android/app/src/main/assets/ocean/repository")
     args = parser.parse_args()
     seeds = tuple(args.seed) or DEFAULT_SEEDS
     output = args.output.resolve()
@@ -125,13 +165,19 @@ def main() -> int:
         download(f"{args.repository_url}/dists/stable/InRelease", inrelease)
         download(f"{args.repository_url}/dists/stable/main/binary-aarch64/Packages.gz", compressed)
         download(f"{args.repository_url}/ocean.gpg", key)
-        run("gpgv", "--keyring", key, inrelease, stdout=subprocess.DEVNULL)
+        release = work / "Release"
+        run("gpgv", "--keyring", key, "--output", release, inrelease, stdout=subprocess.DEVNULL)
         expected = (ROOT / "ocean-packages/keys/ocean-development-repository.fingerprint").read_text().strip()
         shown = run("gpg", "--batch", "--show-keys", "--with-colons", key, stdout=subprocess.PIPE).stdout
         actual = next(line.split(":")[9] for line in shown.splitlines() if line.startswith("fpr:"))
         if actual != expected:
             raise RuntimeError(f"repository key mismatch: expected={expected} actual={actual}")
-        entries = paragraphs(gzip.decompress(compressed.read_bytes()).decode())
+        packages = verify_catalog_index(release.read_text(), compressed.read_bytes())
+        list_prefix = write_catalog(args.catalog_output, args.repository_url, inrelease, compressed, key, packages)
+        entries = paragraphs(packages.decode())
+        if args.catalog_only:
+            print(f"Prepared verified catalogue: {len(entries)} packages")
+            return 0
         closure = resolve(entries, seeds)
 
         root = work / "root"
@@ -178,6 +224,9 @@ def main() -> int:
         (prefix / "tmp").chmod(0o700)
         (prefix / "var/run").mkdir(parents=True, exist_ok=True)
         (prefix / "var/lib/apt/lists/partial").mkdir(parents=True, exist_ok=True)
+        lists = prefix / "var/lib/apt/lists"
+        (lists / (list_prefix + "InRelease")).write_bytes(inrelease.read_bytes())
+        (lists / (list_prefix + "main_binary-aarch64_Packages")).write_bytes(packages)
         (prefix / "var/cache/apt/archives/partial").mkdir(parents=True, exist_ok=True)
         (prefix / "var/log/apt").mkdir(parents=True, exist_ok=True)
         # Repository packages may carry their upstream default source files.
@@ -226,7 +275,7 @@ def main() -> int:
             archive_entries = len(set(tar.getnames()))
         compress_zstd(tar_path, archive)
         manifest = {
-            "bootstrapVersion": "1.0.2",
+            "bootstrapVersion": "1.0.3",
             "architecture": "aarch64",
             "packageName": "studio.ocean.app",
             "prefix": "/data/data/studio.ocean.app/files/usr",
