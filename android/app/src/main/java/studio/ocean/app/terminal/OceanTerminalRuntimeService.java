@@ -182,6 +182,14 @@ public final class OceanTerminalRuntimeService extends Service {
     }
     private void preparePackageCatalog(OceanPaths paths) {
         try {
+            int repaired = OceanDpkgDatabaseRepair.repair(paths.prefix());
+            if (repaired > 0) TerminalStartupLog.stage("PKG", "Repaired " + repaired + " bootstrap package file lists; originals backed up");
+        } catch (IOException error) {
+            TerminalStartupLog.failure("Installed package file-list repair failed", error);
+            main.post(() -> android.widget.Toast.makeText(this,
+                    "Package database repair failed. See terminal diagnostics.", android.widget.Toast.LENGTH_LONG).show());
+        }
+        try {
             if (OceanPackageCatalog.prepare(paths.prefix(), name -> getAssets().open("ocean/repository/" + name))) {
                 TerminalStartupLog.stage("PKG", "Verified Ocean package catalogue restored");
             }

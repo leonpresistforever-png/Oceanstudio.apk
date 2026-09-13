@@ -20,7 +20,7 @@ import tarfile
 import tempfile
 import urllib.request
 import urllib.parse
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 PREFIX = Path("data/data/studio.ocean.app/files/usr")
@@ -146,6 +146,31 @@ def write_catalog(output: Path, repository: str, inrelease: Path, compressed: Pa
     return prefix
 
 
+def package_file_list(deb: Path) -> str:
+    """Write dpkg's machine format directly from tar member names.
+
+    dpkg treats '/' as an empty filename; the archive root must be '/.'.
+    Human-readable dpkg-deb -c output also appends symlink destinations.
+    """
+    process = subprocess.Popen(["dpkg-deb", "--fsys-tarfile", str(deb)], stdout=subprocess.PIPE)
+    paths = []
+    try:
+        with tarfile.open(fileobj=process.stdout, mode="r|") as archive:
+            for member in archive:
+                path = PurePosixPath(member.name)
+                if path.is_absolute() or ".." in path.parts or any(c in member.name for c in "\n\r\0"):
+                    raise RuntimeError(f"Invalid package file-list path: {member.name!r}")
+                paths.append("/." if str(path) == "." else "/" + str(path))
+        if process.wait() != 0:
+            raise RuntimeError(f"Cannot read package payload: {deb.name}")
+    finally:
+        process.stdout.close()
+        if process.poll() is None:
+            process.terminate()
+        process.wait()
+    return "\n".join(paths) + "\n" if paths else ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
@@ -202,13 +227,7 @@ def main() -> int:
             run("dpkg-deb", "-e", deb, control)
             control_fields = (control / "control").read_text().rstrip()
             status_blocks.append(control_fields + "\nStatus: install ok installed\n")
-            listing = run("dpkg-deb", "-c", deb, stdout=subprocess.PIPE).stdout
-            paths = []
-            for line in listing.splitlines():
-                parts = line.split(maxsplit=5)
-                if len(parts) == 6:
-                    paths.append("/" + parts[5].removeprefix("./"))
-            (info / f"{entry['Package']}.list").write_text("\n".join(paths) + "\n")
+            (info / f"{entry['Package']}.list").write_text(package_file_list(deb))
             for name in ("md5sums", "conffiles", "preinst", "postinst", "prerm", "postrm", "config", "triggers"):
                 source = control / name
                 if source.is_file():
@@ -275,7 +294,7 @@ def main() -> int:
             archive_entries = len(set(tar.getnames()))
         compress_zstd(tar_path, archive)
         manifest = {
-            "bootstrapVersion": "1.0.3",
+            "bootstrapVersion": "1.0.4",
             "architecture": "aarch64",
             "packageName": "studio.ocean.app",
             "prefix": "/data/data/studio.ocean.app/files/usr",
