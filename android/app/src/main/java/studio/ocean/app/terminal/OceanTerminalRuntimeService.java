@@ -182,6 +182,12 @@ public final class OceanTerminalRuntimeService extends Service {
     }
     private void preparePackageCatalog(OceanPaths paths) {
         try {
+            if (OceanPackageFrontend.prepare(paths.prefix(), getAssets().open("ocean/pkg/frontend")))
+                TerminalStartupLog.stage("PKG", "Ocean pkg updated with automatic catalogue refresh");
+        } catch (IOException error) {
+            TerminalStartupLog.failure("Package frontend update failed", error);
+        }
+        try {
             int repaired = OceanDpkgDatabaseRepair.repair(paths.prefix());
             if (repaired > 0) TerminalStartupLog.stage("PKG", "Repaired " + repaired + " bootstrap package file lists; originals backed up");
         } catch (IOException error) {

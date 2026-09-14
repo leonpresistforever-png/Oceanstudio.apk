@@ -67,6 +67,9 @@ public final class OceanPackageCatalog {
                 }
                 atomicWrite(new File(lists, listPrefix + "InRelease"), release);
                 atomicWrite(new File(lists, indexName), packages);
+                // Installation time must not make an old snapshot look fresh.
+                if (!new File(lists, indexName).setLastModified(0))
+                    throw new IOException("Cannot retain bundled catalogue age");
                 return true;
             } finally { lock.release(); }
         }
