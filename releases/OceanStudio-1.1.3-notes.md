@@ -1,17 +1,16 @@
-OceanStudio 1.1.3 adds automatic package-catalogue refresh, repairs the legacy dpkg file-list error shown in the screenshots, and includes the terminal styling and keyboard toggle.
+OceanStudio 1.1.3 — signed ARM64 testing APK.
 
-This is a signed ARM64 **testing APK**, matching the previous release's debug/testing mode. Firebase login is not configured; the existing visibly labelled development entry is available. This is not a production-authenticated build.
+Includes automatic package catalogue refresh, repair of the legacy dpkg file-list failure, terminal styling and the keyboard toggle. The embedded catalogue contains 1,036 distinct package names. Fifty Android unit-test executions and focused catalogue/dpkg/migration checks passed; APK signature, alignment and embedded bootstrap/catalogue hashes were verified.
 
-**Installation compatibility:** this APK uses a new, preserved signing key. It cannot update older APKs signed with the previous key. Keep the existing app and its data until you have a backup or the original signing key; uninstalling deletes app-private data. Future APKs must reuse the new key.
+This retains the existing debug build's visibly labelled testing entry because Firebase login is unconfigured. It is not a production-authenticated build.
 
-Validation completed:
-- 50 Android unit-test executions passed with zero failures/errors.
-- Seven automatic-catalogue tests passed.
-- Real dpkg file-list regression reproduced exit code 2 and verified the corrected format.
-- Frontend migration checks passed for the actual bundled script, backups, custom files, symlinks and package-manager locks.
-- Final APK signature, ZIP alignment, bundled bootstrap and catalogue hashes verified.
-- Packaged catalogue contains 1,036 distinct package names (1,046 records).
+Signing compatibility: a new preserved key is used. This APK cannot update older installations signed with the previous key. Keep existing app data backed up before changing installation; uninstalling removes app-private data.
 
-Limits: physical-device installation, keyboard operation and every package's execution have not been verified. The existing runtime still includes legacy Termux-derived files; it is not an entirely upstream-source-built distribution. No new packages have been added to the live APT pool. The separate source-candidates ZIP contains cmark and kilo built from pinned official sources, with receipts and source archives; these are quarantined candidates pending Android runtime tests. The 2,200-package expansion remains incomplete.
+Physical-device installation and execution of every package remain unverified. The existing runtime still includes legacy Termux-derived files. The requested additional package expansion and source-only bootstrap are not completed or included in this release.
 
-The APK can be downloaded directly; no outer ZIP is required. Its SHA-256 and validation report are attached. Source and the committed APK copy are saved on main.
+Download the APK directly; no outer ZIP is needed.
+
+SHA-256: 75f9d0372284ee9010bbe1d86d1eb1db2f3d070d0177c779e34d9e154615cf50
+
+The source and a copy of this APK are saved on main.
+

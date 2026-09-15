@@ -1,3 +1,5 @@
+> Historical snapshot: the signed APK has since been published and merged to main. See [the current build status](../../releases/BUILD_STATUS.md) for delivered files, signing compatibility and remaining package work.
+
 # Source build checkpoint — 2026-09-15
 
 This branch is work in progress, not a published release.
