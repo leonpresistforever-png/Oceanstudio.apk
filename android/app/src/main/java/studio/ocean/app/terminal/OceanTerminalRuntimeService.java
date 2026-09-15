@@ -109,6 +109,7 @@ public final class OceanTerminalRuntimeService extends Service {
             }
             progress(callback, RuntimeState.VERIFYING_ACTIVE, "Verifying installed runtime", 0, 0);
             paths.ensureDirectoryContract();
+            preparePackageCatalog(paths);
             File shell = new File(paths.prefix(), "bin/bash");
             TerminalStartupLog.environment(this, shell.getAbsolutePath());
             OceanRuntimeValidator.validate(paths).requireValid();
@@ -164,7 +165,7 @@ public final class OceanTerminalRuntimeService extends Service {
             try {
                 OceanPaths paths=new OceanPaths(this);
                 if(!OceanRuntimeState.isInstalled(this))new OceanBootstrapInstaller(this).install();
-                paths.ensureDirectoryContract(); OceanRuntimeValidator.validate(paths).requireValid();
+                paths.ensureDirectoryContract(); preparePackageCatalog(paths); OceanRuntimeValidator.validate(paths).requireValid();
                 File shell=new File(paths.prefix(),"bin/bash");
                 TerminalSession session=startSession(shell.getAbsolutePath(),new String[]{shell.getAbsolutePath(),"-lc",command},paths.home(),24,80,false);
                 session.addListener(new TerminalSession.Listener(){
@@ -179,6 +180,33 @@ public final class OceanTerminalRuntimeService extends Service {
             } catch(Throwable error){main.post(()->callback.onFailure(error));}
         });
     }
+    private void preparePackageCatalog(OceanPaths paths) {
+        try {
+            if (OceanPackageFrontend.prepare(paths.prefix(), getAssets().open("ocean/pkg/frontend")))
+                TerminalStartupLog.stage("PKG", "Ocean pkg updated with automatic catalogue refresh");
+        } catch (IOException error) {
+            TerminalStartupLog.failure("Package frontend update failed", error);
+        }
+        try {
+            int repaired = OceanDpkgDatabaseRepair.repair(paths.prefix());
+            if (repaired > 0) TerminalStartupLog.stage("PKG", "Repaired " + repaired + " bootstrap package file lists; originals backed up");
+        } catch (IOException error) {
+            TerminalStartupLog.failure("Installed package file-list repair failed", error);
+            main.post(() -> android.widget.Toast.makeText(this,
+                    "Package database repair failed. See terminal diagnostics.", android.widget.Toast.LENGTH_LONG).show());
+        }
+        try {
+            if (OceanPackageCatalog.prepare(paths.prefix(), name -> getAssets().open("ocean/repository/" + name))) {
+                TerminalStartupLog.stage("PKG", "Verified Ocean package catalogue restored");
+            }
+        } catch (IOException error) {
+            // Package metadata must never stop a working terminal from opening.
+            TerminalStartupLog.failure("Package catalogue repair failed; run pkg update", error);
+            main.post(() -> android.widget.Toast.makeText(this,
+                    "Package catalogue unavailable. Run pkg update to refresh it.", android.widget.Toast.LENGTH_LONG).show());
+        }
+    }
+
     private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery) throws IOException {
         TerminalDiagnosticBundle.state("VALIDATING", "STARTING", "shell=" + shell + " recovery=" + recovery);
         long handle = NativePty.create(shell, argv, OceanEnvironment.create(this, shell, recovery), cwd.getAbsolutePath(), rows, columns, TerminalDiagnosticBundle.nativeLog(this).getAbsolutePath());
