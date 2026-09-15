@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "efc6567ae2021f5b689fc7d684125763a840bb9e",
+  "mergedMainCommit": "e5244e83eb4b5cfe5334e2c9ab775546d31dcb5b",
+  "androidDeviceTested": false,
+  "sourceOnlyRuntime": false,
+  "liveUniquePackages": 1036,
+  "newLivePackages": 0,
+  "catalogueTestsPassed": 7,
+  "sourceBuilderTestsPassed": 5,
+  "frontendMigrationScenarios": "passed",
+  "unitTests": {
+    "testDebugUnitTest": {
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "testReleaseUnitTest": {
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "apkSha256": "75f9d0372284ee9010bbe1d86d1eb1db2f3d070d0177c779e34d9e154615cf50",
+  "apkBytes": 29118776,
+  "apkCertificateSha256": "b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387",
+  "previousCertificateSha256": "655f903c1742609c3a62f5328dde00d9a6deeeddbb4f486fccc510cce5c4044a",
+  "inPlaceUpdateCompatible": false,
+  "buildType": "debug",
+  "firebaseLoginConfigured": false,
+  "bootstrapVerified": true
+}
