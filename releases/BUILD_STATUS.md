@@ -1,20 +1,16 @@
-# OceanStudio build checkpoint — 2026-09-15
+# OceanStudio build checkpoint — 2026-09-16
 
-PR #3 was merged into main as e5244e83eb4b5cfe5334e2c9ab775546d31dcb5b. It includes automatic catalogue refresh, dpkg metadata repair, terminal UI/keyboard controls and the official-source candidate builder.
+OceanStudio 1.1.4 (version code 6) is published as the latest GitHub release:
+https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.1.4
 
-A signed ARM64 debug/testing APK, version 1.1.3 (code 5), has been built from efc6567ae2021f5b689fc7d684125763a840bb9e. The committed alias is `releases/OceanStudio-latest-debug.apk`. The versioned GitHub release `v1.1.3` is published and marked latest, with the signed APK attached.
+The ARM64 debug/testing APK is built from `fad6505bcf061e199d8aeff78fc3894bc7ae4843`. Its committed alias is `releases/OceanStudio-latest-debug.apk`; the release asset is `OceanStudio-1.1.4-arm64-debug.apk`. APK SHA-256: `bbaa174a9c2fa36a55a80432f9bad16e25c91442409b837536aa6829ca8cc4aa`.
 
-APK SHA-256: 75f9d0372284ee9010bbe1d86d1eb1db2f3d070d0177c779e34d9e154615cf50.
+The signing certificate matches 1.1.3, permitting an in-place update from that version. Preserve the private signing backup and never commit it or its password. Earlier installations signed with the old pre-1.1.3 key are not update-compatible. Production Firebase authentication remains unconfigured; this debug APK retains the visibly labelled testing entry.
 
-50 Gradle unit-test executions, seven catalogue tests, the isolated dpkg reproduction/repair regression and frontend migration checks passed. The packaged catalogue/bootstrap, APK signature and ZIP alignment were verified. The validation JSON records precise scope; no device-wide or all-package guarantee is claimed.
+The model now receives structured terminal tools and real native-service output/exit status. Gemini, Claude and OpenAI-compatible protocols have fixture coverage. The UI retains its layout with grey agent labels, vector icons, subtle separators and expandable tool output.
 
-The original APK signing key was unavailable. A new signing key is preserved privately in `OceanStudio-private-signing-backup-20260915.zip` in the user's saved files. Do not upload that private backup to GitHub. It contains the key and its password, not the GitHub access token. Reuse it for future APKs. The new APK cannot update old installations signed with the previous key; retain existing user data until backed up. Firebase login remains unconfigured; this APK retains the prior debug build's visibly labelled testing entry.
+Verification: 42 Gradle unit tests passed; APK signature, alignment, version and packaged catalogue passed. The host lifecycle test passed 20 fast UTF-8 command exits plus cancellation using host adapters. Android service tests compiled but were not executed on a device. No live model call was made without a user BYOK key. Exact scope is recorded in `OceanStudio-1.1.4-validation.json`.
 
-The live APT pool is unchanged: 1,036 distinct names. The existing pool includes Termux-derived files and lacks complete source provenance. The independent source builder has four pinned recipes. This session rebuilt and retained cmark and kilo; subsequent source downloads were blocked. The privately saved candidate ZIP is not a live APT update and Android installation/execution tests are pending. Expansion to 2,200 packages and a fully upstream-source-built bootstrap remain unfinished.
+To reduce quota use, this local build reused the unchanged, verified Ocean PTY library from 1.1.3; bootstrap/catalogue assets are byte-identical. The normal CMake/NDK source build remains intact. Main checkpoint commits skip CI, and no Actions build was dispatched for this release. Only the APK was attached to the release.
 
-Future work should begin with this checkpoint and the release assets. Preserve each completed batch before beginning another one; reuse caches and avoid re-running passing checks without a concrete reason. Do not describe this checkpoint as completion of all requested package work.
-
-Automatic approval review rejected the original combined release upload because it included supporting reports and upstream-source archives beyond the explicitly requested APK. Publication was narrowed to the APK only. Candidate sources/binaries, the validation report and signature report were saved privately. No supporting archive was uploaded to the release.
-
-Download: https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.1.3
-
+Package work remains separate: 1,036 distinct indexed names / 1,046 records. Existing packages include Termux-derived files and do not have complete source provenance. Four pinned independent source recipes exist, and cmark/kilo candidates were previously saved; Android package acceptance and expansion to 2,200 remain unfinished. Do not claim that this release completes that work.

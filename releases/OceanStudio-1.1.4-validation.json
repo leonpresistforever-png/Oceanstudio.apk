@@ -1,0 +1,68 @@
+{
+  "version": "1.1.4",
+  "versionCode": 6,
+  "applicationId": "studio.ocean.app",
+  "variant": "debug",
+  "source_commit": "fad6505bcf061e199d8aeff78fc3894bc7ae4843",
+  "apk": "OceanStudio-1.1.4-arm64-debug.apk",
+  "size": 29135230,
+  "sha256": "bbaa174a9c2fa36a55a80432f9bad16e25c91442409b837536aa6829ca8cc4aa",
+  "certificate_sha256": "b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387",
+  "update_compatible_with": "1.1.3",
+  "unit_test_count": 42,
+  "test_suites": [
+    {
+      "name": "studio.ocean.app.OceanModelConfigTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.terminal.OceanPackageCatalogTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.terminal.OceanDpkgDatabaseRepairTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.terminal.OceanBootstrapLinkPolicyTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.AgentArchitectureTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.OceanAgentConversationTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.terminal.LocalProcessDiagnosticsTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "studio.ocean.app.ExampleUnitTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "host_session_smoke": "20 fast exits preserve exact UTF-8 output and exit 7; cancellation reaps the child",
+  "preserved_asset_count": 8,
+  "native_source_changed": false,
+  "device_tests": "compiled, not run; no attached Android device",
+  "live_provider_test": "not run; no user model API key available"
+}

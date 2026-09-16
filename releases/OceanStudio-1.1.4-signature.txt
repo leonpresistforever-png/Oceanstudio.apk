@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=OceanStudio, O=OceanStudio
+Signer #1 certificate SHA-256 digest: b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387
+Signer #1 certificate SHA-1 digest: c90974b559efd9e22de3e5d24a12d7b011502faa
+Signer #1 certificate MD5 digest: 4f5980afa5bd5874064768e14630bf19
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 3072
+Signer #1 public key SHA-256 digest: 47370be3032845297259ea8b2f9b97a47c322cdd7cfe36a0a0971f34472802fd
+Signer #1 public key SHA-1 digest: 0ea8d373183d2bf6e1614cf488b75088f0e6942a
+Signer #1 public key MD5 digest: 28552edb30ec74666e894a6a1d69a050
