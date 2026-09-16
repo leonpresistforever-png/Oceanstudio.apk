@@ -37,6 +37,7 @@ public final class OceanTerminalRuntimeService extends Service {
     private final Object stateLock = new Object();
     private final LocalBinder binder = new LocalBinder();
     private final Map<String, TerminalSession> sessions = new LinkedHashMap<>();
+    private final java.util.Set<String> commandSessions = new java.util.HashSet<>();
     private final ExecutorService bootstrapWorker = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "ocean-bootstrap-worker");
         thread.setPriority(Thread.NORM_PRIORITY - 1);
@@ -67,7 +68,7 @@ public final class OceanTerminalRuntimeService extends Service {
 
     public TerminalSession firstRunning() {
         synchronized (stateLock) {
-            for (TerminalSession session : sessions.values()) if (session.isRunning()) return session;
+            for (TerminalSession session : sessions.values()) if (session.isRunning() && !commandSessions.contains(session.id)) return session;
             return null;
         }
     }
@@ -159,26 +160,77 @@ public final class OceanTerminalRuntimeService extends Service {
             } catch (Throwable error) { main.post(() -> callback.onFailure(error)); }
         });
     }
-    /** Runs an agent-approved command through the same native PTY/runtime owner as the terminal UI. */
-    public void requestCommand(String command, CommandCallback callback) {
+    /** A cancellable command never becomes the interactive terminal's active shell. */
+    public final class CommandHandle implements TerminalSession.Listener {
+        private final CommandCallback callback;
+        private final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
+        private volatile TerminalSession session;
+        private volatile boolean cancelled, timedOut;
+        private final Runnable deadline = () -> stop(true);
+        private CommandHandle(CommandCallback callback) { this.callback = callback; }
+        public boolean timedOut() { return timedOut; }
+        public void cancel() { stop(false); }
+        private void attach(TerminalSession value) {
+            session = value;
+            if (cancelled) value.terminateCommand();
+        }
+        private void stop(boolean timeout) {
+            if (finished.get()) return;
+            cancelled = true;
+            timedOut = timeout;
+            TerminalSession active = session;
+            if (active != null) active.terminateCommand();
+            main.post(() -> finishExit(timeout ? 124 : 130));
+        }
+        @Override public void onOutput(byte[] bytes, int length) {
+            if (finished.get()) return;
+            byte[] output = java.util.Arrays.copyOf(bytes, length);
+            main.post(() -> callback.onOutput(output, output.length));
+        }
+        @Override public void onExit(int code) { main.post(() -> finishExit(cancelled ? (timedOut ? 124 : 130) : code)); }
+        private void finishExit(int code) {
+            if (!finished.compareAndSet(false, true)) return;
+            main.removeCallbacks(deadline);
+            callback.onExit(code);
+        }
+        private void fail(Throwable error) {
+            main.post(() -> {
+                if (!finished.compareAndSet(false, true)) return;
+                main.removeCallbacks(deadline);
+                callback.onFailure(error);
+            });
+        }
+    }
+
+    public CommandHandle requestCommand(String command, CommandCallback callback) {
+        return requestCommand(command, null, 120, callback);
+    }
+
+    /** Runs a bounded headless command through the same Ocean PTY, prefix and environment. */
+    public CommandHandle requestCommand(String command, String cwd, int timeoutSeconds, CommandCallback callback) {
+        CommandHandle request = new CommandHandle(callback);
+        if (command == null || command.trim().isEmpty() || command.indexOf('\0') >= 0
+                || timeoutSeconds < 1 || timeoutSeconds > 300) {
+            request.fail(new IllegalArgumentException("Invalid command or timeout"));
+            return request;
+        }
+        main.postDelayed(request.deadline, timeoutSeconds * 1000L);
         bootstrapWorker.execute(() -> {
             try {
-                OceanPaths paths=new OceanPaths(this);
-                if(!OceanRuntimeState.isInstalled(this))new OceanBootstrapInstaller(this).install();
+                if (request.cancelled) return;
+                OceanPaths paths = new OceanPaths(this);
+                if (!OceanRuntimeState.isInstalled(this)) new OceanBootstrapInstaller(this).install();
                 paths.ensureDirectoryContract(); preparePackageCatalog(paths); OceanRuntimeValidator.validate(paths).requireValid();
-                File shell=new File(paths.prefix(),"bin/bash");
-                TerminalSession session=startSession(shell.getAbsolutePath(),new String[]{shell.getAbsolutePath(),"-lc",command},paths.home(),24,80,false);
-                session.addListener(new TerminalSession.Listener(){
-                    @Override public void onOutput(byte[] bytes,int length){
-                        // TerminalSession reuses its native read buffer. Copy before crossing
-                        // threads so a later PTY read cannot corrupt agent tool output.
-                        byte[] output=java.util.Arrays.copyOf(bytes,length);
-                        main.post(()->callback.onOutput(output,output.length));
-                    }
-                    @Override public void onExit(int exitCode){main.post(()->callback.onExit(exitCode));}
-                });
-            } catch(Throwable error){main.post(()->callback.onFailure(error));}
+                File directory = cwd == null || cwd.isEmpty() ? paths.home() : new File(cwd);
+                if (!directory.isAbsolute() || !directory.isDirectory()) throw new IOException("Working directory does not exist: " + directory);
+                if (request.cancelled) return;
+                File shell = new File(paths.prefix(), "bin/bash");
+                TerminalSession session = startSession(shell.getAbsolutePath(), new String[]{shell.getAbsolutePath(), "-lc", command},
+                        directory.getCanonicalFile(), 24, 100, false, request);
+                request.attach(session);
+            } catch (Throwable error) { request.fail(error); }
         });
+        return request;
     }
     private void preparePackageCatalog(OceanPaths paths) {
         try {
@@ -208,6 +260,9 @@ public final class OceanTerminalRuntimeService extends Service {
     }
 
     private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery) throws IOException {
+        return startSession(shell, argv, cwd, rows, columns, recovery, null);
+    }
+    private TerminalSession startSession(String shell, String[] argv, File cwd, int rows, int columns, boolean recovery, TerminalSession.Listener commandListener) throws IOException {
         TerminalDiagnosticBundle.state("VALIDATING", "STARTING", "shell=" + shell + " recovery=" + recovery);
         long handle = NativePty.create(shell, argv, OceanEnvironment.create(this, shell, recovery), cwd.getAbsolutePath(), rows, columns, TerminalDiagnosticBundle.nativeLog(this).getAbsolutePath());
         if (handle == 0) {
@@ -218,14 +273,19 @@ public final class OceanTerminalRuntimeService extends Service {
         TerminalSession session;
         try { session = new TerminalSession(this, handle, this::removeCompletedSession); }
         catch (Throwable error) { NativePty.signal(handle, 15); NativePty.close(handle); NativePty.waitExit(handle); NativePty.destroy(handle); throw new IOException("Cannot start PTY workers", error); }
-        synchronized (stateLock) { sessions.put(session.id, session); }
+        synchronized (stateLock) {
+            sessions.put(session.id, session);
+            if (commandListener != null) commandSessions.add(session.id);
+        }
+        // Register before starting either worker: fast commands must not lose output or exit.
+        if (commandListener != null) session.addListener(commandListener);
         session.startWorkers();
         return session;
     }
-    public void closeSession(String id) { TerminalSession session; synchronized (stateLock) { session = sessions.remove(id); } if (session != null) session.close(); }
+    public void closeSession(String id) { TerminalSession session; synchronized (stateLock) { session = sessions.remove(id); commandSessions.remove(id); } if (session != null) session.close(); }
     private void removeCompletedSession(TerminalSession session) {
         boolean empty;
-        synchronized (stateLock) { if (sessions.get(session.id) == session) sessions.remove(session.id); empty = sessions.isEmpty() && !installScheduled; }
+        synchronized (stateLock) { if (sessions.get(session.id) == session) sessions.remove(session.id); commandSessions.remove(session.id); empty = sessions.isEmpty() && !installScheduled; }
         if (empty) stopSelf();
     }
     @Override public void onDestroy() {
@@ -234,7 +294,7 @@ public final class OceanTerminalRuntimeService extends Service {
             ipcServer = null;
         }
         TerminalSession[] active;
-        synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); }
+        synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); commandSessions.clear(); }
         for (TerminalSession session : active) session.close();
         bootstrapWorker.shutdown();
         super.onDestroy();

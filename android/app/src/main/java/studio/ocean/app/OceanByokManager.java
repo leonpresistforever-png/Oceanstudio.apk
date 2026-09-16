@@ -37,18 +37,16 @@ public final class OceanByokManager {
         try{return decrypt(value);}catch(Exception error){return "";}
     }
     public void saveConfig(String provider,String model,String apiKey,String baseUrl) throws Exception {
-        if(provider==null||model==null||model.trim().isEmpty()||apiKey==null||apiKey.trim().isEmpty())
-            throw new IllegalArgumentException("Provider, model, and API key are required");
-        if(baseUrl==null||!baseUrl.startsWith("https://"))throw new IllegalArgumentException("An HTTPS endpoint is required");
-        prefs.edit().putString(PROVIDER,provider).putString(MODEL,model.trim())
-                .putString(API_KEY,encrypt(apiKey.trim())).putString(BASE_URL,baseUrl.replaceAll("/+$",""))
+        OceanModelConfig config = new OceanModelConfig(provider,model,apiKey,baseUrl);
+        prefs.edit().putString(PROVIDER,config.provider).putString(MODEL,config.model)
+                .putString(API_KEY,encrypt(config.apiKey)).putString(BASE_URL,config.baseUrl)
                 .remove(VERIFIED).commit();
     }
     public boolean hasApiKey(){return !getApiKey().isEmpty();}
-    public void markVerified(){prefs.edit().putString(VERIFIED,configurationDigest()).apply();}
+    public void markVerified(String testedDigest){if(testedDigest.equals(configurationDigest()))prefs.edit().putString(VERIFIED,testedDigest).apply();}
     public boolean isVerified(){String current=prefs.getString(VERIFIED,"");return !current.isEmpty()&&current.equals(configurationDigest());}
 
-    private String configurationDigest(){
+    String configurationDigest(){
         try{byte[] digest=MessageDigest.getInstance("SHA-256").digest((getProvider()+"\n"+getModel()+"\n"+getBaseUrl()+"\n"+getApiKey()).getBytes(StandardCharsets.UTF_8));return Base64.encodeToString(digest,Base64.NO_WRAP);}
         catch(Exception error){return "";}
     }

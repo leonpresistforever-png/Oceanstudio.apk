@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -121,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
         TextView modelBtn = findViewById(R.id.model_button);
         if (byokManager != null) modelBtn.setText(byokManager.isVerified()?byokManager.getModel():"Configure model");
         modelBtn.setOnClickListener(v -> showByokPage());
-        findViewById(R.id.send_button).setOnClickListener(v -> submitAgentPrompt());
+        findViewById(R.id.send_button).setOnClickListener(v -> { if (agentRunner.isRunning()) agentRunner.cancel(); else submitAgentPrompt(); });
 
         bindGroup(R.id.group_workspace,R.id.workspace_children,R.id.chevron_workspace); bindGroup(R.id.group_agents,R.id.agents_children,R.id.chevron_agents); bindGroup(R.id.group_tools,R.id.tools_children,R.id.chevron_tools); bindGroup(R.id.group_connections,R.id.connections_children,R.id.chevron_connections);
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
@@ -135,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
             byokNav.setTextColor(getColor(R.color.ocean_ink));
             byokNav.setTextSize(14f);
             byokNav.setPadding((int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density), (int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density));
-            byokNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_spark), null, null, null);
+            byokNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_models), null, null, null);
             byokNav.setCompoundDrawablePadding((int)(12 * getResources().getDisplayMetrics().density));
             byokNav.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
             toolsChildren.addView(byokNav, 0);
@@ -206,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Configure a conversation provider. Ocean reports Connected only after a real authenticated API request succeeds. Terminal tools run separately through Ocean's native runtime service.");
+        sub.setText("Connect your model to chat and run commands in Ocean. Terminal results appear here, without opening the terminal screen.");
         sub.setTextSize(13f);
         sub.setTextColor(0xFF7B7873);
         sub.setPadding(0, 8, 0, 24);
@@ -234,11 +235,18 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(mLabel);
 
         EditText modelInput = new EditText(this);
-        modelInput.setHint("Provider model identifier");
+        modelInput.setHint("Model ID, e.g. gemini-2.5-flash");
+        modelInput.setSingleLine(true);
+        modelInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         modelInput.setText(byokManager.getModel());
         modelInput.setBackgroundResource(R.drawable.composer_background);
         modelInput.setPadding(20,20,20,20);
         layout.addView(modelInput);
+        TextView modelHelp = new TextView(this);
+        modelHelp.setText("Use the exact model ID from your provider. The provider name (for example, google) is not a model ID.");
+        modelHelp.setTextSize(12f); modelHelp.setTextColor(0xFF73777D); modelHelp.setPadding(0, dp(8), 0, dp(16));
+        layout.addView(modelHelp);
+        addDivider(layout, 4);
 
         String curProv = byokManager.getProvider();
         if (OceanByokManager.PROVIDER_ANTHROPIC.equals(curProv)) providerSpinner.setSelection(1);
@@ -264,7 +272,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(keyInput);
 
         TextView bLabel = new TextView(this);
-        bLabel.setText("CUSTOM BASE URL (SCHEMA / ENDPOINT)");
+        bLabel.setText("API BASE URL");
         bLabel.setTextSize(12f);
         bLabel.setTypeface(null, Typeface.BOLD);
         bLabel.setTextColor(0xFF191817);
@@ -279,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(urlInput);
         providerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){
+                modelInput.setHint(position == 0 ? "gemini-2.5-flash" : position == 1 ? "claude model ID" : "Provider model ID");
                 String old=urlInput.getText().toString();
                 if(old.isEmpty()||old.contains("generativelanguage.googleapis.com")||old.contains("api.anthropic.com")||old.contains("api.openai.com")){
                     if(position==0)urlInput.setText("https://generativelanguage.googleapis.com");
@@ -298,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button saveBtn = new Button(this);
         saveBtn.setText("Save & Test Connection");
+        saveBtn.setAllCaps(false);
         saveBtn.setTextColor(0xFFFFFFFF);
         saveBtn.setBackgroundColor(0xFF191817);
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int)(48 * getResources().getDisplayMetrics().density));
@@ -315,10 +325,11 @@ public class MainActivity extends AppCompatActivity {
 
             try { byokManager.saveConfig(prov,mod,key,burl); }
             catch(Exception error){ connectionStatus.setText(error.getMessage());connectionStatus.setTextColor(0xFFB3261E);return; }
-            saveBtn.setEnabled(false); connectionStatus.setText("Testing authenticated provider request…");
+            saveBtn.setEnabled(false); providerSpinner.setEnabled(false); modelInput.setEnabled(false); keyInput.setEnabled(false); urlInput.setEnabled(false);
+            connectionStatus.setText("Testing connection…");
             agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback(){
-                @Override public void onSuccess(){runOnUiThread(()->{byokManager.markVerified();saveBtn.setEnabled(true);connectionStatus.setText("Connected · authenticated request succeeded");connectionStatus.setTextColor(0xFF18794E);((TextView)findViewById(R.id.model_button)).setText(mod);});}
-                @Override public void onFailure(String error){runOnUiThread(()->{saveBtn.setEnabled(true);connectionStatus.setText("Not connected · "+error);connectionStatus.setTextColor(0xFFB3261E);});}
+                @Override public void onSuccess(){runOnUiThread(()->{saveBtn.setEnabled(true);providerSpinner.setEnabled(true);modelInput.setEnabled(true);keyInput.setEnabled(true);urlInput.setEnabled(true);modelInput.setText(byokManager.getModel());connectionStatus.setText("Connected · authenticated request succeeded");connectionStatus.setTextColor(0xFF18794E);((TextView)findViewById(R.id.model_button)).setText(byokManager.getModel());});}
+                @Override public void onFailure(String error){runOnUiThread(()->{saveBtn.setEnabled(true);providerSpinner.setEnabled(true);modelInput.setEnabled(true);keyInput.setEnabled(true);urlInput.setEnabled(true);connectionStatus.setText("Not connected · "+error);connectionStatus.setTextColor(0xFFB3261E);});}
             });
         });
 
@@ -344,12 +355,12 @@ public class MainActivity extends AppCompatActivity {
 
         TextView thoughtView = agentCard.findViewWithTag("THOUGHT_VIEW");
         LinearLayout toolBox = agentCard.findViewWithTag("TOOL_BOX");
-        TextView toolHeader = agentCard.findViewWithTag("TOOL_HEADER");
-        TextView toolLogs = agentCard.findViewWithTag("TOOL_LOGS");
+        OceanToolCard[] currentTool = {null};
         TextView responseView = agentCard.findViewWithTag("RESPONSE_VIEW");
 
         chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
 
+        setAgentBusy(true);
         agentRunner.processPrompt(prompt, new OceanAgentRunner.AgentCallback() {
             @Override public void onThought(String thought) {
                 thoughtView.setVisibility(View.VISIBLE);
@@ -357,46 +368,31 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override public void onToolStart(String toolName, String command) {
+                thoughtView.setText("Running " + toolName.toLowerCase(java.util.Locale.ROOT) + "…");
                 toolBox.setVisibility(View.VISIBLE);
-                String displayCmd = command;
-                if (displayCmd.contains("/bin/")) displayCmd = displayCmd.substring(displayCmd.lastIndexOf("/bin/") + 5);
-                final String showCmd = displayCmd;
-                toolHeader.setText("▶ " + toolName + " [" + showCmd + "]");
-                toolLogs.setText("");
-                toolLogs.setVisibility(View.GONE);
-                toolHeader.setOnClickListener(v -> {
-                    boolean expand = toolLogs.getVisibility() != View.VISIBLE;
-                    toolLogs.setVisibility(expand ? View.VISIBLE : View.GONE);
-                    toolHeader.setText((expand ? "▼ " : "▶ ") + toolName + " [" + showCmd + "]");
-                });
+                currentTool[0] = new OceanToolCard(MainActivity.this, toolName, command);
+                toolBox.addView(currentTool[0]);
             }
-
-            @Override public void onToolOutput(String outputChunk) {
-                toolLogs.append(outputChunk + "\n");
-                chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+            @Override public void onToolOutput(String chunk) {
+                if (currentTool[0] != null) currentTool[0].append(chunk);
             }
-
             @Override public void onToolComplete(int exitCode) {
-                String cur = toolHeader.getText().toString();
-                if (exitCode == 0) {
-                    toolHeader.setText(cur + " ✔ exit 0");
-                    toolHeader.setTextColor(0xFF059669);
-                } else {
-                    toolHeader.setText(cur + " ✖ exit " + exitCode);
-                    toolHeader.setTextColor(0xFFDC2626);
-                    toolLogs.setVisibility(View.VISIBLE);
-                }
+                if (currentTool[0] != null) currentTool[0].complete(exitCode);
             }
 
             @Override public void onResponse(String response) {
                 responseView.setVisibility(View.VISIBLE);
-                responseView.setText(response);
+                responseView.setText(OceanMessageText.render(response));
+                thoughtView.setVisibility(View.GONE);
+                setAgentBusy(false);
                 chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
             }
 
             @Override public void onError(String error) {
                 responseView.setVisibility(View.VISIBLE);
-                responseView.setText("Error: " + error);
+                responseView.setText(error);
+                thoughtView.setVisibility(View.GONE);
+                setAgentBusy(false);
                 responseView.setTextColor(0xFFDC2626);
             }
         });
@@ -431,10 +427,11 @@ public class MainActivity extends AppCompatActivity {
         head.setText("Ocean Agent");
         head.setTextSize(13f);
         head.setTypeface(null, Typeface.BOLD);
-        head.setTextColor(0xFF18A9DF);
-        head.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_spark), null, null, null);
-        head.setCompoundDrawablePadding(12);
+        head.setTextColor(0xFF62666D);
+        head.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_agent), null, null, null);
+        head.setCompoundDrawablePadding(dp(10));
         card.addView(head);
+        addDivider(card, 12);
 
         TextView thought = new TextView(this);
         thought.setTag("THOUGHT_VIEW");
@@ -447,24 +444,8 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout toolBox = new LinearLayout(this);
         toolBox.setTag("TOOL_BOX");
         toolBox.setOrientation(LinearLayout.VERTICAL);
-        toolBox.setBackgroundResource(R.drawable.composer_background);
-        toolBox.setPadding(pad, pad, pad, pad);
+        toolBox.setPadding(0, 0, 0, dp(8));
         toolBox.setVisibility(View.GONE);
-
-        TextView toolHeader = new TextView(this);
-        toolHeader.setTag("TOOL_HEADER");
-        toolHeader.setTextSize(13f);
-        toolHeader.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        toolHeader.setTextColor(0xFF1F2937);
-        toolBox.addView(toolHeader);
-
-        TextView toolLogs = new TextView(this);
-        toolLogs.setTag("TOOL_LOGS");
-        toolLogs.setTextSize(12f);
-        toolLogs.setTypeface(Typeface.MONOSPACE);
-        toolLogs.setTextColor(0xFF4B5563);
-        toolLogs.setPadding(0, 12, 0, 0);
-        toolBox.addView(toolLogs);
 
         card.addView(toolBox);
 
@@ -472,6 +453,8 @@ public class MainActivity extends AppCompatActivity {
         response.setTag("RESPONSE_VIEW");
         response.setTextColor(0xFF191817);
         response.setTextSize(15f);
+        response.setTextIsSelectable(true);
+        response.setLineSpacing(dp(3), 1f);
         response.setPadding(0, 10, 0, 0);
         response.setVisibility(View.GONE);
         card.addView(response);
@@ -486,7 +469,36 @@ public class MainActivity extends AppCompatActivity {
         int end=expand?children.getMeasuredHeight():0; children.setAlpha(expand?0f:1f); ValueAnimator height=ValueAnimator.ofInt(start,end); height.setDuration(220); height.setInterpolator(new DecelerateInterpolator()); height.addUpdateListener(a -> {ViewGroup.LayoutParams p=children.getLayoutParams();p.height=(int)a.getAnimatedValue();children.setLayoutParams(p);children.setAlpha(expand?a.getAnimatedFraction():1f-a.getAnimatedFraction());}); height.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){if(!expand)children.setVisibility(View.GONE);ViewGroup.LayoutParams p=children.getLayoutParams();p.height=expand?ViewGroup.LayoutParams.WRAP_CONTENT:0;children.setLayoutParams(p);}}); height.start(); chevron.animate().rotation(expand?90f:0f).setDuration(200).start();
     }
     private void bindDestination(int id,String title) { findViewById(id).setOnClickListener(v -> { closeDrawer(); View content=findViewById(R.id.home_content); content.animate().alpha(0f).translationY(6f).setDuration(120).withEndAction(() -> { TextView heading=findViewById(R.id.empty_title), message=findViewById(R.id.empty_message); ((TextView)findViewById(R.id.screen_title)).setText(title); if(title.equals("OceanStudio")){ heading.setText(R.string.build_question); message.setText(R.string.build_subtitle); } else { heading.setText(title); message.setText(getString(R.string.destination_unavailable,title)); } content.setTranslationY(6f); content.animate().alpha(1f).translationY(0f).setDuration(190).start(); }).start(); }); }
-    private void newChat() { if(drawerOpen) closeDrawer(); ((EditText)findViewById(R.id.prompt)).setText(""); ((TextView)findViewById(R.id.screen_title)).setText(R.string.app_name); ((TextView)findViewById(R.id.empty_title)).setText(R.string.build_question); ((TextView)findViewById(R.id.empty_message)).setText(R.string.build_subtitle); }
+    private void newChat() {
+        if (agentRunner.isRunning()) { Toast.makeText(this, "Stop the current request before starting a new chat", Toast.LENGTH_SHORT).show(); return; }
+        if (drawerOpen) closeDrawer();
+        agentRunner.resetConversation();
+        if (chatMessagesLayout != null) chatMessagesLayout.removeAllViews();
+        if (chatScrollView != null) chatScrollView.setVisibility(View.GONE);
+        if (contentFrame != null) { View byok = contentFrame.findViewWithTag("BYOK_VIEW"); if (byok != null) contentFrame.removeView(byok); }
+        findViewById(R.id.home_content).setVisibility(View.VISIBLE);
+        ((EditText)findViewById(R.id.prompt)).setText("");
+        ((TextView)findViewById(R.id.screen_title)).setText(R.string.app_name);
+        ((TextView)findViewById(R.id.empty_title)).setText(R.string.build_question);
+        ((TextView)findViewById(R.id.empty_message)).setText(R.string.build_subtitle);
+    }
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+    private void addDivider(LinearLayout parent, int margin) {
+        View divider = new View(this); divider.setBackgroundColor(0xFFE5E7EB);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+        params.topMargin = dp(margin); params.bottomMargin = dp(margin);
+        parent.addView(divider, params);
+    }
+    private void setAgentBusy(boolean busy) {
+        ImageButton button = findViewById(R.id.send_button);
+        if (button == null) return;
+        button.setImageResource(busy ? R.drawable.ic_stop : R.drawable.ic_send);
+        button.setContentDescription(busy ? "Stop request" : getString(R.string.send));
+    }
+    @Override protected void onDestroy() {
+        if (agentRunner != null) agentRunner.cancel();
+        super.onDestroy();
+    }
 
     private void openDrawer() { if(drawerOpen)return; drawerOpen=true; sidebar.setVisibility(View.VISIBLE); backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(190).start(); sidebar.animate().translationX(0f).setDuration(270).setInterpolator(new DecelerateInterpolator()).start(); findViewById(R.id.main_content).animate().translationX(sidebar.getWidth()*.08f).setDuration(270).start(); }
     private void closeDrawer() { if(!drawerOpen)return; drawerOpen=false; backdrop.animate().alpha(0f).setDuration(180).withEndAction(() -> backdrop.setVisibility(View.GONE)).start(); sidebar.animate().translationX(-sidebar.getWidth()).setDuration(240).setInterpolator(new DecelerateInterpolator()).setListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){sidebar.setVisibility(View.GONE); sidebar.animate().setListener(null);}}).start(); findViewById(R.id.main_content).animate().translationX(0f).setDuration(240).start(); }

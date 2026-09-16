@@ -25,6 +25,7 @@ public final class AgentArchitectureTest {
         String runner=source("OceanAgentRunner.java");
         assertTrue(runner.contains("OceanTerminalRuntimeService"));
         assertTrue(runner.contains("requestCommand(command"));
+        assertTrue(runner.contains("OceanAgentConversation"));
         assertFalse(runner.contains("new ProcessBuilder"));
         assertFalse(runner.contains("/system/bin/sh"));
     }
