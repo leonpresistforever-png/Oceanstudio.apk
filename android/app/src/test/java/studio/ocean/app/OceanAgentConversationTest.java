@@ -20,6 +20,10 @@ public final class OceanAgentConversationTest {
             requests.add(new JSONObject(body.toString()));
             if (requests.size() == 1) {
                 assertEquals("run_terminal_command", body.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations").getJSONObject(0).getString("name"));
+                JSONObject schema = body.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations").getJSONObject(0).getJSONObject("parameters");
+                assertEquals("OBJECT", schema.getString("type"));
+                assertEquals("STRING", schema.getJSONObject("properties").getJSONObject("command").getString("type"));
+                assertFalse(body.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations").getJSONObject(1).has("parameters"));
                 return gemini("[{text:'Checking pip.'},{thoughtSignature:'opaque-signature',functionCall:{id:'call-7',name:'run_terminal_command',args:{command:'pip --version'}}}]");
             }
             JSONArray contents = body.getJSONArray("contents");
@@ -32,6 +36,17 @@ public final class OceanAgentConversationTest {
             return gemini("[{thought:true,text:'private reasoning'},{text:'pip 24.3'},{text:' is installed.'}]");
         }, (name, args) -> { calls.incrementAndGet(); assertEquals("run_terminal_command", name); assertEquals("pip --version", args.getString("command")); return success(); }, status -> {});
         assertEquals("pip 24.3 is installed.", answer); assertEquals(1, calls.get()); assertEquals(2, requests.size());
+    }
+
+    @Test public void geminiNoArgumentToolWorksWithoutArgsField() throws Exception {
+        AtomicInteger network = new AtomicInteger(), executed = new AtomicInteger();
+        new OceanAgentConversation("google", "test").run("Open the terminal", request -> {
+            if (network.getAndIncrement() == 0) return gemini("[{functionCall:{name:'open_terminal'}}]");
+            assertTrue(request.getJSONArray("contents").getJSONObject(2).getJSONArray("parts").getJSONObject(0)
+                    .getJSONObject("functionResponse").getJSONObject("response").getBoolean("opened"));
+            return gemini("[{text:'Opened'}]");
+        }, (name, args) -> { assertEquals("open_terminal", name); assertEquals(0, args.length()); executed.incrementAndGet(); return json("{opened:true,exit_code:0}"); }, status -> {});
+        assertEquals(1, executed.get());
     }
 
     @Test public void plainTextAndCodeFencesNeverExecute() throws Exception {

@@ -16,7 +16,7 @@ final class OceanAgentConversation {
     static final int MAX_TOOL_CALLS = 8, MAX_ROUNDS = 6;
     private static final String SYSTEM = "You are Ocean Agent, the assistant built into OceanStudio on Android. "
             + "You have real local tools: run_terminal_command executes Bash headlessly in Ocean's native runtime, "
-            + "and open_terminal opens its visible terminal. The prefix is /data/data/studio.ocean.app/files/usr. "
+            + "and open_terminal opens its visible terminal. The shell exports PREFIX and HOME for Ocean's private directories. "
             + "When the user asks you to run or check a command, use the terminal tool and report its actual output. "
             + "Do not tell the user to open another app to execute it. Never claim an action succeeded without a tool result. "
             + "For a bare request to run pip, run pip --version. Use node for the Node.js executable. "
@@ -93,7 +93,7 @@ final class OceanAgentConversation {
         JSONObject body = new JSONObject();
         if (provider.equals("google")) {
             body.put("contents", messages).put("systemInstruction", new JSONObject().put("parts", new JSONArray().put(new JSONObject().put("text", SYSTEM))));
-            if (tools) body.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations", declarations())));
+            if (tools) body.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations", googleDeclarations())));
         } else if (provider.equals("anthropic")) {
             body.put("model", model).put("system", SYSTEM).put("max_tokens", 2048).put("messages", messages);
             if (tools) {
@@ -115,6 +115,24 @@ final class OceanAgentConversation {
             }
         }
         return body;
+    }
+
+    private JSONArray googleDeclarations() throws JSONException {
+        JSONArray defs = declarations();
+        for (int i = 0; i < defs.length(); i++) {
+            JSONObject definition = defs.getJSONObject(i);
+            JSONObject parameters = definition.getJSONObject("parameters");
+            JSONObject properties = parameters.getJSONObject("properties");
+            // Gemini's no-argument functions omit parameters rather than an empty OBJECT schema.
+            if (properties.length() == 0) { definition.remove("parameters"); continue; }
+            parameters.put("type", "OBJECT");
+            java.util.Iterator<String> names = properties.keys();
+            while (names.hasNext()) {
+                JSONObject property = properties.getJSONObject(names.next());
+                property.put("type", property.getString("type").toUpperCase(java.util.Locale.ROOT));
+            }
+        }
+        return defs;
     }
 
     private JSONArray declarations() throws JSONException {
