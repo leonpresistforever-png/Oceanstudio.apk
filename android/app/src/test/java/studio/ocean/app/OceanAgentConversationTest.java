@@ -131,7 +131,7 @@ public final class OceanAgentConversationTest {
     @Test public void runtimeToolsAreDeclaredAndValidatedBeforeExecution() throws Exception {
         JSONObject request = new OceanAgentConversation("google", "gemini-2.5-flash").request(new JSONArray(), true);
         JSONArray tools = request.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations");
-        assertEquals(5, tools.length());
+        assertEquals(11, tools.length());
         assertEquals("list_runtime_ports", tools.getJSONObject(2).getString("name"));
         assertFalse(tools.getJSONObject(2).has("parameters"));
         assertEquals("open_runtime_port", tools.getJSONObject(3).getString("name"));
@@ -214,5 +214,14 @@ public final class OceanAgentConversationTest {
         }, (n, a) -> null, s -> {});
         try { conversation.run("Blocked", request -> json("{candidates:[]}"), (n,a) -> null, s -> {}); fail("Expected empty response error"); }
         catch (IOException expected) { assertTrue(expected.getMessage().contains("no candidate")); }
+    }
+
+    @Test public void deviceToolsRejectInvalidTargetsBeforeExecution() throws Exception {
+        OceanAgentConversation.validateTool("open_android_app",json("{package_name:'com.android.settings'}"));
+        OceanAgentConversation.validateTool("interact_android_screen",json("{action:'swipe',x:10,y:20,to_x:30,to_y:40}"));
+        for(String value:new String[]{"{action:'tap',x:-1,y:2}","{action:'swipe',x:1,y:2}","{action:'type',ref:'1:1'}","{action:'unknown'}"}){
+            try{OceanAgentConversation.validateTool("interact_android_screen",json(value));fail("Invalid device action accepted");}catch(IllegalArgumentException expected){}
+        }
+        try{OceanAgentConversation.validateTool("open_android_app",json("{package_name:'browser'}"));fail("Ambiguous app accepted");}catch(IllegalArgumentException expected){}
     }
 }

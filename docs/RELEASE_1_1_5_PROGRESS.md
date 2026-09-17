@@ -1,15 +1,13 @@
-# OceanStudio 1.1.5 recovery checkpoint
+# OceanStudio 1.1.5 progress
 
-Status: source recovery in progress; no 1.1.5 release published.
+Status: source integration completed; fresh local build and signing pending. No v1.1.5 release published yet.
 
-Scope: agent output UI thread crash fix; BYOK spacing/type cleanup; Runtime Ports list/browser and real agent visual tools; user-enabled file/settings/accessibility controls with stop; signed APK release.
+Implemented: main-thread agent terminal output fix; Runtime Ports discovery, browser and image/interaction tools; opt-in device Accessibility controls with stop notification and permission dashboard; launchable-app inventory; BYOK typography/spacing. These are real native APIs, not simulated tool results.
 
-Recovered: Runtime Ports source, provider screenshot wiring, terminal Ports button, output main-thread dispatch, browser compilation fixes.
+Acceptance pending: fresh unit tests, APK assembly, signature compatibility and embedded bootstrap/native checks. No physical Android device is connected, so live-device crash/gesture/WebView acceptance remains unverified.
 
-Pending: Device Access recovery and verification, BYOK polish, final build/signature/asset checks and release.
+Android limits: shared storage grants do not expose private app data. Secure screens remain protected. General Android apps do not run headlessly through Accessibility. Desktop apps, Docker, decompilation/re-sign tools require separately available compatible runtimes and packages; this release does not install or certify them.
 
-Earlier 49-test build passed before workspace loss, but that binary is unavailable. Rerun verification on recovered source. No connected Android device; do not claim live-device acceptance.
+Previous successful local build was lost when workspace reverted. Treat only current test/build artifacts as release evidence. Save all source checkpoints to main with skip-ci; do not use GitHub Actions quota. Signing keys and tokens must remain private.
 
-Separate unfinished work: expand package pool; existing pool is 1036 distinct names / 1046 records and is not certified official-source-only. Never claim 2200 packages or unsupported desktop apps work.
-
-Use local builds and skip-ci commits to conserve Actions quota. Stable signing material remains private and must never be committed.
+Separate unfinished request: package expansion. Last audited pool 1036 distinct names / 1046 records. Do not claim 2200 packages, 1000 newly compiled packages, or official-source-only provenance without an audited build manifest.

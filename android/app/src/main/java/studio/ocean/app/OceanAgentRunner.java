@@ -89,6 +89,8 @@ public final class OceanAgentRunner {
                         status(callback, "Working with " + config.model + "…");
                         result = conversation.run(text, body -> send(config, body), (name, args) -> {
                             if (name.equals("open_terminal")) return openTerminal(callback);
+                            if (name.equals("device_status") || name.equals("list_android_apps") || name.equals("open_android_app") || name.equals("inspect_android_screen") || name.equals("capture_android_screen") || name.equals("interact_android_screen"))
+                                return runRuntimeTool("Device control", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context,name,args));
                             if (name.equals("list_runtime_ports")) return runRuntimeTool("Runtime ports", "Scan Ocean listeners", callback, RuntimePortsActivity::listForAgent);
                             if (name.equals("open_runtime_port")) return runRuntimeTool("Open runtime port", "localhost:" + args.getInt("port"), callback,
                                     () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/")));

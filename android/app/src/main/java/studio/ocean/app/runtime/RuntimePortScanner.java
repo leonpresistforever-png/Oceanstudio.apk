@@ -19,6 +19,13 @@ public final class RuntimePortScanner {
         int uid = android.os.Process.myUid();
         read("/proc/self/net/tcp", uid, ports);
         read("/proc/self/net/tcp6", uid, ports);
+        // Android can deny socket tables. Probe common local ports without claiming ownership.
+        for (int port : new int[]{3000,3001,4000,5000,5173,5174,5800,6080,6901,8000,8001,8080,8081,8888,9000}) {
+            if (ports.contains(port)) continue;
+            try (java.net.Socket socket = new java.net.Socket()) {
+                socket.connect(new java.net.InetSocketAddress("127.0.0.1",port),60); ports.add(port);
+            } catch (IOException ignored) { }
+        }
         List<Integer> sorted = new ArrayList<>(ports);
         Collections.sort(sorted);
         return sorted;
@@ -50,8 +57,8 @@ public final class RuntimePortScanner {
     }
 
     public static String kind(int port) {
-        if (port == 6080 || port == 5800 || port == 6901) return "noVNC / remote desktop";
-        if (port == 3000 || port == 5173 || port == 8000 || port == 8080 || port == 8888) return "Web development server";
-        return "Local HTTP service";
+        if (port == 6080 || port == 5800 || port == 6901) return "Possible noVNC service";
+        if (port == 3000 || port == 5173 || port == 8000 || port == 8080 || port == 8888) return "Possible web development server";
+        return "TCP listener · protocol unverified";
     }
 }

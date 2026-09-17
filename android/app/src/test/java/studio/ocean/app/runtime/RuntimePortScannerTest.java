@@ -17,8 +17,8 @@ public class RuntimePortScannerTest {
     }
 
     @Test public void labelsKnownRemoteDesktopAndDevelopmentPorts() {
-        assertEquals("noVNC / remote desktop", RuntimePortScanner.kind(6080));
-        assertEquals("Web development server", RuntimePortScanner.kind(5173));
-        assertEquals("Local HTTP service", RuntimePortScanner.kind(4317));
+        assertEquals("Possible noVNC service", RuntimePortScanner.kind(6080));
+        assertEquals("Possible web development server", RuntimePortScanner.kind(5173));
+        assertEquals("TCP listener · protocol unverified", RuntimePortScanner.kind(4317));
     }
 }

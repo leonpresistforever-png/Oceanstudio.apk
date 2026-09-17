@@ -132,6 +132,8 @@ public class MainActivity extends AppCompatActivity {
         // Add BYOK Models link into sidebar Tools children
         LinearLayout toolsChildren = findViewById(R.id.tools_children);
         if (toolsChildren != null) {
+            TextView deviceNav = new TextView(this); deviceNav.setText("Device Access"); deviceNav.setTextSize(14); deviceNav.setTextColor(0xFF44464B); deviceNav.setPadding(dp(24),dp(16),dp(24),dp(16)); deviceNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); }); toolsChildren.addView(deviceNav);
+
             TextView byokNav = new TextView(this);
             byokNav.setText("BYOK Models & APIs");
             byokNav.setTextColor(getColor(R.color.ocean_ink));
@@ -201,18 +203,20 @@ public class MainActivity extends AppCompatActivity {
         layout.setPadding(pad, pad, pad, pad);
 
         TextView title = new TextView(this);
-        title.setText("BYOK Models & Endpoints");
-        title.setTextSize(20f);
+        title.setText("Models & connections");
+        title.setTextSize(24f);
         title.setTypeface(null, Typeface.BOLD);
         title.setTextColor(0xFF191817);
         layout.addView(title);
 
         TextView sub = new TextView(this);
         sub.setText("Connect your model to chat and run commands in Ocean. Terminal results appear here, without opening the terminal screen.");
-        sub.setTextSize(13f);
+        sub.setTextSize(14f);
+        sub.setLineSpacing(dp(3),1f);
         sub.setTextColor(0xFF7B7873);
-        sub.setPadding(0, 8, 0, 24);
+        sub.setPadding(0, dp(10), 0, dp(22));
         layout.addView(sub);
+        addDivider(layout, 8);
 
         TextView pLabel = new TextView(this);
         pLabel.setText("SERVICE PROVIDER");
@@ -225,14 +229,15 @@ public class MainActivity extends AppCompatActivity {
         String[] providers = {"Google AI (Gemini)", "Anthropic (Claude)", "OpenAI", "Custom Endpoint"};
         ArrayAdapter<String> pAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, providers);
         providerSpinner.setAdapter(pAdapter);
-        layout.addView(providerSpinner);
+        providerSpinner.setBackgroundResource(R.drawable.composer_background);
+        layout.addView(providerSpinner,new LinearLayout.LayoutParams(-1,dp(52)));
 
         TextView mLabel = new TextView(this);
         mLabel.setText("ACTIVE MODEL");
         mLabel.setTextSize(12f);
         mLabel.setTypeface(null, Typeface.BOLD);
         mLabel.setTextColor(0xFF191817);
-        mLabel.setPadding(0, 20, 0, 0);
+        mLabel.setPadding(0, dp(20), 0, dp(8));
         layout.addView(mLabel);
 
         EditText modelInput = new EditText(this);
@@ -241,8 +246,9 @@ public class MainActivity extends AppCompatActivity {
         modelInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         modelInput.setText(byokManager.getModel());
         modelInput.setBackgroundResource(R.drawable.composer_background);
-        modelInput.setPadding(20,20,20,20);
-        layout.addView(modelInput);
+        modelInput.setPadding(dp(14),0,dp(14),0);
+        modelInput.setTextSize(15f); modelInput.setSingleLine(true);
+        layout.addView(modelInput,new LinearLayout.LayoutParams(-1,dp(52)));
         TextView modelHelp = new TextView(this);
         modelHelp.setText("Use the exact model ID from your provider. The provider name (for example, google) is not a model ID.");
         modelHelp.setTextSize(12f); modelHelp.setTextColor(0xFF73777D); modelHelp.setPadding(0, dp(8), 0, dp(16));
@@ -260,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
         kLabel.setTextSize(12f);
         kLabel.setTypeface(null, Typeface.BOLD);
         kLabel.setTextColor(0xFF191817);
-        kLabel.setPadding(0, 20, 0, 4);
+        kLabel.setPadding(0, dp(20), 0, dp(8));
         layout.addView(kLabel);
 
         EditText keyInput = new EditText(this);
@@ -268,24 +274,26 @@ public class MainActivity extends AppCompatActivity {
         keyInput.setText(byokManager.getApiKey());
         keyInput.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         keyInput.setBackgroundResource(R.drawable.composer_background);
-        keyInput.setPadding(20, 20, 20, 20);
+        keyInput.setPadding(dp(14),0,dp(14),0);
         keyInput.setTextSize(14f);
-        layout.addView(keyInput);
+        keyInput.setTextSize(15f); keyInput.setSingleLine(true);
+        layout.addView(keyInput,new LinearLayout.LayoutParams(-1,dp(52)));
 
         TextView bLabel = new TextView(this);
         bLabel.setText("API BASE URL");
         bLabel.setTextSize(12f);
         bLabel.setTypeface(null, Typeface.BOLD);
         bLabel.setTextColor(0xFF191817);
-        bLabel.setPadding(0, 20, 0, 4);
+        bLabel.setPadding(0, dp(20), 0, dp(8));
         layout.addView(bLabel);
 
         EditText urlInput = new EditText(this);
         urlInput.setText(byokManager.getBaseUrl());
         urlInput.setBackgroundResource(R.drawable.composer_background);
-        urlInput.setPadding(20, 20, 20, 20);
+        urlInput.setPadding(dp(14),0,dp(14),0);
         urlInput.setTextSize(14f);
-        layout.addView(urlInput);
+        urlInput.setTextSize(15f); urlInput.setSingleLine(true);
+        layout.addView(urlInput,new LinearLayout.LayoutParams(-1,dp(52)));
         providerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){
                 modelInput.setHint(position == 0 ? "gemini-2.5-flash" : position == 1 ? "claude model ID" : "Provider model ID");
@@ -303,7 +311,8 @@ public class MainActivity extends AppCompatActivity {
         TextView connectionStatus = new TextView(this);
         connectionStatus.setText(byokManager.isVerified()?"Connected · last configuration verified":"Not connected");
         connectionStatus.setTextColor(byokManager.isVerified()?0xFF18794E:0xFF7B7873);
-        connectionStatus.setPadding(0,20,0,0);
+        connectionStatus.setTextSize(13f);
+        connectionStatus.setPadding(0,dp(20),0,0);
         layout.addView(connectionStatus);
 
         Button saveBtn = new Button(this);

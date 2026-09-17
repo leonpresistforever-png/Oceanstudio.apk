@@ -51,7 +51,8 @@ public final class RuntimePortsActivity extends AppCompatActivity {
     private TextView scanStatus, subtitle, urlView;
     private volatile boolean pageLoaded;
     private volatile String currentUrl = "";
-    private int currentPort;
+    private volatile int currentPort;
+    private volatile boolean pageFailed;
     private float captureScaleX = 1f, captureScaleY = 1f;
 
     @Override protected void onCreate(Bundle state) {
@@ -109,12 +110,16 @@ public final class RuntimePortsActivity extends AppCompatActivity {
                 return !isLoopback(request.getUrl());
             }
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                pageLoaded = false;
+                pageLoaded = false; pageFailed = false;
                 currentUrl = url; urlView.setText(url);
                 subtitle.setText("Loading local service…");
             }
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                if(request.isForMainFrame()){pageFailed=true; subtitle.setText("Local service unavailable");}
+            }
             @Override public void onPageFinished(WebView view, String url) {
-                pageLoaded = true;
+                pageLoaded = !pageFailed;
+                if(pageFailed)return;
                 currentUrl = url; urlView.setText(url);
                 subtitle.setText(view.getTitle() == null || view.getTitle().trim().isEmpty() ? "Connected to localhost:" + currentPort : view.getTitle());
             }
@@ -132,9 +137,9 @@ public final class RuntimePortsActivity extends AppCompatActivity {
 
     private void renderPorts(List<Integer> ports) {
         portsList.removeAllViews();
-        scanStatus.setText(ports.isEmpty() ? "No Ocean listeners found" : ports.size() + (ports.size() == 1 ? " listener ready" : " listeners ready"));
+        scanStatus.setText(ports.isEmpty() ? "No local listeners found" : ports.size() + (ports.size() == 1 ? " listener ready" : " listeners ready"));
         if (ports.isEmpty()) {
-            TextView empty = text("Start a server in Ocean Terminal, then tap refresh. Services must listen on 127.0.0.1 or 0.0.0.0.", 14, 0xFF7B7873);
+            TextView empty = text("Start a server in Ocean Terminal, then refresh. Android may hide the full port table; common ports are probed and any other port can be opened manually.", 14, 0xFF7B7873);
             empty.setPadding(0, dp(8), 0, dp(12));
             portsList.addView(empty);
             return;
@@ -174,7 +179,7 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         if (path == null || path.isEmpty()) path = "/";
         if (!path.startsWith("/") || path.contains("\u0000")) { Toast.makeText(this, "Invalid local path", Toast.LENGTH_SHORT).show(); return; }
         currentPort = port;
-        pageLoaded = false;
+        pageLoaded = false; pageFailed = false;
         listScroll.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
         browserBar.setVisibility(View.VISIBLE);
@@ -228,15 +233,15 @@ public final class RuntimePortsActivity extends AppCompatActivity {
             if (activity != null && activity.currentPort == port && activity.pageLoaded) break;
             Thread.sleep(100);
         }
-        if (activity == null || activity.currentPort != port) throw new IOException("Runtime Ports screen is not active");
+        if (activity == null || activity.currentPort != port || !activity.pageLoaded) throw new IOException("Runtime Ports screen is not active");
         JSONObject result = activity.perform(new JSONObject().put("action", "snapshot"));
-        result.put("opened", true).put("port", port).put("exit_code", 0);
+        result.put("opened", true).put("port", port).put("exit_code", result.has("error") ? -1 : 0);
         return result;
     }
 
     public static JSONObject interactForAgent(JSONObject arguments) throws Exception {
         RuntimePortsActivity activity = active.get();
-        if (activity == null || activity.webView == null || activity.webView.getVisibility() != View.VISIBLE)
+        if (activity == null || activity.currentPort == 0 || !activity.pageLoaded)
             throw new IOException("Open a runtime port before interacting with it");
         return activity.perform(arguments);
     }
