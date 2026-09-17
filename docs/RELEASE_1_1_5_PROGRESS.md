@@ -1,6 +1,6 @@
 # OceanStudio 1.1.5 progress
 
-Status: source saved to main; local build and signing complete. Release publication is the next step.
+Status: v1.1.5 published as latest. Source, signed APK and verification evidence are saved on main.
 
 Implemented: main-thread agent terminal output fix; Runtime Ports discovery, browser and image/interaction tools; opt-in device Accessibility controls with stop notification and permission dashboard; launchable-app inventory; BYOK typography/spacing. These are real native APIs, not simulated tool results.
 
@@ -13,3 +13,6 @@ Previous successful local build was lost when workspace reverted. Treat only cur
 Separate unfinished request: package expansion. Last audited pool 1036 distinct names / 1046 records. Do not claim 2200 packages, 1000 newly compiled packages, or official-source-only provenance without an audited build manifest.
 
 Candidate: OceanStudio-1.1.5-arm64-debug.apk, SHA-256 bcb218d63f0395d4c26b85536b98582bb5e72ec58365a48df0c7523b8c9f683d. Build source commit 5b8643f83086dbbf5a224c89ef1595cea16ca973. Check GitHub Releases for publication status before retrying any upload.
+
+Published release: https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.1.5
+Release/asset checkpoint commit: b1b975f2d7120e8e567e298c4ce489db07b555a1. GitHub confirmed all uploaded asset SHA-256 digests. Remaining work is physical-device acceptance and the separate package expansion, not release publication.

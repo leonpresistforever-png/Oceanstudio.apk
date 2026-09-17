@@ -1,6 +1,6 @@
 # OceanStudio 1.1.5 build status
 
-Signed arm64 debug APK built locally and verified. GitHub release publication follows this checkpoint.
+Signed arm64 debug APK built locally and verified. Published as the latest GitHub release: https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.1.5.
 
 - Source commit: 5b8643f83086dbbf5a224c89ef1595cea16ca973.
 - Version: 1.1.5, versionCode 7.
