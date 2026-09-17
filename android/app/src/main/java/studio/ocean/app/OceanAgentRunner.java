@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONObject;
 import studio.ocean.app.terminal.OceanTerminalActivity;
 import studio.ocean.app.terminal.OceanTerminalRuntimeService;
+import studio.ocean.app.runtime.RuntimePortsActivity;
 
 /** Connects explicit provider tool calls to the native runtime; prose is never executable. */
 public final class OceanAgentRunner {
@@ -88,6 +89,11 @@ public final class OceanAgentRunner {
                         status(callback, "Working with " + config.model + "…");
                         result = conversation.run(text, body -> send(config, body), (name, args) -> {
                             if (name.equals("open_terminal")) return openTerminal(callback);
+                            if (name.equals("list_runtime_ports")) return runRuntimeTool("Runtime ports", "Scan Ocean listeners", callback, RuntimePortsActivity::listForAgent);
+                            if (name.equals("open_runtime_port")) return runRuntimeTool("Open runtime port", "localhost:" + args.getInt("port"), callback,
+                                    () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/")));
+                            if (name.equals("interact_runtime_page")) return runRuntimeTool("Runtime page", args.getString("action"), callback,
+                                    () -> RuntimePortsActivity.interactForAgent(args));
                             return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", 120), callback);
                         }, thought -> status(callback, thought));
                     }
@@ -189,6 +195,25 @@ public final class OceanAgentRunner {
         return new JSONObject().put("opened", true).put("exit_code", 0);
     }
 
+    private interface RuntimeAction { JSONObject run() throws Exception; }
+    private JSONObject runRuntimeTool(String name, String detail, AgentCallback callback, RuntimeAction action) throws Exception {
+        mainHandler.post(() -> callback.onToolStart(name, detail));
+        int exit = -1;
+        try {
+            JSONObject result = action.run();
+            exit = result.has("error") ? -1 : result.optInt("exit_code", 0);
+            JSONObject visible = new JSONObject(result.toString()); visible.remove("image_base64");
+            String output = visible.toString();
+            if (output.length() > 12000) output = output.substring(0, 12000) + "…";
+            String finalOutput = output;
+            mainHandler.post(() -> callback.onToolOutput(finalOutput));
+            return result;
+        } finally {
+            int finalExit = exit;
+            mainHandler.post(() -> callback.onToolComplete(finalExit));
+        }
+    }
+
     /** A worker awaits results; service callbacks and all UI events stay on the main thread. */
     private JSONObject runTerminal(String command, String cwd, int timeoutSeconds, AgentCallback callback) throws Exception {
         OceanAgentConversation.validateTool("run_terminal_command", new JSONObject().put("command", command).put("timeout_seconds", timeoutSeconds));
@@ -210,7 +235,7 @@ public final class OceanAgentRunner {
                             int keep = Math.min(length, Math.max(0, 32768 - output.size()));
                             output.write(bytes, 0, keep);
                             if (keep < length) truncated[0] = true;
-                            if (keep > 0) callback.onToolOutput(new String(bytes, 0, keep, StandardCharsets.UTF_8));
+                            if (keep > 0) { String chunk = new String(bytes, 0, keep, StandardCharsets.UTF_8); mainHandler.post(() -> callback.onToolOutput(chunk)); }
                         }
                         @Override public void onExit(int code) { exitCode[0] = code; completed.countDown(); }
                         @Override public void onFailure(Throwable error) { failure[0] = error; completed.countDown(); }

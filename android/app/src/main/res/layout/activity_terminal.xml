@@ -18,6 +18,8 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical" android:paddingHorizontal="10dp">
         <Button android:id="@+id/terminal_tools" style="@style/OceanTerminalAction" android:text="@string/terminal_tools" android:drawableStart="@drawable/ic_terminal_tools" android:drawablePadding="8dp" />
         <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <Button android:id="@+id/terminal_ports" style="@style/OceanTerminalAction" android:text="@string/terminal_ports" android:drawableStart="@drawable/ic_ports" android:drawableTint="@color/terminal_accent" android:drawablePadding="6dp" />
+        <View android:layout_width="1dp" android:layout_height="20dp" android:layout_marginHorizontal="3dp" android:background="@color/terminal_border" />
         <Button android:id="@+id/terminal_keyboard" style="@style/OceanTerminalAction" android:text="@string/terminal_keyboard" android:contentDescription="@string/terminal_show_keyboard" android:drawableStart="@drawable/ic_keyboard" android:drawablePadding="8dp" />
     </LinearLayout>
     <HorizontalScrollView android:id="@+id/terminal_shortcuts" android:layout_width="match_parent" android:layout_height="52dp" android:fillViewport="true" android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="8dp">

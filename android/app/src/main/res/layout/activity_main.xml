@@ -71,6 +71,7 @@
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
                 <LinearLayout android:id="@+id/group_tools" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/tools_group"/><ImageView android:id="@+id/chevron_tools" style="@style/OceanChevron"/></LinearLayout>
                 <LinearLayout android:id="@+id/tools_children" style="@style/OceanNavChildren">
+                    <TextView android:id="@+id/nav_runtime_ports" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="@string/runtime_ports" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser" android:text="@string/browser_research" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/playground" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/automations" />

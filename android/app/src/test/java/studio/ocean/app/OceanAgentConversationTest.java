@@ -120,12 +120,68 @@ public final class OceanAgentConversationTest {
 
     @Test public void oversizedCallBatchIsRejectedBeforeSideEffects() throws Exception {
         JSONArray parts = new JSONArray();
-        for (int i = 0; i < 9; i++) parts.put(json("{functionCall:{name:'run_terminal_command',args:{command:'pwd'}}}"));
+        for (int i = 0; i < OceanAgentConversation.MAX_TOOL_CALLS + 1; i++) parts.put(json("{functionCall:{name:'run_terminal_command',args:{command:'pwd'}}}"));
         try {
             new OceanAgentConversation("google", "test").run("Check", request -> gemini(parts.toString()),
                     (name, args) -> { fail("Over-budget batch executed"); return null; }, status -> {});
             fail("Expected budget error");
         } catch (IOException expected) { assertTrue(expected.getMessage().contains("limit")); }
+    }
+
+    @Test public void runtimeToolsAreDeclaredAndValidatedBeforeExecution() throws Exception {
+        JSONObject request = new OceanAgentConversation("google", "gemini-2.5-flash").request(new JSONArray(), true);
+        JSONArray tools = request.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations");
+        assertEquals(5, tools.length());
+        assertEquals("list_runtime_ports", tools.getJSONObject(2).getString("name"));
+        assertFalse(tools.getJSONObject(2).has("parameters"));
+        assertEquals("open_runtime_port", tools.getJSONObject(3).getString("name"));
+        assertEquals("INTEGER", tools.getJSONObject(3).getJSONObject("parameters").getJSONObject("properties").getJSONObject("port").getString("type"));
+        OceanAgentConversation.validateTool("open_runtime_port", json("{port:6080,path:'/vnc.html'}"));
+        OceanAgentConversation.validateTool("interact_runtime_page", json("{action:'click',x:40,y:80}"));
+        for (JSONObject invalid : new JSONObject[]{json("{port:0}"), json("{port:6080,path:'http://outside'}")}) {
+            try { OceanAgentConversation.validateTool("open_runtime_port", invalid); fail("Invalid local target accepted"); }
+            catch (IllegalArgumentException expected) { }
+        }
+        try { OceanAgentConversation.validateTool("interact_runtime_page", json("{action:'click'}")); fail("Coordinate-free click accepted"); }
+        catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void runtimeScreenshotReachesGeminiAsImageWithoutDuplicatingBase64InFunctionJson() throws Exception {
+        AtomicInteger network = new AtomicInteger();
+        new OceanAgentConversation("google", "gemini-2.5-flash").run("Inspect the desktop", request -> {
+            if (network.getAndIncrement() == 0) return gemini("[{functionCall:{id:'shot',name:'interact_runtime_page',args:{action:'screenshot'}}}]");
+            JSONArray parts = request.getJSONArray("contents").getJSONObject(2).getJSONArray("parts");
+            assertEquals(2, parts.length());
+            JSONObject response = parts.getJSONObject(0).getJSONObject("functionResponse").getJSONObject("response");
+            assertFalse(response.has("image_base64"));
+            assertEquals("abc123", parts.getJSONObject(1).getJSONObject("inlineData").getString("data"));
+            return gemini("[{text:'Desktop inspected'}]");
+        }, (name, args) -> json("{image_base64:'abc123',media_type:'image/jpeg',image_width:720,image_height:1000,exit_code:0}"), status -> {});
+    }
+
+    @Test public void runtimeScreenshotUsesClaudeImageToolResult() throws Exception {
+        AtomicInteger network = new AtomicInteger();
+        new OceanAgentConversation("anthropic", "claude-test").run("Inspect", request -> {
+            if (network.getAndIncrement() == 0) return json("{content:[{type:'tool_use',id:'shot',name:'interact_runtime_page',input:{action:'screenshot'}}]}");
+            JSONObject toolResult = request.getJSONArray("messages").getJSONObject(2).getJSONArray("content").getJSONObject(0);
+            JSONArray content = toolResult.getJSONArray("content");
+            assertEquals("image", content.getJSONObject(0).getString("type"));
+            assertEquals("abc123", content.getJSONObject(0).getJSONObject("source").getString("data"));
+            assertFalse(content.getJSONObject(1).getString("text").contains("abc123"));
+            return json("{content:[{type:'text',text:'Inspected'}]}");
+        }, (name, args) -> json("{image_base64:'abc123',media_type:'image/jpeg',exit_code:0}"), status -> {});
+    }
+
+    @Test public void runtimeScreenshotUsesOpenAiUserImageAfterToolResult() throws Exception {
+        AtomicInteger network = new AtomicInteger();
+        new OceanAgentConversation("openai", "vision-test").run("Inspect", request -> {
+            if (network.getAndIncrement() == 0) return json("{choices:[{message:{role:'assistant',content:null,tool_calls:[{id:'shot',type:'function',function:{name:'interact_runtime_page',arguments:'{\"action\":\"screenshot\"}'}}]}}]}");
+            JSONArray messages = request.getJSONArray("messages");
+            assertEquals("tool", messages.getJSONObject(3).getString("role"));
+            assertFalse(messages.getJSONObject(3).getString("content").contains("abc123"));
+            assertTrue(messages.getJSONObject(4).getJSONArray("content").getJSONObject(0).getJSONObject("image_url").getString("url").endsWith("abc123"));
+            return json("{choices:[{message:{role:'assistant',content:'Inspected'}}]}");
+        }, (name, args) -> json("{image_base64:'abc123',media_type:'image/jpeg',exit_code:0}"), status -> {});
     }
 
     @Test public void repetitiveModelIsStoppedAtRoundBudget() throws Exception {

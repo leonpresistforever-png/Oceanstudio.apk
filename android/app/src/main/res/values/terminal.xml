@@ -9,6 +9,7 @@
     <string name="terminal_shell_badge">&gt;_</string>
     <string name="terminal_tools">Tools</string>
     <string name="terminal_keyboard">Keyboard</string>
+    <string name="terminal_ports">Ports</string>
     <string name="terminal_show_keyboard">Show keyboard</string>
     <string name="terminal_hide_keyboard">Hide keyboard</string>
     <string name="terminal_show_tools">Show terminal shortcuts</string>

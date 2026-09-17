@@ -77,6 +77,7 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
             toolsVisible = state == null || state.getBoolean("terminal_tools_visible", true);
             safeClick("terminal_keyboard", v -> toggleKeyboard());
             safeClick("terminal_tools", v -> { toolsVisible = !toolsVisible; updateTools(); });
+            safeClick("terminal_ports", v -> startActivity(new android.content.Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
             updateTools();
             View root = findSafeView("terminal_root");
             if (root != null) {
