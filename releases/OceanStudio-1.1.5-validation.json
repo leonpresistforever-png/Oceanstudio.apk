@@ -1,0 +1,24 @@
+{
+  "apk": "OceanStudio-1.1.5-arm64-debug.apk",
+  "sha256": "bcb218d63f0395d4c26b85536b98582bb5e72ec58365a48df0c7523b8c9f683d",
+  "bytes": 29229940,
+  "certificate_sha256": "b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387",
+  "manifest": "package: name='studio.ocean.app' versionCode='7' versionName='1.1.5' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+  "previous_release_signature_matches": true,
+  "bootstrap_and_pty_identical_to_1_1_4": true,
+  "unit_tests": {
+    "tests": 49,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "device_acceptance": "not run; no connected Android device",
+  "source_commit": "5b8643f83086dbbf5a224c89ef1595cea16ca973",
+  "build_tasks": [
+    ":app:testDebugUnitTest",
+    ":app:assembleDebug",
+    ":app:compileDebugAndroidTestJavaWithJavac"
+  ],
+  "github_actions_used": false,
+  "build_result": "BUILD SUCCESSFUL"
+}
