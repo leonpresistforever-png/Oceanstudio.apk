@@ -219,13 +219,20 @@ public final class RuntimePortsActivity extends AppCompatActivity {
     public static JSONObject openForAgent(Context context, int port, String path) throws Exception {
         if (path == null || path.isEmpty()) path = "/";
         final String requestedPath = path;
+        Throwable[] launchFailure = new Throwable[1];
+        java.util.concurrent.atomic.AtomicBoolean launchExpired = new java.util.concurrent.atomic.AtomicBoolean();
         CountDownLatch launched = new CountDownLatch(1);
         new Handler(Looper.getMainLooper()).post(() -> {
-            context.startActivity(new Intent(context, RuntimePortsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra(EXTRA_PORT, port).putExtra(EXTRA_PATH, requestedPath));
-            launched.countDown();
+            try {
+                if (launchExpired.get()) return;
+                context.startActivity(new Intent(context, RuntimePortsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .putExtra(EXTRA_PORT, port).putExtra(EXTRA_PATH, requestedPath));
+            } catch (Exception error) { launchFailure[0] = error; }
+            finally { launched.countDown(); }
         });
-        if (!launched.await(10, TimeUnit.SECONDS)) throw new IOException("Runtime Ports did not open");
+        try { if (!launched.await(10, TimeUnit.SECONDS)) throw new IOException("Runtime Ports did not open"); }
+        finally { launchExpired.set(true); }
+        if (launchFailure[0] != null) throw new IOException("Runtime Ports could not open", launchFailure[0]);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         RuntimePortsActivity activity = null;
         while (System.nanoTime() < deadline) {
@@ -251,8 +258,10 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         if (action.equals("wait")) Thread.sleep(arguments.optInt("wait_ms", 750));
         CountDownLatch complete = new CountDownLatch(1);
         JSONObject[] result = new JSONObject[1]; Throwable[] failure = new Throwable[1];
+        java.util.concurrent.atomic.AtomicBoolean expired = new java.util.concurrent.atomic.AtomicBoolean();
         handler.post(() -> {
             try {
+                if (expired.get() || active.get() != this || currentPort == 0) throw new IOException("Runtime page is no longer active");
                 if (action.equals("snapshot") || action.equals("wait")) evaluateSnapshot(value -> { result[0] = value; complete.countDown(); });
                 else if (action.equals("screenshot")) { result[0] = capture(); complete.countDown(); }
                 else if (action.equals("reload")) { webView.reload(); result[0] = ok("Reloaded " + webView.getUrl()); complete.countDown(); }
@@ -264,7 +273,8 @@ public final class RuntimePortsActivity extends AppCompatActivity {
                 else runDomAction(action, arguments, value -> { result[0] = value; complete.countDown(); });
             } catch (Throwable error) { failure[0] = error; complete.countDown(); }
         });
-        if (!complete.await(15, TimeUnit.SECONDS)) throw new IOException("Runtime page action timed out");
+        try { if (!complete.await(15, TimeUnit.SECONDS)) throw new IOException("Runtime page action timed out"); }
+        finally { expired.set(true); }
         if (failure[0] != null) throw new IOException(failure[0].getMessage(), failure[0]);
         if (result[0] == null) throw new IOException("Runtime page returned no result");
         return result[0].put("url", currentUrl).put("exit_code", result[0].has("error") ? -1 : 0);
@@ -272,7 +282,7 @@ public final class RuntimePortsActivity extends AppCompatActivity {
 
     private interface JsonCallback { void complete(JSONObject value); }
     private void evaluateSnapshot(JsonCallback callback) {
-        String script = "(()=>{const q='a,button,input,textarea,select,[role=button],[onclick],canvas';const es=[...document.querySelectorAll(q)].slice(0,120);const controls=es.map((e,i)=>{let r=e.getAttribute('data-ocean-ref')||('ref_'+(i+1));e.setAttribute('data-ocean-ref',r);const b=e.getBoundingClientRect();return {ref:r,tag:e.tagName.toLowerCase(),type:e.type||'',text:(e.innerText||e.value||e.getAttribute('aria-label')||e.title||'').trim().slice(0,180),x:Math.round(b.x),y:Math.round(b.y),width:Math.round(b.width),height:Math.round(b.height),disabled:!!e.disabled};});return JSON.stringify({title:document.title,url:location.href,text:(document.body?.innerText||'').slice(0,16000),controls});})()";
+        String script = "(()=>{const q='a,button,input,textarea,select,[role=button],[onclick],canvas';const es=[...document.querySelectorAll(q)].slice(0,120);const stamp=Date.now().toString(36);const controls=es.map((e,i)=>{let r='ref_'+stamp+'_'+(i+1);e.setAttribute('data-ocean-ref',r);const b=e.getBoundingClientRect();return {ref:r,tag:e.tagName.toLowerCase(),type:e.type||'',text:(e.type==='password'?'[protected]':(e.innerText||e.value||e.getAttribute('aria-label')||e.title||'')).trim().slice(0,180),x:Math.round(b.x),y:Math.round(b.y),width:Math.round(b.width),height:Math.round(b.height),disabled:!!e.disabled};});return JSON.stringify({title:document.title,url:location.href,text:(document.body?.innerText||'').slice(0,16000),controls});})()";
         webView.evaluateJavascript(script, raw -> {
             try { callback.complete(new JSONObject(decodeJavascript(raw)).put("page_loaded", pageLoaded)); }
             catch (Exception error) { callback.complete(failure("Could not inspect page: " + error.getMessage())); }
@@ -283,7 +293,7 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         String target = JSONObject.quote(args.optString("target", ""));
         String text = JSONObject.quote(args.optString("text", ""));
         String script = "(()=>{try{const t=" + target + ";let e=Array.from(document.querySelectorAll('[data-ocean-ref]')).find(n=>n.getAttribute('data-ocean-ref')===t);if(!e&&t)e=document.querySelector(t);if(!e)return JSON.stringify({error:'Target not found'});"
-                + (action.equals("click") || action.equals("double_click") ? "e.click();" + (action.equals("double_click") ? "e.click();" : "") : "e.focus();const v=" + text + ";const p=Object.getPrototypeOf(e);const s=Object.getOwnPropertyDescriptor(p,'value')?.set;if(s)s.call(e,v);else e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));")
+                + (action.equals("click") || action.equals("double_click") ? "e.click();" + (action.equals("double_click") ? "e.click();e.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));" : "") : "e.focus();const v=" + text + ";const p=Object.getPrototypeOf(e);const s=Object.getOwnPropertyDescriptor(p,'value')?.set;if(s)s.call(e,v);else e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));")
                 + "return JSON.stringify({ok:true,target:t});}catch(x){return JSON.stringify({error:String(x)});}})()";
         webView.evaluateJavascript(script, raw -> {
             try { callback.complete(new JSONObject(decodeJavascript(raw))); }
