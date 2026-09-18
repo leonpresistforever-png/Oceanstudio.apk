@@ -142,6 +142,18 @@ public final class AgentArchitectureTest {
         assertTrue(forge.contains("Machine:.*AArch64"));
     }
 
+    @Test public void forgeSigningIdentityStaysPrivateAndUserFacing() throws Exception {
+        String vault=source("OceanForgeSigningStore.java");
+        String activity=source("OceanForgeActivity.java");
+        String runner=source("OceanAgentRunner.java");
+        assertTrue(vault.contains("getNoBackupFilesDir()"));
+        assertTrue(vault.contains("AndroidKeyStore"));
+        assertTrue(vault.contains("AES/GCM/NoPadding"));
+        assertTrue(activity.contains("OceanForgeSigningStore"));
+        assertTrue(activity.contains("Save signing identity privately") || activity.contains("saveSigningIdentity"));
+        assertFalse(runner.contains("OceanForgeSigningStore"));
+    }
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
