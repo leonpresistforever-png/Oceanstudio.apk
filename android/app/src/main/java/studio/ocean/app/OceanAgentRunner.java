@@ -36,6 +36,7 @@ public final class OceanAgentRunner {
 
     private final Context context;
     private final OceanByokManager byokManager;
+    private final OceanAgentSettings agentSettings;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile Thread worker;
@@ -46,6 +47,7 @@ public final class OceanAgentRunner {
     public OceanAgentRunner(Context context) {
         this.context = context.getApplicationContext();
         byokManager = new OceanByokManager(this.context);
+        agentSettings = new OceanAgentSettings(this.context);
     }
     public boolean isRunning() { return running.get(); }
     public void cancel() {
@@ -77,29 +79,33 @@ public final class OceanAgentRunner {
                 } else {
                     String command = OceanAgentRequests.explicitCommand(text);
                     if (command != null) {
-                        JSONObject execution = runTerminal(command, null, 120, callback);
+                        if (!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected in Plugins.");
+                        JSONObject execution = runTerminal(command, null, agentSettings.commandTimeoutSeconds(), callback);
                         result = execution.optInt("exit_code", -1) == 0 ? "Command completed. Output is shown above."
                                 : "Command exited with code " + execution.optInt("exit_code", -1) + ". " + execution.optString("error", "Review its output above.");
                     } else {
                         if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
                         OceanModelConfig config = configuredModel();
-                        String digest = byokManager.configurationDigest();
+                        String digest = byokManager.configurationDigest()+"|"+agentSettings.signature();
                         if (conversation == null || !digest.equals(conversationDigest)) {
-                            conversation = new OceanAgentConversation(config.provider, config.model);
+                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.userInstructions());
                             conversationDigest = digest;
                         }
                         status(callback, "Working with " + config.model + "…");
                         result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
                             CrashSurvival.mark("EXECUTE_AGENT_TOOL");
-                            if (name.equals("open_terminal")) return openTerminal(callback);
-                            if (name.equals("device_status") || name.equals("list_android_apps") || name.equals("open_android_app") || name.equals("inspect_android_screen") || name.equals("capture_android_screen") || name.equals("interact_android_screen"))
+                            if (name.equals("open_terminal")) { if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected."); return openTerminal(callback); }
+                            if (name.equals("device_status") || name.equals("list_android_apps") || name.equals("open_android_app") || name.equals("inspect_android_screen") || name.equals("capture_android_screen") || name.equals("interact_android_screen")) {
+                                if(!pluginConnected("device")) throw new IOException("Device Access plugin is disconnected.");
                                 return runRuntimeTool("Device control", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context,name,args));
-                            if (name.equals("list_runtime_ports")) return runRuntimeTool("Runtime ports", "Scan Ocean listeners", callback, RuntimePortsActivity::listForAgent);
-                            if (name.equals("open_runtime_port")) return runRuntimeTool("Open runtime port", "localhost:" + args.getInt("port"), callback,
-                                    () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/")));
-                            if (name.equals("interact_runtime_page")) return runRuntimeTool("Runtime page", args.getString("action"), callback,
-                                    () -> RuntimePortsActivity.interactForAgent(args));
-                            return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", 120), callback);
+                            }
+                            if (name.equals("list_runtime_ports")) { if(!pluginConnected("runtime")) throw new IOException("Runtime Ports plugin is disconnected."); return runRuntimeTool("Runtime ports", "Scan Ocean listeners", callback, RuntimePortsActivity::listForAgent); }
+                            if (name.equals("open_runtime_port")) { if(!pluginConnected("runtime")) throw new IOException("Runtime Ports plugin is disconnected."); return runRuntimeTool("Open runtime port", "localhost:" + args.getInt("port"), callback,
+                                    () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/"))); }
+                            if (name.equals("interact_runtime_page")) { if(!pluginConnected("runtime")) throw new IOException("Runtime Ports plugin is disconnected."); return runRuntimeTool("Runtime page", args.getString("action"), callback,
+                                    () -> RuntimePortsActivity.interactForAgent(args)); }
+                            if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
+                            return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", agentSettings.commandTimeoutSeconds()), callback);
                         }, thought -> status(callback, thought));
                     }
                 }
@@ -151,8 +157,8 @@ public final class OceanAgentRunner {
             conn.setRequestProperty("x-api-key", config.apiKey);
             conn.setRequestProperty("anthropic-version", "2023-06-01");
         } else conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
-        conn.setConnectTimeout(20000);
-        conn.setReadTimeout(60000);
+        conn.setConnectTimeout(agentSettings.connectTimeoutMs());
+        conn.setReadTimeout(agentSettings.antiTimeout()?agentSettings.readTimeoutMs():Math.min(agentSettings.readTimeoutMs(),60000));
         conn.setDoOutput(true);
         boolean agentRequest = Thread.currentThread() == worker;
         if (agentRequest) activeConnection = conn;
@@ -184,6 +190,8 @@ public final class OceanAgentRunner {
             conn.disconnect();
         }
     }
+
+    private boolean pluginConnected(String id) { return context.getSharedPreferences("ocean_plugin_state",Context.MODE_PRIVATE).getBoolean("connected_"+id,true); }
 
     private JSONObject openTerminal(AgentCallback callback) throws Exception {
         CountDownLatch ready = new CountDownLatch(1);
