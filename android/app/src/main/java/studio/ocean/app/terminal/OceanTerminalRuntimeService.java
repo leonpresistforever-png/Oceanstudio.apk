@@ -1,8 +1,13 @@
 package studio.ocean.app.terminal;
 
 import android.app.Service;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -44,8 +49,11 @@ public final class OceanTerminalRuntimeService extends Service {
         return thread;
     });
     private final Handler main = new Handler(Looper.getMainLooper());
+    private static final String TASK_CHANNEL="ocean_tasks";
+    private static final int TASK_NOTIFICATION_ID=441;
     private RuntimeState runtimeState = RuntimeState.UNINITIALIZED;
     private boolean installScheduled;
+    private int activeHeadlessCommands;
     private OceanIpcServer ipcServer;
 
     @Override public void onCreate() {
@@ -165,9 +173,15 @@ public final class OceanTerminalRuntimeService extends Service {
         private final CommandCallback callback;
         private final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
         private volatile TerminalSession session;
-        private volatile boolean cancelled, timedOut;
+        private volatile boolean cancelled, timedOut, foregroundHeld;
         private final Runnable deadline = () -> stop(true);
         private CommandHandle(CommandCallback callback) { this.callback = callback; }
+        private void holdForeground(){ foregroundHeld=true; }
+        private void releaseForeground(){
+            if(!foregroundHeld)return;
+            foregroundHeld=false;
+            leaveCommandForeground();
+        }
         public boolean timedOut() { return timedOut; }
         public void cancel() { stop(false); }
         private void attach(TerminalSession value) {
@@ -191,12 +205,14 @@ public final class OceanTerminalRuntimeService extends Service {
         private void finishExit(int code) {
             if (!finished.compareAndSet(false, true)) return;
             main.removeCallbacks(deadline);
+            releaseForeground();
             callback.onExit(code);
         }
         private void fail(Throwable error) {
             main.post(() -> {
                 if (!finished.compareAndSet(false, true)) return;
                 main.removeCallbacks(deadline);
+                releaseForeground();
                 callback.onFailure(error);
             });
         }
@@ -212,6 +228,13 @@ public final class OceanTerminalRuntimeService extends Service {
         if (command == null || command.trim().isEmpty() || command.indexOf('\0') >= 0
                 || timeoutSeconds < 1 || timeoutSeconds > 1800) {
             request.fail(new IllegalArgumentException("Invalid command or timeout"));
+            return request;
+        }
+        try {
+            enterCommandForeground();
+            request.holdForeground();
+        } catch (Throwable error) {
+            request.fail(error);
             return request;
         }
         main.postDelayed(request.deadline, timeoutSeconds * 1000L);
@@ -232,6 +255,40 @@ public final class OceanTerminalRuntimeService extends Service {
         });
         return request;
     }
+    private void enterCommandForeground() {
+        boolean first;
+        synchronized (stateLock) { first=++activeHeadlessCommands==1; }
+        if(!first)return;
+        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        if(Build.VERSION.SDK_INT>=26){
+            NotificationChannel channel=new NotificationChannel(TASK_CHANNEL,"Ocean background tasks",NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("Visible status for local terminal and Ocean Forge tasks");
+            manager.createNotificationChannel(channel);
+        }
+        Intent open=new Intent(this,studio.ocean.app.MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        int flags=PendingIntent.FLAG_UPDATE_CURRENT;
+        if(Build.VERSION.SDK_INT>=23)flags|=PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent pending=PendingIntent.getActivity(this,TASK_NOTIFICATION_ID,open,flags);
+        Notification.Builder builder=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,TASK_CHANNEL):new Notification.Builder(this);
+        Notification notification=builder
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("Ocean task running")
+                .setContentText("A local terminal or Ocean Forge task is active.")
+                .setContentIntent(pending)
+                .setOngoing(true)
+                .build();
+        startForeground(TASK_NOTIFICATION_ID,notification);
+    }
+
+    private void leaveCommandForeground() {
+        boolean stop;
+        synchronized (stateLock) {
+            if(activeHeadlessCommands>0)activeHeadlessCommands--;
+            stop=activeHeadlessCommands==0;
+        }
+        if(stop)stopForeground(true);
+    }
+
     private void preparePackageCatalog(OceanPaths paths) {
         try {
             if (OceanPackageFrontend.prepare(paths.prefix(), getAssets().open("ocean/pkg/frontend")))
@@ -294,7 +351,8 @@ public final class OceanTerminalRuntimeService extends Service {
             ipcServer = null;
         }
         TerminalSession[] active;
-        synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); commandSessions.clear(); }
+        synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); commandSessions.clear(); activeHeadlessCommands=0; }
+        stopForeground(true);
         for (TerminalSession session : active) session.close();
         bootstrapWorker.shutdown();
         super.onDestroy();
