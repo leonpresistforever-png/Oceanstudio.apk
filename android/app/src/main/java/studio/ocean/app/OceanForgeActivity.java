@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import java.nio.charset.StandardCharsets;
 import studio.ocean.app.terminal.OceanTerminalRuntimeService;
 
@@ -39,26 +40,55 @@ public final class OceanForgeActivity extends AppCompatActivity {
         output=findViewById(R.id.forge_output);
         state=findViewById(R.id.forge_state);
 
+        Button bootstrap=findViewById(R.id.forge_bootstrap);
+        Button sdkStatus=findViewById(R.id.forge_sdk_status);
+        Button configureSdk=findViewById(R.id.forge_configure_sdk);
         Button init=findViewById(R.id.forge_init);
+        Button checkpoint=findViewById(R.id.forge_checkpoint);
+        Button diff=findViewById(R.id.forge_diff);
+        Button rollback=findViewById(R.id.forge_rollback);
         Button tools=findViewById(R.id.forge_tools);
         Button status=findViewById(R.id.forge_status);
         Button test=findViewById(R.id.forge_test);
         Button build=findViewById(R.id.forge_build);
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
-        commandButtons=new Button[]{init,tools,status,test,build,verify,install};
+        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,checkpoint,diff,rollback,tools,status,test,build,verify,install};
+
+        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",300));
+        sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
+        configureSdk.setOnClickListener(v->{
+            String sdk=((EditText)findViewById(R.id.forge_sdk_root)).getText().toString().trim();
+            String aapt2=((EditText)findViewById(R.id.forge_aapt2_path)).getText().toString().trim();
+            if(!sdk.startsWith("/")||!aapt2.startsWith("/")){state.setText("Enter absolute SDK and aapt2 paths.");return;}
+            runForge("ocean-forge configure-sdk "+shellQuote(sdk)+" "+shellQuote(aapt2),120);
+        });
 
         init.setOnClickListener(v->{
             String path=((EditText)findViewById(R.id.forge_source_path)).getText().toString().trim();
             if(path.isEmpty()||!path.startsWith("/")){state.setText("Enter an absolute source directory first.");return;}
             runForge("ocean-forge init "+shellQuote(path),300);
         });
+        checkpoint.setOnClickListener(v->runForge("ocean-forge checkpoint manual",120));
+        diff.setOnClickListener(v->runForge("ocean-forge diff",120));
+        rollback.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle("Rollback Forge workspace?")
+                .setMessage("Restore the last Forge checkpoint and discard newer workspace changes.")
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("Rollback",(d,w)->runForge("ocean-forge rollback",180))
+                .show());
+
         tools.setOnClickListener(v->runForge("ocean-forge tools",120));
         status.setOnClickListener(v->runForge("ocean-forge status",120));
         test.setOnClickListener(v->runForge("ocean-forge test",300));
         build.setOnClickListener(v->runForge("ocean-forge build",300));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
-        install.setOnClickListener(v->runForge("ocean-forge install",120));
+        install.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle("Update Ocean?")
+                .setMessage("Forge will verify the candidate signature first. Android PackageInstaller will handle the final update approval.")
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("Verify & update",(d,w)->runForge("ocean-forge install",120))
+                .show());
 
         bindService(new Intent(this,OceanTerminalRuntimeService.class),connection,Context.BIND_AUTO_CREATE);
     }
