@@ -6,6 +6,8 @@ import android.view.Gravity;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.File;
+import java.io.FileInputStream;
+import java.util.Properties;
 
 public final class PluginCenterActivity extends AppCompatActivity {
     private android.content.SharedPreferences prefs;
@@ -24,6 +26,24 @@ public final class PluginCenterActivity extends AppCompatActivity {
         add(list,"python","Python Tools","Python and pip workflows.",exists("usr/bin/python")||exists("usr/bin/python3"));
         add(list,"git","Git Tools","Local Git repository workflows.",exists("usr/bin/git"));
         add(list,"browser","Browser Tools","curl and local browser helpers.",exists("usr/bin/curl"));
+
+        File directory=new File(getFilesDir(),"home/.ocean/plugins");
+        File[] manifests=directory.listFiles((dir,name)->name.endsWith(".plugin"));
+        if(manifests!=null){
+            java.util.Arrays.sort(manifests,java.util.Comparator.comparing(File::getName));
+            for(File manifest:manifests){
+                try(FileInputStream input=new FileInputStream(manifest)){
+                    Properties p=new Properties(); p.load(input);
+                    String id=p.getProperty("id",manifest.getName().replace(".plugin","")).replaceAll("[^a-zA-Z0-9._-]","");
+                    if(id.isEmpty())continue;
+                    String name=p.getProperty("name",id);
+                    String command=p.getProperty("command","");
+                    String description=p.getProperty("description","Terminal-registered Ocean plugin.");
+                    boolean available=command.isEmpty()||exists("usr/bin/"+command);
+                    add(list,id,name,description+(command.isEmpty()?"":" · "+command),available);
+                }catch(Exception ignored){}
+            }
+        }
     }
 
     private void add(LinearLayout root,String id,String name,String description,boolean installed){
