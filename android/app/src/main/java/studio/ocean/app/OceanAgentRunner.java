@@ -8,6 +8,8 @@ import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -108,10 +110,9 @@ public final class OceanAgentRunner {
                                 return runRuntimeTool("Ocean plugins","List registered plugins",callback,()->OceanPluginRuntime.list(context));
                             }
                             if(name.equals("run_ocean_plugin")){
+                                if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                                 OceanPluginRuntime.Plugin plugin=OceanPluginRuntime.resolveConnected(context,args.getString("id"));
-                                String input=args.optString("input","");
-                                String commandText="printf '%s' "+shellQuote(input)+" | "+shellQuote(plugin.executable.getAbsolutePath());
-                                return runTerminal(commandText,null,agentSettings.commandTimeoutSeconds(),callback);
+                                return runRegisteredPlugin(plugin,args.optString("input",""),callback);
                             }
                             if(name.equals("ocean_forge")){
                                 if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
@@ -215,6 +216,23 @@ public final class OceanAgentRunner {
             if (agentRequest) activeConnection = null;
             conn.disconnect();
         }
+    }
+
+    private JSONObject runRegisteredPlugin(OceanPluginRuntime.Plugin plugin,String input,AgentCallback callback)throws Exception{
+        if(input==null)input="";
+        if(input.length()>32768)throw new IllegalArgumentException("Plugin input exceeds 32768 characters");
+        File dir=new File(context.getCacheDir(),"ocean-plugin-input");
+        if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Could not create plugin input directory");
+        File file=File.createTempFile("input-",".txt",dir);
+        file.setReadable(false,false);file.setWritable(false,false);
+        file.setReadable(true,true);file.setWritable(true,true);
+        try{
+            try(FileOutputStream out=new FileOutputStream(file,false)){
+                out.write(input.getBytes(StandardCharsets.UTF_8));out.flush();out.getFD().sync();
+            }
+            String command=shellQuote(plugin.executable.getAbsolutePath())+" < "+shellQuote(file.getAbsolutePath());
+            return runTerminal(command,null,agentSettings.commandTimeoutSeconds(),callback);
+        }finally{file.delete();}
     }
 
     private boolean pluginConnected(String id) { return context.getSharedPreferences("ocean_plugin_state",Context.MODE_PRIVATE).getBoolean("connected_"+id,true); }
