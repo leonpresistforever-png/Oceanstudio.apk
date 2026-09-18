@@ -50,8 +50,20 @@ android {
         // This is required for both extractNativeLibs=false and for reliable JNI loading.
         jniLibs.useLegacyPackaging = false
     }
+    def forgeKeystorePath = System.getenv('OCEAN_FORGE_KEYSTORE')
+    signingConfigs {
+        if (forgeKeystorePath) {
+            forge {
+                storeFile file(forgeKeystorePath)
+                storePassword System.getenv('OCEAN_FORGE_STORE_PASS') ?: ''
+                keyAlias System.getenv('OCEAN_FORGE_KEY_ALIAS') ?: ''
+                keyPassword System.getenv('OCEAN_FORGE_KEY_PASS') ?: ''
+            }
+        }
+    }
     buildTypes {
         debug {
+            if (forgeKeystorePath) signingConfig signingConfigs.forge
             // Debug APKs always expose the visibly labelled testing-only entry.
             buildConfigField "boolean", "OCEAN_DEV_AUTH_BYPASS", "true"
         }
