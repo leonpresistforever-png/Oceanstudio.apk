@@ -28,7 +28,17 @@ android {
         buildConfigField "String", "OCEAN_BOOTSTRAP_SHA256", "\"${System.getenv('OCEAN_BOOTSTRAP_SHA256') ?: 'not-bundled'}\""
     }
     buildFeatures { buildConfig true }
-    externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt') } }
+    // Ocean Forge can rebuild Java/resources on-device by reusing the installed,
+    // already-verified PTY library when native source is unchanged.
+    def forgeReuseNative = System.getenv('OCEAN_FORGE_REUSE_NATIVE') == 'true'
+    if (!forgeReuseNative) {
+        externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt') } }
+    }
+    sourceSets {
+        main {
+            if (forgeReuseNative) jniLibs.srcDir 'src/forgeNative'
+        }
+    }
     // Android AssetManager.open() cannot stream-decompress assets > 1 MB that are DEFLATED.
     // The 17+ MB ocean bootstrap archive MUST be stored uncompressed, or installation silently fails.
     // All native .so libraries must also be stored uncompressed for system linker mmap.
