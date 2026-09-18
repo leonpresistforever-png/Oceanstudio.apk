@@ -16,6 +16,7 @@ Usage:
   ocean-forge bootstrap
   ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
   ocean-forge sdk-status
+  ocean-forge clone <git-url> [branch]
   ocean-forge init <source-dir>
   ocean-forge status
   ocean-forge diff
@@ -30,6 +31,7 @@ Usage:
 Notes:
 - bootstrap installs Ocean's local JVM/build helper toolchain.
 - configure-sdk records an Android 35 SDK and ARM64 aapt2 override.
+- clone uses existing Git credentials; do not embed access tokens in repository URLs.
 - init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
 - build-signed uses short-lived password files and an imported signing identity for the candidate.
@@ -141,6 +143,27 @@ case "${1:-}" in
       echo "JAVA_HOME=$JAVA_HOME"
       "$AAPT2_OVERRIDE" version || true
     fi
+    ;;
+
+  clone)
+    url="${2:-}"; branch="${3:-}"
+    [[ -n "$url" ]] || { echo "Usage: ocean-forge clone <git-url> [branch]" >&2; exit 2; }
+    case "$url" in
+      *://*@*) echo "Do not embed credentials or tokens in the Git URL. Configure Git credentials separately." >&2; exit 2 ;;
+    esac
+    need git
+    rm -rf "$current"
+    mkdir -p "$WORKSPACE"
+    echo "Cloning Ocean Forge source workspace..."
+    if [[ -n "$branch" ]]; then
+      git clone --depth 1 --branch "$branch" -- "$url" "$current"
+    else
+      git clone --depth 1 -- "$url" "$current"
+    fi
+    printf '%s\n' "$url" > "$STATE/source-origin"
+    git -C "$current" rev-parse HEAD > "$STATE/baseline-commit"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/initialized-at"
+    echo "Forge workspace ready: $current"
     ;;
 
   init)
