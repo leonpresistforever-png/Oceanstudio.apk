@@ -25,10 +25,10 @@ public final class OceanForgeWorkspace {
         if(action.equals("list"))return list(root,args.optString("path",""));
         if(action.equals("read"))return read(root,args.getString("path"),args.optInt("start_line",1),args.optInt("end_line",400));
         if(action.equals("search"))return search(root,args.getString("query"),args.optString("path",""));
-        if(action.equals("write"))return write(root,args.getString("path"),args.getString("content"),args.optString("expected_sha256",""));
-        if(action.equals("replace"))return replace(root,args.getString("path"),args.getString("old_text"),args.getString("new_text"),args.optString("expected_sha256",""));
-        if(action.equals("move"))return move(root,args.getString("path"),args.getString("to_path"),args.getString("expected_sha256"));
-        if(action.equals("delete"))return delete(root,args.getString("path"),args.getString("expected_sha256"));
+        if(action.equals("write")){requireCheckpoint(context);return write(root,args.getString("path"),args.getString("content"),args.optString("expected_sha256",""));}
+        if(action.equals("replace")){requireCheckpoint(context);return replace(root,args.getString("path"),args.getString("old_text"),args.getString("new_text"),args.getString("expected_sha256"));}
+        if(action.equals("move")){requireCheckpoint(context);return move(root,args.getString("path"),args.getString("to_path"),args.getString("expected_sha256"));}
+        if(action.equals("delete")){requireCheckpoint(context);return delete(root,args.getString("path"),args.getString("expected_sha256"));}
         throw new IllegalArgumentException("Unsupported Forge workspace action");
     }
 
@@ -112,6 +112,7 @@ public final class OceanForgeWorkspace {
         if(bytes.length>MAX_WRITE_BYTES)throw new IllegalArgumentException("Forge write exceeds 256 KiB");
         File file=resolve(root,relative,false);
         String previous=file.isFile()?sha256(file):"";
+        if(file.isFile()&&(expectedSha==null||expectedSha.isEmpty()))throw new IllegalArgumentException("Forge write to an existing file requires expected_sha256 from a recent read");
         verifyExpected(previous,expectedSha,file.isFile());
         atomicWrite(file,bytes);
         return new JSONObject().put("path",relative).put("bytes",bytes.length).put("previous_sha256",previous).put("sha256",sha256(file)).put("exit_code",0);
@@ -121,7 +122,9 @@ public final class OceanForgeWorkspace {
         rejectSensitive(relative);
         File file=resolve(root,relative,true);
         if(!file.isFile()||file.length()>MAX_WRITE_BYTES)throw new IllegalArgumentException("Forge file is unavailable for structured replacement");
-        String previous=sha256(file); verifyExpected(previous,expectedSha,true);
+        String previous=sha256(file);
+        if(expectedSha==null||expectedSha.isEmpty())throw new IllegalArgumentException("Forge replace requires expected_sha256 from a recent read");
+        verifyExpected(previous,expectedSha,true);
         String content=readText(file,MAX_WRITE_BYTES);
         int first=content.indexOf(oldText);
         if(first<0)throw new IllegalArgumentException("Forge replacement text was not found");
@@ -181,6 +184,11 @@ public final class OceanForgeWorkspace {
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         try(InputStream in=new FileInputStream(file)){byte[] buffer=new byte[8192];int n;while((n=in.read(buffer))!=-1){if(out.size()+n>max)throw new IllegalArgumentException("Forge file exceeds operation size limit");out.write(buffer,0,n);}}
         return out.toByteArray();
+    }
+
+    private static void requireCheckpoint(Context context){
+        File marker=new File(context.getFilesDir(),"home/ocean-forge/state/last-checkpoint");
+        if(!marker.isFile())throw new IllegalStateException("Create an Ocean Forge checkpoint before modifying source files");
     }
 
     private static File resolve(File root,String relative,boolean requireFile)throws Exception{
