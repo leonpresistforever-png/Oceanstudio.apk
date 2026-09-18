@@ -47,6 +47,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         }
 
         Button bootstrap=findViewById(R.id.forge_bootstrap);
+        Button detectSdk=findViewById(R.id.forge_detect_sdk);
         Button sdkStatus=findViewById(R.id.forge_sdk_status);
         Button configureSdk=findViewById(R.id.forge_configure_sdk);
         Button init=findViewById(R.id.forge_init);
@@ -61,9 +62,10 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
         Button buildSigned=findViewById(R.id.forge_build_signed);
-        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
+        commandButtons=new Button[]{bootstrap,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
         bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",1800));
+        detectSdk.setOnClickListener(v->runForge("ocean-forge detect-sdk",120));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
         configureSdk.setOnClickListener(v->{
             String sdk=((EditText)findViewById(R.id.forge_sdk_root)).getText().toString().trim();
