@@ -59,7 +59,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button buildSigned=findViewById(R.id.forge_build_signed);
         commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
-        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",300));
+        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",1800));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
         configureSdk.setOnClickListener(v->{
             String sdk=((EditText)findViewById(R.id.forge_sdk_root)).getText().toString().trim();
@@ -88,13 +88,13 @@ public final class OceanForgeActivity extends AppCompatActivity {
             if(url.isEmpty()){state.setText("Enter a Git repository URL.");return;}
             String command="ocean-forge clone "+shellQuote(url);
             if(!branch.isEmpty())command+=" "+shellQuote(branch);
-            runForge(command,300);
+            runForge(command,1800);
         });
 
         tools.setOnClickListener(v->runForge("ocean-forge tools",120));
         status.setOnClickListener(v->runForge("ocean-forge status",120));
-        test.setOnClickListener(v->runForge("ocean-forge test",300));
-        build.setOnClickListener(v->runForge("ocean-forge build",300));
+        test.setOnClickListener(v->runForge("ocean-forge test",1800));
+        build.setOnClickListener(v->runForge("ocean-forge build",1800));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
         buildSigned.setOnClickListener(v->buildSignedCandidate());
 
@@ -150,7 +150,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
             writeSecret(keyFile,key);
             ((EditText)findViewById(R.id.forge_store_password)).setText("");
             ((EditText)findViewById(R.id.forge_key_password)).setText("");
-            runForge("ocean-forge build-signed "+shellQuote(keystore)+" "+shellQuote(alias)+" "+shellQuote(storeFile.getAbsolutePath())+" "+shellQuote(keyFile.getAbsolutePath()),300);
+            runForge("ocean-forge build-signed "+shellQuote(keystore)+" "+shellQuote(alias)+" "+shellQuote(storeFile.getAbsolutePath())+" "+shellQuote(keyFile.getAbsolutePath()),1800);
         }catch(Exception error){
             state.setText("Could not prepare signing credentials");
             output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
