@@ -426,6 +426,15 @@ PY
     } || echo "Candidate: none"
     installed="$(installed_apk || true)"
     [[ -n "$installed" ]] && echo "Installed Ocean APK: $installed" || echo "Installed Ocean APK: unavailable"
+    if [[ -f "$STATE/built-native.sha256" ]]; then
+      echo "Native core: locally rebuilt"
+      cat "$STATE/built-native.sha256"
+    elif [[ -f "$STATE/reused-native.sha256" ]]; then
+      echo "Native core: reused from installed Ocean"
+      cat "$STATE/reused-native.sha256"
+    else
+      echo "Native core: not prepared for current candidate"
+    fi
     ;;
 
   diff)
