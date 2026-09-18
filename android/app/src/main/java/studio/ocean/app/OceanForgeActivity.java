@@ -26,6 +26,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
     private Button[] commandButtons;
     private Button stopButton;
     private OceanTerminalRuntimeService.CommandHandle activeHandle;
+    private OceanForgeSigningStore signingStore;
 
     private final ServiceConnection connection=new ServiceConnection(){
         @Override public void onServiceConnected(ComponentName name, IBinder binder){
@@ -43,6 +44,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ocean_forge);
         output=findViewById(R.id.forge_output);
         state=findViewById(R.id.forge_state);
+        signingStore=new OceanForgeSigningStore(this);
         try{
             OceanForgeInstaller.ensure(this);
             OceanForgeInstaller.ensureSourceBundle(this);
@@ -67,6 +69,8 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button build=findViewById(R.id.forge_build);
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
+        Button saveSigning=findViewById(R.id.forge_save_signing);
+        Button forgetSigning=findViewById(R.id.forge_forget_signing);
         Button buildSigned=findViewById(R.id.forge_build_signed);
         stopButton=findViewById(R.id.forge_stop);
         commandButtons=new Button[]{bootstrap,seed,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
@@ -110,6 +114,17 @@ public final class OceanForgeActivity extends AppCompatActivity {
         test.setOnClickListener(v->runForge("ocean-forge test",3600));
         build.setOnClickListener(v->runForge("ocean-forge build",3600));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
+        saveSigning.setOnClickListener(v->saveSigningIdentity());
+        forgetSigning.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle("Forget saved signing identity?")
+                .setMessage("Ocean will delete the private keystore copy and its encrypted saved credentials.")
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("Forget",(d,w)->{
+                    signingStore.clear();
+                    updateSigningStatus();
+                }).show());
+        updateSigningStatus();
+
         buildSigned.setOnClickListener(v->buildSignedCandidate());
         stopButton.setOnClickListener(v->{
             OceanTerminalRuntimeService.CommandHandle handle=activeHandle;
@@ -153,13 +168,51 @@ public final class OceanForgeActivity extends AppCompatActivity {
         });
     }
 
+    private void saveSigningIdentity(){
+        String path=((EditText)findViewById(R.id.forge_keystore_path)).getText().toString().trim();
+        String alias=((EditText)findViewById(R.id.forge_key_alias)).getText().toString().trim();
+        String store=((EditText)findViewById(R.id.forge_store_password)).getText().toString();
+        String key=((EditText)findViewById(R.id.forge_key_password)).getText().toString();
+        if(!path.startsWith("/")||alias.isEmpty()||store.isEmpty()||key.isEmpty()){
+            state.setText("Enter keystore path, alias and both passwords before saving.");
+            return;
+        }
+        try{
+            signingStore.save(new File(path),alias,store,key);
+            ((EditText)findViewById(R.id.forge_store_password)).setText("");
+            ((EditText)findViewById(R.id.forge_key_password)).setText("");
+            updateSigningStatus();
+            state.setText("Signing identity saved privately");
+        }catch(Exception error){
+            state.setText("Could not save signing identity");
+            output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
+        }
+    }
+
+    private void updateSigningStatus(){
+        TextView status=findViewById(R.id.forge_signing_status);
+        if(signingStore!=null&&signingStore.isConfigured()){
+            String sha=signingStore.sha256();
+            if(sha.length()>12)sha=sha.substring(0,12);
+            status.setText("Saved privately · alias "+signingStore.alias()+" · keystore SHA-256 "+sha+"…");
+        }else status.setText("No signing identity saved");
+    }
+
     private void buildSignedCandidate(){
         String keystore=((EditText)findViewById(R.id.forge_keystore_path)).getText().toString().trim();
         String alias=((EditText)findViewById(R.id.forge_key_alias)).getText().toString().trim();
         String store=((EditText)findViewById(R.id.forge_store_password)).getText().toString();
         String key=((EditText)findViewById(R.id.forge_key_password)).getText().toString();
+
+        boolean manual=keystore.startsWith("/")&&!alias.isEmpty()&&!store.isEmpty()&&!key.isEmpty();
+        if(!manual&&signingStore.isConfigured()){
+            keystore=signingStore.keystoreFile().getAbsolutePath();
+            alias=signingStore.alias();
+            store=signingStore.storePassword();
+            key=signingStore.keyPassword();
+        }
         if(!keystore.startsWith("/")||alias.isEmpty()||store.isEmpty()||key.isEmpty()){
-            state.setText("Enter keystore path, alias and both passwords.");
+            state.setText("Enter signing credentials or save a private signing identity first.");
             return;
         }
         try{
