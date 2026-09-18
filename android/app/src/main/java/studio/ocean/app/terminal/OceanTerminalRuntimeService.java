@@ -210,7 +210,7 @@ public final class OceanTerminalRuntimeService extends Service {
     public CommandHandle requestCommand(String command, String cwd, int timeoutSeconds, CommandCallback callback) {
         CommandHandle request = new CommandHandle(callback);
         if (command == null || command.trim().isEmpty() || command.indexOf('\0') >= 0
-                || timeoutSeconds < 1 || timeoutSeconds > 300) {
+                || timeoutSeconds < 1 || timeoutSeconds > 1800) {
             request.fail(new IllegalArgumentException("Invalid command or timeout"));
             return request;
         }
