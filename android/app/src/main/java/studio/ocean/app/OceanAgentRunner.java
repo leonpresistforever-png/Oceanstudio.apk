@@ -88,7 +88,7 @@ public final class OceanAgentRunner {
                         OceanModelConfig config = configuredModel();
                         String digest = byokManager.configurationDigest()+"|"+agentSettings.signature();
                         if (conversation == null || !digest.equals(conversationDigest)) {
-                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.userInstructions());
+                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.userInstructions());
                             conversationDigest = digest;
                         }
                         status(callback, "Working with " + config.model + "…");
