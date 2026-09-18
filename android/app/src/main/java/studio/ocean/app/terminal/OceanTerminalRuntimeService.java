@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -54,6 +55,7 @@ public final class OceanTerminalRuntimeService extends Service {
     private RuntimeState runtimeState = RuntimeState.UNINITIALIZED;
     private boolean installScheduled;
     private int activeHeadlessCommands;
+    private PowerManager.WakeLock taskWakeLock;
     private OceanIpcServer ipcServer;
 
     @Override public void onCreate() {
@@ -231,6 +233,8 @@ public final class OceanTerminalRuntimeService extends Service {
             return request;
         }
         try {
+            Intent keepAlive=new Intent(this,OceanTerminalRuntimeService.class);
+            if(Build.VERSION.SDK_INT>=26)startForegroundService(keepAlive); else startService(keepAlive);
             enterCommandForeground();
             request.holdForeground();
         } catch (Throwable error) {
@@ -279,6 +283,12 @@ public final class OceanTerminalRuntimeService extends Service {
                 .setOngoing(true)
                 .build();
         startForeground(TASK_NOTIFICATION_ID,notification);
+        PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
+        if(power!=null){
+            taskWakeLock=power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"OceanStudio:ForgeTask");
+            taskWakeLock.setReferenceCounted(false);
+            taskWakeLock.acquire(31L*60L*1000L);
+        }
     }
 
     private void leaveCommandForeground() {
@@ -287,7 +297,13 @@ public final class OceanTerminalRuntimeService extends Service {
             if(activeHeadlessCommands>0)activeHeadlessCommands--;
             stop=activeHeadlessCommands==0;
         }
-        if(stop)stopForeground(true);
+        if(stop){
+            if(taskWakeLock!=null){
+                try{if(taskWakeLock.isHeld())taskWakeLock.release();}catch(Throwable ignored){}
+                taskWakeLock=null;
+            }
+            stopForeground(true);
+        }
     }
 
     private void preparePackageCatalog(OceanPaths paths) {
@@ -353,6 +369,10 @@ public final class OceanTerminalRuntimeService extends Service {
         }
         TerminalSession[] active;
         synchronized (stateLock) { active = sessions.values().toArray(new TerminalSession[0]); sessions.clear(); commandSessions.clear(); activeHeadlessCommands=0; }
+        if(taskWakeLock!=null){
+            try{if(taskWakeLock.isHeld())taskWakeLock.release();}catch(Throwable ignored){}
+            taskWakeLock=null;
+        }
         stopForeground(true);
         for (TerminalSession session : active) session.close();
         bootstrapWorker.shutdown();
