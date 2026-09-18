@@ -38,6 +38,8 @@ public final class OceanAgentSettings {
                 .apply();
     }
 
+    public String signature(){ return temperature()+"|"+topP()+"|"+maxTokens()+"|"+connectTimeoutMs()+"|"+readTimeoutMs()+"|"+commandTimeoutSeconds()+"|"+maxRounds()+"|"+maxToolCalls()+"|"+keepSessionAlive()+"|"+antiTimeout()+"|"+userInstructions().hashCode(); }
+
     public void reset(){ prefs.edit().clear().apply(); }
     private static int clamp(int v,int min,int max){return Math.max(min,Math.min(max,v));}
     private static float clamp(float v,float min,float max){return Math.max(min,Math.min(max,v));}
