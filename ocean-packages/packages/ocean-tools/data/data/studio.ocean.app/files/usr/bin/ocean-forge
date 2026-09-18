@@ -13,6 +13,7 @@ Ocean Forge — local OceanStudio development and rebuild workspace
 
 Usage:
   ocean-forge tools
+  ocean-forge doctor
   ocean-forge bootstrap
   ocean-forge bootstrap-sdk
   ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
@@ -176,6 +177,60 @@ case "${1:-}" in
     done
     ;;
 
+  doctor)
+    failures=0
+    echo "Ocean Forge doctor"
+    echo "Workspace: $current"
+    for tool in git java javac python3 curl unzip tar clang llvm-readelf; do
+      if command -v "$tool" >/dev/null 2>&1; then
+        printf '  %-14s OK  %s\n' "$tool" "$(command -v "$tool")"
+      else
+        printf '  %-14s MISSING\n' "$tool"
+        failures=$((failures+1))
+      fi
+    done
+    if [[ -d "$current/android" && -f "$current/android/app/build.gradle" ]]; then
+      echo "  source         OK"
+      if [[ -x "$current/android/gradlew" || -f "$current/android/gradlew" ]]; then echo "  gradle wrapper OK"; else echo "  gradle wrapper MISSING"; failures=$((failures+1)); fi
+      if [[ -f "$current/android/variables.gradle" ]]; then
+        min="$(sed -n 's/^\s*minSdkVersion = \([0-9][0-9]*\)\s*$/\1/p' "$current/android/variables.gradle" | head -n1)"
+        target="$(sed -n 's/^\s*targetSdkVersion = \([0-9][0-9]*\)\s*$/\1/p' "$current/android/variables.gradle" | head -n1)"
+        compile="$(sed -n 's/^\s*compileSdkVersion = \([0-9][0-9]*\)\s*$/\1/p' "$current/android/variables.gradle" | head -n1)"
+        echo "  SDK baseline   min=$min target=$target compile=$compile"
+        [[ "$min" = "28" && "$target" = "28" && "$compile" = "35" ]] || failures=$((failures+1))
+      fi
+    else
+      echo "  source         NOT INITIALIZED"
+      failures=$((failures+1))
+    fi
+    if load_sdk >/dev/null 2>&1; then
+      echo "  Android SDK    OK  $ANDROID_HOME"
+      echo "  android.jar    $ANDROID_HOME/platforms/android-35/android.jar"
+      version="$($AAPT2_OVERRIDE version 2>&1 | head -n1 || true)"
+      echo "  ARM64 aapt2    OK  $version"
+    else
+      echo "  Android SDK    NOT CONFIGURED; run ocean-forge bootstrap-sdk"
+      failures=$((failures+1))
+    fi
+    if [[ -d "$current/.git" && -f "$STATE/baseline-commit" ]]; then
+      echo "  baseline       OK  $(cat "$STATE/baseline-commit")"
+      if git -C "$current" diff --quiet "$(cat "$STATE/baseline-commit")" -- android/app/src/main/cpp; then
+        echo "  native source  unchanged; installed JNI reuse is available"
+      else
+        echo "  native source  changed; local ARM64 clang rebuild will be used"
+      fi
+    else
+      echo "  baseline       MISSING"
+      failures=$((failures+1))
+    fi
+    if [[ -f "$candidate" ]]; then
+      echo "  candidate      present  $(sha256sum "$candidate" | awk '{print $1}')"
+    else
+      echo "  candidate      none"
+    fi
+    if [[ $failures -eq 0 ]]; then echo "FORGE_READY=true"; else echo "FORGE_READY=false failures=$failures"; fi
+    exit "$failures"
+    ;;
   bootstrap)
     command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
     echo "Installing Ocean Forge toolchain..."
