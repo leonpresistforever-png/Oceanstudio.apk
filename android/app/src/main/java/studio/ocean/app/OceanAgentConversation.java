@@ -221,7 +221,7 @@ final class OceanAgentConversation {
         JSONObject forge = new JSONObject().put("name","ocean_forge")
                 .put("description","Operate OceanStudio's local self-development workspace. Use checkpoint before source edits, diff to review changes, test before build, then verify the candidate APK. Installation remains a visible user action.")
                 .put("parameters",new JSONObject().put("type","object").put("properties",new JSONObject()
-                        .put("action",new JSONObject().put("type","string").put("description","One of: tools, status, checkpoint, diff, test, build, verify."))
+                        .put("action",new JSONObject().put("type","string").put("description","One of: tools, bootstrap, bootstrap_sdk, seed, status, checkpoint, diff, test, build, verify."))
                         .put("label",new JSONObject().put("type","string").put("description","Optional checkpoint label.")))
                         .put("required",new JSONArray().put("action")));
         JSONObject forgeWorkspace = new JSONObject().put("name","ocean_forge_workspace")
@@ -269,7 +269,7 @@ final class OceanAgentConversation {
 
         if(name.equals("ocean_forge")){
             String action=args.optString("action","");
-            if(!java.util.Arrays.asList("tools","status","checkpoint","diff","test","build","verify").contains(action))
+            if(!java.util.Arrays.asList("tools","bootstrap","bootstrap_sdk","seed","status","checkpoint","diff","test","build","verify").contains(action))
                 throw new IllegalArgumentException("Unsupported Ocean Forge action");
             if(args.has("label") && (!(args.opt("label") instanceof String) || args.getString("label").length()>80 || args.getString("label").indexOf('\0')>=0))
                 throw new IllegalArgumentException("Forge checkpoint label is invalid");
