@@ -18,7 +18,9 @@
             android:text="min 28 · target 28 · compile 35" android:textColor="@color/ocean_ink" android:textSize="12sp"/>
 
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="FORGE TOOLCHAIN"/>
-        <Button android:id="@+id/forge_bootstrap" style="@style/OceanPrimaryButton" android:text="Install Forge toolchain"/>
+        <Button android:id="@+id/forge_bootstrap" style="@style/OceanPrimaryButton" android:text="Install full Forge build environment"/>
+        <Button android:id="@+id/forge_seed" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="8dp" android:text="Initialize source from this Ocean APK" android:textAllCaps="false"/>
         <Button android:id="@+id/forge_detect_sdk" android:layout_width="match_parent" android:layout_height="46dp"
             android:layout_marginTop="8dp" android:text="Auto-detect Android SDK adapter" android:textAllCaps="false"/>
         <Button android:id="@+id/forge_sdk_status" android:layout_width="match_parent" android:layout_height="46dp"
