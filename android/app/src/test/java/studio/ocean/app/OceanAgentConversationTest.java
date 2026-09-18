@@ -219,6 +219,10 @@ public final class OceanAgentConversationTest {
     @Test public void deviceToolsRejectInvalidTargetsBeforeExecution() throws Exception {
         OceanAgentConversation.validateTool("open_android_app",json("{package_name:'com.android.settings'}"));
         OceanAgentConversation.validateTool("interact_android_screen",json("{action:'swipe',x:10,y:20,to_x:30,to_y:40}"));
+        OceanAgentConversation.validateTool("interact_android_screen",json("{action:'long_press',x:10,y:20}"));
+        OceanAgentConversation.validateTool("interact_android_screen",json("{action:'recents'}"));
+        OceanAgentConversation.validateTool("interact_android_screen",json("{action:'notifications'}"));
+        OceanAgentConversation.validateTool("interact_android_screen",json("{action:'quick_settings'}"));
         for(String value:new String[]{"{action:'tap',x:-1,y:2}","{action:'swipe',x:1,y:2}","{action:'type',ref:'1:1'}","{action:'unknown'}"}){
             try{OceanAgentConversation.validateTool("interact_android_screen",json(value));fail("Invalid device action accepted");}catch(IllegalArgumentException expected){}
         }
