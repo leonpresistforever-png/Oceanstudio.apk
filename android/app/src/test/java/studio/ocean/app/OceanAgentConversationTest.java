@@ -108,7 +108,7 @@ public final class OceanAgentConversationTest {
     }
 
     @Test public void unknownToolAndInvalidArgumentsDoNotReachExecutor() throws Exception {
-        for (String call : new String[]{"{name:'erase_everything',args:{}}", "{name:'run_terminal_command',args:{command:22}}", "{name:'run_terminal_command',args:{command:'pwd',timeout_seconds:301}}"}) {
+        for (String call : new String[]{"{name:'erase_everything',args:{}}", "{name:'run_terminal_command',args:{command:22}}", "{name:'run_terminal_command',args:{command:'pwd',timeout_seconds:1801}}"}) {
             AtomicInteger network = new AtomicInteger();
             new OceanAgentConversation("google", "test").run("Check", request -> {
                 if (network.getAndIncrement() == 0) return gemini("[{functionCall:" + call + "}]");
