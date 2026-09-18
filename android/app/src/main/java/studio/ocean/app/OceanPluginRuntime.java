@@ -65,10 +65,14 @@ public final class OceanPluginRuntime {
         String description=bounded(p.getProperty("description","Terminal-registered Ocean plugin."),512);
         String command=p.getProperty("command","").trim();
         if(!command.matches("[A-Za-z0-9._+:-]{1,128}"))throw new IllegalArgumentException("Invalid plugin command");
-        File bin=new File(new File(context.getFilesDir(),"usr/bin"),command).getCanonicalFile();
-        File root=new File(context.getFilesDir(),"usr/bin").getCanonicalFile();
-        if(!bin.getPath().startsWith(root.getPath()+File.separator))throw new IllegalArgumentException("Plugin command escapes Ocean prefix");
-        return new Plugin(id,name,description,command,bin);
+        File prefixRoot=new File(context.getFilesDir(),"usr/bin").getCanonicalFile();
+        File overlayRoot=new File(context.getFilesDir(),"forge-tools/bin").getCanonicalFile();
+        File overlay=new File(overlayRoot,command).getCanonicalFile();
+        File prefix=new File(prefixRoot,command).getCanonicalFile();
+        if(!overlay.getPath().startsWith(overlayRoot.getPath()+File.separator)||!prefix.getPath().startsWith(prefixRoot.getPath()+File.separator))
+            throw new IllegalArgumentException("Plugin command escapes Ocean tool roots");
+        File executable=overlay.isFile()&&overlay.canExecute()?overlay:prefix;
+        return new Plugin(id,name,description,command,executable);
     }
 
     private static String safeId(String value){
