@@ -129,17 +129,21 @@ public final class OceanForgeWorkspace {
     }
 
     private static void rejectSensitive(String path){
-        String p=path.replace('\\','/').toLowerCase(Locale.ROOT);
-        if(p.equals(".git")||p.startsWith(".git/")||p.equals("android/local.properties")||
-                p.endsWith(".jks")||p.endsWith(".keystore")||p.endsWith(".p12")||p.endsWith(".pem")||
-                p.endsWith(".pk8")||p.endsWith(".env"))
+        if(sensitivePath(path))
             throw new IllegalArgumentException("Signing, credential, Git-internal and local-secret files are not available through Forge workspace tools");
+    }
+
+    private static boolean sensitivePath(String path){
+        String p=path.replace('\\','/').toLowerCase(Locale.ROOT);
+        return p.equals(".git")||p.startsWith(".git/")||p.equals("android/local.properties")||
+                p.endsWith(".jks")||p.endsWith(".keystore")||p.endsWith(".p12")||p.endsWith(".pem")||
+                p.endsWith(".pk8")||p.endsWith(".env");
     }
 
     private static boolean skip(File root,File file){
         String p=relative(root,file).replace('\\','/');
-        return p.equals(".git")||p.startsWith(".git/")||p.equals(".gradle")||p.startsWith(".gradle/")||
-                p.contains("/build/")||p.startsWith("android/app/src/forgeNative/");
+        return sensitivePath(p)||p.equals(".gradle")||p.startsWith(".gradle/")||
+                p.endsWith("/build")||p.contains("/build/")||p.startsWith("android/app/src/forgeNative/");
     }
 
     private static boolean binaryName(String name){
