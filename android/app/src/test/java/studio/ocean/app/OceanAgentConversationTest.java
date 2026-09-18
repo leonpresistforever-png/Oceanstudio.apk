@@ -168,7 +168,10 @@ public final class OceanAgentConversationTest {
         OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'read',path:'android/app/build.gradle',start_line:1,end_line:50}"));
         OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'search',query:'OceanForge',path:'android/app/src/main/java'}"));
         OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'write',path:'docs/generated.md',content:'# test'}"));
-        for(String invalid:new String[]{"{action:'delete',path:'x'}","{action:'write',path:'x'}","{action:'search',query:''}"}){
+        OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'replace',path:'docs/generated.md',old_text:'# test',new_text:'# changed',expected_sha256:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}"));
+        OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'move',path:'docs/generated.md',to_path:'docs/moved.md',expected_sha256:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}"));
+        OceanAgentConversation.validateTool("ocean_forge_workspace",json("{action:'delete',path:'docs/generated.md',expected_sha256:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}"));
+        for(String invalid:new String[]{"{action:'delete',path:'x'}","{action:'replace',path:'x',old_text:'a',new_text:'b'}","{action:'write',path:'x'}","{action:'search',query:''}"}){
             try{OceanAgentConversation.validateTool("ocean_forge_workspace",json(invalid));fail("Invalid Forge workspace operation accepted");}
             catch(IllegalArgumentException expected){}
         }
