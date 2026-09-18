@@ -3,6 +3,7 @@
 android/.gradle/
 android/build/
 android/app/build/
+android/app/src/forgeNative/
 android/local.properties
 android/.idea/
 *.apk
