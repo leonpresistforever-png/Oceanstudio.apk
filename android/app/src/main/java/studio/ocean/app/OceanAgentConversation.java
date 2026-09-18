@@ -227,10 +227,14 @@ final class OceanAgentConversation {
         JSONObject forgeWorkspace = new JSONObject().put("name","ocean_forge_workspace")
                 .put("description","Read, search, list, or write text source files only inside Ocean Forge's private source workspace. Use Ocean Forge checkpoint before writes and diff after writes.")
                 .put("parameters",new JSONObject().put("type","object").put("properties",new JSONObject()
-                        .put("action",new JSONObject().put("type","string").put("description","One of: list, read, search, write."))
+                        .put("action",new JSONObject().put("type","string").put("description","One of: list, read, search, write, replace, move, delete."))
                         .put("path",new JSONObject().put("type","string").put("description","Workspace-relative file or directory path."))
                         .put("query",new JSONObject().put("type","string").put("description","Text query for search."))
                         .put("content",new JSONObject().put("type","string").put("description","Complete UTF-8 file content for write."))
+                        .put("old_text",new JSONObject().put("type","string").put("description","Exact source block to replace once."))
+                        .put("new_text",new JSONObject().put("type","string").put("description","Replacement source block."))
+                        .put("to_path",new JSONObject().put("type","string").put("description","Workspace-relative destination for move."))
+                        .put("expected_sha256",new JSONObject().put("type","string").put("description","Optional stale-edit guard; required for move/delete."))
                         .put("start_line",new JSONObject().put("type","integer"))
                         .put("end_line",new JSONObject().put("type","integer")))
                         .put("required",new JSONArray().put("action")));
@@ -275,16 +279,28 @@ final class OceanAgentConversation {
 
         if(name.equals("ocean_forge_workspace")){
             String action=args.optString("action","");
-            if(!java.util.Arrays.asList("list","read","search","write").contains(action))
+            if(!java.util.Arrays.asList("list","read","search","write","replace","move","delete").contains(action))
                 throw new IllegalArgumentException("Unsupported Forge workspace action");
             if(args.has("path") && (!(args.opt("path") instanceof String) || args.getString("path").length()>1024 || args.getString("path").indexOf('\0')>=0))
                 throw new IllegalArgumentException("Forge workspace path is invalid");
-            if((action.equals("read")||action.equals("write")) && !(args.opt("path") instanceof String))
+            if((action.equals("read")||action.equals("write")||action.equals("replace")||action.equals("move")||action.equals("delete")) && !(args.opt("path") instanceof String))
                 throw new IllegalArgumentException("Forge file path is required");
             if(action.equals("search") && (!(args.opt("query") instanceof String) || args.getString("query").isEmpty() || args.getString("query").length()>200))
                 throw new IllegalArgumentException("Forge search query is required");
             if(action.equals("write") && (!(args.opt("content") instanceof String) || args.getString("content").length()>262144))
                 throw new IllegalArgumentException("Forge write content is invalid");
+            if(action.equals("replace")){
+                if(!(args.opt("old_text") instanceof String)||args.getString("old_text").isEmpty()||args.getString("old_text").length()>262144)
+                    throw new IllegalArgumentException("Forge replacement old_text is invalid");
+                if(!(args.opt("new_text") instanceof String)||args.getString("new_text").length()>262144)
+                    throw new IllegalArgumentException("Forge replacement new_text is invalid");
+            }
+            if(action.equals("move") && (!(args.opt("to_path") instanceof String)||args.getString("to_path").isEmpty()||args.getString("to_path").length()>1024))
+                throw new IllegalArgumentException("Forge move destination is invalid");
+            if((action.equals("move")||action.equals("delete")) && (!(args.opt("expected_sha256") instanceof String)||!args.getString("expected_sha256").matches("[A-Fa-f0-9]{64}")))
+                throw new IllegalArgumentException("Forge move/delete requires expected_sha256");
+            if(args.has("expected_sha256") && (!(args.opt("expected_sha256") instanceof String)||!args.getString("expected_sha256").matches("[A-Fa-f0-9]{64}")))
+                throw new IllegalArgumentException("Forge expected_sha256 is invalid");
             if(args.has("start_line")) requireInteger(args,"start_line",1,1000000);
             if(args.has("end_line")) requireInteger(args,"end_line",1,1000000);
             return;
