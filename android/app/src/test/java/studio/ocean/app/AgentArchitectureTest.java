@@ -68,7 +68,8 @@ public final class AgentArchitectureTest {
         assertTrue(manifest.contains("android.permission.FOREGROUND_SERVICE"));
         assertTrue(service.contains("startForeground(TASK_NOTIFICATION_ID"));
         assertTrue(service.contains("leaveCommandForeground()"));
-        assertTrue(service.contains("timeoutSeconds > 3600"));\n        assertTrue(service.contains("taskWakeLock.acquire();"));
+        assertTrue(service.contains("timeoutSeconds > 3600"));
+        assertTrue(service.contains("taskWakeLock.acquire();"));
         assertTrue(service.contains("Ocean task running"));
     }
 
@@ -90,7 +91,9 @@ public final class AgentArchitectureTest {
 
     @Test public void forgeBuildEmbedsTheNextSelfSourceSnapshot() throws Exception {
         String gradle=projectFile("build.gradle");
-        assertTrue(gradle.contains("prepareForgeSourceBundle"));\n        assertTrue(gradle.contains("prepareForgeRuntimeCommand"));\n        assertTrue(gradle.contains("ocean-packages/packages/ocean-tools/**"));
+        assertTrue(gradle.contains("prepareForgeSourceBundle"));
+        assertTrue(gradle.contains("prepareForgeRuntimeCommand"));
+        assertTrue(gradle.contains("ocean-packages/packages/ocean-tools/**"));
         assertTrue(gradle.contains("source.zip"));
         assertTrue(gradle.contains("scripts/verify-native-only.sh"));
         assertTrue(gradle.contains("packages/ocean-prefix.env"));
