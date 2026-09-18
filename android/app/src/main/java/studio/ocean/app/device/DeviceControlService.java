@@ -56,7 +56,9 @@ public final class DeviceControlService extends AccessibilityService {
                 if(tool.equals("inspect_android_screen"))answer[0]=s.snapshot();
                 else if(tool.equals("list_android_apps"))answer[0]=s.apps(a.optString("query",""));
                 else if(tool.equals("open_android_app")){
-                    String pkg=a.getString("package_name");Intent launch=s.getPackageManager().getLaunchIntentForPackage(pkg);
+                    String pkg=a.getString("package_name");
+                    AppAccessPolicy policy=new AppAccessPolicy(s); if(!policy.interactAllowed(pkg))throw new IllegalStateException("App Access profile does not allow interaction with "+pkg);
+                    Intent launch=s.getPackageManager().getLaunchIntentForPackage(pkg);
                     if(launch==null)throw new IllegalArgumentException("No launchable app for package "+pkg);
                     s.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));answer[0]=result("launched",pkg);
                 }else if(tool.equals("interact_android_screen")){if(s.interact(a,answer,done))return;}
@@ -80,6 +82,7 @@ public final class DeviceControlService extends AccessibilityService {
     }
     private JSONObject snapshot()throws Exception{
         clearRefs();AccessibilityNodeInfo root=getRootInActiveWindow();if(root==null)throw new IllegalStateException("No visible accessible window");
+        String pkg=String.valueOf(root.getPackageName()); if(!new AppAccessPolicy(this).inspectAllowed(pkg)){root.recycle();throw new IllegalStateException("App Access profile does not allow screen inspection for "+pkg);}
         JSONArray nodes=new JSONArray();ArrayDeque<AccessibilityNodeInfo> queue=new ArrayDeque<>();queue.add(root);int count=0;
         while(!queue.isEmpty()){
             AccessibilityNodeInfo n=queue.remove();
@@ -96,6 +99,7 @@ public final class DeviceControlService extends AccessibilityService {
         return new JSONObject().put("nodes",nodes).put("coordinate_space","native screen pixels");
     }
     private boolean interact(JSONObject a,JSONObject[] out,CountDownLatch done)throws Exception{
+        String pkg=activePackage(); if(!new AppAccessPolicy(this).interactAllowed(pkg))throw new IllegalStateException("App Access profile does not allow interaction with "+pkg);
         String action=a.getString("action");
         if(action.equals("back")||action.equals("home")||action.equals("recents")||action.equals("notifications")||action.equals("quick_settings")){
             int global = action.equals("back") ? GLOBAL_ACTION_BACK
@@ -127,7 +131,10 @@ public final class DeviceControlService extends AccessibilityService {
         else throw new IllegalArgumentException("Unsupported action");
         out[0]=ok?result("completed",true):result("error","App rejected the action");return false;
     }
+    private String activePackage() throws Exception { AccessibilityNodeInfo root=getRootInActiveWindow(); if(root==null)throw new IllegalStateException("No visible accessible window"); try{return String.valueOf(root.getPackageName());} finally {root.recycle();} }
+
     private void capture(JSONObject[] out,CountDownLatch done){
+        try{String pkg=activePackage();if(!new AppAccessPolicy(this).screenshotAllowed(pkg)){out[0]=result("error","App Access profile does not allow screenshots for "+pkg);done.countDown();return;}}catch(Exception e){out[0]=result("error",e.getMessage());done.countDown();return;}
         if(Build.VERSION.SDK_INT<30){out[0]=result("error","Accessibility screenshots require Android 11 or later");done.countDown();return;}
         takeScreenshot(0,getMainExecutor(),new TakeScreenshotCallback(){
             public void onFailure(int code){out[0]=result("error","Screen capture unavailable or protected ("+code+")");done.countDown();}
