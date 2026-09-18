@@ -64,6 +64,21 @@
                 android:layout_marginStart="8dp" android:text="Update Ocean" android:textAllCaps="false"/>
         </LinearLayout>
 
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="SIGNING IDENTITY"/>
+        <EditText android:id="@+id/forge_keystore_path" style="@style/OceanAuthField"
+            android:hint="/path/to/ocean-signing.keystore" android:inputType="textNoSuggestions"/>
+        <EditText android:id="@+id/forge_key_alias" style="@style/OceanAuthField" android:layout_marginTop="8dp"
+            android:hint="Key alias" android:inputType="textNoSuggestions"/>
+        <EditText android:id="@+id/forge_store_password" style="@style/OceanAuthField" android:layout_marginTop="8dp"
+            android:hint="Keystore password" android:inputType="textPassword"/>
+        <EditText android:id="@+id/forge_key_password" style="@style/OceanAuthField" android:layout_marginTop="8dp"
+            android:hint="Key password" android:inputType="textPassword"/>
+        <Button android:id="@+id/forge_build_signed" style="@style/OceanPrimaryButton"
+            android:layout_marginTop="10dp" android:text="Build signed candidate"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp"
+            android:text="Passwords are written only to short-lived files in Ocean private storage for this build and are deleted by Forge afterward."
+            android:textColor="@color/ocean_muted" android:textSize="12sp"/>
+
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="FORGE OUTPUT"/>
         <TextView android:id="@+id/forge_output" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:minHeight="180dp" android:background="@drawable/auth_field_background"
