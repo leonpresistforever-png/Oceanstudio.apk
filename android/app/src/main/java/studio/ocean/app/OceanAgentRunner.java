@@ -109,9 +109,11 @@ public final class OceanAgentRunner {
                                 OceanForgeInstaller.ensure(context);
                                 if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                                 String action=args.getString("action");
-                                String commandText="ocean-forge "+action;
+                                if(action.equals("seed")) OceanForgeInstaller.ensureSourceBundle(context);
+                                String shellAction=action.equals("bootstrap_sdk")?"bootstrap-sdk":action;
+                                String commandText="ocean-forge "+shellAction;
                                 if(action.equals("checkpoint")&&args.has("label")) commandText+=" "+shellQuote(args.getString("label"));
-                                int timeout=(action.equals("build")||action.equals("test"))?1800:120;
+                                int timeout=(action.equals("build")||action.equals("test")||action.equals("bootstrap")||action.equals("bootstrap_sdk"))?1800:(action.equals("seed")?300:120);
                                 return runTerminal(commandText,null,timeout,callback);
                             }
                             if(name.equals("ocean_forge_workspace")){
