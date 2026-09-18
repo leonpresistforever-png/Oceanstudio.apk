@@ -1,0 +1,168 @@
+#!/data/data/studio.ocean.app/files/usr/bin/bash
+set -euo pipefail
+
+FORGE="$HOME/ocean-forge"
+WORKSPACE="$FORGE/workspace"
+BUILDS="$FORGE/builds"
+STATE="$FORGE/state"
+mkdir -p "$WORKSPACE" "$BUILDS" "$STATE"
+
+usage() {
+  cat <<'EOF'
+Ocean Forge — local OceanStudio development and rebuild workspace
+
+Usage:
+  ocean-forge tools
+  ocean-forge init <source-dir>
+  ocean-forge status
+  ocean-forge test
+  ocean-forge build
+  ocean-forge verify [apk]
+  ocean-forge install [apk]
+  ocean-forge checkpoint [label]
+
+Notes:
+- init copies a source tree into $HOME/ocean-forge/workspace/current.
+- build runs Ocean architecture verification, unit tests and assembleDebug.
+- verify compares the candidate certificate with the currently installed Ocean APK.
+- install hands a verified candidate to Android PackageInstaller.
+- Android still requires the installed and candidate APKs to have compatible signing identities.
+EOF
+}
+
+current="$WORKSPACE/current"
+candidate="$BUILDS/OceanStudio-candidate.apk"
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "Missing tool: $1" >&2; return 1; }
+}
+
+installed_apk() {
+  /system/bin/pm path studio.ocean.app 2>/dev/null | sed -n 's/^package://p' | head -n1
+}
+
+cert_digest() {
+  local apk="$1"
+  apksigner verify --print-certs "$apk" 2>/dev/null |
+    sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr 'A-F' 'a-f' | tr -d ':'
+}
+
+case "${1:-}" in
+  tools)
+    for tool in bash git java javac gradle python3 kotlin kotlinc ecj aapt zipalign apksigner keytool; do
+      if command -v "$tool" >/dev/null 2>&1; then
+        printf '%-12s %s\n' "$tool" "$(command -v "$tool")"
+      else
+        printf '%-12s missing\n' "$tool"
+      fi
+    done
+    ;;
+
+  init)
+    src="${2:-}"
+    [[ -n "$src" && -d "$src" ]] || { echo "Usage: ocean-forge init <source-dir>" >&2; exit 2; }
+    src="$(realpath "$src")"
+    rm -rf "$current"
+    mkdir -p "$current"
+    echo "Creating Forge workspace from $src..."
+    (
+      cd "$src"
+      tar --exclude='.git' --exclude='.gradle' --exclude='**/build' --exclude='ocean-forge' -cf - .
+    ) | (
+      cd "$current"
+      tar -xf -
+    )
+    printf '%s\n' "$src" > "$STATE/source-origin"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/initialized-at"
+    echo "Forge workspace ready: $current"
+    ;;
+
+  status)
+    echo "Ocean Forge: $FORGE"
+    echo "Workspace: $current"
+    [[ -d "$current" ]] || { echo "Workspace state: not initialized"; exit 0; }
+    echo "Workspace state: ready"
+    if [[ -f "$current/android/variables.gradle" ]]; then
+      grep -E 'minSdkVersion|targetSdkVersion|compileSdkVersion' "$current/android/variables.gradle" || true
+    fi
+    [[ -f "$candidate" ]] && {
+      echo "Candidate: $candidate"
+      sha256sum "$candidate"
+    } || echo "Candidate: none"
+    installed="$(installed_apk || true)"
+    [[ -n "$installed" ]] && echo "Installed Ocean APK: $installed" || echo "Installed Ocean APK: unavailable"
+    ;;
+
+  test)
+    [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    cd "$current"
+    [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
+    [[ -x android/gradlew ]] || chmod +x android/gradlew
+    ./scripts/verify-native-only.sh
+    cd android
+    export GRADLE_USER_HOME="$FORGE/gradle-home"
+    ./gradlew test --no-daemon --stacktrace
+    ;;
+
+  build)
+    [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    cd "$current"
+    [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
+    [[ -x android/gradlew ]] || chmod +x android/gradlew
+    ./scripts/verify-native-only.sh
+    cd android
+    export GRADLE_USER_HOME="$FORGE/gradle-home"
+    export OCEAN_BUILD_COMMIT="forge-local"
+    ./gradlew test assembleDebug --no-daemon --stacktrace
+    built="app/build/outputs/apk/debug/app-debug.apk"
+    [[ -f "$built" ]] || { echo "Gradle completed but APK output was not found." >&2; exit 4; }
+    cp "$built" "$candidate"
+    sha256sum "$candidate" > "$candidate.sha256"
+    echo "Forge candidate built: $candidate"
+    "$0" verify "$candidate" || true
+    ;;
+
+  verify)
+    apk="${2:-$candidate}"
+    [[ -f "$apk" ]] || { echo "Candidate not found: $apk" >&2; exit 5; }
+    need apksigner
+    apksigner verify --verbose "$apk"
+    candidate_cert="$(cert_digest "$apk")"
+    installed="$(installed_apk || true)"
+    if [[ -n "$installed" && -r "$installed" ]]; then
+      installed_cert="$(cert_digest "$installed")"
+      echo "Candidate certificate: $candidate_cert"
+      echo "Installed certificate: $installed_cert"
+      if [[ -n "$candidate_cert" && "$candidate_cert" = "$installed_cert" ]]; then
+        echo "UPDATE_COMPATIBLE=true"
+        exit 0
+      fi
+      echo "UPDATE_COMPATIBLE=false"
+      echo "Candidate cannot update the installed Ocean app until it is signed with the same trusted key."
+      exit 10
+    fi
+    echo "Installed certificate unavailable; candidate APK itself verified."
+    ;;
+
+  install)
+    apk="${2:-$candidate}"
+    [[ -f "$apk" ]] || { echo "Candidate not found: $apk" >&2; exit 5; }
+    "$0" verify "$apk"
+    command -v ocean-pkg >/dev/null 2>&1 || { echo "ocean-pkg is required for PackageInstaller handoff." >&2; exit 6; }
+    ocean-pkg install "$apk"
+    ;;
+
+  checkpoint)
+    label="${2:-checkpoint}"
+    [[ -d "$current" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    safe="$(printf '%s' "$label" | tr ' ' '_' | tr -cd 'A-Za-z0-9._-')"
+    [[ -n "$safe" ]] || safe=checkpoint
+    mkdir -p "$FORGE/checkpoints"
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    tar -C "$current" -czf "$FORGE/checkpoints/${stamp}-${safe}.tar.gz" .
+    echo "Checkpoint saved: $FORGE/checkpoints/${stamp}-${safe}.tar.gz"
+    ;;
+
+  ""|-h|--help|help) usage ;;
+  *) echo "Unknown Ocean Forge command: $1" >&2; usage; exit 2 ;;
+esac
