@@ -63,6 +63,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button checkpoint=findViewById(R.id.forge_checkpoint);
         Button diff=findViewById(R.id.forge_diff);
         Button rollback=findViewById(R.id.forge_rollback);
+        Button doctor=findViewById(R.id.forge_doctor);
         Button tools=findViewById(R.id.forge_tools);
         Button status=findViewById(R.id.forge_status);
         Button test=findViewById(R.id.forge_test);
@@ -73,7 +74,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button forgetSigning=findViewById(R.id.forge_forget_signing);
         Button buildSigned=findViewById(R.id.forge_build_signed);
         stopButton=findViewById(R.id.forge_stop);
-        commandButtons=new Button[]{bootstrap,seed,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
+        commandButtons=new Button[]{bootstrap,seed,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,doctor,tools,status,test,build,verify,install,buildSigned};
 
         bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap && ocean-forge bootstrap-sdk",3600));
         seed.setOnClickListener(v->runForge("ocean-forge seed",300));
@@ -109,6 +110,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
             runForge(command,3600);
         });
 
+        doctor.setOnClickListener(v->runForge("ocean-forge doctor",300));
         tools.setOnClickListener(v->runForge("ocean-forge tools",120));
         status.setOnClickListener(v->runForge("ocean-forge status",120));
         test.setOnClickListener(v->runForge("ocean-forge test",3600));
