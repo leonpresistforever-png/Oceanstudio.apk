@@ -14,9 +14,11 @@ Ocean Forge — local OceanStudio development and rebuild workspace
 Usage:
   ocean-forge tools
   ocean-forge bootstrap
+  ocean-forge bootstrap-sdk
   ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
   ocean-forge detect-sdk
   ocean-forge sdk-status
+  ocean-forge seed [source.zip]
   ocean-forge clone <git-url> [branch]
   ocean-forge init <source-dir>
   ocean-forge status
@@ -31,7 +33,9 @@ Usage:
 
 Notes:
 - bootstrap installs Ocean's local JVM/build helper toolchain.
+- bootstrap-sdk downloads the Android 35 platform package and an ARM64 aapt2 adapter, verifies them, and configures Forge.
 - configure-sdk records an Android 35 SDK and ARM64 aapt2 override.
+- seed initializes the workspace from the source snapshot carried inside the installed Ocean APK.
 - clone uses existing Git credentials; do not embed access tokens in repository URLs.
 - init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
@@ -137,9 +141,96 @@ case "${1:-}" in
     command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
     echo "Installing Ocean Forge toolchain..."
     pkg update
-    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip
+    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip curl ca-certificates
     echo "Forge toolchain installation complete."
     "$0" tools
+    ;;
+
+  bootstrap-sdk)
+    need curl
+    need python3
+    need unzip
+
+    sdk="$HOME/android-sdk"
+    cache="$FORGE/download-cache"
+    mkdir -p "$sdk/platforms" "$sdk/build-tools/34.0.4" "$cache"
+
+    repo_xml="$cache/repository2-1.xml"
+    echo "Resolving Android SDK Platform 35 from Google's repository metadata..."
+    curl --fail --location --retry 5 --retry-all-errors \
+      --connect-timeout 20 --max-time 180 \
+      -o "$repo_xml.tmp" "https://dl.google.com/android/repository/repository2-1.xml"
+    mv "$repo_xml.tmp" "$repo_xml"
+
+    platform_meta="$cache/platform35.meta"
+    python3 - "$repo_xml" > "$platform_meta.tmp" <<'PY'
+import sys, xml.etree.ElementTree as ET
+root=ET.parse(sys.argv[1]).getroot()
+best=None
+for pkg in root.iter():
+    if pkg.tag.endswith("remotePackage") and pkg.attrib.get("path")=="platforms;android-35":
+        rev=[]
+        for n in pkg.iter():
+            if n.tag.endswith(("major","minor","micro")):
+                try: rev.append(int(n.text or "0"))
+                except: rev.append(0)
+        for a in pkg.iter():
+            if not a.tag.endswith("archive"): continue
+            url=size=sha=None
+            for n in a.iter():
+                tag=n.tag.split("}")[-1]
+                if tag=="url": url=(n.text or "").strip()
+                elif tag=="size": size=(n.text or "").strip()
+                elif tag=="checksum" and n.attrib.get("type","sha1").lower()=="sha1": sha=(n.text or "").strip()
+            if url:
+                cand=(tuple(rev or [0]),url,size or "",sha or "")
+                if best is None or cand[0]>best[0]: best=cand
+if best is None: raise SystemExit("platforms;android-35 archive not found")
+print(best[1]); print(best[2]); print(best[3])
+PY
+    mv "$platform_meta.tmp" "$platform_meta"
+    platform_url="$(sed -n '1p' "$platform_meta")"
+    platform_size="$(sed -n '2p' "$platform_meta")"
+    platform_sha1="$(sed -n '3p' "$platform_meta")"
+    case "$platform_url" in http*) ;; *) platform_url="https://dl.google.com/android/repository/$platform_url" ;; esac
+
+    platform_zip="$cache/platform-35.zip"
+    echo "Downloading Android 35 platform..."
+    curl --fail --location --continue-at - --retry 5 --retry-all-errors \
+      --connect-timeout 20 --max-time 1800 -o "$platform_zip" "$platform_url"
+    [[ -z "$platform_size" || "$(wc -c < "$platform_zip" | tr -d ' ')" = "$platform_size" ]] || {
+      echo "Android platform size verification failed." >&2; exit 20;
+    }
+    if [[ -n "$platform_sha1" ]]; then
+      actual="$(sha1sum "$platform_zip" | awk '{print $1}')"
+      [[ "$actual" = "$platform_sha1" ]] || { echo "Android platform SHA-1 verification failed." >&2; exit 20; }
+    fi
+
+    temp="$cache/platform35-extract"
+    rm -rf "$temp"; mkdir -p "$temp"
+    unzip -q -o "$platform_zip" -d "$temp"
+    android_jar="$(find "$temp" -type f -name android.jar | head -n1)"
+    [[ -n "$android_jar" ]] || { echo "Downloaded platform archive did not contain android.jar" >&2; exit 20; }
+    platform_root="$(dirname "$android_jar")"
+    rm -rf "$sdk/platforms/android-35"
+    mkdir -p "$sdk/platforms/android-35"
+    cp -a "$platform_root"/. "$sdk/platforms/android-35"/
+    [[ -f "$sdk/platforms/android-35/android.jar" ]] || { echo "Failed to install Android 35 platform." >&2; exit 20; }
+
+    aapt2="$sdk/build-tools/34.0.4/aapt2"
+    aapt2_url="https://github.com/AndroidIDEOfficial/platform-tools/releases/download/v34.0.4/aapt2-arm64-v8a"
+    echo "Downloading AndroidIDE ARM64 aapt2 adapter..."
+    curl --fail --location --retry 5 --retry-all-errors \
+      --connect-timeout 20 --max-time 600 -o "$aapt2.tmp" "$aapt2_url"
+    [[ "$(wc -c < "$aapt2.tmp" | tr -d ' ')" = "4588600" ]] || { echo "ARM64 aapt2 size verification failed." >&2; rm -f "$aapt2.tmp"; exit 21; }
+    mv "$aapt2.tmp" "$aapt2"
+    chmod 700 "$aapt2"
+    "$aapt2" version >/dev/null 2>&1 || { echo "ARM64 aapt2 adapter cannot execute on this device." >&2; exit 21; }
+
+    printf '%s\n' "$(realpath "$sdk")" > "$STATE/android-sdk-root"
+    printf '%s\n' "$(realpath "$aapt2")" > "$STATE/aapt2-override"
+    echo "Forge SDK bootstrap complete."
+    "$0" sdk-status
     ;;
 
   detect-sdk)
@@ -189,6 +280,36 @@ case "${1:-}" in
     fi
     ;;
 
+  seed)
+    bundle="${2:-$STATE/source.zip}"
+    [[ -f "$bundle" ]] || { echo "Forge source bundle not found: $bundle" >&2; exit 22; }
+    need unzip
+    rm -rf "$current"
+    mkdir -p "$current"
+    echo "Initializing Forge workspace from bundled Ocean source..."
+    unzip -q -o "$bundle" -d "$current"
+    [[ -d "$current/android" && -f "$current/android/app/build.gradle" ]] || {
+      rm -rf "$current"
+      echo "Forge source bundle is incomplete." >&2
+      exit 22
+    }
+    chmod +x "$current/android/gradlew" "$current/scripts/verify-native-only.sh" 2>/dev/null || true
+    printf '%s\n' "apk-bundled-source" > "$STATE/source-origin"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/initialized-at"
+    if command -v git >/dev/null 2>&1; then
+      (
+        cd "$current"
+        git init -q
+        git config user.name "Ocean Forge"
+        git config user.email "forge@ocean.local"
+        git add -A
+        git commit -q -m "Ocean Forge bundled-source baseline" || true
+        git rev-parse HEAD
+      ) > "$STATE/baseline-commit"
+    fi
+    echo "Forge workspace seeded from this Ocean APK: $current"
+    "$0" status
+    ;;
   clone)
     url="${2:-}"; branch="${3:-}"
     [[ -n "$url" ]] || { echo "Usage: ocean-forge clone <git-url> [branch]" >&2; exit 2; }
