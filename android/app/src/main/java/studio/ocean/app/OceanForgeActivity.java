@@ -41,6 +41,10 @@ public final class OceanForgeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ocean_forge);
         output=findViewById(R.id.forge_output);
         state=findViewById(R.id.forge_state);
+        try{OceanForgeInstaller.ensure(this);}catch(Exception error){
+            state.setText("Forge command installation failed");
+            output.setText(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());
+        }
 
         Button bootstrap=findViewById(R.id.forge_bootstrap);
         Button sdkStatus=findViewById(R.id.forge_sdk_status);
