@@ -113,6 +113,11 @@ public final class OceanAgentRunner {
                                 int timeout=(action.equals("build")||action.equals("test"))?300:120;
                                 return runTerminal(commandText,null,timeout,callback);
                             }
+                            if(name.equals("ocean_forge_workspace")){
+                                if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
+                                return runRuntimeTool("Forge workspace",args.getString("action"),callback,
+                                        () -> OceanForgeWorkspace.execute(context,args));
+                            }
                             if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                             return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", agentSettings.commandTimeoutSeconds()), callback);
                         }, thought -> status(callback, thought));
