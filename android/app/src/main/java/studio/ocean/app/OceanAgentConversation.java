@@ -202,7 +202,7 @@ final class OceanAgentConversation {
             .put(deviceTool("open_android_app","Launch an installed Android app using its exact package_name from list_android_apps, only when user requested.",new JSONObject().put("package_name",new JSONObject().put("type","string")),"package_name"))
             .put(deviceTool("inspect_android_screen","Read visible accessible controls and stable refs. Inspect again after screen changes.",new JSONObject(),null))
             .put(deviceTool("capture_android_screen","Capture visible unprotected screen. Image coordinates are native screen pixels.",new JSONObject(),null))
-            .put(deviceTool("interact_android_screen","Control visible screen: click/type/scroll use ref; tap/swipe use native screen x/y and to_x/to_y. back/home navigate. Inspect results after actions.",deviceProps,"action"));
+            .put(deviceTool("interact_android_screen","Control visible screen: click/type/scroll use ref; tap/long_press/swipe use native screen x/y and to_x/to_y. back/home/recents/notifications/quick_settings navigate Android surfaces. Inspect results after actions.",deviceProps,"action"));
     }
 
     private JSONObject deviceTool(String name,String description,JSONObject props,String required) throws JSONException {
@@ -217,8 +217,8 @@ final class OceanAgentConversation {
         if(name.equals("open_android_app")){if(!(args.opt("package_name") instanceof String)||!args.getString("package_name").matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+"))throw new IllegalArgumentException("Exact Android package_name required");return;}
         if(name.equals("interact_android_screen")){
             String action=args.optString("action","");
-            if(!java.util.Arrays.asList("click","type","scroll","tap","swipe","back","home").contains(action))throw new IllegalArgumentException("Unsupported device action");
-            if(action.equals("tap")||action.equals("swipe")){requireInteger(args,"x",0,10000);requireInteger(args,"y",0,10000);if(action.equals("swipe")){requireInteger(args,"to_x",0,10000);requireInteger(args,"to_y",0,10000);}}
+            if(!java.util.Arrays.asList("click","type","scroll","tap","long_press","swipe","back","home","recents","notifications","quick_settings").contains(action))throw new IllegalArgumentException("Unsupported device action");
+            if(action.equals("tap")||action.equals("long_press")||action.equals("swipe")){requireInteger(args,"x",0,10000);requireInteger(args,"y",0,10000);if(action.equals("swipe")){requireInteger(args,"to_x",0,10000);requireInteger(args,"to_y",0,10000);}}
             if(action.equals("click")||action.equals("type")||action.equals("scroll")){if(!(args.opt("ref") instanceof String)||args.getString("ref").length()>64)throw new IllegalArgumentException("Screen ref required");}
             if(action.equals("type")&&(!(args.opt("text") instanceof String)||args.getString("text").length()>8192))throw new IllegalArgumentException("Text required, maximum 8192 characters");return;
         }
