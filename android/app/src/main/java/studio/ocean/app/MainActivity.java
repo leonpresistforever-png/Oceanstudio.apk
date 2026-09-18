@@ -138,10 +138,12 @@ public class MainActivity extends AppCompatActivity {
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
         findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         findViewById(R.id.nav_runtime_ports).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
+        findViewById(R.id.nav_ocean_forge).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, OceanForgeActivity.class)); });
         findViewById(R.id.nav_agent_settings).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
         findViewById(R.id.nav_plugins).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         findViewById(R.id.agent_controls_settings).setOnClickListener(v -> startActivity(new Intent(this, AgentSettingsActivity.class)));
         findViewById(R.id.agent_controls_plugins).setOnClickListener(v -> startActivity(new Intent(this, PluginCenterActivity.class)));
+        findViewById(R.id.agent_controls_forge).setOnClickListener(v -> startActivity(new Intent(this, OceanForgeActivity.class)));
         findViewById(R.id.agent_controls_byok).setOnClickListener(v -> { closeAgentControls(); showByokPage(); });
         findViewById(R.id.agent_controls_device).setOnClickListener(v -> startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)));
         findViewById(R.id.agent_controls_runtime).setOnClickListener(v -> startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
