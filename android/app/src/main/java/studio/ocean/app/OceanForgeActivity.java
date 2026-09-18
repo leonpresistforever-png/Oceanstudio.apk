@@ -46,6 +46,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button sdkStatus=findViewById(R.id.forge_sdk_status);
         Button configureSdk=findViewById(R.id.forge_configure_sdk);
         Button init=findViewById(R.id.forge_init);
+        Button clone=findViewById(R.id.forge_clone);
         Button checkpoint=findViewById(R.id.forge_checkpoint);
         Button diff=findViewById(R.id.forge_diff);
         Button rollback=findViewById(R.id.forge_rollback);
@@ -56,7 +57,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
         Button buildSigned=findViewById(R.id.forge_build_signed);
-        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
+        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
         bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",300));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
@@ -80,6 +81,15 @@ public final class OceanForgeActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel",null)
                 .setPositiveButton("Rollback",(d,w)->runForge("ocean-forge rollback",180))
                 .show());
+
+        clone.setOnClickListener(v->{
+            String url=((EditText)findViewById(R.id.forge_repo_url)).getText().toString().trim();
+            String branch=((EditText)findViewById(R.id.forge_repo_branch)).getText().toString().trim();
+            if(url.isEmpty()){state.setText("Enter a Git repository URL.");return;}
+            String command="ocean-forge clone "+shellQuote(url);
+            if(!branch.isEmpty())command+=" "+shellQuote(branch);
+            runForge(command,300);
+        });
 
         tools.setOnClickListener(v->runForge("ocean-forge tools",120));
         status.setOnClickListener(v->runForge("ocean-forge status",120));
