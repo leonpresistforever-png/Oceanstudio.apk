@@ -234,6 +234,7 @@ public final class OceanTerminalRuntimeService extends Service {
             enterCommandForeground();
             request.holdForeground();
         } catch (Throwable error) {
+            leaveCommandForeground();
             request.fail(error);
             return request;
         }
