@@ -131,12 +131,14 @@ public final class OceanAgentConversationTest {
     @Test public void runtimeToolsAreDeclaredAndValidatedBeforeExecution() throws Exception {
         JSONObject request = new OceanAgentConversation("google", "gemini-2.5-flash").request(new JSONArray(), true);
         JSONArray tools = request.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations");
-        assertEquals(13, tools.length());
+        assertEquals(15, tools.length());
         assertEquals("list_runtime_ports", tools.getJSONObject(2).getString("name"));
         assertFalse(tools.getJSONObject(2).has("parameters"));
         assertEquals("open_runtime_port", tools.getJSONObject(3).getString("name"));
         assertEquals("ocean_forge", tools.getJSONObject(5).getString("name"));
         assertEquals("ocean_forge_workspace", tools.getJSONObject(6).getString("name"));
+        assertEquals("list_ocean_plugins", tools.getJSONObject(7).getString("name"));
+        assertEquals("run_ocean_plugin", tools.getJSONObject(8).getString("name"));
         assertEquals("INTEGER", tools.getJSONObject(3).getJSONObject("parameters").getJSONObject("properties").getJSONObject("port").getString("type"));
         OceanAgentConversation.validateTool("open_runtime_port", json("{port:6080,path:'/vnc.html'}"));
         OceanAgentConversation.validateTool("interact_runtime_page", json("{action:'click',x:40,y:80}"));
@@ -148,6 +150,18 @@ public final class OceanAgentConversationTest {
         catch (IllegalArgumentException expected) { }
     }
 
+
+    @Test public void dynamicPluginToolsValidateIdsAndBoundedInput() throws Exception {
+        OceanAgentConversation.validateTool("list_ocean_plugins",json("{}"));
+        OceanAgentConversation.validateTool("run_ocean_plugin",json("{id:'sample',input:'{\"hello\":true}'}"));
+        for(String invalid:new String[]{"{id:'../bad'}","{id:''}"}) {
+            try{OceanAgentConversation.validateTool("run_ocean_plugin",json(invalid));fail("Invalid plugin id accepted");}
+            catch(IllegalArgumentException expected){}
+        }
+        StringBuilder huge=new StringBuilder();for(int i=0;i<4097;i++)huge.append('x');
+        try{OceanAgentConversation.validateTool("run_ocean_plugin",new JSONObject().put("id","sample").put("input",huge.toString()));fail("Oversized plugin input accepted");}
+        catch(IllegalArgumentException expected){}
+    }
 
     @Test public void forgeToolAcceptsOnlyBoundedDevelopmentActions() throws Exception {
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'bootstrap'}"));
