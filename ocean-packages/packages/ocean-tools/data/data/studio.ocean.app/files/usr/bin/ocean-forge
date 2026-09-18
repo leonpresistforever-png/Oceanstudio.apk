@@ -253,7 +253,7 @@ PY
       sdk="$(realpath "$candidate")"; break
     done
     if [[ -n "$sdk" ]]; then
-      for candidate in "${PREFIX:-}/bin/aapt2" "$HOME/.androidide/aapt2" "$sdk/build-tools/35.0.0/aapt2"; do
+      for candidate in "${PREFIX:-}/bin/aapt2" "$HOME/.androidide/aapt2" "$sdk/build-tools/34.0.4/aapt2" "$sdk/build-tools/35.0.0/aapt2"; do
         [[ -n "$candidate" && -x "$candidate" ]] || continue
         if "$candidate" version >/dev/null 2>&1; then aapt2="$(realpath "$candidate")"; break; fi
       done
