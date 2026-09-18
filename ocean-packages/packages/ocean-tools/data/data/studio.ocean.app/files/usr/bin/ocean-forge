@@ -141,7 +141,7 @@ case "${1:-}" in
     command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
     echo "Installing Ocean Forge toolchain..."
     pkg update
-    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip curl ca-certificates
+    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip curl ca-certificates tar xz-utils
     echo "Forge toolchain installation complete."
     "$0" tools
     ;;
@@ -217,15 +217,27 @@ PY
     cp -a "$platform_root"/. "$sdk/platforms/android-35"/
     [[ -f "$sdk/platforms/android-35/android.jar" ]] || { echo "Failed to install Android 35 platform." >&2; exit 20; }
 
+    build_tools_archive="$cache/build-tools-34.0.4-aarch64.tar.xz"
+    build_tools_url="https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/build-tools-34.0.4-aarch64.tar.xz"
+    echo "Downloading AndroidIDE ARM64 SDK Build Tools 34.0.4..."
+    curl --fail --location --continue-at - --retry 5 --retry-all-errors \
+      --connect-timeout 20 --max-time 1800 -o "$build_tools_archive" "$build_tools_url"
+    [[ "$(wc -c < "$build_tools_archive" | tr -d ' ')" = "41666832" ]] || {
+      echo "ARM64 build-tools size verification failed." >&2; exit 21;
+    }
+
+    build_tools_temp="$cache/build-tools-extract"
+    rm -rf "$build_tools_temp"; mkdir -p "$build_tools_temp"
+    tar -xJf "$build_tools_archive" -C "$build_tools_temp"
+    found_aapt2="$(find "$build_tools_temp" -type f -name aapt2 | head -n1)"
+    [[ -n "$found_aapt2" ]] || { echo "ARM64 build-tools archive did not contain aapt2." >&2; exit 21; }
+    found_root="$(dirname "$found_aapt2")"
+    rm -rf "$sdk/build-tools/34.0.4"
+    mkdir -p "$sdk/build-tools/34.0.4"
+    cp -a "$found_root"/. "$sdk/build-tools/34.0.4"/
     aapt2="$sdk/build-tools/34.0.4/aapt2"
-    aapt2_url="https://github.com/AndroidIDEOfficial/platform-tools/releases/download/v34.0.4/aapt2-arm64-v8a"
-    echo "Downloading AndroidIDE ARM64 aapt2 adapter..."
-    curl --fail --location --retry 5 --retry-all-errors \
-      --connect-timeout 20 --max-time 600 -o "$aapt2.tmp" "$aapt2_url"
-    [[ "$(wc -c < "$aapt2.tmp" | tr -d ' ')" = "4588600" ]] || { echo "ARM64 aapt2 size verification failed." >&2; rm -f "$aapt2.tmp"; exit 21; }
-    mv "$aapt2.tmp" "$aapt2"
     chmod 700 "$aapt2"
-    "$aapt2" version >/dev/null 2>&1 || { echo "ARM64 aapt2 adapter cannot execute on this device." >&2; exit 21; }
+    "$aapt2" version >/dev/null 2>&1 || { echo "ARM64 aapt2 cannot execute on this device." >&2; exit 21; }
 
     printf '%s\n' "$(realpath "$sdk")" > "$STATE/android-sdk-root"
     printf '%s\n' "$(realpath "$aapt2")" > "$STATE/aapt2-override"
