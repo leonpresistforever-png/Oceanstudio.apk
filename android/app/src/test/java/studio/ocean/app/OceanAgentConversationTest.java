@@ -150,6 +150,9 @@ public final class OceanAgentConversationTest {
 
 
     @Test public void forgeToolAcceptsOnlyBoundedDevelopmentActions() throws Exception {
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'bootstrap'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'bootstrap_sdk'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'seed'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'status'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'checkpoint',label:'before-ui-change'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'diff'}"));
