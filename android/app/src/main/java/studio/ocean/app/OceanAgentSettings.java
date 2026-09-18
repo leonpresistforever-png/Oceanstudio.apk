@@ -14,7 +14,7 @@ public final class OceanAgentSettings {
     public int maxTokens(){ return clamp(prefs.getInt("max_tokens",2048),128,32768); }
     public int connectTimeoutMs(){ return clamp(prefs.getInt("connect_timeout_ms",20000),5000,120000); }
     public int readTimeoutMs(){ return clamp(prefs.getInt("read_timeout_ms",60000),10000,600000); }
-    public int commandTimeoutSeconds(){ return clamp(prefs.getInt("command_timeout_seconds",120),5,300); }
+    public int commandTimeoutSeconds(){ return clamp(prefs.getInt("command_timeout_seconds",120),5,1800); }
     public int maxRounds(){ return clamp(prefs.getInt("max_rounds",16),1,64); }
     public int maxToolCalls(){ return clamp(prefs.getInt("max_tool_calls",24),1,128); }
     public boolean keepSessionAlive(){ return prefs.getBoolean("keep_session_alive",true); }
@@ -30,7 +30,7 @@ public final class OceanAgentSettings {
                 .putInt("max_tokens",clamp(maxTokens,128,32768))
                 .putInt("connect_timeout_ms",clamp(connectMs,5000,120000))
                 .putInt("read_timeout_ms",clamp(readMs,10000,600000))
-                .putInt("command_timeout_seconds",clamp(commandSeconds,5,300))
+                .putInt("command_timeout_seconds",clamp(commandSeconds,5,1800))
                 .putInt("max_rounds",clamp(maxRounds,1,64))
                 .putInt("max_tool_calls",clamp(maxToolCalls,1,128))
                 .putBoolean("keep_session_alive",keepAlive)
