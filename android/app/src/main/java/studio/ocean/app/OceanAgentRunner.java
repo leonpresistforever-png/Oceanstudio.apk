@@ -66,8 +66,10 @@ public final class OceanAgentRunner {
             mainHandler.post(() -> callback.onError("Another request is running. Stop it before starting a new one."));
             return;
         }
+        CrashSurvival.mark("START_AGENT_WORKER");
         worker = new Thread(() -> {
             try {
+                CrashSurvival.mark("AGENT_WORKER_RUNNING");
                 String text = prompt.trim(), result;
                 if (OceanAgentRequests.opensTerminal(text)) {
                     openTerminal(callback);
@@ -87,7 +89,8 @@ public final class OceanAgentRunner {
                             conversationDigest = digest;
                         }
                         status(callback, "Working with " + config.model + "…");
-                        result = conversation.run(text, body -> send(config, body), (name, args) -> {
+                        result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
+                            CrashSurvival.mark("EXECUTE_AGENT_TOOL");
                             if (name.equals("open_terminal")) return openTerminal(callback);
                             if (name.equals("device_status") || name.equals("list_android_apps") || name.equals("open_android_app") || name.equals("inspect_android_screen") || name.equals("capture_android_screen") || name.equals("interact_android_screen"))
                                 return runRuntimeTool("Device control", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context,name,args));

@@ -63,6 +63,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override protected void onPostResume() {
+        super.onPostResume();
+        CrashSurvival.showPending(this);
+    }
+
     private void showLoading(Runnable destination) {
         final int generation=++loadingGeneration;
         setContentView(R.layout.activity_loading);
@@ -351,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
         EditText promptInput = findViewById(R.id.prompt);
         String prompt = promptInput.getText().toString().trim();
         if (prompt.isEmpty()) return;
+        CrashSurvival.begin();
         promptInput.setText("");
 
         findViewById(R.id.home_content).setVisibility(View.GONE);
@@ -370,14 +376,17 @@ public class MainActivity extends AppCompatActivity {
 
         chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
 
+        CrashSurvival.mark("CHAT_UI_READY");
         setAgentBusy(true);
         agentRunner.processPrompt(prompt, new OceanAgentRunner.AgentCallback() {
             @Override public void onThought(String thought) {
+                CrashSurvival.mark("RENDER_AGENT_STATUS");
                 thoughtView.setVisibility(View.VISIBLE);
                 thoughtView.setText(thought);
             }
 
             @Override public void onToolStart(String toolName, String command) {
+                CrashSurvival.mark("RENDER_TOOL_CARD");
                 thoughtView.setText("Running " + toolName.toLowerCase(java.util.Locale.ROOT) + "…");
                 toolBox.setVisibility(View.VISIBLE);
                 currentTool[0] = new OceanToolCard(MainActivity.this, toolName, command);
@@ -391,18 +400,22 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override public void onResponse(String response) {
+                CrashSurvival.mark("RENDER_AGENT_RESPONSE");
                 responseView.setVisibility(View.VISIBLE);
                 responseView.setText(OceanMessageText.render(response));
                 thoughtView.setVisibility(View.GONE);
                 setAgentBusy(false);
+                CrashSurvival.finished();
                 chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
             }
 
             @Override public void onError(String error) {
+                CrashSurvival.mark("RENDER_AGENT_ERROR");
                 responseView.setVisibility(View.VISIBLE);
                 responseView.setText(error);
                 thoughtView.setVisibility(View.GONE);
                 setAgentBusy(false);
+                CrashSurvival.finished();
                 responseView.setTextColor(0xFFDC2626);
             }
         });
