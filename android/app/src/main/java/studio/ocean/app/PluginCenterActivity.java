@@ -76,5 +76,14 @@ public final class PluginCenterActivity extends AppCompatActivity {
         card.addView(desc);
     }
 
-    private boolean exists(String relative){return new File(getFilesDir(),relative).exists();}
+    private boolean exists(String relative){
+        File direct=new File(getFilesDir(),relative);
+        if(direct.exists())return true;
+        String prefix="usr/bin/";
+        if(relative.startsWith(prefix)){
+            File overlay=new File(new File(getFilesDir(),"forge-tools/bin"),relative.substring(prefix.length()));
+            return overlay.exists();
+        }
+        return false;
+    }
 }
