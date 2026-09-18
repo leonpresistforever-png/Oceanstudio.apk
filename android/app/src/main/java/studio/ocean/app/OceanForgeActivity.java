@@ -13,6 +13,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileOutputStream;
 import studio.ocean.app.terminal.OceanTerminalRuntimeService;
 
 public final class OceanForgeActivity extends AppCompatActivity {
@@ -53,7 +55,8 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button build=findViewById(R.id.forge_build);
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
-        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,checkpoint,diff,rollback,tools,status,test,build,verify,install};
+        Button buildSigned=findViewById(R.id.forge_build_signed);
+        commandButtons=new Button[]{bootstrap,sdkStatus,configureSdk,init,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
         bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",300));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
@@ -83,6 +86,8 @@ public final class OceanForgeActivity extends AppCompatActivity {
         test.setOnClickListener(v->runForge("ocean-forge test",300));
         build.setOnClickListener(v->runForge("ocean-forge build",300));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
+        buildSigned.setOnClickListener(v->buildSignedCandidate());
+
         install.setOnClickListener(v->new AlertDialog.Builder(this)
                 .setTitle("Update Ocean?")
                 .setMessage("Forge will verify the candidate signature first. Android PackageInstaller will handle the final update approval.")
@@ -115,6 +120,37 @@ public final class OceanForgeActivity extends AppCompatActivity {
                 output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
             }
         });
+    }
+
+    private void buildSignedCandidate(){
+        String keystore=((EditText)findViewById(R.id.forge_keystore_path)).getText().toString().trim();
+        String alias=((EditText)findViewById(R.id.forge_key_alias)).getText().toString().trim();
+        String store=((EditText)findViewById(R.id.forge_store_password)).getText().toString();
+        String key=((EditText)findViewById(R.id.forge_key_password)).getText().toString();
+        if(!keystore.startsWith("/")||alias.isEmpty()||store.isEmpty()||key.isEmpty()){
+            state.setText("Enter keystore path, alias and both passwords.");
+            return;
+        }
+        try{
+            File stateDir=new File(getFilesDir(),"home/ocean-forge/state");
+            if(!stateDir.isDirectory()&&!stateDir.mkdirs())throw new IllegalStateException("Could not create Forge state directory");
+            File storeFile=new File(stateDir,"store-pass.tmp");
+            File keyFile=new File(stateDir,"key-pass.tmp");
+            writeSecret(storeFile,store);
+            writeSecret(keyFile,key);
+            ((EditText)findViewById(R.id.forge_store_password)).setText("");
+            ((EditText)findViewById(R.id.forge_key_password)).setText("");
+            runForge("ocean-forge build-signed "+shellQuote(keystore)+" "+shellQuote(alias)+" "+shellQuote(storeFile.getAbsolutePath())+" "+shellQuote(keyFile.getAbsolutePath()),300);
+        }catch(Exception error){
+            state.setText("Could not prepare signing credentials");
+            output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
+        }
+    }
+
+    private static void writeSecret(File file,String value) throws Exception{
+        try(FileOutputStream out=new FileOutputStream(file,false)){out.write(value.getBytes(StandardCharsets.UTF_8));out.flush();}
+        file.setReadable(false,false);file.setWritable(false,false);
+        file.setReadable(true,true);file.setWritable(true,true);
     }
 
     private void setButtons(boolean enabled){for(Button button:commandButtons)button.setEnabled(enabled);}
