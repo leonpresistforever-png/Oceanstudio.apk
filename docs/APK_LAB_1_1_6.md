@@ -41,3 +41,6 @@ These remain behind the user-enabled Accessibility service and Ocean's separate 
 The normal Android validation workflow can publish an APK only when a main-branch commit contains `[release-apk]`. It verifies the APK signing certificate against the certificate used by OceanStudio 1.1.5.
 
 If the certificate matches, the build can publish the stable version tag. If it differs, the build publishes a clearly labelled prerelease instead, because Android will not accept a differently signed APK as an in-place update over 1.1.5.
+
+
+Release build retry: workflow YAML was corrected before the runner build was triggered.
