@@ -20,9 +20,10 @@ public final class OceanAgentSettings {
     public boolean keepSessionAlive(){ return prefs.getBoolean("keep_session_alive",true); }
     public boolean antiTimeout(){ return prefs.getBoolean("anti_timeout",true); }
     public String userInstructions(){ return prefs.getString("user_instructions",""); }
+    public String reasoningEffort(){ String v=prefs.getString("reasoning_effort","default"); return ("low".equals(v)||"medium".equals(v)||"high".equals(v))?v:"default"; }
 
     public void save(float temperature,float topP,int maxTokens,int connectMs,int readMs,int commandSeconds,
-                     int maxRounds,int maxToolCalls,boolean keepAlive,boolean antiTimeout,String instructions){
+                     int maxRounds,int maxToolCalls,boolean keepAlive,boolean antiTimeout,String reasoningEffort,String instructions){
         prefs.edit()
                 .putFloat("temperature",clamp(temperature,0f,2f))
                 .putFloat("top_p",clamp(topP,0.01f,1f))
@@ -34,11 +35,12 @@ public final class OceanAgentSettings {
                 .putInt("max_tool_calls",clamp(maxToolCalls,1,128))
                 .putBoolean("keep_session_alive",keepAlive)
                 .putBoolean("anti_timeout",antiTimeout)
+                .putString("reasoning_effort",("low".equals(reasoningEffort)||"medium".equals(reasoningEffort)||"high".equals(reasoningEffort))?reasoningEffort:"default")
                 .putString("user_instructions",instructions==null?"":instructions.trim())
                 .apply();
     }
 
-    public String signature(){ return temperature()+"|"+topP()+"|"+maxTokens()+"|"+connectTimeoutMs()+"|"+readTimeoutMs()+"|"+commandTimeoutSeconds()+"|"+maxRounds()+"|"+maxToolCalls()+"|"+keepSessionAlive()+"|"+antiTimeout()+"|"+userInstructions().hashCode(); }
+    public String signature(){ return temperature()+"|"+topP()+"|"+maxTokens()+"|"+connectTimeoutMs()+"|"+readTimeoutMs()+"|"+commandTimeoutSeconds()+"|"+maxRounds()+"|"+maxToolCalls()+"|"+keepSessionAlive()+"|"+antiTimeout()+"|"+reasoningEffort()+"|"+userInstructions().hashCode(); }
 
     public void reset(){ prefs.edit().clear().apply(); }
     private static int clamp(int v,int min,int max){return Math.max(min,Math.min(max,v));}
