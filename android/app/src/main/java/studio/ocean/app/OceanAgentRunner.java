@@ -106,6 +106,7 @@ public final class OceanAgentRunner {
                                     () -> RuntimePortsActivity.interactForAgent(args)); }
                             if(name.equals("ocean_forge")){
                                 if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
+                                OceanForgeInstaller.ensure(context);
                                 if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                                 String action=args.getString("action");
                                 String commandText="ocean-forge "+action;
