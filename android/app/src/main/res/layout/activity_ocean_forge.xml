@@ -17,11 +17,32 @@
             android:paddingHorizontal="12dp" android:paddingVertical="8dp"
             android:text="min 28 · target 28 · compile 35" android:textColor="@color/ocean_ink" android:textSize="12sp"/>
 
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="FORGE TOOLCHAIN"/>
+        <Button android:id="@+id/forge_bootstrap" style="@style/OceanPrimaryButton" android:text="Install Forge toolchain"/>
+        <Button android:id="@+id/forge_sdk_status" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="8dp" android:text="Check Android SDK adapter" android:textAllCaps="false"/>
+        <EditText android:id="@+id/forge_sdk_root" style="@style/OceanAuthField" android:layout_marginTop="10dp"
+            android:hint="/path/to/android-sdk" android:inputType="textNoSuggestions"/>
+        <EditText android:id="@+id/forge_aapt2_path" style="@style/OceanAuthField" android:layout_marginTop="8dp"
+            android:hint="/path/to/arm64/aapt2" android:inputType="textNoSuggestions"/>
+        <Button android:id="@+id/forge_configure_sdk" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="8dp" android:text="Configure Android 35 + ARM64 aapt2" android:textAllCaps="false"/>
+
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="SOURCE WORKSPACE"/>
         <EditText android:id="@+id/forge_source_path" style="@style/OceanAuthField"
             android:hint="/path/to/OceanStudio/source" android:inputType="textNoSuggestions"/>
         <Button android:id="@+id/forge_init" style="@style/OceanPrimaryButton"
             android:layout_marginTop="10dp" android:text="Initialize Forge workspace"/>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="WORKSPACE CONTROL"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/forge_checkpoint" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:text="Checkpoint" android:textAllCaps="false"/>
+            <Button android:id="@+id/forge_diff" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:layout_marginStart="8dp" android:text="Diff" android:textAllCaps="false"/>
+            <Button android:id="@+id/forge_rollback" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:layout_marginStart="8dp" android:text="Rollback" android:textAllCaps="false"/>
+        </LinearLayout>
 
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="BUILD PIPELINE"/>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
