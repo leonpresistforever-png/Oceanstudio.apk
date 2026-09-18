@@ -93,3 +93,36 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
 }
+
+
+/*
+ * Ocean Forge self-source bundle.
+ * Every APK carries the source subset required for the next on-device rebuild.
+ * Build outputs/caches and signing material are never included.
+ */
+def forgeGeneratedAssets = file("$buildDir/generated/forgeAssets")
+def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
+    archiveFileName = "source.zip"
+    destinationDirectory = file("$buildDir/generated/forgeAssets/ocean/forge")
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(rootProject.projectDir) {
+        into "android"
+        exclude ".gradle/**"
+        exclude "**/build/**"
+        exclude "**/.idea/**"
+        exclude "**/*.jks"
+        exclude "**/*.keystore"
+        exclude "**/*.p12"
+        exclude "**/local.properties"
+    }
+    from(rootProject.projectDir.parentFile) {
+        include "scripts/verify-native-only.sh"
+        include "packages/ocean-prefix.env"
+    }
+}
+
+android.sourceSets.main.assets.srcDir(forgeGeneratedAssets)
+tasks.named("preBuild").configure { dependsOn(prepareForgeSourceBundle) }
