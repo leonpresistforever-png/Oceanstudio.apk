@@ -73,6 +73,7 @@
                 <LinearLayout android:id="@+id/group_tools" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/tools_group"/><ImageView android:id="@+id/chevron_tools" style="@style/OceanChevron"/></LinearLayout>
                 <LinearLayout android:id="@+id/tools_children" style="@style/OceanNavChildren">
                     <TextView android:id="@+id/nav_runtime_ports" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="@string/runtime_ports" />
+                    <TextView android:id="@+id/nav_ocean_forge" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Ocean Forge" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser" android:text="@string/browser_research" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/playground" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/automations" />
@@ -115,6 +116,7 @@
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border"/>
                 <TextView android:id="@+id/agent_controls_settings" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_models" android:text="Agent Settings"/>
                 <TextView android:id="@+id/agent_controls_plugins" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_tools" android:text="Plugins"/>
+                <TextView android:id="@+id/agent_controls_forge" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_tools" android:text="Ocean Forge"/>
                 <TextView android:id="@+id/agent_controls_byok" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_connections" android:text="Models & APIs"/>
                 <TextView android:id="@+id/agent_controls_device" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_agent" android:text="Device Access"/>
                 <TextView android:id="@+id/agent_controls_runtime" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_ports" android:text="Runtime Ports"/>
