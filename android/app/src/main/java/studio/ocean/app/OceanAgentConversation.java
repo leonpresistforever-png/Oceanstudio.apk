@@ -30,28 +30,45 @@ final class OceanAgentConversation {
             + "Do not read or disclose credentials. Be concise and distinguish failures from successful results.";
 
     private final String provider, model;
+    private final float temperature, topP;
+    private final int maxTokens, maxRounds, maxToolCalls;
+    private final boolean keepSessionAlive;
+    private final String userInstructions;
     private final ArrayDeque<JSONArray> turns = new ArrayDeque<>();
 
-    OceanAgentConversation(String provider, String model) { this.provider = provider; this.model = model; }
+    OceanAgentConversation(String provider, String model) {
+        this(provider,model,0.7f,1.0f,2048,MAX_ROUNDS,MAX_TOOL_CALLS,true,"");
+    }
+
+    OceanAgentConversation(String provider,String model,float temperature,float topP,int maxTokens,int maxRounds,int maxToolCalls,boolean keepSessionAlive,String userInstructions) {
+        this.provider=provider; this.model=model; this.temperature=temperature; this.topP=topP; this.maxTokens=maxTokens;
+        this.maxRounds=maxRounds; this.maxToolCalls=maxToolCalls; this.keepSessionAlive=keepSessionAlive;
+        this.userInstructions=userInstructions==null?"":userInstructions.trim();
+    }
+
+    private String systemPrompt() {
+        if(userInstructions.isEmpty()) return SYSTEM;
+        return SYSTEM + "\n\nUser-provided persistent instructions:\n" + userInstructions;
+    }
 
     String run(String prompt, Transport transport, ToolExecutor executor, Progress progress) throws Exception {
         JSONArray messages = new JSONArray();
-        for (JSONArray turn : turns) for (int i = 0; i < turn.length(); i++) messages.put(turn.get(i));
+        if (keepSessionAlive) for (JSONArray turn : turns) for (int i = 0; i < turn.length(); i++) messages.put(turn.get(i));
         int start = messages.length();
         messages.put(user(prompt));
         int calls = 0;
-        for (int round = 0; round < MAX_ROUNDS; round++) {
+        for (int round = 0; round < maxRounds; round++) {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException("Stopped");
             JSONObject response = transport.send(request(messages, true));
             Reply reply = parse(response);
             if (reply.calls.isEmpty()) {
                 if (reply.text.trim().isEmpty()) throw new IOException("The provider returned no text or supported tool call");
                 messages.put(reply.message);
-                remember(messages, start);
+                if (keepSessionAlive) remember(messages, start);
                 return reply.text;
             }
             // Reject the entire batch before any side effect if it exceeds the budget or is malformed.
-            if (calls + reply.calls.size() > MAX_TOOL_CALLS)
+            if (calls + reply.calls.size() > maxToolCalls)
                 throw new IOException("Agent tool limit reached. Review the command results before continuing.");
             messages.put(reply.message); // Preserve signatures, call IDs, and all model content blocks verbatim.
             JSONArray results = new JSONArray();
@@ -118,10 +135,11 @@ final class OceanAgentConversation {
     JSONObject request(JSONArray messages, boolean tools) throws JSONException {
         JSONObject body = new JSONObject();
         if (provider.equals("google")) {
-            body.put("contents", messages).put("systemInstruction", new JSONObject().put("parts", new JSONArray().put(new JSONObject().put("text", SYSTEM))));
+            body.put("contents", messages).put("systemInstruction", new JSONObject().put("parts", new JSONArray().put(new JSONObject().put("text", systemPrompt()))));
+            body.put("generationConfig", new JSONObject().put("temperature",temperature).put("topP",topP).put("maxOutputTokens",maxTokens));
             if (tools) body.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations", googleDeclarations())));
         } else if (provider.equals("anthropic")) {
-            body.put("model", model).put("system", SYSTEM).put("max_tokens", 2048).put("messages", messages);
+            body.put("model", model).put("system", systemPrompt()).put("max_tokens", maxTokens).put("temperature",temperature).put("top_p",topP).put("messages", messages);
             if (tools) {
                 JSONArray declarations = declarations(), defs = new JSONArray();
                 for (int i = 0; i < declarations.length(); i++) {
@@ -131,9 +149,9 @@ final class OceanAgentConversation {
                 body.put("tools", defs);
             }
         } else {
-            JSONArray all = new JSONArray().put(new JSONObject().put("role", "system").put("content", SYSTEM));
+            JSONArray all = new JSONArray().put(new JSONObject().put("role", "system").put("content", systemPrompt()));
             for (int i = 0; i < messages.length(); i++) all.put(messages.get(i));
-            body.put("model", model).put("messages", all);
+            body.put("model", model).put("messages", all).put("temperature",temperature).put("top_p",topP).put("max_tokens",maxTokens);
             if (tools) {
                 JSONArray defs = declarations(), wrapped = new JSONArray();
                 for (int i = 0; i < defs.length(); i++) wrapped.put(new JSONObject().put("type", "function").put("function", defs.get(i)));
