@@ -13,10 +13,19 @@ fi
 if [[ -z "$out" ]]; then
   out="${apk%.apk}_decompiled"
 fi
+rm -rf "$out"
 mkdir -p "$out"
-echo "Extracting APK structure to $out..."
+
+if command -v apktool >/dev/null 2>&1; then
+  echo "Decoding APK with apktool into $out..."
+  apktool d -f "$apk" -o "$out"
+  printf '%s\n' "$apk" > "$out/.ocean-source-apk"
+  echo "APK workspace ready: $out"
+  exit 0
+fi
+
+echo "apktool is unavailable; falling back to raw extraction + DEX disassembly."
 unzip -q -o "$apk" -d "$out"
-echo "Disassembling DEX files to smali..."
 for dex in "$out"/classes*.dex; do
   if [[ -f "$dex" ]]; then
     name="$(basename "$dex" .dex)"
@@ -28,4 +37,5 @@ for dex in "$out"/classes*.dex; do
     fi
   fi
 done
-echo "Decompilation complete in $out"
+printf '%s\n' "$apk" > "$out/.ocean-source-apk"
+echo "Fallback workspace ready in $out. Install apktool for rebuildable decoding."
