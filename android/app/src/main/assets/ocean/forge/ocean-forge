@@ -15,6 +15,7 @@ Usage:
   ocean-forge tools
   ocean-forge bootstrap
   ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
+  ocean-forge detect-sdk
   ocean-forge sdk-status
   ocean-forge clone <git-url> [branch]
   ocean-forge init <source-dir>
@@ -139,6 +140,31 @@ case "${1:-}" in
     pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip
     echo "Forge toolchain installation complete."
     "$0" tools
+    ;;
+
+  detect-sdk)
+    sdk=""
+    aapt2=""
+    for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/android-sdk" "$HOME/.androidide/android-sdk" "${PREFIX:-$HOME/../usr}/share/android-sdk"; do
+      [[ -n "$candidate" && -f "$candidate/platforms/android-35/android.jar" ]] || continue
+      sdk="$(realpath "$candidate")"; break
+    done
+    if [[ -n "$sdk" ]]; then
+      for candidate in "${PREFIX:-}/bin/aapt2" "$HOME/.androidide/aapt2" "$sdk/build-tools/35.0.0/aapt2"; do
+        [[ -n "$candidate" && -x "$candidate" ]] || continue
+        if "$candidate" version >/dev/null 2>&1; then aapt2="$(realpath "$candidate")"; break; fi
+      done
+    fi
+    if [[ -n "$sdk" && -n "$aapt2" ]]; then
+      printf '%s\n' "$sdk" > "$STATE/android-sdk-root"
+      printf '%s\n' "$aapt2" > "$STATE/aapt2-override"
+      echo "Detected Forge Android SDK adapter."
+      "$0" sdk-status
+    else
+      echo "No complete Android 35 + ARM64 aapt2 adapter was detected." >&2
+      echo "Install/provide an Android 35 SDK and ARM64 aapt2, then run configure-sdk." >&2
+      exit 9
+    fi
     ;;
 
   configure-sdk)
