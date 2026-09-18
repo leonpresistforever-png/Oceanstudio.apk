@@ -30,6 +30,7 @@ public final class DeviceAccessActivity extends AppCompatActivity {
             else requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},81);
         });
         button(rows,"Modify system settings", () -> launch(new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,Uri.parse("package:"+getPackageName()))));
+        if (Build.VERSION.SDK_INT >= 26) button(rows,"Install unknown apps", () -> launch(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName()))));
         button(rows,"Accessibility settings", () -> launch(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         Switch live = new Switch(this); live.setText("Allow live agent control"); live.setPadding(0,dp(20),0,dp(20)); live.setChecked(DeviceControlService.enabled(this)); rows.addView(live);
         live.setOnCheckedChangeListener((v,on) -> { DeviceControlService.setEnabled(this,on); refresh(); });
@@ -47,6 +48,7 @@ public final class DeviceAccessActivity extends AppCompatActivity {
     private void refresh(){
         if(status==null)return;
         boolean files=Build.VERSION.SDK_INT>=30 ? Environment.isExternalStorageManager() : androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.WRITE_EXTERNAL_STORAGE)==0;
-        status.setText("Accessibility: "+(DeviceControlService.connected()?"connected":"off")+"\nLive control: "+(DeviceControlService.enabled(this)?"allowed":"off")+"\nSystem settings: "+(Settings.System.canWrite(this)?"allowed":"off")+"\nShared files: "+(files?"allowed":"off"));
+        boolean installs=Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls();
+        status.setText("Accessibility: "+(DeviceControlService.connected()?"connected":"off")+"\nLive control: "+(DeviceControlService.enabled(this)?"allowed":"off")+"\nSystem settings: "+(Settings.System.canWrite(this)?"allowed":"off")+"\nInstall APKs: "+(installs?"allowed":"off")+"\nShared files: "+(files?"allowed":"off"));
     }
 }
