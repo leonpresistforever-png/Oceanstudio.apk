@@ -32,7 +32,18 @@
         <EditText android:id="@+id/forge_source_path" style="@style/OceanAuthField"
             android:hint="/path/to/OceanStudio/source" android:inputType="textNoSuggestions"/>
         <Button android:id="@+id/forge_init" style="@style/OceanPrimaryButton"
-            android:layout_marginTop="10dp" android:text="Initialize Forge workspace"/>
+            android:layout_marginTop="10dp" android:text="Initialize from local source"/>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="OR CLONE SOURCE"/>
+        <EditText android:id="@+id/forge_repo_url" style="@style/OceanAuthField"
+            android:hint="https://github.com/owner/repository.git" android:inputType="textUri"/>
+        <EditText android:id="@+id/forge_repo_branch" style="@style/OceanAuthField" android:layout_marginTop="8dp"
+            android:hint="Branch (optional, e.g. main)" android:inputType="textNoSuggestions"/>
+        <Button android:id="@+id/forge_clone" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="8dp" android:text="Clone into Forge" android:textAllCaps="false"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+            android:text="Forge uses existing Git credentials. Do not paste an access token into the repository URL."
+            android:textColor="@color/ocean_muted" android:textSize="12sp"/>
 
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="WORKSPACE CONTROL"/>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
