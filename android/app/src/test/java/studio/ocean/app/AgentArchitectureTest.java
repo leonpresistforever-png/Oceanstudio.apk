@@ -21,6 +21,14 @@ public final class AgentArchitectureTest {
         if(!Files.isRegularFile(file))file=root.resolve("app").resolve(name);
         return new String(Files.readAllBytes(file),StandardCharsets.UTF_8);
     }
+    private String repositoryFile(String name) throws Exception {
+        Path root=Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        for(int depth=0;depth<5&&root!=null;depth++,root=root.getParent()){
+            Path file=root.resolve(name);
+            if(Files.isRegularFile(file))return new String(Files.readAllBytes(file),StandardCharsets.UTF_8);
+        }
+        throw new java.io.IOException("Repository file not found: "+name);
+    }
     @Test public void agentCommandsUseTerminalRuntimeServiceNotProcessBuilder() throws Exception {
         String runner=source("OceanAgentRunner.java");
         assertTrue(runner.contains("OceanTerminalRuntimeService"));
@@ -121,6 +129,17 @@ public final class AgentArchitectureTest {
         assertTrue(gradle.contains("src/forgeNative"));
         assertTrue(gradle.contains("OCEAN_FORGE_REUSE_NATIVE"));
         assertTrue(runner.contains("ocean-forge"));
+    }
+
+    @Test public void forgeShellSupportsSelfSeedSdkAndNativeCore() throws Exception {
+        String forge=repositoryFile("ocean-packages/packages/ocean-tools/data/data/studio.ocean.app/files/usr/bin/ocean-forge");
+        assertTrue(forge.contains("bootstrap-sdk)"));
+        assertTrue(forge.contains("seed)"));
+        assertTrue(forge.contains("prepare_native_library()"));
+        assertTrue(forge.contains("pkg install -y git openjdk-21 kotlin ecj clang cmake ninja"));
+        assertTrue(forge.contains("build-tools-34.0.4-aarch64.tar.xz"));
+        assertTrue(forge.contains("llvm-readelf -h"));
+        assertTrue(forge.contains("Machine:.*AArch64"));
     }
 
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
