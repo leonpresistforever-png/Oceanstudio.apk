@@ -189,7 +189,7 @@ final class OceanAgentConversation {
         JSONObject props = new JSONObject()
                 .put("command", new JSONObject().put("type", "string").put("description", "Bash command to execute for the user's request. No interactive prompts."))
                 .put("cwd", new JSONObject().put("type", "string").put("description", "Optional absolute working directory; defaults to Ocean home."))
-                .put("timeout_seconds", new JSONObject().put("type", "integer").put("description", "Time limit from 1 to 300 seconds; default 120."));
+                .put("timeout_seconds", new JSONObject().put("type", "integer").put("description", "Time limit from 1 to 1800 seconds; default 120."));
         JSONObject command = new JSONObject().put("name", "run_terminal_command")
                 .put("description", "Run a command headlessly in the local Ocean terminal and return combined output and the actual exit code.")
                 .put("parameters", new JSONObject().put("type", "object").put("properties", props).put("required", new JSONArray().put("command")));
@@ -328,8 +328,8 @@ final class OceanAgentConversation {
         if (args.has("timeout_seconds")) {
             Object value = args.get("timeout_seconds");
             if (!(value instanceof Number) || ((Number) value).doubleValue() != ((Number) value).intValue()
-                    || ((Number) value).intValue() < 1 || ((Number) value).intValue() > 300)
-                throw new IllegalArgumentException("timeout_seconds must be an integer from 1 to 300");
+                    || ((Number) value).intValue() < 1 || ((Number) value).intValue() > 1800)
+                throw new IllegalArgumentException("timeout_seconds must be an integer from 1 to 1800");
         }
     }
 
