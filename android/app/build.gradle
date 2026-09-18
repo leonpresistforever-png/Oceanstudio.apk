@@ -46,7 +46,7 @@ android {
     // The 17+ MB ocean bootstrap archive MUST be stored uncompressed, or installation silently fails.
     // All native .so libraries must also be stored uncompressed for system linker mmap.
     aaptOptions {
-        noCompress 'zst', 'tar', 'zstd', 'so', 'gz', 'br', 'bz2', 'lz4', 'xz'
+        noCompress 'zst', 'tar', 'zstd', 'so', 'gz', 'br', 'bz2', 'lz4', 'xz', 'zip'
     }
     packagingOptions {
         // Keep .so files uncompressed in the APK so the system linker can mmap them directly.
