@@ -21,6 +21,7 @@ Usage:
   ocean-forge diff
   ocean-forge test
   ocean-forge build
+  ocean-forge build-signed <keystore> <alias> <store-pass-file> <key-pass-file>
   ocean-forge verify [apk]
   ocean-forge install [apk]
   ocean-forge checkpoint [label]
@@ -31,6 +32,7 @@ Notes:
 - configure-sdk records an Android 35 SDK and ARM64 aapt2 override.
 - init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
+- build-signed uses short-lived password files and an imported signing identity for the candidate.
 - verify compares the candidate certificate with the currently installed Ocean APK.
 - install hands a verified candidate to Android PackageInstaller.
 - Android still requires the installed and candidate APKs to have compatible signing identities.
@@ -231,6 +233,20 @@ case "${1:-}" in
     sha256sum "$candidate" > "$candidate.sha256"
     echo "Forge candidate built: $candidate"
     "$0" verify "$candidate" || true
+    ;;
+
+  build-signed)
+    keystore="${2:-}"; alias="${3:-}"; store_file="${4:-}"; key_file="${5:-}"
+    [[ -f "$keystore" && -n "$alias" && -f "$store_file" && -f "$key_file" ]] || {
+      echo "Usage: ocean-forge build-signed <keystore> <alias> <store-pass-file> <key-pass-file>" >&2
+      exit 2
+    }
+    export OCEAN_FORGE_KEYSTORE="$(realpath "$keystore")"
+    export OCEAN_FORGE_KEY_ALIAS="$alias"
+    export OCEAN_FORGE_STORE_PASS="$(cat "$store_file")"
+    export OCEAN_FORGE_KEY_PASS="$(cat "$key_file")"
+    trap 'rm -f "$store_file" "$key_file"' EXIT HUP INT TERM
+    "$0" build
     ;;
 
   verify)
