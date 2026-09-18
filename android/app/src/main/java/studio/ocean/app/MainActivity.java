@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private AuthMode authMode = AuthMode.SIGN_IN;
     private AuthState authState = AuthState.LOADING;
     private boolean developmentSession;
-    private LinearLayout sidebar; private View backdrop; private boolean drawerOpen;
+    private LinearLayout sidebar, agentControlsDrawer; private View backdrop; private boolean drawerOpen, agentControlsOpen;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private int loadingGeneration;
     private OceanByokManager byokManager;
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         studio.ocean.app.terminal.PreviousProcessExit.capture(this);
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) { @Override public void handleOnBackPressed() { if (drawerOpen) closeDrawer(); else finish(); }});
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) { @Override public void handleOnBackPressed() { if (agentControlsOpen) closeAgentControls(); else if (drawerOpen) closeDrawer(); else finish(); }});
         showLoading(() -> {
             byokManager = new OceanByokManager(this);
         agentRunner = new OceanAgentRunner(this);
@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onPostResume() {
         super.onPostResume();
         CrashSurvival.showPending(this);
+        if (agentControlsOpen) refreshAgentControlsSummary();
     }
 
     private void showLoading(Runnable destination) {
@@ -121,8 +122,12 @@ public class MainActivity extends AppCompatActivity {
     private void startDevelopmentSession() { if (!devBypassAvailable()) return; developmentSession=true; authState=AuthState.DEV_BYPASS_LOGGED_IN; showLoading(this::showMain); }
 
     private void showMain() {
-        setContentView(R.layout.activity_main); sidebar=findViewById(R.id.sidebar); backdrop=findViewById(R.id.drawer_backdrop);
-        findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer()); backdrop.setOnClickListener(v -> closeDrawer()); findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat());
+        setContentView(R.layout.activity_main); sidebar=findViewById(R.id.sidebar); agentControlsDrawer=findViewById(R.id.agent_controls_drawer); backdrop=findViewById(R.id.drawer_backdrop);
+        findViewById(R.id.menu_button).setOnClickListener(v -> openDrawer());
+        findViewById(R.id.agent_controls_button).setOnClickListener(v -> openAgentControls());
+        findViewById(R.id.agent_controls_close).setOnClickListener(v -> closeAgentControls());
+        backdrop.setOnClickListener(v -> { if (agentControlsOpen) closeAgentControls(); else closeDrawer(); });
+        findViewById(R.id.new_chat_button).setOnClickListener(v -> newChat()); findViewById(R.id.sidebar_new_chat).setOnClickListener(v -> newChat());
         
         TextView modelBtn = findViewById(R.id.model_button);
         if (byokManager != null) modelBtn.setText(byokManager.isVerified()?byokManager.getModel():"Configure model");
@@ -133,6 +138,13 @@ public class MainActivity extends AppCompatActivity {
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
         findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         findViewById(R.id.nav_runtime_ports).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
+        findViewById(R.id.nav_agent_settings).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
+        findViewById(R.id.nav_plugins).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
+        findViewById(R.id.agent_controls_settings).setOnClickListener(v -> startActivity(new Intent(this, AgentSettingsActivity.class)));
+        findViewById(R.id.agent_controls_plugins).setOnClickListener(v -> startActivity(new Intent(this, PluginCenterActivity.class)));
+        findViewById(R.id.agent_controls_byok).setOnClickListener(v -> { closeAgentControls(); showByokPage(); });
+        findViewById(R.id.agent_controls_device).setOnClickListener(v -> startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)));
+        findViewById(R.id.agent_controls_runtime).setOnClickListener(v -> startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
         
         // Add BYOK Models link into sidebar Tools children
         LinearLayout toolsChildren = findViewById(R.id.tools_children);
@@ -525,6 +537,42 @@ public class MainActivity extends AppCompatActivity {
 
     private void openDrawer() { if(drawerOpen)return; drawerOpen=true; sidebar.setVisibility(View.VISIBLE); backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(190).start(); sidebar.animate().translationX(0f).setDuration(270).setInterpolator(new DecelerateInterpolator()).start(); findViewById(R.id.main_content).animate().translationX(sidebar.getWidth()*.08f).setDuration(270).start(); }
     private void closeDrawer() { if(!drawerOpen)return; drawerOpen=false; backdrop.animate().alpha(0f).setDuration(180).withEndAction(() -> backdrop.setVisibility(View.GONE)).start(); sidebar.animate().translationX(-sidebar.getWidth()).setDuration(240).setInterpolator(new DecelerateInterpolator()).setListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){sidebar.setVisibility(View.GONE); sidebar.animate().setListener(null);}}).start(); findViewById(R.id.main_content).animate().translationX(0f).setDuration(240).start(); }
+
+    private void openAgentControls() {
+        if (agentControlsOpen) return;
+        if (drawerOpen) closeDrawer();
+        agentControlsOpen=true;
+        refreshAgentControlsSummary();
+        agentControlsDrawer.setVisibility(View.VISIBLE);
+        backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(160).start();
+        agentControlsDrawer.post(() -> {
+            int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.82f),dp(340));
+            ViewGroup.LayoutParams p=agentControlsDrawer.getLayoutParams(); p.width=width; agentControlsDrawer.setLayoutParams(p);
+            agentControlsDrawer.setTranslationX(width);
+            agentControlsDrawer.animate().translationX(0f).setDuration(240).setInterpolator(new DecelerateInterpolator()).start();
+        });
+    }
+
+    private void closeAgentControls() {
+        if(!agentControlsOpen)return;
+        agentControlsOpen=false;
+        backdrop.animate().alpha(0f).setDuration(160).withEndAction(() -> { if(!drawerOpen) backdrop.setVisibility(View.GONE); }).start();
+        agentControlsDrawer.animate().translationX(agentControlsDrawer.getWidth()).setDuration(220).setInterpolator(new DecelerateInterpolator())
+                .setListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){agentControlsDrawer.setVisibility(View.GONE);agentControlsDrawer.animate().setListener(null);}}).start();
+    }
+
+    private void refreshAgentControlsSummary() {
+        if (agentControlsDrawer==null) return;
+        OceanAgentSettings s=new OceanAgentSettings(this);
+        TextView model=findViewById(R.id.agent_controls_model);
+        TextView generation=findViewById(R.id.agent_controls_generation);
+        TextView timeout=findViewById(R.id.agent_controls_timeout);
+        TextView context=findViewById(R.id.agent_controls_context);
+        if(model!=null)model.setText("Model · "+(byokManager!=null&&byokManager.isVerified()?byokManager.getModel():"Not configured"));
+        if(generation!=null)generation.setText("Temperature "+s.temperature()+" · Top P "+s.topP()+" · "+s.maxTokens()+" tokens");
+        if(timeout!=null)timeout.setText("Response timeout · "+(s.readTimeoutMs()/1000)+"s");
+        if(context!=null)context.setText(s.keepSessionAlive()?"Session context · persistent":"Session context · one turn");
+    }
 
     private void showModels(View anchor) {
         LinearLayout content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(18,16,18,16); content.setBackgroundResource(R.drawable.composer_background);
