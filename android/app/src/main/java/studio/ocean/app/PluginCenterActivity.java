@@ -17,6 +17,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         super.onCreate(state);
         setContentView(R.layout.activity_plugins);
         prefs=getSharedPreferences("ocean_plugin_state",MODE_PRIVATE);
+        try{OceanForgeInstaller.ensure(this);}catch(Exception ignored){}
         LinearLayout list=findViewById(R.id.plugin_list);
 
         add(list,"terminal","Ocean Terminal","Local shell, packages and project automation.",exists("usr/bin/bash"));
