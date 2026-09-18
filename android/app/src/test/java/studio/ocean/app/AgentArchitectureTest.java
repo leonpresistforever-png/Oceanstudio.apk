@@ -167,6 +167,14 @@ public final class AgentArchitectureTest {
         assertTrue(gradle.contains("prepareForgeToolOverlay"));
     }
 
+    @Test public void dynamicPluginInputUsesPrivateStdinFiles() throws Exception {
+        String runner=source("OceanAgentRunner.java");
+        assertTrue(runner.contains("ocean-plugin-input"));
+        assertTrue(runner.contains("File.createTempFile"));
+        assertTrue(runner.contains(" < "));
+        assertFalse(runner.contains("printf '%s' "+shellQuote(input)"));
+    }
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
