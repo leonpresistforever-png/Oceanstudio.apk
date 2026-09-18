@@ -104,6 +104,15 @@ public final class OceanAgentRunner {
                                     () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/"))); }
                             if (name.equals("interact_runtime_page")) { if(!pluginConnected("runtime")) throw new IOException("Runtime Ports plugin is disconnected."); return runRuntimeTool("Runtime page", args.getString("action"), callback,
                                     () -> RuntimePortsActivity.interactForAgent(args)); }
+                            if(name.equals("ocean_forge")){
+                                if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
+                                if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
+                                String action=args.getString("action");
+                                String commandText="ocean-forge "+action;
+                                if(action.equals("checkpoint")&&args.has("label")) commandText+=" "+shellQuote(args.getString("label"));
+                                int timeout=(action.equals("build")||action.equals("test"))?300:120;
+                                return runTerminal(commandText,null,timeout,callback);
+                            }
                             if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                             return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", agentSettings.commandTimeoutSeconds()), callback);
                         }, thought -> status(callback, thought));
@@ -192,6 +201,7 @@ public final class OceanAgentRunner {
     }
 
     private boolean pluginConnected(String id) { return context.getSharedPreferences("ocean_plugin_state",Context.MODE_PRIVATE).getBoolean("connected_"+id,true); }
+    private static String shellQuote(String value){ return "'"+value.replace("'","'\\''")+"'"; }
 
     private JSONObject openTerminal(AgentCallback callback) throws Exception {
         CountDownLatch ready = new CountDownLatch(1);
