@@ -13,16 +13,20 @@ Ocean Forge — local OceanStudio development and rebuild workspace
 
 Usage:
   ocean-forge tools
+  ocean-forge bootstrap
   ocean-forge init <source-dir>
   ocean-forge status
+  ocean-forge diff
   ocean-forge test
   ocean-forge build
   ocean-forge verify [apk]
   ocean-forge install [apk]
   ocean-forge checkpoint [label]
+  ocean-forge rollback
 
 Notes:
-- init copies a source tree into $HOME/ocean-forge/workspace/current.
+- bootstrap installs Ocean's local Android/JVM developer toolchain.
+- init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
 - verify compares the candidate certificate with the currently installed Ocean APK.
 - install hands a verified candidate to Android PackageInstaller.
@@ -58,6 +62,15 @@ case "${1:-}" in
     done
     ;;
 
+  bootstrap)
+    command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
+    echo "Installing Ocean Forge toolchain..."
+    pkg update
+    pkg install -y git gradle openjdk-21 kotlin ecj aapt apksigner python
+    echo "Forge toolchain installation complete."
+    "$0" tools
+    ;;
+
   init)
     src="${2:-}"
     [[ -n "$src" && -d "$src" ]] || { echo "Usage: ocean-forge init <source-dir>" >&2; exit 2; }
@@ -74,6 +87,16 @@ case "${1:-}" in
     )
     printf '%s\n' "$src" > "$STATE/source-origin"
     date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/initialized-at"
+    if command -v git >/dev/null 2>&1; then
+      (
+        cd "$current"
+        git init -q
+        git config user.name "Ocean Forge"
+        git config user.email "forge@ocean.local"
+        git add -A
+        git commit -q -m "Ocean Forge baseline" || true
+      )
+    fi
     echo "Forge workspace ready: $current"
     ;;
 
@@ -91,6 +114,18 @@ case "${1:-}" in
     } || echo "Candidate: none"
     installed="$(installed_apk || true)"
     [[ -n "$installed" ]] && echo "Installed Ocean APK: $installed" || echo "Installed Ocean APK: unavailable"
+    ;;
+
+  diff)
+    [[ -d "$current" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    if [[ -d "$current/.git" ]] && command -v git >/dev/null 2>&1; then
+      cd "$current"
+      git status --short
+      git diff --stat
+      git diff -- . ':(exclude)android/app/build' ':(exclude).gradle'
+    else
+      echo "No Git baseline is available for this workspace."
+    fi
     ;;
 
   test)
@@ -159,8 +194,27 @@ case "${1:-}" in
     [[ -n "$safe" ]] || safe=checkpoint
     mkdir -p "$FORGE/checkpoints"
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    tar -C "$current" -czf "$FORGE/checkpoints/${stamp}-${safe}.tar.gz" .
-    echo "Checkpoint saved: $FORGE/checkpoints/${stamp}-${safe}.tar.gz"
+    archive="$FORGE/checkpoints/${stamp}-${safe}.tar.gz"
+    tar -C "$current" -czf "$archive" .
+    if [[ -d "$current/.git" ]] && command -v git >/dev/null 2>&1; then
+      (
+        cd "$current"
+        git add -A
+        git commit -q -m "Forge checkpoint: $label" || true
+      )
+    fi
+    printf '%s\n' "$archive" > "$STATE/last-checkpoint"
+    echo "Checkpoint saved: $archive"
+    ;;
+
+  rollback)
+    archive=""
+    [[ -f "$STATE/last-checkpoint" ]] && archive="$(cat "$STATE/last-checkpoint")"
+    [[ -n "$archive" && -f "$archive" ]] || { echo "No Forge checkpoint is available." >&2; exit 7; }
+    rm -rf "$current"
+    mkdir -p "$current"
+    tar -C "$current" -xzf "$archive"
+    echo "Workspace restored from: $archive"
     ;;
 
   ""|-h|--help|help) usage ;;
