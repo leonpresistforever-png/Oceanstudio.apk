@@ -22,7 +22,8 @@ public final class OceanEnvironment {
         values.add("OCEAN_ROOT=" + paths.root()); values.add("OCEAN_HOME=" + paths.home());
         values.add("OCEAN_PREFIX=" + paths.prefix()); values.add("HOME=" + paths.home());
         values.add("PREFIX=" + paths.prefix()); values.add("TMPDIR=" + paths.temp());
-        values.add("PATH=" + paths.prefix() + "/bin:/system/bin:/system/xbin");
+        java.io.File forgeOverlay=new java.io.File(context.getFilesDir(),"forge-tools/bin");
+        values.add("PATH=" + forgeOverlay.getAbsolutePath() + ":" + paths.prefix() + "/bin:/system/bin:/system/xbin");
         values.add("TERM=xterm-256color"); values.add("COLORTERM=truecolor");
         values.add("SHELL=" + shell); values.add("LANG=C.UTF-8");
         if (!isRecovery && !"/system/bin/sh".equals(shell)) {
