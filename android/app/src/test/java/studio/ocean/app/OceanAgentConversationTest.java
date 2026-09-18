@@ -159,7 +159,7 @@ public final class OceanAgentConversationTest {
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'test'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'build'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'verify'}"));
-        for(String invalid:new String[]{"{action:'install'}","{action:'delete'}","{action:'status',label:'x'}"}){
+        for(String invalid:new String[]{"{action:'install'}","{action:'build-signed'}","{action:'delete'}","{action:'status',label:'x'}"}){
             try{OceanAgentConversation.validateTool("ocean_forge",json(invalid));fail("Invalid Forge action accepted");}
             catch(IllegalArgumentException expected){}
         }
