@@ -14,6 +14,8 @@ Ocean Forge — local OceanStudio development and rebuild workspace
 Usage:
   ocean-forge tools
   ocean-forge bootstrap
+  ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
+  ocean-forge sdk-status
   ocean-forge init <source-dir>
   ocean-forge status
   ocean-forge diff
@@ -25,7 +27,8 @@ Usage:
   ocean-forge rollback
 
 Notes:
-- bootstrap installs Ocean's local Android/JVM developer toolchain.
+- bootstrap installs Ocean's local JVM/build helper toolchain.
+- configure-sdk records an Android 35 SDK and ARM64 aapt2 override.
 - init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
 - verify compares the candidate certificate with the currently installed Ocean APK.
@@ -51,6 +54,51 @@ cert_digest() {
     sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr 'A-F' 'a-f' | tr -d ':'
 }
 
+java_home() {
+  local bin
+  bin="$(readlink -f "$(command -v java 2>/dev/null || true)")"
+  [[ -n "$bin" ]] || return 1
+  dirname "$(dirname "$bin")"
+}
+
+load_sdk() {
+  [[ -f "$STATE/android-sdk-root" && -f "$STATE/aapt2-override" ]] || {
+    echo "Forge Android SDK is not configured. Run: ocean-forge configure-sdk <sdk-root> <arm64-aapt2>" >&2
+    return 1
+  }
+  ANDROID_HOME="$(cat "$STATE/android-sdk-root")"
+  ANDROID_SDK_ROOT="$ANDROID_HOME"
+  AAPT2_OVERRIDE="$(cat "$STATE/aapt2-override")"
+  [[ -f "$ANDROID_HOME/platforms/android-35/android.jar" ]] || { echo "Android 35 platform is missing from $ANDROID_HOME" >&2; return 1; }
+  [[ -x "$AAPT2_OVERRIDE" ]] || { echo "ARM64 aapt2 is missing or not executable: $AAPT2_OVERRIDE" >&2; return 1; }
+  export ANDROID_HOME ANDROID_SDK_ROOT
+  JAVA_HOME="$(java_home)" || { echo "A working Java runtime is required." >&2; return 1; }
+  export JAVA_HOME
+}
+
+prepare_native_reuse() {
+  [[ -d "$current/.git" && -f "$STATE/baseline-commit" ]] || {
+    echo "Forge baseline is unavailable; reinitialize the workspace." >&2
+    return 1
+  }
+  local baseline installed out
+  baseline="$(cat "$STATE/baseline-commit")"
+  if ! git -C "$current" diff --quiet "$baseline" -- android/app/src/main/cpp; then
+    echo "Native Ocean PTY source changed since the Forge baseline." >&2
+    echo "Fast on-device rebuild refuses to reuse the installed liboceanpty.so." >&2
+    echo "Use an ARM64-capable NDK compatibility layer for native changes." >&2
+    return 8
+  fi
+  installed="$(installed_apk || true)"
+  [[ -n "$installed" && -r "$installed" ]] || { echo "Installed Ocean APK is unavailable for native-library reuse." >&2; return 1; }
+  out="$current/android/app/src/forgeNative/arm64-v8a/liboceanpty.so"
+  mkdir -p "$(dirname "$out")"
+  unzip -p "$installed" lib/arm64-v8a/liboceanpty.so > "$out"
+  [[ -s "$out" ]] || { rm -f "$out"; echo "Installed Ocean APK did not contain liboceanpty.so." >&2; return 1; }
+  sha256sum "$out" > "$STATE/reused-native.sha256"
+  echo "Reusing installed native PTY: $(cat "$STATE/reused-native.sha256")"
+}
+
 case "${1:-}" in
   tools)
     for tool in bash git java javac gradle python3 kotlin kotlinc ecj aapt zipalign apksigner keytool; do
@@ -66,9 +114,31 @@ case "${1:-}" in
     command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
     echo "Installing Ocean Forge toolchain..."
     pkg update
-    pkg install -y git gradle openjdk-21 kotlin ecj aapt apksigner python
+    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip
     echo "Forge toolchain installation complete."
     "$0" tools
+    ;;
+
+  configure-sdk)
+    sdk="${2:-}"; aapt2="${3:-}"
+    [[ -n "$sdk" && -d "$sdk" && -n "$aapt2" && -f "$aapt2" ]] || { echo "Usage: ocean-forge configure-sdk <sdk-root> <arm64-aapt2>" >&2; exit 2; }
+    sdk="$(realpath "$sdk")"; aapt2="$(realpath "$aapt2")"
+    [[ -f "$sdk/platforms/android-35/android.jar" ]] || { echo "SDK must contain platforms/android-35/android.jar" >&2; exit 2; }
+    chmod +x "$aapt2" 2>/dev/null || true
+    [[ -x "$aapt2" ]] || { echo "aapt2 must be executable" >&2; exit 2; }
+    printf '%s\n' "$sdk" > "$STATE/android-sdk-root"
+    printf '%s\n' "$aapt2" > "$STATE/aapt2-override"
+    echo "Forge Android SDK configured."
+    "$0" sdk-status
+    ;;
+
+  sdk-status)
+    if load_sdk; then
+      echo "ANDROID_HOME=$ANDROID_HOME"
+      echo "AAPT2_OVERRIDE=$AAPT2_OVERRIDE"
+      echo "JAVA_HOME=$JAVA_HOME"
+      "$AAPT2_OVERRIDE" version || true
+    fi
     ;;
 
   init)
@@ -95,7 +165,8 @@ case "${1:-}" in
         git config user.email "forge@ocean.local"
         git add -A
         git commit -q -m "Ocean Forge baseline" || true
-      )
+        git rev-parse HEAD
+      ) > "$STATE/baseline-commit"
     fi
     echo "Forge workspace ready: $current"
     ;;
@@ -130,17 +201,21 @@ case "${1:-}" in
 
   test)
     [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    load_sdk
     cd "$current"
     [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
     [[ -x android/gradlew ]] || chmod +x android/gradlew
     ./scripts/verify-native-only.sh
     cd android
     export GRADLE_USER_HOME="$FORGE/gradle-home"
-    ./gradlew test --no-daemon --stacktrace
+    export OCEAN_FORGE_REUSE_NATIVE=true
+    ./gradlew -Pandroid.aapt2FromMavenOverride="$AAPT2_OVERRIDE" test --no-daemon --stacktrace
     ;;
 
   build)
     [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
+    load_sdk
+    prepare_native_reuse
     cd "$current"
     [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
     [[ -x android/gradlew ]] || chmod +x android/gradlew
@@ -148,7 +223,8 @@ case "${1:-}" in
     cd android
     export GRADLE_USER_HOME="$FORGE/gradle-home"
     export OCEAN_BUILD_COMMIT="forge-local"
-    ./gradlew test assembleDebug --no-daemon --stacktrace
+    export OCEAN_FORGE_REUSE_NATIVE=true
+    ./gradlew -Pandroid.aapt2FromMavenOverride="$AAPT2_OVERRIDE" test assembleDebug --no-daemon --stacktrace
     built="app/build/outputs/apk/debug/app-debug.apk"
     [[ -f "$built" ]] || { echo "Gradle completed but APK output was not found." >&2; exit 4; }
     cp "$built" "$candidate"
