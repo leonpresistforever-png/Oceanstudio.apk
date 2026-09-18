@@ -245,7 +245,7 @@ final class OceanAgentConversation {
                 .put("description","Run one connected terminal-registered Ocean plugin. The input string is delivered to the plugin on standard input; return its real stdout/exit code.")
                 .put("parameters",new JSONObject().put("type","object").put("properties",new JSONObject()
                         .put("id",new JSONObject().put("type","string").put("description","Registered plugin id from list_ocean_plugins."))
-                        .put("input",new JSONObject().put("type","string").put("description","UTF-8 text or JSON input, maximum 4096 characters.")))
+                        .put("input",new JSONObject().put("type","string").put("description","UTF-8 text or JSON input, maximum 32768 characters.")))
                         .put("required",new JSONArray().put("id")));
         JSONObject deviceProps = new JSONObject().put("action",new JSONObject().put("type","string")).put("ref",new JSONObject().put("type","string")).put("text",new JSONObject().put("type","string"));
         for(String k:new String[]{"x","y","to_x","to_y"}) deviceProps.put(k,new JSONObject().put("type","integer"));
@@ -283,8 +283,8 @@ final class OceanAgentConversation {
         if(name.equals("run_ocean_plugin")){
             if(!(args.opt("id") instanceof String)||!args.getString("id").matches("[A-Za-z0-9._-]{1,80}"))
                 throw new IllegalArgumentException("Registered plugin id is required");
-            if(args.has("input")&&(!(args.opt("input") instanceof String)||args.getString("input").length()>4096||args.getString("input").indexOf('\0')>=0))
-                throw new IllegalArgumentException("Plugin input must be UTF-8 text up to 4096 characters");
+            if(args.has("input")&&(!(args.opt("input") instanceof String)||args.getString("input").length()>32768||args.getString("input").indexOf('\0')>=0))
+                throw new IllegalArgumentException("Plugin input must be UTF-8 text up to 32768 characters");
             return;
         }
 
