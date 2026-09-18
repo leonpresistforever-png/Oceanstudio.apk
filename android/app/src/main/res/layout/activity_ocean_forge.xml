@@ -60,7 +60,9 @@
         </LinearLayout>
 
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="BUILD PIPELINE"/>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <Button android:id="@+id/forge_doctor" android:layout_width="match_parent" android:layout_height="46dp"
+            android:text="Run Forge Doctor" android:textAllCaps="false"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
             <Button android:id="@+id/forge_tools" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
                 android:text="Toolchain" android:textAllCaps="false"/>
             <Button android:id="@+id/forge_status" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
