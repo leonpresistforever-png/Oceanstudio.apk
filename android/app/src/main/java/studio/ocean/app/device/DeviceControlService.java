@@ -97,16 +97,22 @@ public final class DeviceControlService extends AccessibilityService {
     }
     private boolean interact(JSONObject a,JSONObject[] out,CountDownLatch done)throws Exception{
         String action=a.getString("action");
-        if(action.equals("back")||action.equals("home")){
-            boolean accepted=performGlobalAction(action.equals("back")?GLOBAL_ACTION_BACK:GLOBAL_ACTION_HOME);
-            out[0]=accepted?result("accepted",true):result("error","Android rejected navigation");return false;
+        if(action.equals("back")||action.equals("home")||action.equals("recents")||action.equals("notifications")||action.equals("quick_settings")){
+            int global = action.equals("back") ? GLOBAL_ACTION_BACK
+                    : action.equals("home") ? GLOBAL_ACTION_HOME
+                    : action.equals("recents") ? GLOBAL_ACTION_RECENTS
+                    : action.equals("notifications") ? GLOBAL_ACTION_NOTIFICATIONS
+                    : GLOBAL_ACTION_QUICK_SETTINGS;
+            boolean accepted=performGlobalAction(global);
+            out[0]=accepted?result("accepted",true):result("error","Android rejected global action");return false;
         }
-        if(action.equals("tap")||action.equals("swipe")){
+        if(action.equals("tap")||action.equals("long_press")||action.equals("swipe")){
             int x=a.getInt("x"),y=a.getInt("y"),tx=a.optInt("to_x",x),ty=a.optInt("to_y",y);
             android.util.DisplayMetrics dm=getResources().getDisplayMetrics();
             if(x<0||y<0||tx<0||ty<0||x>=dm.widthPixels||tx>=dm.widthPixels||y>=dm.heightPixels||ty>=dm.heightPixels)throw new IllegalArgumentException("Coordinates outside screen");
             Path path=new Path();path.moveTo(x,y);if(action.equals("swipe"))path.lineTo(tx,ty);
-            boolean accepted=dispatchGesture(new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(path,0,action.equals("tap")?70:350)).build(),new GestureResultCallback(){
+            long duration=action.equals("tap")?70:action.equals("long_press")?650:350;
+            boolean accepted=dispatchGesture(new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(path,0,duration)).build(),new GestureResultCallback(){
                 @Override public void onCompleted(GestureDescription g){out[0]=result("completed",true);done.countDown();}
                 @Override public void onCancelled(GestureDescription g){out[0]=result("error","Gesture cancelled");done.countDown();}
             },main);
