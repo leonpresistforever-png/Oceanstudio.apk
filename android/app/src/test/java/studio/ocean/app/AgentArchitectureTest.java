@@ -154,6 +154,19 @@ public final class AgentArchitectureTest {
         assertFalse(runner.contains("OceanForgeSigningStore"));
     }
 
+    @Test public void dynamicPluginsStayInsideOceanToolRoots() throws Exception {
+        String runtime=source("OceanPluginRuntime.java");
+        String environment=projectFile("src/main/java/studio/ocean/app/terminal/OceanEnvironment.java");
+        String installer=source("OceanForgeInstaller.java");
+        String gradle=projectFile("build.gradle");
+        assertTrue(runtime.contains("forge-tools/bin"));
+        assertTrue(runtime.contains("usr/bin"));
+        assertTrue(runtime.contains("Plugin command escapes Ocean tool roots"));
+        assertTrue(environment.contains("forge-tools/bin"));
+        assertTrue(installer.contains("ensureToolOverlay"));
+        assertTrue(gradle.contains("prepareForgeToolOverlay"));
+    }
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
