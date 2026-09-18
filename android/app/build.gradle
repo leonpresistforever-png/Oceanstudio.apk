@@ -12,6 +12,7 @@ configurations.configureEach {
 android {
     namespace "studio.ocean.app"
     compileSdk rootProject.ext.compileSdkVersion
+    if (System.getenv('OCEAN_FORGE_REUSE_NATIVE') == 'true') buildToolsVersion "34.0.4"
     ndkVersion "27.0.12077973"
     defaultConfig {
         applicationId "studio.ocean.app"
