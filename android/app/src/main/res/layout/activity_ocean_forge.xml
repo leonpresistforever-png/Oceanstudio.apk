@@ -88,10 +88,17 @@
             android:hint="Keystore password" android:inputType="textPassword"/>
         <EditText android:id="@+id/forge_key_password" style="@style/OceanAuthField" android:layout_marginTop="8dp"
             android:hint="Key password" android:inputType="textPassword"/>
+        <Button android:id="@+id/forge_save_signing" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="10dp" android:text="Save signing identity privately" android:textAllCaps="false"/>
+        <Button android:id="@+id/forge_forget_signing" android:layout_width="match_parent" android:layout_height="46dp"
+            android:layout_marginTop="6dp" android:text="Forget saved signing identity" android:textAllCaps="false"/>
+        <TextView android:id="@+id/forge_signing_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="7dp" android:text="No signing identity saved"
+            android:textColor="@color/ocean_muted" android:textSize="12sp"/>
         <Button android:id="@+id/forge_build_signed" style="@style/OceanPrimaryButton"
             android:layout_marginTop="10dp" android:text="Build signed candidate"/>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp"
-            android:text="Passwords are written only to short-lived files in Ocean private storage for this build and are deleted by Forge afterward."
+            android:text="A saved identity is copied into Ocean's no-backup private storage. Passwords are encrypted by Android Keystore and only decrypted for short-lived Forge build files."
             android:textColor="@color/ocean_muted" android:textSize="12sp"/>
 
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="FORGE OUTPUT"/>
