@@ -18,6 +18,7 @@ Usage:
   ocean-forge configure-sdk <sdk-root> <arm64-aapt2>
   ocean-forge detect-sdk
   ocean-forge sdk-status
+  ocean-forge seed [source.zip]
   ocean-forge clone <git-url> [branch]
   ocean-forge init <source-dir>
   ocean-forge status
@@ -34,6 +35,7 @@ Notes:
 - bootstrap installs Ocean's local JVM/build helper toolchain.
 - bootstrap-sdk downloads the Android 35 platform package and an ARM64 aapt2 adapter, verifies them, and configures Forge.
 - configure-sdk records an Android 35 SDK and ARM64 aapt2 override.
+- seed initializes the workspace from the source snapshot carried inside the installed Ocean APK.
 - clone uses existing Git credentials; do not embed access tokens in repository URLs.
 - init copies a source tree into $HOME/ocean-forge/workspace/current and creates a local Git baseline.
 - build runs Ocean architecture verification, unit tests and assembleDebug.
@@ -278,6 +280,36 @@ PY
     fi
     ;;
 
+  seed)
+    bundle="${2:-$STATE/source.zip}"
+    [[ -f "$bundle" ]] || { echo "Forge source bundle not found: $bundle" >&2; exit 22; }
+    need unzip
+    rm -rf "$current"
+    mkdir -p "$current"
+    echo "Initializing Forge workspace from bundled Ocean source..."
+    unzip -q -o "$bundle" -d "$current"
+    [[ -d "$current/android" && -f "$current/android/app/build.gradle" ]] || {
+      rm -rf "$current"
+      echo "Forge source bundle is incomplete." >&2
+      exit 22
+    }
+    chmod +x "$current/android/gradlew" "$current/scripts/verify-native-only.sh" 2>/dev/null || true
+    printf '%s\n' "apk-bundled-source" > "$STATE/source-origin"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/initialized-at"
+    if command -v git >/dev/null 2>&1; then
+      (
+        cd "$current"
+        git init -q
+        git config user.name "Ocean Forge"
+        git config user.email "forge@ocean.local"
+        git add -A
+        git commit -q -m "Ocean Forge bundled-source baseline" || true
+        git rev-parse HEAD
+      ) > "$STATE/baseline-commit"
+    fi
+    echo "Forge workspace seeded from this Ocean APK: $current"
+    "$0" status
+    ;;
   clone)
     url="${2:-}"; branch="${3:-}"
     [[ -n "$url" ]] || { echo "Usage: ocean-forge clone <git-url> [branch]" >&2; exit 2; }
