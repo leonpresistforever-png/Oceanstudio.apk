@@ -131,10 +131,11 @@ public final class OceanAgentConversationTest {
     @Test public void runtimeToolsAreDeclaredAndValidatedBeforeExecution() throws Exception {
         JSONObject request = new OceanAgentConversation("google", "gemini-2.5-flash").request(new JSONArray(), true);
         JSONArray tools = request.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations");
-        assertEquals(11, tools.length());
+        assertEquals(12, tools.length());
         assertEquals("list_runtime_ports", tools.getJSONObject(2).getString("name"));
         assertFalse(tools.getJSONObject(2).has("parameters"));
         assertEquals("open_runtime_port", tools.getJSONObject(3).getString("name"));
+        assertEquals("ocean_forge", tools.getJSONObject(5).getString("name"));
         assertEquals("INTEGER", tools.getJSONObject(3).getJSONObject("parameters").getJSONObject("properties").getJSONObject("port").getString("type"));
         OceanAgentConversation.validateTool("open_runtime_port", json("{port:6080,path:'/vnc.html'}"));
         OceanAgentConversation.validateTool("interact_runtime_page", json("{action:'click',x:40,y:80}"));
@@ -144,6 +145,20 @@ public final class OceanAgentConversationTest {
         }
         try { OceanAgentConversation.validateTool("interact_runtime_page", json("{action:'click'}")); fail("Coordinate-free click accepted"); }
         catch (IllegalArgumentException expected) { }
+    }
+
+
+    @Test public void forgeToolAcceptsOnlyBoundedDevelopmentActions() throws Exception {
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'status'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'checkpoint',label:'before-ui-change'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'diff'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'test'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'build'}"));
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'verify'}"));
+        for(String invalid:new String[]{"{action:'install'}","{action:'delete'}","{action:'status',label:'x'}"}){
+            try{OceanAgentConversation.validateTool("ocean_forge",json(invalid));fail("Invalid Forge action accepted");}
+            catch(IllegalArgumentException expected){}
+        }
     }
 
     @Test public void runtimeScreenshotReachesGeminiAsImageWithoutDuplicatingBase64InFunctionJson() throws Exception {
