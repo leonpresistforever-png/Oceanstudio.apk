@@ -103,32 +103,71 @@ load_sdk() {
   export JAVA_HOME
 }
 
-prepare_native_reuse() {
+prepare_native_library() {
   [[ -d "$current/.git" && -f "$STATE/baseline-commit" ]] || {
     echo "Forge baseline is unavailable; reinitialize the workspace." >&2
     return 1
   }
-  local baseline installed out
+
+  local baseline installed out source native_build
   baseline="$(cat "$STATE/baseline-commit")"
-  if ! git -C "$current" diff --quiet "$baseline" -- android/app/src/main/cpp; then
-    echo "Native Ocean PTY source changed since the Forge baseline." >&2
-    echo "Fast on-device rebuild refuses to reuse the installed liboceanpty.so." >&2
-    echo "Use an ARM64-capable NDK compatibility layer for native changes." >&2
-    return 8
-  fi
-  installed="$(installed_apk || true)"
-  [[ -n "$installed" && -r "$installed" ]] || { echo "Installed Ocean APK is unavailable for native-library reuse." >&2; return 1; }
   out="$current/android/app/src/forgeNative/arm64-v8a/liboceanpty.so"
+  source="$current/android/app/src/main/cpp/ocean_pty.c"
   mkdir -p "$(dirname "$out")"
-  unzip -p "$installed" lib/arm64-v8a/liboceanpty.so > "$out"
-  [[ -s "$out" ]] || { rm -f "$out"; echo "Installed Ocean APK did not contain liboceanpty.so." >&2; return 1; }
-  sha256sum "$out" > "$STATE/reused-native.sha256"
-  echo "Reusing installed native PTY: $(cat "$STATE/reused-native.sha256")"
+
+  if git -C "$current" diff --quiet "$baseline" -- android/app/src/main/cpp; then
+    installed="$(installed_apk || true)"
+    [[ -n "$installed" && -r "$installed" ]] || {
+      echo "Installed Ocean APK is unavailable for native-library reuse." >&2
+      return 1
+    }
+    unzip -p "$installed" lib/arm64-v8a/liboceanpty.so > "$out"
+    [[ -s "$out" ]] || {
+      rm -f "$out"
+      echo "Installed Ocean APK did not contain liboceanpty.so." >&2
+      return 1
+    }
+    sha256sum "$out" > "$STATE/reused-native.sha256"
+    rm -f "$STATE/built-native.sha256"
+    echo "Native core unchanged; reusing installed PTY: $(cat "$STATE/reused-native.sha256")"
+    return 0
+  fi
+
+  echo "Native Ocean PTY source changed; compiling a fresh ARM64 JNI library locally..."
+  need clang
+  need llvm-readelf
+  [[ -f "$source" ]] || { echo "Native source is missing: $source" >&2; return 8; }
+
+  native_build="$FORGE/native-build"
+  rm -rf "$native_build"
+  mkdir -p "$native_build"
+
+  clang     -shared -fPIC -O2     -Wall -Wextra -Werror     -Wl,-soname,liboceanpty.so     -Wl,--no-undefined     -o "$native_build/liboceanpty.so"     "$source"     -llog
+
+  [[ -s "$native_build/liboceanpty.so" ]] || {
+    echo "Native compiler did not produce liboceanpty.so." >&2
+    return 8
+  }
+
+  llvm-readelf -h "$native_build/liboceanpty.so" | grep -Eq 'Machine:.*AArch64' || {
+    echo "Native Forge output is not an AArch64 ELF library." >&2
+    return 8
+  }
+  llvm-readelf -d "$native_build/liboceanpty.so" >/dev/null
+
+  if command -v llvm-strip >/dev/null 2>&1; then
+    llvm-strip --strip-unneeded "$native_build/liboceanpty.so" || true
+  fi
+
+  cp "$native_build/liboceanpty.so" "$out"
+  sha256sum "$out" > "$STATE/built-native.sha256"
+  rm -f "$STATE/reused-native.sha256"
+  echo "Forge native PTY built locally: $(cat "$STATE/built-native.sha256")"
 }
 
 case "${1:-}" in
   tools)
-    for tool in bash git java javac gradle python3 kotlin kotlinc ecj aapt zipalign apksigner keytool; do
+    for tool in bash git java javac gradle python3 kotlin kotlinc ecj clang cmake ninja llvm-readelf aapt zipalign apksigner keytool; do
       if command -v "$tool" >/dev/null 2>&1; then
         printf '%-12s %s\n' "$tool" "$(command -v "$tool")"
       else
@@ -141,7 +180,7 @@ case "${1:-}" in
     command -v pkg >/dev/null 2>&1 || { echo "Ocean pkg frontend is required." >&2; exit 2; }
     echo "Installing Ocean Forge toolchain..."
     pkg update
-    pkg install -y git openjdk-21 kotlin ecj aapt apksigner python unzip curl ca-certificates tar xz-utils
+    pkg install -y git openjdk-21 kotlin ecj clang cmake ninja aapt apksigner python unzip curl ca-certificates tar xz-utils
     echo "Forge toolchain installation complete."
     "$0" tools
     ;;
@@ -417,7 +456,7 @@ PY
   build)
     [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
     load_sdk
-    prepare_native_reuse
+    prepare_native_library
     prepare_version
     cd "$current"
     [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
