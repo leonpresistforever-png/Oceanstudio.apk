@@ -216,6 +216,30 @@ public final class OceanAgentConversationTest {
         catch (IOException expected) { assertTrue(expected.getMessage().contains("no candidate")); }
     }
 
+    @Test public void configuredGenerationAndReasoningSettingsReachProviderRequests() throws Exception {
+        OceanAgentConversation google=new OceanAgentConversation("google","gemini-3.1-pro-preview",0.2f,0.8f,4096,8,12,false,"high","Keep replies concise.");
+        JSONObject g=google.request(new JSONArray(),false);
+        JSONObject generation=g.getJSONObject("generationConfig");
+        assertEquals(0.2, generation.getDouble("temperature"), 0.0001);
+        assertEquals(0.8, generation.getDouble("topP"), 0.0001);
+        assertEquals(4096, generation.getInt("maxOutputTokens"));
+        assertEquals("high",generation.getJSONObject("thinkingConfig").getString("thinkingLevel"));
+        assertTrue(g.getJSONObject("systemInstruction").toString().contains("Keep replies concise."));
+
+        JSONObject a=new OceanAgentConversation("anthropic","claude-test",0.3f,0.9f,5000,8,12,true,"medium","").request(new JSONArray(),false);
+        assertEquals("adaptive",a.getJSONObject("thinking").getString("type"));
+        assertEquals("medium",a.getJSONObject("output_config").getString("effort"));
+
+        JSONObject o=new OceanAgentConversation("openai","reasoning-test",1f,1f,2048,8,12,true,"low","").request(new JSONArray(),false);
+        assertEquals("low",o.getString("reasoning_effort"));
+    }
+
+    @Test public void disabledSessionContextDoesNotReplayPreviousTurn() throws Exception {
+        OceanAgentConversation conversation=new OceanAgentConversation("google","test",1f,1f,2048,8,12,false,"default","");
+        conversation.run("First",request->gemini("[{text:'One'}]"),(n,a)->null,s->{});
+        conversation.run("Second",request->{assertEquals(1,request.getJSONArray("contents").length());return gemini("[{text:'Two'}]");},(n,a)->null,s->{});
+    }
+
     @Test public void deviceToolsRejectInvalidTargetsBeforeExecution() throws Exception {
         OceanAgentConversation.validateTool("open_android_app",json("{package_name:'com.android.settings'}"));
         OceanAgentConversation.validateTool("interact_android_screen",json("{action:'swipe',x:10,y:20,to_x:30,to_y:40}"));
