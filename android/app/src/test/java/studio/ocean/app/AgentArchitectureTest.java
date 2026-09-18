@@ -62,6 +62,29 @@ public final class AgentArchitectureTest {
         assertTrue(policy.contains("restrictionEnabled()"));
     }
 
+    @Test public void longForgeCommandsUseVisibleForegroundExecution() throws Exception {
+        String service=projectFile("src/main/java/studio/ocean/app/terminal/OceanTerminalRuntimeService.java");
+        String manifest=projectFile("src/main/AndroidManifest.xml");
+        assertTrue(manifest.contains("android.permission.FOREGROUND_SERVICE"));
+        assertTrue(service.contains("startForeground(TASK_NOTIFICATION_ID"));
+        assertTrue(service.contains("leaveCommandForeground()"));
+        assertTrue(service.contains("timeoutSeconds > 1800"));
+        assertTrue(service.contains("Ocean task running"));
+    }
+
+    @Test public void forgeCoreIsBundledAndWorkspaceIsConfined() throws Exception {
+        String runner=source("OceanAgentRunner.java");
+        String workspace=source("OceanForgeWorkspace.java");
+        String installer=source("OceanForgeInstaller.java");
+        assertTrue(runner.contains("OceanForgeInstaller.ensure(context)"));
+        assertTrue(runner.contains("OceanForgeWorkspace.execute(context,args)"));
+        assertTrue(workspace.contains("Forge paths must be relative"));
+        assertTrue(workspace.contains("path escapes the workspace"));
+        assertTrue(workspace.contains("Signing, credential, Git-internal"));
+        assertTrue(installer.contains("ocean/forge/ocean-forge"));
+    }
+
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
