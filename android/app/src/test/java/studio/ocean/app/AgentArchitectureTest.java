@@ -172,7 +172,7 @@ public final class AgentArchitectureTest {
         assertTrue(runner.contains("ocean-plugin-input"));
         assertTrue(runner.contains("File.createTempFile"));
         assertTrue(runner.contains(" < "));
-        assertFalse(runner.contains("printf '%s' "+shellQuote(input)"));
+        assertFalse(runner.contains("printf '%s' \"+shellQuote(input)"));
     }
 
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
