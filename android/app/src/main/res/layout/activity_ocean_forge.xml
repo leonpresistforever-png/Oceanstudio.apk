@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/ocean_background" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingHorizontal="22dp" android:paddingTop="20dp" android:paddingBottom="40dp">
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Ocean Forge" android:textColor="@color/ocean_ink" android:textSize="26sp" android:textStyle="bold"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:text="Ocean's local development workspace. Inspect source, run tests, build a candidate APK, verify its signing identity, then hand an update to Android."
+            android:textColor="@color/ocean_muted" android:textSize="14sp"/>
+
+        <TextView android:id="@+id/forge_sdk_badge" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:background="@drawable/auth_field_background"
+            android:paddingHorizontal="12dp" android:paddingVertical="8dp"
+            android:text="min 28 · target 28 · compile 35" android:textColor="@color/ocean_ink" android:textSize="12sp"/>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="SOURCE WORKSPACE"/>
+        <EditText android:id="@+id/forge_source_path" style="@style/OceanAuthField"
+            android:hint="/path/to/OceanStudio/source" android:inputType="textNoSuggestions"/>
+        <Button android:id="@+id/forge_init" style="@style/OceanPrimaryButton"
+            android:layout_marginTop="10dp" android:text="Initialize Forge workspace"/>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="BUILD PIPELINE"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/forge_tools" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:text="Toolchain" android:textAllCaps="false"/>
+            <Button android:id="@+id/forge_status" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:layout_marginStart="8dp" android:text="Status" android:textAllCaps="false"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <Button android:id="@+id/forge_test" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:text="Run tests" android:textAllCaps="false"/>
+            <Button android:id="@+id/forge_build" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:layout_marginStart="8dp" android:text="Build candidate" android:textAllCaps="false"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <Button android:id="@+id/forge_verify" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:text="Verify candidate" android:textAllCaps="false"/>
+            <Button android:id="@+id/forge_install" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+                android:layout_marginStart="8dp" android:text="Update Ocean" android:textAllCaps="false"/>
+        </LinearLayout>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="FORGE OUTPUT"/>
+        <TextView android:id="@+id/forge_output" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="180dp" android:background="@drawable/auth_field_background"
+            android:fontFamily="monospace" android:padding="14dp"
+            android:text="Forge is ready. Check the toolchain or initialize a source workspace."
+            android:textColor="@color/ocean_ink" android:textIsSelectable="true" android:textSize="12sp"/>
+
+        <TextView android:id="@+id/forge_state" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:text="Idle" android:textColor="@color/ocean_muted" android:textSize="12sp"/>
+    </LinearLayout>
+</ScrollView>
