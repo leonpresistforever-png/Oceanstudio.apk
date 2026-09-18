@@ -32,6 +32,7 @@ public final class DeviceAccessActivity extends AppCompatActivity {
         button(rows,"Modify system settings", () -> launch(new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,Uri.parse("package:"+getPackageName()))));
         if (Build.VERSION.SDK_INT >= 26) button(rows,"Install unknown apps", () -> launch(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName()))));
         button(rows,"Accessibility settings", () -> launch(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        button(rows,"App Access Profiles", () -> startActivity(new Intent(this,AppAccessProfilesActivity.class)));
         Switch live = new Switch(this); live.setText("Allow live agent control"); live.setPadding(0,dp(20),0,dp(20)); live.setChecked(DeviceControlService.enabled(this)); rows.addView(live);
         live.setOnCheckedChangeListener((v,on) -> { DeviceControlService.setEnabled(this,on); refresh(); });
         button(rows,"Stop live control", () -> {DeviceControlService.setEnabled(this,false);live.setChecked(false);refresh();});
