@@ -17,8 +17,10 @@ android {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode Integer.parseInt(System.getenv('OCEAN_FORGE_VERSION_CODE') ?: '8')
-        versionName System.getenv('OCEAN_FORGE_VERSION_NAME') ?: "1.1.6"
+        versionCode 8
+        versionName "1.1.6"
+        if (project.hasProperty('oceanForgeVersionCode')) versionCode Integer.parseInt(project.property('oceanForgeVersionCode').toString())
+        if (project.hasProperty('oceanForgeVersionName')) versionName project.property('oceanForgeVersionName').toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters 'arm64-v8a' }
         buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${System.getenv('OCEAN_FIREBASE_API_KEY') ?: ''}\""
