@@ -101,6 +101,9 @@
             android:text="Forge is ready. Check the toolchain or initialize a source workspace."
             android:textColor="@color/ocean_ink" android:textIsSelectable="true" android:textSize="12sp"/>
 
+        <Button android:id="@+id/forge_stop" android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="12dp" android:enabled="false" android:text="Stop active Forge task"
+            android:textAllCaps="false" android:textColor="@color/ocean_error"/>
         <TextView android:id="@+id/forge_state" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:text="Idle" android:textColor="@color/ocean_muted" android:textSize="12sp"/>
     </LinearLayout>
