@@ -228,7 +228,7 @@ public final class OceanTerminalRuntimeService extends Service {
     public CommandHandle requestCommand(String command, String cwd, int timeoutSeconds, CommandCallback callback) {
         CommandHandle request = new CommandHandle(callback);
         if (command == null || command.trim().isEmpty() || command.indexOf('\0') >= 0
-                || timeoutSeconds < 1 || timeoutSeconds > 1800) {
+                || timeoutSeconds < 1 || timeoutSeconds > 3600) {
             request.fail(new IllegalArgumentException("Invalid command or timeout"));
             return request;
         }
@@ -287,7 +287,7 @@ public final class OceanTerminalRuntimeService extends Service {
         if(power!=null){
             taskWakeLock=power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"OceanStudio:ForgeTask");
             taskWakeLock.setReferenceCounted(false);
-            taskWakeLock.acquire(31L*60L*1000L);
+            taskWakeLock.acquire();
         }
     }
 
