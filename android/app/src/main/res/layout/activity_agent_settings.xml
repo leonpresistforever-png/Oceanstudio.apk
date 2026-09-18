@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/ocean_background" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingHorizontal="24dp" android:paddingTop="22dp" android:paddingBottom="40dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Agent Settings" android:textColor="@color/ocean_ink" android:textSize="26sp" android:textStyle="bold"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:layout_marginBottom="18dp"
+            android:text="Model generation, request limits and persistent instructions. Defaults preserve Ocean's current behavior."
+            android:textColor="@color/ocean_muted" android:textSize="14sp"/>
+
+        <TextView style="@style/OceanAuthLabel" android:text="TEMPERATURE"/>
+        <EditText android:id="@+id/agent_temperature" style="@style/OceanAuthField" android:inputType="numberDecimal" android:hint="0.0 – 2.0"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="TOP P"/>
+        <EditText android:id="@+id/agent_top_p" style="@style/OceanAuthField" android:inputType="numberDecimal" android:hint="0.01 – 1.0"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="MAX OUTPUT TOKENS"/>
+        <EditText android:id="@+id/agent_max_tokens" style="@style/OceanAuthField" android:inputType="number" android:hint="2048"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="CONNECT TIMEOUT (MS)"/>
+        <EditText android:id="@+id/agent_connect_timeout" style="@style/OceanAuthField" android:inputType="number" android:hint="20000"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="RESPONSE TIMEOUT (MS)"/>
+        <EditText android:id="@+id/agent_read_timeout" style="@style/OceanAuthField" android:inputType="number" android:hint="60000"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="COMMAND TIMEOUT (SECONDS)"/>
+        <EditText android:id="@+id/agent_command_timeout" style="@style/OceanAuthField" android:inputType="number" android:hint="120"/>
+
+        <Switch android:id="@+id/agent_keep_session" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="Keep recent session context" android:textColor="@color/ocean_ink"/>
+        <Switch android:id="@+id/agent_anti_timeout" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="Extended response timeout mode" android:textColor="@color/ocean_ink"/>
+
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="22dp" android:text="AGENT INSTRUCTIONS"/>
+        <EditText android:id="@+id/agent_instructions" android:layout_width="match_parent" android:layout_height="150dp"
+            android:background="@drawable/auth_field_background" android:gravity="top|start" android:hint="Persistent instructions for Ocean Agent…"
+            android:inputType="textCapSentences|textMultiLine" android:maxLines="10" android:minLines="5"
+            android:padding="14dp" android:textColor="@color/ocean_ink" android:textColorHint="@color/ocean_muted" android:textSize="14sp"/>
+
+        <Button android:id="@+id/agent_save_settings" style="@style/OceanPrimaryButton"
+            android:layout_marginTop="24dp" android:text="Save settings"/>
+        <Button android:id="@+id/agent_reset_settings" android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="8dp" android:background="@android:color/transparent" android:text="Reset defaults"
+            android:textAllCaps="false" android:textColor="@color/ocean_muted"/>
+    </LinearLayout>
+</ScrollView>
