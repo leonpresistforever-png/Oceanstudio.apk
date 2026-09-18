@@ -102,6 +102,11 @@ dependencies {
  * Build outputs/caches and signing material are never included.
  */
 def forgeGeneratedAssets = file("$buildDir/generated/forgeAssets")
+def prepareForgeRuntimeCommand = tasks.register("prepareForgeRuntimeCommand", Copy) {
+    from(rootProject.projectDir.parentFile.toPath()
+            .resolve("ocean-packages/packages/ocean-tools/data/data/studio.ocean.app/files/usr/bin/ocean-forge").toFile())
+    into(file("$buildDir/generated/forgeAssets/ocean/forge"))
+}
 def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     archiveFileName = "source.zip"
     destinationDirectory = file("$buildDir/generated/forgeAssets/ocean/forge")
@@ -122,8 +127,13 @@ def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     from(rootProject.projectDir.parentFile) {
         include "scripts/verify-native-only.sh"
         include "packages/ocean-prefix.env"
+        include "ocean-packages/packages/ocean-tools/**"
+        include "ocean-packages/scripts/**"
     }
 }
 
 android.sourceSets.main.assets.srcDir(forgeGeneratedAssets)
-tasks.named("preBuild").configure { dependsOn(prepareForgeSourceBundle) }
+tasks.named("preBuild").configure {
+    dependsOn(prepareForgeRuntimeCommand)
+    dependsOn(prepareForgeSourceBundle)
+}
