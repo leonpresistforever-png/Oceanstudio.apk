@@ -13,6 +13,7 @@
 
         <activity android:name=".terminal.OceanTerminalActivity" android:label="Ocean Terminal" android:theme="@style/OceanTerminalTheme" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".device.DeviceAccessActivity" android:exported="false" />
+        <activity android:name=".device.AppAccessProfilesActivity" android:label="App Access Profiles" android:exported="false" />
         <service android:name=".device.DeviceControlService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/device_accessibility" />
