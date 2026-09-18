@@ -23,6 +23,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         add(list,"runtime","Runtime Ports","Local HTTP and noVNC browser/desktop sessions.",true);
         add(list,"device","Device Access","User-authorized visible Android interaction.",true);
         add(list,"apk","APK Lab","Inspect, rebuild, align, sign and install APK workspaces.",exists("usr/bin/ocean-apk-lab"));
+        add(list,"forge","Ocean Forge","Local source workspace, tests, candidate builds, signature verification and update staging.",exists("usr/bin/ocean-forge"));
         add(list,"python","Python Tools","Python and pip workflows.",exists("usr/bin/python")||exists("usr/bin/python3"));
         add(list,"git","Git Tools","Local Git repository workflows.",exists("usr/bin/git"));
         add(list,"browser","Browser Tools","curl and local browser helpers.",exists("usr/bin/curl"));
