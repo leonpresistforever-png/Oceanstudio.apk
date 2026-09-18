@@ -9,6 +9,36 @@ import java.util.Locale;
 public final class OceanForgeInstaller {
     private OceanForgeInstaller(){}
 
+    public static synchronized File ensureSourceBundle(Context context)throws IOException{
+        File state=new File(context.getFilesDir(),"home/ocean-forge/state");
+        if(!state.isDirectory()&&!state.mkdirs())throw new IOException("Could not create Ocean Forge state directory");
+        File target=new File(state,"source.zip");
+        File temp=new File(state,"source.zip.tmp");
+        MessageDigest digest;
+        try{digest=MessageDigest.getInstance("SHA-256");}catch(Exception e){throw new IOException("SHA-256 unavailable",e);}
+        long total=0;
+        try(InputStream in=context.getAssets().open("ocean/forge/source.zip");
+            FileOutputStream out=new FileOutputStream(temp,false)){
+            byte[] buffer=new byte[32768];int n;
+            while((n=in.read(buffer))!=-1){
+                total+=n;
+                if(total>128L*1024L*1024L)throw new IOException("Ocean Forge source bundle is unexpectedly large");
+                digest.update(buffer,0,n);out.write(buffer,0,n);
+            }
+            out.flush();out.getFD().sync();
+        }
+        String incoming=hex(digest.digest());
+        if(target.isFile()){
+            try{
+                if(incoming.equals(sha256(target))){temp.delete();return target;}
+            }catch(Exception ignored){}
+            if(!target.delete())throw new IOException("Could not replace Ocean Forge source bundle");
+        }
+        if(!temp.renameTo(target))throw new IOException("Could not activate Ocean Forge source bundle");
+        target.setReadable(true,true);target.setWritable(true,true);
+        return target;
+    }
+
     public static synchronized File ensure(Context context)throws IOException{
         byte[] asset=readAsset(context);
         File target=new File(context.getFilesDir(),"usr/bin/ocean-forge");
