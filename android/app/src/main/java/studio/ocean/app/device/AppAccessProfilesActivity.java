@@ -45,9 +45,9 @@ public final class AppAccessProfilesActivity extends AppCompatActivity {
         TextView name=text(String.valueOf(app.loadLabel(getPackageManager())),16,true,0xff191817);card.addView(name);
         TextView packageText=text(pkg,12,false,0xff7b7873);packageText.setPadding(0,dp(2),0,dp(8));card.addView(packageText);
 
-        Switch inspect=new Switch(this);inspect.setText("Allow screen inspection");inspect.setChecked(policy.inspectAllowed(pkg)&&policy.restrictionEnabled());card.addView(inspect);
-        Switch interact=new Switch(this);interact.setText("Allow interaction");interact.setChecked(policy.interactAllowed(pkg)&&policy.restrictionEnabled());card.addView(interact);
-        Switch screenshot=new Switch(this);screenshot.setText("Allow screenshots");screenshot.setChecked(policy.screenshotAllowed(pkg)&&policy.restrictionEnabled());card.addView(screenshot);
+        Switch inspect=new Switch(this);inspect.setText("Allow screen inspection");inspect.setChecked(policy.profileInspect(pkg));card.addView(inspect);
+        Switch interact=new Switch(this);interact.setText("Allow interaction");interact.setChecked(policy.profileInteract(pkg));card.addView(interact);
+        Switch screenshot=new Switch(this);screenshot.setText("Allow screenshots");screenshot.setChecked(policy.profileScreenshot(pkg));card.addView(screenshot);
 
         CompoundButton.OnCheckedChangeListener listener=(v,on)->policy.set(pkg,inspect.isChecked(),interact.isChecked(),screenshot.isChecked());
         inspect.setOnCheckedChangeListener(listener);interact.setOnCheckedChangeListener(listener);screenshot.setOnCheckedChangeListener(listener);
