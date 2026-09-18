@@ -168,7 +168,8 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < connectionsChildren.getChildCount(); i++) {
                 View child = connectionsChildren.getChildAt(i);
                 if (child instanceof TextView) {
-                    child.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
+                    if (child.getId() == R.id.nav_plugins) child.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
+                    else child.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
                 }
             }
         }
