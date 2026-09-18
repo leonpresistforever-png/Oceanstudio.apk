@@ -111,31 +111,31 @@ jobs:
             TAG="v$VERSION"
             TITLE="OceanStudio $VERSION"
             PRERELEASE=""
-            cat > /tmp/release-notes.md <<EOF
-OceanStudio $VERSION debug distribution.
-
-- Built from $GITHUB_SHA.
-- APK certificate matches the existing OceanStudio 1.1.5 signing certificate.
-- Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements.
-- Device actions remain user-authorized; Android protected screens and private app sandboxes are not bypassed.
-EOF
+            printf '%s\n' \
+              "OceanStudio $VERSION debug distribution." \
+              "" \
+              "- Built from $GITHUB_SHA." \
+              "- APK certificate matches the existing OceanStudio 1.1.5 signing certificate." \
+              "- Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements." \
+              "- Device actions remain user-authorized; Android protected screens and private app sandboxes are not bypassed." \
+              > /tmp/release-notes.md
           else
             TAG="v$VERSION-ci-$SHORT"
             TITLE="OceanStudio $VERSION CI build (fresh signing certificate)"
             PRERELEASE="--prerelease"
-            cat > /tmp/release-notes.md <<EOF
-OceanStudio $VERSION CI debug build from $GITHUB_SHA.
-
-WARNING: this APK was signed with certificate:
-$CERT
-
-The currently published 1.1.5 certificate is:
-$EXPECTED_CERT
-
-Because the certificates differ, Android will not install this APK as an in-place update over 1.1.5. It is published as a prerelease rather than being marked latest.
-
-Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements.
-EOF
+            printf '%s\n' \
+              "OceanStudio $VERSION CI debug build from $GITHUB_SHA." \
+              "" \
+              "WARNING: this APK was signed with certificate:" \
+              "$CERT" \
+              "" \
+              "The currently published 1.1.5 certificate is:" \
+              "$EXPECTED_CERT" \
+              "" \
+              "Because the certificates differ, Android will not install this APK as an in-place update over 1.1.5. It is published as a prerelease rather than being marked latest." \
+              "" \
+              "Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements." \
+              > /tmp/release-notes.md
           fi
 
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
