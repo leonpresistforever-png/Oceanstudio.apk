@@ -158,12 +158,13 @@ public final class OceanAgentConversationTest {
             try{OceanAgentConversation.validateTool("run_ocean_plugin",json(invalid));fail("Invalid plugin id accepted");}
             catch(IllegalArgumentException expected){}
         }
-        StringBuilder huge=new StringBuilder();for(int i=0;i<4097;i++)huge.append('x');
+        StringBuilder huge=new StringBuilder();for(int i=0;i<32769;i++)huge.append('x');
         try{OceanAgentConversation.validateTool("run_ocean_plugin",new JSONObject().put("id","sample").put("input",huge.toString()));fail("Oversized plugin input accepted");}
         catch(IllegalArgumentException expected){}
     }
 
     @Test public void forgeToolAcceptsOnlyBoundedDevelopmentActions() throws Exception {
+        OceanAgentConversation.validateTool("ocean_forge",json("{action:'doctor'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'bootstrap'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'bootstrap_sdk'}"));
         OceanAgentConversation.validateTool("ocean_forge",json("{action:'seed'}"));
