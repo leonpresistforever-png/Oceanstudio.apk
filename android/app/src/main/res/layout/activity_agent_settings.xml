@@ -15,6 +15,8 @@
         <EditText android:id="@+id/agent_temperature" style="@style/OceanAuthField" android:inputType="numberDecimal" android:hint="0.0 – 2.0"/>
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="TOP P"/>
         <EditText android:id="@+id/agent_top_p" style="@style/OceanAuthField" android:inputType="numberDecimal" android:hint="0.01 – 1.0"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="THINKING / REASONING"/>
+        <Spinner android:id="@+id/agent_reasoning_effort" android:layout_width="match_parent" android:layout_height="48dp" android:background="@drawable/auth_field_background"/>
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="MAX OUTPUT TOKENS"/>
         <EditText android:id="@+id/agent_max_tokens" style="@style/OceanAuthField" android:inputType="number" android:hint="2048"/>
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="CONNECT TIMEOUT (MS)"/>
@@ -23,6 +25,10 @@
         <EditText android:id="@+id/agent_read_timeout" style="@style/OceanAuthField" android:inputType="number" android:hint="60000"/>
         <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="COMMAND TIMEOUT (SECONDS)"/>
         <EditText android:id="@+id/agent_command_timeout" style="@style/OceanAuthField" android:inputType="number" android:hint="120"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="MAX AGENT ROUNDS"/>
+        <EditText android:id="@+id/agent_max_rounds" style="@style/OceanAuthField" android:inputType="number" android:hint="16"/>
+        <TextView style="@style/OceanAuthLabel" android:layout_marginTop="16dp" android:text="MAX TOOL CALLS"/>
+        <EditText android:id="@+id/agent_max_tool_calls" style="@style/OceanAuthField" android:inputType="number" android:hint="24"/>
 
         <Switch android:id="@+id/agent_keep_session" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="18dp" android:text="Keep recent session context" android:textColor="@color/ocean_ink"/>
