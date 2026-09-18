@@ -33,16 +33,17 @@ final class OceanAgentConversation {
     private final float temperature, topP;
     private final int maxTokens, maxRounds, maxToolCalls;
     private final boolean keepSessionAlive;
-    private final String userInstructions;
+    private final String userInstructions, reasoningEffort;
     private final ArrayDeque<JSONArray> turns = new ArrayDeque<>();
 
     OceanAgentConversation(String provider, String model) {
-        this(provider,model,0.7f,1.0f,2048,MAX_ROUNDS,MAX_TOOL_CALLS,true,"");
+        this(provider,model,0.7f,1.0f,2048,MAX_ROUNDS,MAX_TOOL_CALLS,true,"default","");
     }
 
-    OceanAgentConversation(String provider,String model,float temperature,float topP,int maxTokens,int maxRounds,int maxToolCalls,boolean keepSessionAlive,String userInstructions) {
+    OceanAgentConversation(String provider,String model,float temperature,float topP,int maxTokens,int maxRounds,int maxToolCalls,boolean keepSessionAlive,String reasoningEffort,String userInstructions) {
         this.provider=provider; this.model=model; this.temperature=temperature; this.topP=topP; this.maxTokens=maxTokens;
         this.maxRounds=maxRounds; this.maxToolCalls=maxToolCalls; this.keepSessionAlive=keepSessionAlive;
+        this.reasoningEffort=("low".equals(reasoningEffort)||"medium".equals(reasoningEffort)||"high".equals(reasoningEffort))?reasoningEffort:"default";
         this.userInstructions=userInstructions==null?"":userInstructions.trim();
     }
 
@@ -136,10 +137,13 @@ final class OceanAgentConversation {
         JSONObject body = new JSONObject();
         if (provider.equals("google")) {
             body.put("contents", messages).put("systemInstruction", new JSONObject().put("parts", new JSONArray().put(new JSONObject().put("text", systemPrompt()))));
-            body.put("generationConfig", new JSONObject().put("temperature",temperature).put("topP",topP).put("maxOutputTokens",maxTokens));
+            JSONObject generation=new JSONObject().put("temperature",temperature).put("topP",topP).put("maxOutputTokens",maxTokens);
+            if(!"default".equals(reasoningEffort)) generation.put("thinkingConfig",new JSONObject().put("thinkingLevel",reasoningEffort));
+            body.put("generationConfig",generation);
             if (tools) body.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations", googleDeclarations())));
         } else if (provider.equals("anthropic")) {
             body.put("model", model).put("system", systemPrompt()).put("max_tokens", maxTokens).put("temperature",temperature).put("top_p",topP).put("messages", messages);
+            if(!"default".equals(reasoningEffort)) body.put("thinking",new JSONObject().put("type","adaptive")).put("output_config",new JSONObject().put("effort",reasoningEffort));
             if (tools) {
                 JSONArray declarations = declarations(), defs = new JSONArray();
                 for (int i = 0; i < declarations.length(); i++) {
@@ -152,6 +156,7 @@ final class OceanAgentConversation {
             JSONArray all = new JSONArray().put(new JSONObject().put("role", "system").put("content", systemPrompt()));
             for (int i = 0; i < messages.length(); i++) all.put(messages.get(i));
             body.put("model", model).put("messages", all).put("temperature",temperature).put("top_p",topP).put("max_tokens",maxTokens);
+            if(provider.equals("openai")&&!"default".equals(reasoningEffort)) body.put("reasoning_effort",reasoningEffort);
             if (tools) {
                 JSONArray defs = declarations(), wrapped = new JSONArray();
                 for (int i = 0; i < defs.length(); i++) wrapped.put(new JSONObject().put("type", "function").put("function", defs.get(i)));
