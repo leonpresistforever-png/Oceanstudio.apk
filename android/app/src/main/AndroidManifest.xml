@@ -18,6 +18,8 @@
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/device_accessibility" />
         </service>
         <activity android:name=".runtime.RuntimePortsActivity" android:label="Runtime Ports" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".AgentSettingsActivity" android:label="Agent Settings" android:exported="false" />
+        <activity android:name=".PluginCenterActivity" android:label="Plugins" android:exported="false" />
         <activity android:name=".terminal.OceanTerminalDiagnosticsActivity" android:label="Ocean Terminal Diagnostics" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.diagnostics" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/diagnostic_file_paths" /></provider>
         <service android:name=".terminal.OceanTerminalRuntimeService" android:exported="false" />
