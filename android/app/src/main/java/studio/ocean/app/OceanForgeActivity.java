@@ -24,6 +24,8 @@ public final class OceanForgeActivity extends AppCompatActivity {
     private TextView output;
     private TextView state;
     private Button[] commandButtons;
+    private Button stopButton;
+    private OceanTerminalRuntimeService.CommandHandle activeHandle;
 
     private final ServiceConnection connection=new ServiceConnection(){
         @Override public void onServiceConnected(ComponentName name, IBinder binder){
@@ -66,9 +68,10 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
         Button buildSigned=findViewById(R.id.forge_build_signed);
+        stopButton=findViewById(R.id.forge_stop);
         commandButtons=new Button[]{bootstrap,seed,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
-        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap && ocean-forge bootstrap-sdk",1800));
+        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap && ocean-forge bootstrap-sdk",3600));
         seed.setOnClickListener(v->runForge("ocean-forge seed",300));
         detectSdk.setOnClickListener(v->runForge("ocean-forge detect-sdk",120));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
@@ -99,15 +102,22 @@ public final class OceanForgeActivity extends AppCompatActivity {
             if(url.isEmpty()){state.setText("Enter a Git repository URL.");return;}
             String command="ocean-forge clone "+shellQuote(url);
             if(!branch.isEmpty())command+=" "+shellQuote(branch);
-            runForge(command,1800);
+            runForge(command,3600);
         });
 
         tools.setOnClickListener(v->runForge("ocean-forge tools",120));
         status.setOnClickListener(v->runForge("ocean-forge status",120));
-        test.setOnClickListener(v->runForge("ocean-forge test",1800));
-        build.setOnClickListener(v->runForge("ocean-forge build",1800));
+        test.setOnClickListener(v->runForge("ocean-forge test",3600));
+        build.setOnClickListener(v->runForge("ocean-forge build",3600));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
         buildSigned.setOnClickListener(v->buildSignedCandidate());
+        stopButton.setOnClickListener(v->{
+            OceanTerminalRuntimeService.CommandHandle handle=activeHandle;
+            if(handle!=null){
+                state.setText("Stopping Forge task…");
+                handle.cancel();
+            }
+        });
 
         install.setOnClickListener(v->new AlertDialog.Builder(this)
                 .setTitle("Update Ocean?")
@@ -122,21 +132,21 @@ public final class OceanForgeActivity extends AppCompatActivity {
     private void runForge(String command,int timeout){
         if(running){state.setText("A Forge command is already running.");return;}
         if(!bound||runtime==null){state.setText("Forge runtime is still connecting.");return;}
-        running=true; setButtons(false);
+        running=true; setButtons(false); stopButton.setEnabled(true);
         output.setText("$ "+command+"\n");
         state.setText("Running…");
 
-        runtime.requestCommand(command,null,timeout,new OceanTerminalRuntimeService.CommandCallback(){
+        activeHandle=runtime.requestCommand(command,null,timeout,new OceanTerminalRuntimeService.CommandCallback(){
             @Override public void onOutput(byte[] bytes,int length){
                 String chunk=new String(bytes,0,length,StandardCharsets.UTF_8);
                 output.append(chunk);
             }
             @Override public void onExit(int code){
-                running=false;setButtons(true);
-                state.setText(code==0?"Completed":"Exited with code "+code);
+                running=false;activeHandle=null;setButtons(true);stopButton.setEnabled(false);
+                state.setText(code==0?"Completed":code==130?"Stopped":"Exited with code "+code);
             }
             @Override public void onFailure(Throwable error){
-                running=false;setButtons(true);
+                running=false;activeHandle=null;setButtons(true);stopButton.setEnabled(false);
                 state.setText("Forge failed");
                 output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
             }
@@ -161,7 +171,7 @@ public final class OceanForgeActivity extends AppCompatActivity {
             writeSecret(keyFile,key);
             ((EditText)findViewById(R.id.forge_store_password)).setText("");
             ((EditText)findViewById(R.id.forge_key_password)).setText("");
-            runForge("ocean-forge build-signed "+shellQuote(keystore)+" "+shellQuote(alias)+" "+shellQuote(storeFile.getAbsolutePath())+" "+shellQuote(keyFile.getAbsolutePath()),1800);
+            runForge("ocean-forge build-signed "+shellQuote(keystore)+" "+shellQuote(alias)+" "+shellQuote(storeFile.getAbsolutePath())+" "+shellQuote(keyFile.getAbsolutePath()),3600);
         }catch(Exception error){
             state.setText("Could not prepare signing credentials");
             output.append("\n"+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage()));
