@@ -41,12 +41,16 @@ public final class OceanForgeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ocean_forge);
         output=findViewById(R.id.forge_output);
         state=findViewById(R.id.forge_state);
-        try{OceanForgeInstaller.ensure(this);}catch(Exception error){
-            state.setText("Forge command installation failed");
+        try{
+            OceanForgeInstaller.ensure(this);
+            OceanForgeInstaller.ensureSourceBundle(this);
+        }catch(Exception error){
+            state.setText("Forge setup incomplete");
             output.setText(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());
         }
 
         Button bootstrap=findViewById(R.id.forge_bootstrap);
+        Button seed=findViewById(R.id.forge_seed);
         Button detectSdk=findViewById(R.id.forge_detect_sdk);
         Button sdkStatus=findViewById(R.id.forge_sdk_status);
         Button configureSdk=findViewById(R.id.forge_configure_sdk);
@@ -62,9 +66,10 @@ public final class OceanForgeActivity extends AppCompatActivity {
         Button verify=findViewById(R.id.forge_verify);
         Button install=findViewById(R.id.forge_install);
         Button buildSigned=findViewById(R.id.forge_build_signed);
-        commandButtons=new Button[]{bootstrap,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
+        commandButtons=new Button[]{bootstrap,seed,detectSdk,sdkStatus,configureSdk,init,clone,checkpoint,diff,rollback,tools,status,test,build,verify,install,buildSigned};
 
-        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap",1800));
+        bootstrap.setOnClickListener(v->runForge("ocean-forge bootstrap && ocean-forge bootstrap-sdk",1800));
+        seed.setOnClickListener(v->runForge("ocean-forge seed",300));
         detectSdk.setOnClickListener(v->runForge("ocean-forge detect-sdk",120));
         sdkStatus.setOnClickListener(v->runForge("ocean-forge sdk-status",120));
         configureSdk.setOnClickListener(v->{
