@@ -268,7 +268,10 @@ case "${1:-}" in
     export GRADLE_USER_HOME="$FORGE/gradle-home"
     export OCEAN_BUILD_COMMIT="forge-local"
     export OCEAN_FORGE_REUSE_NATIVE=true
-    ./gradlew -Pandroid.aapt2FromMavenOverride="$AAPT2_OVERRIDE" test assembleDebug --no-daemon --stacktrace
+    ./gradlew -Pandroid.aapt2FromMavenOverride="$AAPT2_OVERRIDE" \
+      -PoceanForgeVersionCode="$OCEAN_FORGE_VERSION_CODE" \
+      -PoceanForgeVersionName="$OCEAN_FORGE_VERSION_NAME" \
+      test assembleDebug --no-daemon --stacktrace
     built="app/build/outputs/apk/debug/app-debug.apk"
     [[ -f "$built" ]] || { echo "Gradle completed but APK output was not found." >&2; exit 4; }
     cp "$built" "$candidate"
