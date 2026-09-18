@@ -234,7 +234,7 @@ final class OceanAgentConversation {
                         .put("old_text",new JSONObject().put("type","string").put("description","Exact source block to replace once."))
                         .put("new_text",new JSONObject().put("type","string").put("description","Replacement source block."))
                         .put("to_path",new JSONObject().put("type","string").put("description","Workspace-relative destination for move."))
-                        .put("expected_sha256",new JSONObject().put("type","string").put("description","Optional stale-edit guard; required for move/delete."))
+                        .put("expected_sha256",new JSONObject().put("type","string").put("description","SHA-256 returned by a recent read. Required for replace/move/delete and for overwriting an existing file."))
                         .put("start_line",new JSONObject().put("type","integer"))
                         .put("end_line",new JSONObject().put("type","integer")))
                         .put("required",new JSONArray().put("action")));
@@ -297,7 +297,7 @@ final class OceanAgentConversation {
             }
             if(action.equals("move") && (!(args.opt("to_path") instanceof String)||args.getString("to_path").isEmpty()||args.getString("to_path").length()>1024))
                 throw new IllegalArgumentException("Forge move destination is invalid");
-            if((action.equals("move")||action.equals("delete")) && (!(args.opt("expected_sha256") instanceof String)||!args.getString("expected_sha256").matches("[A-Fa-f0-9]{64}")))
+            if((action.equals("replace")||action.equals("move")||action.equals("delete")) && (!(args.opt("expected_sha256") instanceof String)||!args.getString("expected_sha256").matches("[A-Fa-f0-9]{64}")))
                 throw new IllegalArgumentException("Forge move/delete requires expected_sha256");
             if(args.has("expected_sha256") && (!(args.opt("expected_sha256") instanceof String)||!args.getString("expected_sha256").matches("[A-Fa-f0-9]{64}")))
                 throw new IllegalArgumentException("Forge expected_sha256 is invalid");
