@@ -96,6 +96,22 @@ public final class AgentArchitectureTest {
         assertTrue(gradle.contains("packages/ocean-prefix.env"));
     }
 
+    @Test public void forgeCanBootstrapItsOwnAndroidBuildEnvironment() throws Exception {
+        String gradle=projectFile("build.gradle");
+        String installer=source("OceanForgeInstaller.java");
+        String runner=source("OceanAgentRunner.java");
+        String conversation=source("OceanAgentConversation.java");
+        assertTrue(gradle.contains("OCEAN_FORGE_REUSE_NATIVE"));
+        assertTrue(gradle.contains("buildToolsVersion \"34.0.4\""));
+        assertTrue(gradle.contains("prepareForgeSourceBundle"));
+        assertTrue(installer.contains("ensureSourceBundle"));
+        assertTrue(installer.contains("ocean/forge/source.zip"));
+        assertTrue(runner.contains("bootstrap_sdk"));
+        assertTrue(runner.contains("ensureSourceBundle(context)"));
+        assertTrue(conversation.contains("bootstrap its toolchain/SDK"));
+        assertTrue(conversation.contains("patch it, and retry"));
+    }
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
