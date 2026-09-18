@@ -104,6 +104,15 @@ public final class OceanAgentRunner {
                                     () -> RuntimePortsActivity.openForAgent(context, args.getInt("port"), args.optString("path", "/"))); }
                             if (name.equals("interact_runtime_page")) { if(!pluginConnected("runtime")) throw new IOException("Runtime Ports plugin is disconnected."); return runRuntimeTool("Runtime page", args.getString("action"), callback,
                                     () -> RuntimePortsActivity.interactForAgent(args)); }
+                            if(name.equals("list_ocean_plugins")){
+                                return runRuntimeTool("Ocean plugins","List registered plugins",callback,()->OceanPluginRuntime.list(context));
+                            }
+                            if(name.equals("run_ocean_plugin")){
+                                OceanPluginRuntime.Plugin plugin=OceanPluginRuntime.resolveConnected(context,args.getString("id"));
+                                String input=args.optString("input","");
+                                String commandText="printf '%s' "+shellQuote(input)+" | "+shellQuote(plugin.executable.getAbsolutePath());
+                                return runTerminal(commandText,null,agentSettings.commandTimeoutSeconds(),callback);
+                            }
                             if(name.equals("ocean_forge")){
                                 if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
                                 OceanForgeInstaller.ensure(context);
