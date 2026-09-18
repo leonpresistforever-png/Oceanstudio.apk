@@ -24,10 +24,16 @@ public final class AgentSettingsActivity extends AppCompatActivity {
     private void load() {
         ((EditText)findViewById(R.id.agent_temperature)).setText(String.valueOf(settings.temperature()));
         ((EditText)findViewById(R.id.agent_top_p)).setText(String.valueOf(settings.topP()));
+        Spinner reasoning=findViewById(R.id.agent_reasoning_effort);
+        String[] reasoningOptions={"Default","Low","Medium","High"};
+        reasoning.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,reasoningOptions));
+        String effort=settings.reasoningEffort(); reasoning.setSelection("low".equals(effort)?1:"medium".equals(effort)?2:"high".equals(effort)?3:0);
         ((EditText)findViewById(R.id.agent_max_tokens)).setText(String.valueOf(settings.maxTokens()));
         ((EditText)findViewById(R.id.agent_connect_timeout)).setText(String.valueOf(settings.connectTimeoutMs()));
         ((EditText)findViewById(R.id.agent_read_timeout)).setText(String.valueOf(settings.readTimeoutMs()));
         ((EditText)findViewById(R.id.agent_command_timeout)).setText(String.valueOf(settings.commandTimeoutSeconds()));
+        ((EditText)findViewById(R.id.agent_max_rounds)).setText(String.valueOf(settings.maxRounds()));
+        ((EditText)findViewById(R.id.agent_max_tool_calls)).setText(String.valueOf(settings.maxToolCalls()));
         ((Switch)findViewById(R.id.agent_keep_session)).setChecked(settings.keepSessionAlive());
         ((Switch)findViewById(R.id.agent_anti_timeout)).setChecked(settings.antiTimeout());
         ((EditText)findViewById(R.id.agent_instructions)).setText(settings.userInstructions());
@@ -42,13 +48,17 @@ public final class AgentSettingsActivity extends AppCompatActivity {
                     Integer.parseInt(((EditText)findViewById(R.id.agent_connect_timeout)).getText().toString()),
                     Integer.parseInt(((EditText)findViewById(R.id.agent_read_timeout)).getText().toString()),
                     Integer.parseInt(((EditText)findViewById(R.id.agent_command_timeout)).getText().toString()),
-                    settings.maxRounds(), settings.maxToolCalls(),
+                    Integer.parseInt(((EditText)findViewById(R.id.agent_max_rounds)).getText().toString()),
+                    Integer.parseInt(((EditText)findViewById(R.id.agent_max_tool_calls)).getText().toString()),
                     ((Switch)findViewById(R.id.agent_keep_session)).isChecked(),
                     ((Switch)findViewById(R.id.agent_anti_timeout)).isChecked(),
+                    reasoningValue((Spinner)findViewById(R.id.agent_reasoning_effort)),
                     ((EditText)findViewById(R.id.agent_instructions)).getText().toString());
             Toast.makeText(this, "Agent settings saved", Toast.LENGTH_SHORT).show();
         } catch (Exception error) {
             Toast.makeText(this, "Check the numeric values", Toast.LENGTH_LONG).show();
         }
     }
+
+    private String reasoningValue(Spinner spinner){ int p=spinner.getSelectedItemPosition(); return p==1?"low":p==2?"medium":p==3?"high":"default"; }
 }
