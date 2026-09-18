@@ -110,7 +110,7 @@ public final class OceanAgentRunner {
                                 String action=args.getString("action");
                                 String commandText="ocean-forge "+action;
                                 if(action.equals("checkpoint")&&args.has("label")) commandText+=" "+shellQuote(args.getString("label"));
-                                int timeout=(action.equals("build")||action.equals("test"))?300:120;
+                                int timeout=(action.equals("build")||action.equals("test"))?1800:120;
                                 return runTerminal(commandText,null,timeout,callback);
                             }
                             if(name.equals("ocean_forge_workspace")){
