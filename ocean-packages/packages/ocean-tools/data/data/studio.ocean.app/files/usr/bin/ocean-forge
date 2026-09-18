@@ -52,6 +52,24 @@ installed_apk() {
   /system/bin/pm path studio.ocean.app 2>/dev/null | sed -n 's/^package://p' | head -n1
 }
 
+installed_version_code() {
+  /system/bin/dumpsys package studio.ocean.app 2>/dev/null |
+    sed -n 's/.*versionCode=\([0-9][0-9]*\).*/\1/p' | head -n1
+}
+
+prepare_version() {
+  local installed_code source_code base_name next
+  installed_code="$(installed_version_code || true)"
+  source_code="$(grep -E 'versionCode ' "$current/android/app/build.gradle" | grep -oE "[0-9]+" | tail -n1 || true)"
+  [[ -n "$source_code" ]] || source_code=1
+  if [[ -n "$installed_code" && "$source_code" -le "$installed_code" ]]; then next=$((installed_code+1)); else next="$source_code"; fi
+  base_name="$(grep -E 'versionName ' "$current/android/app/build.gradle" | grep -oE '"[^"]+"' | tail -n1 | tr -d '"' || true)"
+  [[ -n "$base_name" ]] || base_name="1.0"
+  export OCEAN_FORGE_VERSION_CODE="$next"
+  export OCEAN_FORGE_VERSION_NAME="$base_name-forge.$next"
+  echo "Forge candidate version: $OCEAN_FORGE_VERSION_NAME ($OCEAN_FORGE_VERSION_CODE)"
+}
+
 cert_digest() {
   local apk="$1"
   apksigner verify --print-certs "$apk" 2>/dev/null |
@@ -241,6 +259,7 @@ case "${1:-}" in
     [[ -d "$current/android" ]] || { echo "Initialize a source workspace first." >&2; exit 3; }
     load_sdk
     prepare_native_reuse
+    prepare_version
     cd "$current"
     [[ -x scripts/verify-native-only.sh ]] || chmod +x scripts/verify-native-only.sh 2>/dev/null || true
     [[ -x android/gradlew ]] || chmod +x android/gradlew
@@ -277,6 +296,18 @@ case "${1:-}" in
     [[ -f "$apk" ]] || { echo "Candidate not found: $apk" >&2; exit 5; }
     need apksigner
     apksigner verify --verbose "$apk"
+    if command -v aapt >/dev/null 2>&1; then
+      badging="$(aapt dump badging "$apk" 2>/dev/null | head -n1 || true)"
+      pkg="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+      code="$(printf '%s\n' "$badging" | sed -n "s/.*versionCode='\([0-9][0-9]*\)'.*/\1/p")"
+      [[ "$pkg" = "studio.ocean.app" ]] || { echo "Candidate package mismatch: $pkg" >&2; exit 11; }
+      installed_code="$(installed_version_code || true)"
+      if [[ -n "$installed_code" && -n "$code" && "$code" -lt "$installed_code" ]]; then
+        echo "Candidate versionCode $code is lower than installed $installed_code" >&2
+        exit 12
+      fi
+      echo "Candidate package: $pkg versionCode=$code"
+    fi
     candidate_cert="$(cert_digest "$apk")"
     installed="$(installed_apk || true)"
     if [[ -n "$installed" && -r "$installed" ]]; then
