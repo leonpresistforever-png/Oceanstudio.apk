@@ -1,0 +1,54 @@
+#!/data/data/studio.ocean.app/files/usr/bin/bash
+set -euo pipefail
+DIR="$HOME/.ocean/plugins"
+mkdir -p "$DIR"
+
+safe_id() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9._-'; }
+clean() { printf '%s' "$1" | tr '\n\r=' '   '; }
+
+usage() {
+  cat <<'EOF'
+Ocean Plugin Registry
+Usage:
+  ocean-plugin register <id> <name> <command> [description]
+  ocean-plugin list
+  ocean-plugin remove <id>
+
+Register creates a persistent plugin manifest shown in Ocean's Plugins page.
+It does not install software by itself; install the required package/tool first.
+EOF
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  register)
+    [[ $# -ge 4 ]] || { usage; exit 1; }
+    id="$(safe_id "$2")"; [[ -n "$id" ]] || { echo "Invalid plugin id" >&2; exit 2; }
+    name="$(clean "$3")"; command_name="$(clean "$4")"; description="$(clean "${5:-Terminal-registered Ocean plugin.}")"
+    file="$DIR/$id.plugin"
+    {
+      printf 'id=%s\n' "$id"
+      printf 'name=%s\n' "$name"
+      printf 'command=%s\n' "$command_name"
+      printf 'description=%s\n' "$description"
+    } > "$file"
+    echo "Registered plugin: $id"
+    ;;
+  list)
+    found=0
+    for file in "$DIR"/*.plugin; do
+      [[ -f "$file" ]] || continue
+      found=1
+      id="$(sed -n 's/^id=//p' "$file" | head -n1)"
+      name="$(sed -n 's/^name=//p' "$file" | head -n1)"
+      command_name="$(sed -n 's/^command=//p' "$file" | head -n1)"
+      printf '%-20s %-28s %s\n' "$id" "$name" "$command_name"
+    done
+    [[ $found -eq 1 ]] || echo "No registered plugins."
+    ;;
+  remove)
+    [[ $# -eq 2 ]] || { usage; exit 1; }
+    id="$(safe_id "$2")"; rm -f "$DIR/$id.plugin"; echo "Removed plugin registry entry: $id"
+    ;;
+  *) usage; [[ -n "$cmd" ]] && exit 1 || exit 0 ;;
+esac
