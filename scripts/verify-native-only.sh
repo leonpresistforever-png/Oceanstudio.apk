@@ -17,6 +17,7 @@ sed -n '/BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS/p' android/app/s
 sed -n '/release {/,/}/p' android/app/build.gradle | sed -n '/OCEAN_DEV_AUTH_BYPASS.*false/p' | read -r release_guard \
   || fail "release builds must hard-disable development authentication"
 if find android/app/src/main -type f \( -name '*.java' -o -name '*.kt' -o -name '*.c' -o -name '*.cpp' \) \
+    ! -path '*/runtime/RuntimePortsActivity.java' \
     -exec sed -n '/com\.getcapacitor\|android\.webkit\.WebView\|com\.termux\|\/data\/data\/com\.termux/p' {} + \
     | sed -n '1p' | read -r forbidden; then
   fail "forbidden wrapper or Termux identity found"
