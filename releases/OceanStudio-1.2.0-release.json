@@ -1,0 +1,29 @@
+{
+  "url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.2.0",
+  "tag": "v1.2.0",
+  "release_id": 392023720,
+  "target_commit": "12c4ffd",
+  "assets": [
+    {
+      "name": "OceanStudio-1.2.0-arm64-debug.apk",
+      "id": 574538118,
+      "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.0/OceanStudio-1.2.0-arm64-debug.apk",
+      "size": 29590440,
+      "digest": "sha256:33084842c7fbd7ea9b019fd4607c062ae07009a9e03555543545743e46a61cc9"
+    },
+    {
+      "name": "SHA256SUMS",
+      "id": 574538720,
+      "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.0/SHA256SUMS",
+      "size": 100,
+      "digest": "sha256:3d3ec936d812d8a5f8221b2bc4a54dfbe45f657519ff1c9cb4ca801824be5171"
+    },
+    {
+      "name": "verification.json",
+      "id": 574538762,
+      "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.0/verification.json",
+      "size": 867,
+      "digest": "sha256:bb15a7703358ce7b545f47a61d15bfdc281dc64b38bf228bebb11bc64d262cb4"
+    }
+  ]
+}

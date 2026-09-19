@@ -1,14 +1,16 @@
-# OceanStudio 1.1.5 build status
+# OceanStudio 1.2.0 build status
 
-Signed arm64 debug APK built locally and verified. Published as the latest GitHub release: https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.1.5.
+Signed arm64 debug APK built locally, verified, and published:
+https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/tag/v1.2.0
 
-- Source commit: 5b8643f83086dbbf5a224c89ef1595cea16ca973.
-- Version: 1.1.5, versionCode 7.
-- Unit tests: 49 passed, zero failures/errors/skips.
-- APK assembly and Android instrumentation-source compilation succeeded. No connected-device test was run.
-- Signing certificate matches v1.1.4; install as an update to preserve app data.
-- Bootstrap and native arm64 PTY binary match v1.1.4; no terminal runtime replacement.
-- APK SHA-256: bcb218d63f0395d4c26b85536b98582bb5e72ec58365a48df0c7523b8c9f683d.
-- No GitHub Actions quota used. APK is already a ZIP container; the bootstrap stays stored uncompressed inside it for extraction compatibility.
+- Source commit: 12c4ffd.
+- Version: 1.2.0, versionCode 9.
+- Native architecture verified: `scripts/verify-native-only.sh` passed.
+- APK assembly succeeded with versionCode 9 and versionName 1.2.0.
+- Prefix-native curl bootstrap hydrated and verified (`bootstrapVersion 1.0.4`, 56 packages).
+- Signing certificate matches v1.1.4 and v1.1.5 (`b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387`).
+- APK SHA-256: `33084842c7fbd7ea9b019fd4607c062ae07009a9e03555543545743e46a61cc9`.
+- Size: 29,590,440 bytes.
+- Companion package repository `Oceanstudio-packages` indexed and updated with 166 verified official-source packages (Toybox, glibc, nix, core-suite).
 
-See OceanStudio-1.1.5-validation.json and OceanStudio-1.1.5-notes.md for evidence, changes and limits. Device acceptance and the separate 1000-package expansion remain open.
+See OceanStudio-1.2.0-validation.json and OceanStudio-1.2.0-notes.md for detailed evidence, changes, and verification.

@@ -1,12 +1,12 @@
 {
-  "bootstrapVersion": "1.0.2",
+  "bootstrapVersion": "1.0.4",
   "architecture": "aarch64",
   "packageName": "studio.ocean.app",
   "prefix": "/data/data/studio.ocean.app/files/usr",
   "archive": "ocean-aarch64.tar.zst",
-  "archiveSha256": "33e7de333d928728a53c301e8b680f4193c3a8d00c023e3bff4de0de5f04f93b",
-  "archiveSize": 17466116,
-  "entryCount": 3773,
+  "archiveSha256": "0f7de1787af894bd3a2243342b5de8a267ad11163f15e06ddd0715ee5ec65990",
+  "archiveSize": 17846609,
+  "entryCount": 3778,
   "packageList": [
     "apt",
     "attr",
@@ -14,6 +14,7 @@
     "bzip2",
     "ca-certificates",
     "coreutils",
+    "curl",
     "diffutils",
     "dpkg",
     "findutils",
@@ -100,6 +101,12 @@
       "version": "9.11-1",
       "sha256": "be2b1a67144490999c8e0272fac4c1172e90c79ded77115f5d99171759523cc1",
       "artifact": "coreutils_9.11-1_aarch64.deb"
+    },
+    {
+      "name": "curl",
+      "version": "8.21.0",
+      "sha256": "df380b632e2acb5793d7f4dfdf2e6b6fa56659edbc13a0f31a72495cca2bc680",
+      "artifact": "curl_8.21.0_aarch64.deb"
     },
     {
       "name": "diffutils",
