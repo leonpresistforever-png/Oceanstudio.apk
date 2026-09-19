@@ -18,8 +18,8 @@ android {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.1.6"
+        versionCode 9
+        versionName "1.2.0"
         if (project.hasProperty('oceanForgeVersionCode')) versionCode Integer.parseInt(project.property('oceanForgeVersionCode').toString())
         if (project.hasProperty('oceanForgeVersionName')) versionName project.property('oceanForgeVersionName').toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
