@@ -24,7 +24,7 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 PREFIX = Path("data/data/studio.ocean.app/files/usr")
-DEFAULT_SEEDS = ("bash", "apt", "libcurl", "ocean-pkg", "ocean-hello")
+DEFAULT_SEEDS = ("bash", "apt", "libcurl", "curl", "ocean-pkg", "ocean-hello")
 
 
 def paragraphs(text: str) -> list[dict[str, str]]:
