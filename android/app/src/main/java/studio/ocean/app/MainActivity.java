@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         bindGroup(R.id.group_workspace,R.id.workspace_children,R.id.chevron_workspace); bindGroup(R.id.group_agents,R.id.agents_children,R.id.chevron_agents); bindGroup(R.id.group_tools,R.id.tools_children,R.id.chevron_tools); bindGroup(R.id.group_connections,R.id.connections_children,R.id.chevron_connections);
         bindDestination(R.id.nav_agent,"OceanStudio"); bindDestination(R.id.nav_editor,"Editor"); bindDestination(R.id.nav_files,"Files"); bindDestination(R.id.nav_preview,"Preview");
         findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
+        findViewById(R.id.nav_x11).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.render.OceanX11Activity.class)); });
         findViewById(R.id.nav_runtime_ports).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
         findViewById(R.id.nav_ocean_forge).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, OceanForgeActivity.class)); });
         findViewById(R.id.nav_agent_settings).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
