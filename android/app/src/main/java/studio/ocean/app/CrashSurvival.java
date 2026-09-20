@@ -69,7 +69,7 @@ public final class CrashSurvival {
             final String text=report;
             activity.runOnUiThread(() -> {
                 if(activity.isFinishing()||activity.isDestroyed()){requested.set(false);return;}
-                if(text.isEmpty())return;
+                if(text.isEmpty()){requested.set(false);return;}
                 int pad=Math.round(18*activity.getResources().getDisplayMetrics().density);
                 TextView body=new TextView(activity);body.setText(text);body.setTextSize(12);body.setTypeface(Typeface.MONOSPACE);body.setTextIsSelectable(true);body.setPadding(pad,pad,pad,pad);
                 ScrollView scroll=new ScrollView(activity);scroll.addView(body);
@@ -118,6 +118,38 @@ public final class CrashSurvival {
         String report=CrashReportStore.read(pending);
         return CrashReportStore.identity(report).equals(app.getSharedPreferences("crash-survival",0).getString("seen",""))?"":report;
     }
+    public static synchronized String diagnosticSnapshot(Context context) {
+        if(app==null) install(context.getApplicationContext());
+        StringBuilder out=new StringBuilder();
+        out.append("Ocean local crash diagnostics\n");
+        out.append("Version: ").append(BuildConfig.VERSION_NAME).append("\n");
+        out.append("Build: ").append(BuildConfig.OCEAN_BUILD_COMMIT).append("\n");
+        out.append("Current stage: ").append(stage).append("\n");
+        out.append("Directory: ").append(directory==null?"unavailable":directory.getAbsolutePath()).append("\n\n");
+        try {
+            String prepared=prepareReport();
+            if(!prepared.isEmpty()) out.append("=== PREVIOUS CRASH / INTERRUPTION ===\n").append(prepared).append("\n");
+        } catch(Throwable error) {
+            out.append("Could not prepare Android exit report: ").append(error.getClass().getSimpleName()).append("\n");
+        }
+        if(directory!=null){
+            String uncaught=CrashReportStore.read(new File(directory,"uncaught.txt"));
+            if(!uncaught.isEmpty()) out.append("\n=== LAST JAVA UNCAUGHT EXCEPTION ===\n").append(uncaught).append("\n");
+            Properties last=load(new File(directory,"session.properties"));
+            if(!last.isEmpty()){
+                out.append("\n=== CURRENT/PREVIOUS SESSION JOURNAL ===\n");
+                out.append("started=").append(last.getProperty("started","unknown")).append("\n");
+                out.append("pid=").append(last.getProperty("pid","unknown")).append("\n");
+                out.append("version=").append(last.getProperty("version","unknown")).append("\n");
+                out.append("build=").append(last.getProperty("build","unknown")).append("\n");
+                out.append("busy=").append(last.getProperty("busy","unknown")).append("\n");
+                out.append("stage=").append(last.getProperty("stage","unknown")).append("\n");
+                out.append("stageTime=").append(last.getProperty("stageTime","unknown")).append("\n");
+            }
+        }
+        return out.toString();
+    }
+
     private static Properties load(File file){Properties p=new Properties();try(FileInputStream in=new FileInputStream(file)){p.load(in);}catch(Exception ignored){}return p;}
     private static long number(String text,long fallback){try{return Long.parseLong(text);}catch(Exception ignored){return fallback;}}
     private static String reasonName(int reason){switch(reason){case ApplicationExitInfo.REASON_CRASH:return "JAVA_CRASH";case ApplicationExitInfo.REASON_CRASH_NATIVE:return "NATIVE_CRASH";case ApplicationExitInfo.REASON_ANR:return "APP_NOT_RESPONDING";case ApplicationExitInfo.REASON_SIGNALED:return "SIGNAL";case ApplicationExitInfo.REASON_LOW_MEMORY:return "LOW_MEMORY";case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE:return "EXCESSIVE_RESOURCE_USAGE";case ApplicationExitInfo.REASON_USER_REQUESTED:return "USER_REQUESTED_STOP";case ApplicationExitInfo.REASON_EXIT_SELF:return "EXIT_SELF";case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE:return "INITIALIZATION_FAILURE";default:return "REASON_"+reason;}}
