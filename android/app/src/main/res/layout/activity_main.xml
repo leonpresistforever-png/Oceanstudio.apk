@@ -60,6 +60,7 @@
                     <TextView android:id="@+id/nav_editor" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_editor" android:text="@string/editor" />
                     <TextView android:id="@+id/nav_files" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_files" android:text="@string/files" />
                     <TextView android:id="@+id/nav_terminal" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_terminal" android:text="@string/ocean_terminal" />
+                    <TextView android:id="@+id/nav_x11" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_preview" android:text="X11 Renderer" />
                     <TextView android:id="@+id/nav_preview" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_preview" android:text="@string/preview" />
                 </LinearLayout>
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
