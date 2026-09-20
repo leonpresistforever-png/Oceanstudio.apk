@@ -12,6 +12,10 @@
         android:theme="@style/AppTheme">
 
         <activity android:name=".terminal.OceanTerminalActivity" android:label="Ocean Terminal" android:theme="@style/OceanTerminalTheme" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".render.OceanX11Activity" android:label="X11 Renderer" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".render.Ocean3DActivity" android:label="Ocean 3D" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".capture.OceanCaptureActivity" android:label="Ocean Capture" android:exported="false" android:theme="@style/AppTheme" />
+        <service android:name=".capture.OceanScreenRecordService" android:exported="false" android:foregroundServiceType="mediaProjection" />
         <activity android:name=".device.DeviceAccessActivity" android:exported="false" />
         <activity android:name=".device.AppAccessProfilesActivity" android:label="App Access Profiles" android:exported="false" />
         <service android:name=".device.DeviceControlService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -56,4 +60,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
