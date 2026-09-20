@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.nav_terminal).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         findViewById(R.id.nav_runtime_ports).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
         findViewById(R.id.nav_ocean_forge).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, OceanForgeActivity.class)); });
-        findViewById(R.id.nav_agent_settings).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
+        findViewById(R.id.nav_agent_settings).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });\n        findViewById(R.id.nav_crash_diagnostics).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, CrashDiagnosticsActivity.class)); });
         findViewById(R.id.nav_plugins).setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         findViewById(R.id.agent_controls_settings).setOnClickListener(v -> startActivity(new Intent(this, AgentSettingsActivity.class)));
         findViewById(R.id.agent_controls_plugins).setOnClickListener(v -> startActivity(new Intent(this, PluginCenterActivity.class)));
