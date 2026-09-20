@@ -1,0 +1,21 @@
+{
+  "apk": "OceanStudio-1.2.1-arm64-debug.apk",
+  "sourceCommit": "a8b7cc3cc46915ba5c444eaf5c21315d4e7d172c",
+  "buildMode": "compiled-current-android-source",
+  "versionCode": 10,
+  "versionName": "1.2.1",
+  "applicationId": "studio.ocean.app",
+  "sha256": "d5188088ae1821fa3ee50247bed07c5246ade0945a4209cd0fa5ac69afe9c81a",
+  "size": 22735936,
+  "certificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
+  "previous120CertificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
+  "updateCertificateMatch": true,
+  "requiredFeatures": {
+    "pluginCenter": true,
+    "agentSettings": true,
+    "rightAgentControlsDrawer": true,
+    "crashSurvival": true,
+    "manualCrashDiagnostics": true
+  },
+  "status": "BUILT_AND_VALIDATED_NOT_PUBLISHED"
+}
