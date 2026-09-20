@@ -242,6 +242,44 @@ public final class OceanIpcServer {
                 result.put("charging", status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL);
                 result.put("plugged", plugged > 0);
                 result.put("success", true);
+            } else if ("/api/device".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                String tool = json.optString("tool", "");
+                JSONObject args = json.optJSONObject("args");
+                if (args == null) args = json;
+                if (tool.isEmpty()) throw new IllegalArgumentException("tool is required");
+                result = studio.ocean.app.device.DeviceControlService.execute(context, tool, args);
+            } else if ("/api/intent".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                result = handleIntent(json);
+            } else if ("/api/capture".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                result = handleCapture(json);
+            } else if ("/api/x11".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                String action = json.optString("action", "status");
+                if ("open".equals(action)) {
+                    int port = json.optInt("port", studio.ocean.app.render.OceanX11Activity.DEFAULT_RFB_PORT);
+                    studio.ocean.app.render.OceanX11Activity.open(context, port);
+                    result.put("success", true).put("port", port);
+                } else {
+                    result = studio.ocean.app.render.OceanX11Activity.control(action, json);
+                }
+            } else if ("/api/3d".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                String action = json.optString("action", "status");
+                if ("open".equals(action)) {
+                    String model = json.optString("path", "");
+                    if (model.isEmpty()) throw new IllegalArgumentException("path is required");
+                    studio.ocean.app.render.Ocean3DActivity.open(context, model);
+                    result.put("success", true).put("path", model);
+                } else {
+                    result = studio.ocean.app.render.Ocean3DActivity.control(action, json);
+                }
+            } else if ("/api/share-file".equals(path)) {
+                JSONObject json = new JSONObject(body);
+                handleShareFile(json.getString("path"), json.optString("title", "Share via Ocean"));
+                result.put("success", true);
             } else {
                 result.put("error", "Unknown endpoint: " + path);
                 result.put("success", false);
@@ -255,13 +293,97 @@ public final class OceanIpcServer {
         return result;
     }
 
+    private JSONObject handleIntent(JSONObject json) throws Exception {
+        String action = json.optString("action", Intent.ACTION_VIEW);
+        String uri = json.optString("uri", "");
+        String pkg = json.optString("package", "");
+        String type = json.optString("type", "");
+        Intent i = uri.isEmpty() ? new Intent(action) : new Intent(action, Uri.parse(uri));
+        if (!pkg.isEmpty()) i.setPackage(pkg);
+        if (!type.isEmpty()) i.setType(type);
+        if (json.optBoolean("chooser", false)) {
+            Intent chooser = Intent.createChooser(i, json.optString("title", "Open with"));
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(chooser);
+        } else {
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            JSONObject extras = json.optJSONObject("extras");
+            if (extras != null) {
+                java.util.Iterator<String> keys = extras.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    Object value = extras.opt(key);
+                    if (value instanceof Boolean) i.putExtra(key, (Boolean)value);
+                    else if (value instanceof Integer) i.putExtra(key, (Integer)value);
+                    else if (value instanceof Long) i.putExtra(key, (Long)value);
+                    else if (value instanceof Double) i.putExtra(key, (Double)value);
+                    else if (value != null) i.putExtra(key, String.valueOf(value));
+                }
+            }
+            context.startActivity(i);
+        }
+        return new JSONObject().put("success", true).put("action", action).put("uri", uri).put("package", pkg);
+    }
+
+    private JSONObject handleCapture(JSONObject json) throws Exception {
+        String action = json.optString("action", "status");
+        if ("screenshot".equals(action)) {
+            return studio.ocean.app.device.DeviceControlService.execute(
+                    context, "capture_android_screen", new JSONObject());
+        }
+        if ("selfie".equals(action) || "photo".equals(action) || "record_start".equals(action)) {
+            String mode = "record_start".equals(action) ? "record" : action;
+            Intent i = new Intent(context, studio.ocean.app.capture.OceanCaptureActivity.class)
+                    .putExtra("mode", mode).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(i);
+            return new JSONObject().put("success", true).put("requires_user_confirmation", true).put("mode", mode);
+        }
+        if ("record_stop".equals(action)) {
+            Intent stop = new Intent(context, studio.ocean.app.capture.OceanScreenRecordService.class)
+                    .setAction(studio.ocean.app.capture.OceanScreenRecordService.ACTION_STOP);
+            context.startService(stop);
+            return new JSONObject().put("success", true);
+        }
+        android.content.SharedPreferences p = context.getSharedPreferences(
+                studio.ocean.app.capture.OceanCaptureActivity.PREF, Context.MODE_PRIVATE);
+        return new JSONObject()
+                .put("success", true)
+                .put("photo_status", p.getString("photo_status", "idle"))
+                .put("photo_path", p.getString("photo_path", ""))
+                .put("record_status", p.getString("record_status", "idle"))
+                .put("record_path", p.getString("record_path", ""))
+                .put("photo_error", p.getString("photo_error", ""))
+                .put("record_error", p.getString("record_error", ""));
+    }
+
+    private void handleShareFile(String path, String title) throws Exception {
+        File file = new File(path);
+        if (!file.isFile()) throw new IOException("File not found: " + path);
+        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".diagnostics", file);
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType(getMimeType(path));
+        send.putExtra(Intent.EXTRA_STREAM, uri);
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent chooser = Intent.createChooser(send, title);
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(chooser);
+    }
+
     private void handleOpen(String target) {
         try {
             Intent intent;
-            if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:") || target.startsWith("geo:")) {
+            if (target.startsWith("app:")) {
+                String pkg = target.substring(4);
+                intent = context.getPackageManager().getLaunchIntentForPackage(pkg);
+                if (intent == null) throw new IllegalArgumentException("No launchable app: " + pkg);
+            } else if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:") || target.startsWith("geo:") || target.startsWith("market:") || target.startsWith("tel:")) {
                 intent = new Intent(Intent.ACTION_VIEW, Uri.parse(target));
             } else {
+                Intent launch = context.getPackageManager().getLaunchIntentForPackage(target);
                 File file = new File(target);
+                if (launch != null && !file.exists()) {
+                    intent = launch;
+                } else {
                 Uri uri;
                 try {
                     uri = FileProvider.getUriForFile(context, context.getPackageName() + ".diagnostics", file);
@@ -272,6 +394,7 @@ public final class OceanIpcServer {
                 intent = new Intent(Intent.ACTION_VIEW);
                 intent.setDataAndType(uri, mime != null ? mime : "*/*");
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
             }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
