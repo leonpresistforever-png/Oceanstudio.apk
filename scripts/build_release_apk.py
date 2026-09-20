@@ -1,160 +1,194 @@
 #!/usr/bin/env python3
-"""Build, align, sign, and validate the official OceanStudio release APK with official apksigner."""
-import os, sys, shutil, subprocess, zipfile, hashlib, json
+"""Build OceanStudio from CURRENT Android source, validate required features, align and sign it.
+
+This script intentionally refuses to:
+- repackage an existing release APK as a substitute for compilation;
+- generate a new signing key silently;
+- publish an APK that omits required 1.2.1 UI/diagnostic features.
+"""
+from __future__ import annotations
+import hashlib, json, os, shutil, subprocess, sys, zipfile
 from pathlib import Path
 
-ROOT = Path("/data/data/com.termux/files/home/Oceanstudio.apk")
-RELEASES_DIR = ROOT / "releases"
-KEYSTORE_PATH = Path("/data/data/com.termux/files/home/oceanstudio-release.jks")
+ROOT = Path(__file__).resolve().parents[1]
+ANDROID = ROOT / "android"
+RELEASES = ROOT / "releases"
+BUILD_APK = ANDROID / "app/build/outputs/apk/debug/app-debug.apk"
+PREVIOUS_APK = RELEASES / "OceanStudio-1.2.0-arm64-debug.apk"
+VERSION_NAME = "1.2.1"
+VERSION_CODE = 10
+OUTPUT_APK = RELEASES / f"OceanStudio-{VERSION_NAME}-arm64-debug.apk"
+LATEST_APK = RELEASES / "OceanStudio-latest-debug.apk"
+
+def run(args, *, cwd=None, env=None, capture=False):
+    print("+", " ".join(map(str,args)), flush=True)
+    return subprocess.run(
+        list(map(str,args)), cwd=cwd, env=env, check=True, text=True,
+        stdout=subprocess.PIPE if capture else None,
+        stderr=subprocess.STDOUT if capture else None)
+
+def tool(name):
+    path=shutil.which(name)
+    if not path:
+        raise SystemExit(f"Required tool is missing: {name}")
+    return path
+
+def cert_digest(apk: Path) -> str:
+    out=run([tool("apksigner"),"verify","--print-certs",apk],capture=True).stdout
+    for line in out.splitlines():
+        prefix="Signer #1 certificate SHA-256 digest:"
+        if line.startswith(prefix):
+            return line.split(":",1)[1].strip().lower().replace(":","")
+    raise SystemExit(f"Could not read signing certificate from {apk}")
+
+def validate_compiled_features(apk: Path):
+    if not apk.is_file() or apk.stat().st_size < 1_000_000:
+        raise SystemExit("Compiled APK missing or implausibly small")
+
+    with zipfile.ZipFile(apk,"r") as z:
+        dex_names=[n for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
+        if not dex_names:
+            raise SystemExit("Compiled APK has no classes*.dex")
+        dex=b"".join(z.read(n) for n in dex_names)
+
+    required_classes=[
+        b"PluginCenterActivity",
+        b"AgentSettingsActivity",
+        b"CrashSurvival",
+        b"CrashDiagnosticsActivity",
+        b"OceanForgeActivity",
+    ]
+    missing=[x.decode() for x in required_classes if x not in dex]
+    if missing:
+        raise SystemExit("Compiled APK is missing required classes: "+", ".join(missing))
+
+    resources=run([tool("aapt"),"dump","resources",apk],capture=True).stdout
+    required_ids=["agent_controls_drawer","agent_controls_button","nav_plugins","nav_agent_settings","nav_crash_diagnostics"]
+    missing_ids=[x for x in required_ids if x not in resources]
+    if missing_ids:
+        raise SystemExit("Compiled APK is missing required UI resources: "+", ".join(missing_ids))
+
+    manifest=run([tool("aapt"),"dump","xmltree",apk,"AndroidManifest.xml"],capture=True).stdout
+    for activity in ["PluginCenterActivity","AgentSettingsActivity","CrashDiagnosticsActivity"]:
+        if activity not in manifest:
+            raise SystemExit(f"Compiled manifest is missing {activity}")
+
+    badging=run([tool("aapt"),"dump","badging",apk],capture=True).stdout
+    expected=[f"versionCode='{VERSION_CODE}'",f"versionName='{VERSION_NAME}'","package: name='studio.ocean.app'"]
+    for item in expected:
+        if item not in badging:
+            raise SystemExit(f"Badging validation failed: {item}")
 
 def main():
-    print("=== OCEANSTUDIO APK CANONICAL RELEASE BUILDER ===")
-    
-    # 1. Ensure canonical signing keystore exists
-    if not KEYSTORE_PATH.exists():
-        print("Generating canonical OceanStudio release keystore...")
-        cmd_genkey = [
-            "keytool", "-genkeypair", "-v",
-            "-keystore", str(KEYSTORE_PATH),
-            "-alias", "oceanstudio",
-            "-keyalg", "RSA",
-            "-keysize", "2048",
-            "-validity", "10000",
-            "-storepass", "oceanstudio",
-            "-keypass", "oceanstudio",
-            "-dname", "CN=OceanStudio, OU=Engineering, O=Ocean, L=San Francisco, ST=CA, C=US"
-        ]
-        subprocess.run(cmd_genkey, check=True)
-        print("Keystore created successfully at:", KEYSTORE_PATH)
-    else:
-        print("Using existing keystore at:", KEYSTORE_PATH)
+    for required in ("java","aapt","zipalign","apksigner"):
+        tool(required)
+    gradlew=ANDROID/"gradlew"
+    if not gradlew.is_file():
+        raise SystemExit("android/gradlew is missing")
+    gradlew.chmod(gradlew.stat().st_mode | 0o111)
 
-    # 2. Source APK
-    src_apk = RELEASES_DIR / "OceanStudio-1.2.0-arm64-debug.apk"
-    work_dir = Path("/data/data/com.termux/files/usr/tmp/ocean_apk_build")
-    if work_dir.exists():
-        shutil.rmtree(work_dir)
-    work_dir.mkdir(parents=True)
+    env=dict(os.environ)
+    try:
+        commit=run(["git","rev-parse","HEAD"],cwd=ROOT,capture=True).stdout.strip()
+    except Exception:
+        commit="local"
+    env["OCEAN_BUILD_COMMIT"]=commit
 
-    unaligned_apk = work_dir / "unaligned.apk"
-    aligned_apk = work_dir / "aligned.apk"
-    final_signed_apk = work_dir / "final_signed.apk"
+    # THIS is the critical difference from the broken 1.2.0 script:
+    # compile current Java/resources instead of opening an old release APK.
+    run([gradlew,"clean","test","assembleDebug","--no-daemon","--stacktrace"],cwd=ANDROID,env=env)
 
-    print("Repacking clean APK (removing legacy signatures and standardizing compression)...")
-    with zipfile.ZipFile(src_apk, "r") as zin, zipfile.ZipFile(unaligned_apk, "w") as zout:
-        for item in zin.infolist():
-            # Strip previous signature files
-            if item.filename.startswith("META-INF/") and (
-                item.filename.endswith(".SF") or
-                item.filename.endswith(".RSA") or
-                item.filename.endswith(".MF") or
-                item.filename.endswith(".EC")
-            ):
-                continue
-            data = zin.read(item.filename)
-            zinfo = zipfile.ZipInfo(item.filename)
-            # .so files and bootstrap tarball MUST be stored uncompressed
-            if item.filename.endswith(".so") or "ocean-aarch64.tar.zst" in item.filename:
-                zinfo.compress_type = zipfile.ZIP_STORED
-            else:
-                zinfo.compress_type = zipfile.ZIP_DEFLATED
-            zout.writestr(zinfo, data)
+    validate_compiled_features(BUILD_APK)
 
-    # 3. Zipalign with 4-byte and 4KB page alignment (-p 4)
-    print("Running zipalign (-f -p 4)...")
-    subprocess.run(["zipalign", "-f", "-p", "4", str(unaligned_apk), str(aligned_apk)], check=True)
-    res_align = subprocess.run(["zipalign", "-c", "-v", "4", str(aligned_apk)], capture_output=True, text=True)
-    if "Verification successful" not in res_align.stdout:
-        raise SystemExit("FATAL: zipalign verification failed!")
-    print("Zipalign: VERIFICATION SUCCESSFUL")
+    RELEASES.mkdir(parents=True,exist_ok=True)
+    work=ROOT/"build/release-apk"
+    if work.exists(): shutil.rmtree(work)
+    work.mkdir(parents=True)
+    aligned=work/"aligned.apk"
+    signed=work/"signed.apk"
 
-    # 4. Sign with official Android SDK apksigner (v1, v2, v3, min-sdk-version 28)
-    print("Signing with official apksigner (v1, v2, v3 schemes, min-sdk-version 28)...")
-    cmd_sign = [
-        "apksigner", "sign",
-        "--ks", str(KEYSTORE_PATH),
-        "--ks-pass", "pass:oceanstudio",
-        "--ks-key-alias", "oceanstudio",
-        "--key-pass", "pass:oceanstudio",
-        "--min-sdk-version", "28",
-        "--v1-signing-enabled", "true",
-        "--v2-signing-enabled", "true",
-        "--v3-signing-enabled", "true",
-        "--in", str(aligned_apk),
-        "--out", str(final_signed_apk)
-    ]
-    res_sign = subprocess.run(cmd_sign, capture_output=True, text=True)
-    if res_sign.returncode != 0:
-        raise SystemExit(f"FATAL: apksigner sign failed: {res_sign.stderr}")
-    print("apksigner sign: COMPLETED")
+    run([tool("zipalign"),"-f","-p","4",BUILD_APK,aligned])
+    run([tool("zipalign"),"-c","-v","4",aligned])
 
-    # 5. Full forensic verification with apksigner verify
-    print("\nVerifying signed APK with apksigner...")
-    res_verify = subprocess.run(
-        ["apksigner", "verify", "-v", "--print-certs", str(final_signed_apk)],
-        capture_output=True, text=True
-    )
-    print(res_verify.stdout)
-    if "Verifies" not in res_verify.stdout:
-        raise SystemExit("FATAL: apksigner verify failed!")
+    keystore=os.environ.get("OCEAN_RELEASE_KEYSTORE","").strip()
+    store_pass=os.environ.get("OCEAN_RELEASE_STORE_PASS","")
+    key_alias=os.environ.get("OCEAN_RELEASE_KEY_ALIAS","oceanstudio")
+    key_pass=os.environ.get("OCEAN_RELEASE_KEY_PASS",store_pass)
 
-    # Verify zipalign still passes after apksigner
-    res_align_final = subprocess.run(["zipalign", "-c", "-v", "4", str(final_signed_apk)], capture_output=True, text=True)
-    if "Verification successful" not in res_align_final.stdout:
-        raise SystemExit("FATAL: zipalign check failed on signed APK!")
-    print("Post-signing zipalign: VERIFICATION SUCCESSFUL")
+    if not keystore:
+        legacy=Path.home()/"oceanstudio-release.jks"
+        if legacy.is_file():
+            keystore=str(legacy)
+            print(f"Using existing local OceanStudio keystore: {legacy}")
+        else:
+            raise SystemExit(
+                "No release keystore supplied. Set OCEAN_RELEASE_KEYSTORE. "
+                "A new key will NOT be generated automatically."
+            )
+    if not Path(keystore).is_file():
+        raise SystemExit("OCEAN_RELEASE_KEYSTORE does not exist")
+    if not store_pass:
+        raise SystemExit("Set OCEAN_RELEASE_STORE_PASS securely in the environment")
 
-    # 6. Verify badging (SDK version 28)
-    print("\nVerifying manifest badging...")
-    res_aapt = subprocess.run(["aapt", "dump", "badging", str(final_signed_apk)], capture_output=True, text=True)
-    badging = res_aapt.stdout
-    print([line for line in badging.splitlines() if "sdkVersion" in line or "package:" in line])
-    assert "sdkVersion:'28'" in badging
-    assert "targetSdkVersion:'28'" in badging
+    run([
+        tool("apksigner"),"sign",
+        "--ks",keystore,
+        "--ks-pass","env:OCEAN_RELEASE_STORE_PASS",
+        "--ks-key-alias",key_alias,
+        "--key-pass","env:OCEAN_RELEASE_KEY_PASS",
+        "--min-sdk-version","28",
+        "--v1-signing-enabled","true",
+        "--v2-signing-enabled","true",
+        "--v3-signing-enabled","true",
+        "--in",aligned,
+        "--out",signed,
+    ],env=env)
 
-    # 7. Compute final hashes and replace release files
-    apk_data = final_signed_apk.read_bytes()
-    apk_sha256 = hashlib.sha256(apk_data).hexdigest()
-    apk_size = len(apk_data)
-    print(f"\nFinal APK size: {apk_size} bytes")
-    print(f"Final APK SHA-256: {apk_sha256}")
+    verify=run([tool("apksigner"),"verify","-v","--print-certs",signed],capture=True).stdout
+    print(verify)
+    run([tool("zipalign"),"-c","-v","4",signed])
+    validate_compiled_features(signed)
 
-    target_apk = RELEASES_DIR / "OceanStudio-1.2.0-arm64-debug.apk"
-    latest_apk = RELEASES_DIR / "OceanStudio-latest-debug.apk"
+    new_cert=cert_digest(signed)
+    previous_cert=cert_digest(PREVIOUS_APK) if PREVIOUS_APK.is_file() else ""
+    if previous_cert and new_cert != previous_cert:
+        raise SystemExit(
+            "Signing certificate mismatch with the published 1.2.0 APK. "
+            f"previous={previous_cert} new={new_cert}. Refusing update release."
+        )
 
-    shutil.copy2(final_signed_apk, target_apk)
-    shutil.copy2(final_signed_apk, latest_apk)
+    data=signed.read_bytes()
+    digest=hashlib.sha256(data).hexdigest()
+    shutil.copy2(signed,OUTPUT_APK)
+    shutil.copy2(signed,LATEST_APK)
+    (OUTPUT_APK.with_suffix(OUTPUT_APK.suffix+".sha256")).write_text(digest+"\n")
+    (RELEASES/"OceanStudio-latest-debug.apk.sha256").write_text(digest+"\n")
 
-    (RELEASES_DIR / "OceanStudio-1.2.0-arm64-debug.apk.sha256").write_text(f"{apk_sha256}\n", encoding="utf-8")
-    (RELEASES_DIR / "OceanStudio-latest-debug.apk.sha256").write_text(f"{apk_sha256}\n", encoding="utf-8")
-
-    sums_content = f"{apk_sha256}  OceanStudio-1.2.0-arm64-debug.apk\n{apk_sha256}  OceanStudio-latest-debug.apk\n"
-    (RELEASES_DIR / "SHA256SUMS").write_text(sums_content, encoding="utf-8")
-
-    validation_data = {
-        "apk": "OceanStudio-1.2.0-arm64-debug.apk",
-        "size": apk_size,
-        "sha256": apk_sha256,
-        "minSdkVersion": 28,
-        "targetSdkVersion": 28,
-        "compileSdkVersion": 35,
-        "applicationId": "studio.ocean.app",
-        "versionCode": 9,
-        "versionName": "1.2.0",
-        "abi": "arm64-v8a",
-        "zipalign": "4-byte page-aligned (passed)",
-        "signing": {
-            "v1_jar": True,
-            "v2_scheme": True,
-            "v3_scheme": True,
-            "signer": "CN=OceanStudio, OU=Engineering, O=Ocean, L=San Francisco, ST=CA, C=US"
+    validation={
+        "apk":OUTPUT_APK.name,
+        "sourceCommit":commit,
+        "buildMode":"compiled-current-android-source",
+        "versionCode":VERSION_CODE,
+        "versionName":VERSION_NAME,
+        "applicationId":"studio.ocean.app",
+        "sha256":digest,
+        "size":len(data),
+        "certificateSha256":new_cert,
+        "previous120CertificateSha256":previous_cert or None,
+        "updateCertificateMatch": (not previous_cert) or new_cert==previous_cert,
+        "requiredFeatures":{
+            "pluginCenter":True,
+            "agentSettings":True,
+            "rightAgentControlsDrawer":True,
+            "crashSurvival":True,
+            "manualCrashDiagnostics":True,
         },
-        "status": "READY_FOR_INSTALLATION"
+        "status":"BUILT_AND_VALIDATED_NOT_PUBLISHED",
     }
-    (RELEASES_DIR / "OceanStudio-1.2.0-validation.json").write_text(json.dumps(validation_data, indent=2) + "\n", encoding="utf-8")
+    (RELEASES/f"OceanStudio-{VERSION_NAME}-validation.json").write_text(json.dumps(validation,indent=2)+"\n")
+    print(json.dumps(validation,indent=2))
+    print(f"READY LOCAL ARTIFACT: {OUTPUT_APK}")
+    return 0
 
-    print("\nRelease files updated successfully on disk!")
-    return apk_sha256, apk_size
-
-if __name__ == "__main__":
-    main()
+if __name__=="__main__":
+    raise SystemExit(main())
