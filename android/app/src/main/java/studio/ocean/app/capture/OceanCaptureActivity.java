@@ -3,6 +3,7 @@ package studio.ocean.app.capture;
 import android.app.*;
 import android.content.*;
 import android.net.Uri;
+import android.media.projection.MediaProjectionManager;
 import android.os.*;
 import android.provider.MediaStore;
 import androidx.appcompat.app.AppCompatActivity;
