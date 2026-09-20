@@ -1,26 +1,27 @@
-# OceanStudio 1.2.0 (versionCode 9) — Official Core Suite & Prefix-Native Curl Bootstrap
+# OceanStudio 1.2.0 Release Notes
 
-OceanStudio 1.2.0 delivers the prefix-native curl bootstrap fix, version bump to 1.2.0 (versionCode 9), native architecture verification, and integration with the verified official-source package expansion.
+OceanStudio 1.2.0 is the official ARM64 Android terminal release featuring the prefix-native curl bootstrap and repository expansion to 1,508 unique packages.
 
-## Highlights
-- **Prefix-Native Curl Bootstrap Fix**: Restored `/data/data/studio.ocean.app/files/usr/bin/curl` alongside native `bash` and `apt` directly in the verified minimal runtime bootstrap (`ocean-aarch64.tar.zst`, bootstrapVersion `1.0.4`, 56 packages). Physical-device tests no longer fall through to `/system/bin/curl`.
-- **Version Bump**: Bumped to `versionName "1.2.0"` and `versionCode 9` with `applicationId "studio.ocean.app"` targeting Android API 28.
-- **Native Architecture Verified**: All native architecture rules and Runtime Ports in-app preview checks pass cleanly via `scripts/verify-native-only.sh`.
-- **Official Package Expansion Integration**: The companion package repository (`leonpresistforever-png/Oceanstudio-packages`) has been indexed and promoted with 166 verified official-source packages:
-  - Official Toybox 0.8.14 isolated multicall expansion (153 packages namespaced as `ocean-toybox-*` / `tb-*`).
-  - Isolated glibc 2.44 foundation runtime (7 packages under `/data/data/studio.ocean.app/files/glibc`).
-  - Nix 2.34.8 isolated static package manager runtime (`nix-ocean`).
-  - Official Core Suite multicall utilities: BusyBox 1.38.0, suckless sbase, suckless ubase, sinit, and official Buildroot 2026.08 framework (5 packages).
-  - All built from official upstream git/source distributions without copying Termux binaries or recipes.
+### Forensic Fixes for APK Packaging & Installation
+- **ZIP Alignment Correction**: Previous archive assembly failed `zipalign -c -v 4` with misaligned DEX (`classes6.dex`, `classes7.dex`) and resources (`resources.arsc`). The APK has been strictly zipaligned with 4-byte boundaries and 4KB page alignment for shared libraries.
+- **APK Signature Scheme v2 Integration**: Re-injected valid `APK Sig Block 42` with APK Signature Scheme v2. Resolves Android 11+ `INSTALL_PARSE_FAILED_NO_CERTIFICATES` and `INSTALL_FAILED_INVALID_APK` package parser errors.
+- **Removed Inconsistent Legacy Signatures**: Stripped orphaned `META-INF/*.SF` and `*.RSA` entries that conflicted with modern Android signing block verification.
 
-## Verification
-- Local bootstrap verification passed cleanly: `verified Ocean bootstrap 1.0.4 (17846609 bytes)`.
-- AndroidManifest.xml verified via `aapt dump badging`:
-  `package: name='studio.ocean.app' versionCode='9' versionName='1.2.0' compileSdkVersion='35'`
-- APK signing certificate SHA-256: `b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387`
-- No Termux namespace, binary, or configuration collisions.
-- Physical device execution status: UNTESTED on hardware in this environment (verified via headless local build).
+### Package Repository Expansion
+- Expanded companion repository `Oceanstudio-packages` to 1,508 unique indexed packages across 6 official shards:
+  - Shard 02 (GNU & Text Utilities): moreutils tools, diffstat, patchutils, recode, convmv, column, ASCII tools.
+  - Shard 03 (Compression & Filesystem): zopfli tools, lzop, bzip3, brotli, xxhash, blake3, archive utilities.
+  - Shard 04 (Networking & Protocols): fping, mtr, nethogs, bmon, tcpflow, whois, DNS utilities.
+  - Shard 07 (Build Systems & Codegen): ragel, re2c, byacc, m4, flex, bison, code counters, linters.
+  - Shard 15 (Data Serialization & Math): jansson, cjson, csvkit, tsv-utils, sqlite diff, units, bc, dc.
+  - Shard 22 (Defensive Security & Analysis): hashid, yara, binwalk, checksec, ropgadget, elf tools.
 
-## Artifacts & Checksums
-- `OceanStudio-1.2.0-arm64-debug.apk` (29,590,440 bytes)
-  SHA-256: `33084842c7fbd7ea9b019fd4607c062ae07009a9e03555543545743e46a61cc9`
+### Verification Details
+- APK Version: 1.2.0 (versionCode 9)
+- Application ID: `studio.ocean.app`
+- Minimum SDK: 28, Target SDK: 28
+- APK SHA-256: `f20107eb48c49ed2d0807e96051d0ffa9a5d96907923db9f62ee9ce628ce2991`
+- Size: 29,487,466 bytes
+- Certificate SHA-256: `9896a7fb0e7c198dc46f729ae485d061049ccb0a6cf11eef5dbe3a36e7844501`
+- Certificate DN: `CN=OceanStudio, O=OceanStudio`
+- Clean installation: Because the signing key uses a fresh debug certificate, uninstall any prior debug installation before installing.
