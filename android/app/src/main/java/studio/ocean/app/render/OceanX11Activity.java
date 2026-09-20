@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Native Ocean X11/RFB renderer.
  *
  * This is not a WebView and does not depend on Termux:X11. It attaches to a
- * localhost RFB/VNC backend (normally started by ocean-x11-session) and renders
+ * localhost RFB/VNC backend (normally started by ocean-x11-start) and renders
  * frames directly into an Android View while forwarding touch + keyboard input.
  */
 public final class OceanX11Activity extends AppCompatActivity {
@@ -69,15 +69,6 @@ public final class OceanX11Activity extends AppCompatActivity {
             fitButton.setText(surface.fitMode ? "1:1" : "Fit");
         });
         bar.addView(fitButton);
-
-        Button keyboard = button("Keyboard");
-        keyboard.setOnClickListener(v -> surface.showKeyboard());
-        bar.addView(keyboard);
-
-        Button reconnect = button("Reconnect");
-        reconnect.setOnClickListener(v -> connect());
-        bar.addView(reconnect);
-
         root.addView(bar, new LinearLayout.LayoutParams(-1, -2));
 
         status = new TextView(this);
@@ -86,6 +77,23 @@ public final class OceanX11Activity extends AppCompatActivity {
         status.setTextSize(12);
         status.setPadding(dp(12), dp(6), dp(12), dp(6));
         root.addView(status, new LinearLayout.LayoutParams(-1, -2));
+
+        HorizontalScrollView controlsScroll = new HorizontalScrollView(this);
+        controlsScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setPadding(dp(8), 0, dp(8), dp(6));
+        Button start = button("Start");
+        start.setOnClickListener(v -> runBackend(true));
+        Button stop = button("Stop");
+        stop.setOnClickListener(v -> runBackend(false));
+        Button reconnect = button("Reconnect");
+        reconnect.setOnClickListener(v -> connect());
+        Button keyboard = button("Keyboard");
+        keyboard.setOnClickListener(v -> surface.showKeyboard());
+        controls.addView(start); controls.addView(stop); controls.addView(reconnect); controls.addView(keyboard);
+        controlsScroll.addView(controls);
+        root.addView(controlsScroll, new LinearLayout.LayoutParams(-1, -2));
 
         surface = new RfbSurface(this);
         root.addView(surface, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -109,6 +117,41 @@ public final class OceanX11Activity extends AppCompatActivity {
         surface.connect("127.0.0.1", port, message -> runOnUiThread(() -> status.setText(message)));
     }
 
+    private void runBackend(boolean start) {
+        new Thread(() -> {
+            String name = start ? "ocean-x11-start" : "ocean-x11-stop";
+            File command = new File(getFilesDir(), "usr/bin/" + name);
+            if (!command.canExecute()) {
+                runOnUiThread(() -> status.setText(name + " is not installed yet. Install ocean-x11-runtime and " + name + "."));
+                return;
+            }
+            try {
+                ProcessBuilder pb = new ProcessBuilder(command.getAbsolutePath());
+                java.util.Map<String,String> env = pb.environment();
+                for (String entry : studio.ocean.app.terminal.OceanEnvironment.create(this, "/system/bin/sh", false)) {
+                    int eq = entry.indexOf('=');
+                    if (eq > 0) env.put(entry.substring(0, eq), entry.substring(eq + 1));
+                }
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                String output;
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                    StringBuilder b = new StringBuilder(); String line;
+                    while ((line = r.readLine()) != null) b.append(line).append('\n');
+                    output = b.toString().trim();
+                }
+                int code = p.waitFor();
+                String finalOutput = output;
+                runOnUiThread(() -> {
+                    status.setText((start ? "X11 start" : "X11 stop") + " · exit " + code + (finalOutput.isEmpty() ? "" : " · " + finalOutput));
+                    if (start && code == 0) status.postDelayed(this::connect, 700);
+                });
+            } catch (Throwable t) {
+                runOnUiThread(() -> status.setText("X11 backend command failed: " + String.valueOf(t.getMessage())));
+            }
+        }, "ocean-x11-control").start();
+    }
+
     public static JSONObject control(String action, JSONObject args) {
         JSONObject o = new JSONObject();
         try {
@@ -125,6 +168,8 @@ public final class OceanX11Activity extends AppCompatActivity {
                 else if ("pixel".equals(action)) a.surface.setFit(false);
                 else if ("keyboard".equals(action)) a.surface.showKeyboard();
                 else if ("reconnect".equals(action)) a.connect();
+                else if ("start".equals(action)) a.runBackend(true);
+                else if ("stop".equals(action)) a.runBackend(false);
             });
             return o.put("success", true);
         } catch (Throwable t) {
