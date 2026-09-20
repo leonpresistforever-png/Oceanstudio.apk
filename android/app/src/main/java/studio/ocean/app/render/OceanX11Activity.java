@@ -133,7 +133,7 @@ public final class OceanX11Activity extends AppCompatActivity {
                     if (eq > 0) env.put(entry.substring(0, eq), entry.substring(eq + 1));
                 }
                 pb.redirectErrorStream(true);
-                Process p = pb.start();
+                java.lang.Process p = pb.start();
                 String output;
                 try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                     StringBuilder b = new StringBuilder(); String line;
