@@ -1,18 +1,20 @@
 {
   "apk": "OceanStudio-1.2.0-arm64-debug.apk",
-  "sha256": "f20107eb48c49ed2d0807e96051d0ffa9a5d96907923db9f62ee9ce628ce2991",
-  "bytes": 29487466,
-  "signing_scheme_v2": true,
-  "certificate_sha256": "9896a7fb0e7c198dc46f729ae485d061049ccb0a6cf11eef5dbe3a36e7844501",
-  "certificate_dn": "CN=OceanStudio, O=OceanStudio",
-  "manifest": "package: name='studio.ocean.app' versionCode='9' versionName='1.2.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
-  "native_architecture_verified": true,
-  "bootstrap_version": "1.0.4",
-  "bootstrap_archive_sha256": "0f7de1787af894bd3a2243342b5de8a267ad11163f15e06ddd0715ee5ec65990",
-  "bootstrap_curl_native": true,
-  "zipalign_verified": true,
-  "package_repo_unique_packages": 1508,
-  "device_acceptance": "APK packaging and alignment forensic issues resolved; signed with APK Signature Scheme v2",
-  "source_commit": "12c4ffd",
-  "build_result": "BUILD SUCCESSFUL"
+  "size": 23004020,
+  "sha256": "16009ed6619cab5b62c27b46ec5892f87acd8985fb07a86e962158b1fecee403",
+  "minSdkVersion": 28,
+  "targetSdkVersion": 28,
+  "compileSdkVersion": 35,
+  "applicationId": "studio.ocean.app",
+  "versionCode": 9,
+  "versionName": "1.2.0",
+  "abi": "arm64-v8a",
+  "zipalign": "4-byte page-aligned (passed)",
+  "signing": {
+    "v1_jar": true,
+    "v2_scheme": true,
+    "v3_scheme": true,
+    "signer": "CN=OceanStudio, OU=Engineering, O=Ocean, L=San Francisco, ST=CA, C=US"
+  },
+  "status": "READY_FOR_INSTALLATION"
 }
