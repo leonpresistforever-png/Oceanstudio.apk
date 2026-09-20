@@ -114,6 +114,8 @@ def main():
     store_pass=os.environ.get("OCEAN_RELEASE_STORE_PASS","")
     key_alias=os.environ.get("OCEAN_RELEASE_KEY_ALIAS","oceanstudio")
     key_pass=os.environ.get("OCEAN_RELEASE_KEY_PASS",store_pass)
+    env["OCEAN_RELEASE_STORE_PASS"]=store_pass
+    env["OCEAN_RELEASE_KEY_PASS"]=key_pass
 
     if not keystore:
         legacy=Path.home()/"oceanstudio-release.jks"
