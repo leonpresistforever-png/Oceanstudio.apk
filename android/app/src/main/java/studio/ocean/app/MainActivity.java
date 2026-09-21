@@ -503,7 +503,8 @@ public class MainActivity extends AppCompatActivity {
             @Override public void onResponse(String response) {
                 CrashSurvival.mark("RENDER_AGENT_RESPONSE");
                 responseView.setVisibility(View.VISIBLE);
-                responseView.setText(OceanMessageText.render(response));
+                String safeResponse = response == null ? "Agent completed without a text response." : response;
+                responseView.setText(OceanMessageText.render(safeResponse));
                 thoughtView.setVisibility(View.GONE);
                 setAgentBusy(false);
                 CrashSurvival.finished();
