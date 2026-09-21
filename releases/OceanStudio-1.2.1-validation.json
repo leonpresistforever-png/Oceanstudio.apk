@@ -5,8 +5,8 @@
   "versionCode": 10,
   "versionName": "1.2.1",
   "applicationId": "studio.ocean.app",
-  "sha256": "ae55a514bfda9c087247587935c1de63e69d1955b6129cc50182682e3672f4ac",
-  "size": 22777644,
+  "sha256": "18196f095b514ffd5139ab1963e4fd0e9b317c2303593ec3e74626d49cb0a613",
+  "size": 30144294,
   "certificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
   "previous120CertificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
   "updateCertificateMatch": true,
@@ -17,5 +17,5 @@
     "crashSurvival": true,
     "manualCrashDiagnostics": true
   },
-  "status": "BUILT_AND_VALIDATED_NOT_PUBLISHED"
+  "status": "PUBLISHED"
 }
