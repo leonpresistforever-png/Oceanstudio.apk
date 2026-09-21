@@ -138,7 +138,9 @@ public final class OceanAgentRunner {
                 }
                 if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
                 String response = result;
-                mainHandler.post(() -> callback.onResponse(response));
+                if (response == null || response.trim().isEmpty()) response = "Agent completed without a text response.";
+                final String safeResponse = response;
+                mainHandler.post(() -> callback.onResponse(safeResponse));
             } catch (Exception error) {
                 boolean stopped = error instanceof InterruptedException || Thread.currentThread().isInterrupted();
                 String detail = stopped ? "Stopped. Commands that already finished are shown above." : OceanAgentConversation.safeMessage(error);
