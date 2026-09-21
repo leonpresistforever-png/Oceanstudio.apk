@@ -62,7 +62,7 @@ public final class AgentArchitectureTest {
         assertTrue(settings.contains("reasoningEffort()"));
         assertTrue(main.contains("openAgentControls()"));
         assertTrue(main.contains("PluginCenterActivity.class"));
-        assertTrue(main.contains("OceanForgeActivity.class"));
+        assertFalse(main.contains("OceanForgeActivity.class"));
         assertTrue(runner.contains("ocean-forge"));
         assertTrue(runner.contains("pluginConnected(\"forge\")"));
         assertTrue(root.contains("AppAccessPolicy"));
