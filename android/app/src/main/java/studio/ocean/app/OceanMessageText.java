@@ -10,6 +10,7 @@ import android.text.style.TypefaceSpan;
 /** Small native renderer for the model's common markdown. It never renders HTML or active content. */
 final class OceanMessageText {
     static CharSequence render(String source) {
+        if (source == null || source.isEmpty()) return "";
         SpannableStringBuilder out = new SpannableStringBuilder();
         boolean code = false;
         for (String line : source.split("\n", -1)) {
