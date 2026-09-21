@@ -37,6 +37,16 @@ public final class AgentArchitectureTest {
         assertFalse(runner.contains("new ProcessBuilder"));
         assertFalse(runner.contains("/system/bin/sh"));
     }
+    @Test public void agentFinalResponseRenderingIsNullSafe() throws Exception {
+        String renderer=source("OceanMessageText.java");
+        String runner=source("OceanAgentRunner.java");
+        String main=source("MainActivity.java");
+        assertTrue(renderer.contains("source == null"));
+        assertTrue(runner.contains("Agent completed without a text response."));
+        assertTrue(runner.contains("safeResponse"));
+        assertTrue(main.contains("response == null"));
+    }
+
     @Test public void modelOutputIsNotParsedAsImplicitShellScript() throws Exception {
         String runner=source("OceanAgentRunner.java");
         assertFalse(runner.contains("Internal Execution Result"));
