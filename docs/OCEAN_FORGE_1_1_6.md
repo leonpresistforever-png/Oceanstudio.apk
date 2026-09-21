@@ -42,9 +42,11 @@ Supported Forge commands:
 
 Forge state is kept under `$HOME/ocean-forge`.
 
-## Native Forge page
+## Internal Forge engine
 
-`OceanForgeActivity` is a dedicated native white page with:
+Forge is an agent-facing self-development capability, not a normal user workspace or package-manager UI. The main navigation and Agent Controls do not expose a Forge setup page. `OceanForgeActivity` remains bundled only as dormant legacy/diagnostic code while the supported path is the structured agent tool surface below.
+
+The legacy activity contains infrastructure for:
 
 - local toolchain bootstrap
 - Android SDK / ARM64 aapt2 auto-detection
@@ -63,7 +65,7 @@ Git clone rejects access tokens embedded in repository URLs and expects Git cred
 
 ## Agent self-development tools
 
-Ocean Agent now has two structured Forge tools.
+Ocean Agent has two structured Forge tools. They are available internally to the agent and are not controlled by the user-facing Plugins connection list.
 
 ### ocean_forge
 
