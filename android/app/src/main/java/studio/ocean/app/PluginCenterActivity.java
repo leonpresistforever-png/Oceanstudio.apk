@@ -98,7 +98,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
         addBuiltin(ids,new Item("runtime","Runtime Ports","Inspect and control real local HTTP or noVNC sessions.",true,R.drawable.ic_ports,false));
         addBuiltin(ids,new Item("device","Device Access","Use visible Android controls only through permissions you grant.",true,R.drawable.ic_agent,false));
         addBuiltin(ids,new Item("apk","APK Lab","Inspect, rebuild, align and sign local APK workspaces.",exists("usr/bin/ocean-apk-lab"),R.drawable.ic_tools,false));
-        addBuiltin(ids,new Item("forge","Forge Engine","Internal self-development capability used by the agent for Ocean source, tests and candidate builds.",exists("usr/bin/ocean-forge"),R.drawable.ic_spark,false));
         addBuiltin(ids,new Item("python","Python","Run Python and pip workflows in the Ocean runtime.",exists("usr/bin/python")||exists("usr/bin/python3"),R.drawable.ic_terminal_tools,false));
         addBuiltin(ids,new Item("git","Git","Read and operate local Git repositories with the installed Git CLI.",exists("usr/bin/git"),R.drawable.ic_github,false));
         addBuiltin(ids,new Item("browser","Browser Tools","Use curl and local browser helpers for web/runtime workflows.",exists("usr/bin/curl"),R.drawable.ic_browser,false));
@@ -410,8 +409,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private String permissionText(Item item){
         if("device".equals(item.id))
             return "Connecting does not grant Accessibility, screenshot, camera or MediaProjection permission. Android still asks you separately when a feature needs it.";
-        if("forge".equals(item.id))
-            return "Forge stays an internal agent tool. Connecting it does not expose a manual Forge configuration page or grant access outside Ocean's private Forge workspace.";
         if("runtime".equals(item.id))
             return "The agent can inspect Ocean-local listeners and pages only through the existing Runtime Ports controls; connection alone does not create a server.";
         return "Connecting grants no new Android permission. The agent can only use the command/runtime that is already installed inside Ocean.";
