@@ -5,7 +5,6 @@ import android.content.*;
 import android.net.Uri;
 import android.media.projection.MediaProjectionManager;
 import android.os.*;
-import android.provider.MediaStore;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import java.io.File;
@@ -44,8 +43,8 @@ public final class OceanCaptureActivity extends AppCompatActivity {
                     .putString("photo_status","awaiting_confirmation")
                     .putString("photo_path",outputPath).apply();
             Uri uri=FileProvider.getUriForFile(this,getPackageName()+".diagnostics",out);
-            Intent i=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            i.putExtra(MediaStore.EXTRA_OUTPUT,uri);
+            Intent i=new Intent("android.media.action.IMAGE_CAPTURE");
+            i.putExtra("output",uri);
             i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
             if("selfie".equals(mode)){
                 i.putExtra("android.intent.extras.CAMERA_FACING",1);

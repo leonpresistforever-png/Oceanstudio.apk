@@ -10,7 +10,7 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 import java.io.File;
 
-public final class OceanScreenRecordService extends Service {
+public final class OceanScreenRecordService extends android.app.Service {
     public static final String ACTION_START="studio.ocean.app.capture.START_RECORD";
     public static final String ACTION_STOP="studio.ocean.app.capture.STOP_RECORD";
     private MediaProjection projection;
