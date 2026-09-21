@@ -223,13 +223,11 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_terminal, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         safeClick(R.id.nav_x11, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.render.OceanX11Activity.class)); });
         safeClick(R.id.nav_runtime_ports, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
-        safeClick(R.id.nav_ocean_forge, v -> { closeDrawer(); startActivity(new Intent(this, OceanForgeActivity.class)); });
         safeClick(R.id.nav_agent_settings, v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
         safeClick(R.id.nav_crash_diagnostics, v -> { closeDrawer(); startActivity(new Intent(this, CrashDiagnosticsActivity.class)); });
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         safeClick(R.id.agent_controls_settings, v -> startActivity(new Intent(this, AgentSettingsActivity.class)));
         safeClick(R.id.agent_controls_plugins, v -> startActivity(new Intent(this, PluginCenterActivity.class)));
-        safeClick(R.id.agent_controls_forge, v -> startActivity(new Intent(this, OceanForgeActivity.class)));
         safeClick(R.id.agent_controls_byok, v -> { closeAgentControls(); showByokPage(); });
         safeClick(R.id.agent_controls_device, v -> startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)));
         safeClick(R.id.agent_controls_runtime, v -> startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
