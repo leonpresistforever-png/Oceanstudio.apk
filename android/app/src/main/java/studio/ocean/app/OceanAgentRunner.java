@@ -115,7 +115,6 @@ public final class OceanAgentRunner {
                                 return runRegisteredPlugin(plugin,args.optString("input",""),callback);
                             }
                             if(name.equals("ocean_forge")){
-                                if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
                                 OceanForgeInstaller.ensure(context);
                                 if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                                 String action=args.getString("action");
@@ -127,7 +126,6 @@ public final class OceanAgentRunner {
                                 return runTerminal(commandText,null,timeout,callback);
                             }
                             if(name.equals("ocean_forge_workspace")){
-                                if(!pluginConnected("forge")) throw new IOException("Ocean Forge plugin is disconnected.");
                                 return runRuntimeTool("Forge workspace",args.getString("action"),callback,
                                         () -> OceanForgeWorkspace.execute(context,args));
                             }
