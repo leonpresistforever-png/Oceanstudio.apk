@@ -99,14 +99,9 @@ def main():
         commit = "local"
     env["OCEAN_BUILD_COMMIT"] = commit
 
-    # Compile current Java/resources or use freshly compiled BUILD_APK
-    if not (BUILD_APK.is_file() and os.environ.get("OCEAN_SKIP_GRADLE") == "1"):
-        try:
-            run([gradlew, "clean", "test", "assembleDebug", "--no-daemon", "--stacktrace"], cwd=ANDROID, env=env)
-        except Exception as e:
-            if not BUILD_APK.is_file():
-                raise
-            print(f"Warning: Gradle build failed ({e}), proceeding with current source-compiled {BUILD_APK}")
+    # Compile current Java/resources using pure on-device build_source_apk
+    source_builder = ROOT / "scripts/build_source_apk.py"
+    run([sys.executable, str(source_builder)], cwd=ROOT, env=env)
 
     validate_compiled_features(BUILD_APK)
 
@@ -121,12 +116,6 @@ def main():
     run([tool("zipalign"),"-c","-v","4",aligned])
 
     keystore=os.environ.get("OCEAN_RELEASE_KEYSTORE","").strip()
-    store_pass=os.environ.get("OCEAN_RELEASE_STORE_PASS","")
-    key_alias=os.environ.get("OCEAN_RELEASE_KEY_ALIAS","oceanstudio")
-    key_pass=os.environ.get("OCEAN_RELEASE_KEY_PASS",store_pass)
-    env["OCEAN_RELEASE_STORE_PASS"]=store_pass
-    env["OCEAN_RELEASE_KEY_PASS"]=key_pass
-
     if not keystore:
         legacy=Path.home()/"oceanstudio-release.jks"
         if legacy.is_file():
@@ -139,6 +128,15 @@ def main():
             )
     if not Path(keystore).is_file():
         raise SystemExit("OCEAN_RELEASE_KEYSTORE does not exist")
+
+    store_pass=os.environ.get("OCEAN_RELEASE_STORE_PASS","").strip()
+    if not store_pass and keystore == str(Path.home()/"oceanstudio-release.jks"):
+        store_pass = "oceanstudio"
+    key_alias=os.environ.get("OCEAN_RELEASE_KEY_ALIAS","oceanstudio")
+    key_pass=os.environ.get("OCEAN_RELEASE_KEY_PASS",store_pass)
+    env["OCEAN_RELEASE_STORE_PASS"]=store_pass
+    env["OCEAN_RELEASE_KEY_PASS"]=key_pass
+
     if not store_pass:
         raise SystemExit("Set OCEAN_RELEASE_STORE_PASS securely in the environment")
 
@@ -171,6 +169,8 @@ def main():
 
     data=signed.read_bytes()
     digest=hashlib.sha256(data).hexdigest()
+    if OUTPUT_APK.exists(): OUTPUT_APK.unlink()
+    if LATEST_APK.exists(): LATEST_APK.unlink()
     shutil.copy2(signed,OUTPUT_APK)
     shutil.copy2(signed,LATEST_APK)
     (OUTPUT_APK.with_suffix(OUTPUT_APK.suffix+".sha256")).write_text(digest+"\n")

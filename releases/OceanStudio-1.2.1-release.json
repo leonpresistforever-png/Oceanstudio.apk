@@ -5,24 +5,38 @@
   "assets": [
     {
       "name": "OceanStudio-1.2.1-arm64-debug.apk",
-      "id": 576478931,
+      "id": 578954590,
       "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.1/OceanStudio-1.2.1-arm64-debug.apk",
-      "size": 22735936,
-      "digest": "sha256:d5188088ae1821fa3ee50247bed07c5246ade0945a4209cd0fa5ac69afe9c81a"
+      "size": 22761260,
+      "digest": "sha256:404049d81b40870a9208f6cfa38260614d7db3da12ed4cdf8aa54c14f56dc792"
     },
     {
       "name": "OceanStudio-1.2.1-arm64-debug.apk.sha256",
-      "id": 576480841,
+      "id": 578957136,
       "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.1/OceanStudio-1.2.1-arm64-debug.apk.sha256",
       "size": 65,
-      "digest": "sha256:d5188088ae1821fa3ee50247bed07c5246ade0945a4209cd0fa5ac69afe9c81a"
+      "digest": "sha256:251d88c036bff4ac48106b0207a57d23dc752c1775a0cd0927da832afc581eb3"
     },
     {
       "name": "OceanStudio-latest-debug.apk",
-      "id": 576480887,
+      "id": 578957157,
       "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.1/OceanStudio-latest-debug.apk",
-      "size": 22735936,
-      "digest": "sha256:d5188088ae1821fa3ee50247bed07c5246ade0945a4209cd0fa5ac69afe9c81a"
+      "size": 22761260,
+      "digest": "sha256:404049d81b40870a9208f6cfa38260614d7db3da12ed4cdf8aa54c14f56dc792"
+    },
+    {
+      "name": "OceanStudio-latest-debug.apk.sha256",
+      "id": 578958289,
+      "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.1/OceanStudio-latest-debug.apk.sha256",
+      "size": 65,
+      "digest": "sha256:251d88c036bff4ac48106b0207a57d23dc752c1775a0cd0927da832afc581eb3"
+    },
+    {
+      "name": "OceanStudio-1.2.1-validation.json",
+      "id": 578958313,
+      "browser_download_url": "https://github.com/leonpresistforever-png/Oceanstudio.apk/releases/download/v1.2.1/OceanStudio-1.2.1-validation.json",
+      "size": 805,
+      "digest": "sha256:55a16ce4d804d109417d0b2df2a2f4eb606dcd26e86a4bc2ab607725cbb47010"
     }
   ]
 }
