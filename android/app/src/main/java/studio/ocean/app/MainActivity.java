@@ -502,7 +502,11 @@ public class MainActivity extends AppCompatActivity {
                 CrashSurvival.mark("RENDER_AGENT_RESPONSE");
                 responseView.setVisibility(View.VISIBLE);
                 String safeResponse = response == null ? "Agent completed without a text response." : response;
-                responseView.setText(OceanMessageText.render(safeResponse));
+                try {
+                    responseView.setText(OceanMessageText.render(safeResponse));
+                } catch (Throwable t) {
+                    responseView.setText(safeResponse);
+                }
                 thoughtView.setVisibility(View.GONE);
                 setAgentBusy(false);
                 CrashSurvival.finished();
