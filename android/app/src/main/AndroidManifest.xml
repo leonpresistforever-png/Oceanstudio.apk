@@ -12,7 +12,7 @@
         android:theme="@style/AppTheme">
 
         <activity android:name=".terminal.OceanTerminalActivity" android:label="Ocean Terminal" android:theme="@style/OceanTerminalTheme" android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".render.OceanX11Activity" android:label="X11 Renderer" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".render.OceanX11Activity" android:label="X11 Renderer" android:exported="false" android:theme="@style/OceanX11Theme" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".render.Ocean3DActivity" android:label="Ocean 3D" android:exported="false" android:theme="@style/AppTheme" />
         <activity android:name=".capture.OceanCaptureActivity" android:label="Ocean Capture" android:exported="false" android:theme="@style/AppTheme" />
         <service android:name=".capture.OceanScreenRecordService" android:exported="false" android:foregroundServiceType="mediaProjection" />
