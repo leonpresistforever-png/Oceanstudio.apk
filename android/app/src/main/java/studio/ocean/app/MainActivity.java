@@ -199,10 +199,10 @@ public class MainActivity extends AppCompatActivity {
         agentControlsDrawer=findViewById(R.id.agent_controls_drawer);
         backdrop=findViewById(R.id.drawer_backdrop);
         safeClick(R.id.menu_button, v -> openDrawer());
-        safeClick(R.id.agent_controls_button, v -> openAgentControls());
+        safeClick(R.id.agent_controls_button, v -> openAgentSearch());
         safeClick(R.id.agent_controls_close, v -> closeAgentControls());
         if (backdrop != null) backdrop.setOnClickListener(v -> { if (agentControlsOpen) closeAgentControls(); else closeDrawer(); });
-        safeClick(R.id.new_chat_button, v -> newChat());
+        safeClick(R.id.new_chat_button, v -> openAgentControls());
         safeClick(R.id.sidebar_new_chat, v -> newChat());
         
         TextView modelBtn = findViewById(R.id.model_button);
@@ -629,6 +629,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void openDrawer() { if(drawerOpen)return; drawerOpen=true; sidebar.setVisibility(View.VISIBLE); backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(190).start(); sidebar.animate().translationX(0f).setDuration(270).setInterpolator(new DecelerateInterpolator()).start(); findViewById(R.id.main_content).animate().translationX(sidebar.getWidth()*.08f).setDuration(270).start(); }
     private void closeDrawer() { if(!drawerOpen)return; drawerOpen=false; backdrop.animate().alpha(0f).setDuration(180).withEndAction(() -> backdrop.setVisibility(View.GONE)).start(); sidebar.animate().translationX(-sidebar.getWidth()).setDuration(240).setInterpolator(new DecelerateInterpolator()).setListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){sidebar.setVisibility(View.GONE); sidebar.animate().setListener(null);}}).start(); findViewById(R.id.main_content).animate().translationX(0f).setDuration(240).start(); }
+
+    private void openAgentSearch() {
+        final EditText query = new EditText(this);
+        query.setHint("Search tools and past conversations");
+        query.setSingleLine(true);
+        query.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0);
+        query.setCompoundDrawablePadding(dp(10));
+        query.setPadding(dp(16), 0, dp(16), 0);
+        query.setBackgroundResource(R.drawable.composer_background);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Search OceanStudio")
+                .setView(query)
+                .setPositiveButton("Search", (d, which) -> {
+                    String term=query.getText().toString().trim();
+                    if(!term.isEmpty()) Toast.makeText(this, "Search ready · " + term, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(d -> query.requestFocus());
+        dialog.show();
+    }
 
     private void openAgentControls() {
         if (agentControlsOpen) return;
