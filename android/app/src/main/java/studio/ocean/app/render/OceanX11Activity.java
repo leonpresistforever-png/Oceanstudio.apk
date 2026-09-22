@@ -98,10 +98,10 @@ public final class OceanX11Activity extends AppCompatActivity {
     @Override public void onBackPressed() {
         if (sessionConnected) {
             if (transientControls.getVisibility() == View.VISIBLE) {
-                transientControls.setVisibility(View.GONE);
+                fadeOut(transientControls);
                 manualMenu = false;
             } else {
-                transientControls.setVisibility(View.VISIBLE);
+                fadeIn(transientControls);
             }
             return;
         }
@@ -120,7 +120,8 @@ public final class OceanX11Activity extends AppCompatActivity {
         surface.setScaleMode(scaleMode);
         surface.setMenuToggle(() -> runOnUiThread(() -> {
             if (!sessionConnected) return;
-            transientControls.setVisibility(transientControls.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+            if (transientControls.getVisibility() == View.VISIBLE) fadeOut(transientControls);
+            else fadeIn(transientControls);
         }));
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1));
 
@@ -286,7 +287,7 @@ public final class OceanX11Activity extends AppCompatActivity {
         TextView d = text("Back hides controls · three-finger tap toggles this panel", 11, false, MUTED);
         LinearLayout.LayoutParams dP = new LinearLayout.LayoutParams(-1, -2); dP.topMargin = dp(2); copy.addView(d, dP);
         TextView close = actionButton("Hide", false);
-        close.setOnClickListener(v -> transientControls.setVisibility(View.GONE));
+        close.setOnClickListener(v -> fadeOut(transientControls));
         top.addView(close, new LinearLayout.LayoutParams(dp(72), dp(40)));
 
         LinearLayout row1 = new LinearLayout(this);
@@ -315,9 +316,9 @@ public final class OceanX11Activity extends AppCompatActivity {
         TextView settings = actionButton("Display settings", false);
         settings.setOnClickListener(v -> {
             manualMenu = true;
-            menuScroll.setVisibility(View.VISIBLE);
+            fadeIn(menuScroll);
             surface.setVisibility(View.VISIBLE);
-            transientControls.setVisibility(View.GONE);
+            fadeOut(transientControls);
         });
         row2.addView(settings, weightButtonParams());
         TextView stop = actionButton("Stop", true);
@@ -449,6 +450,25 @@ public final class OceanX11Activity extends AppCompatActivity {
         }
     }
 
+    private void fadeIn(View view) {
+        if (view == null) return;
+        view.animate().cancel();
+        if (view.getVisibility() != View.VISIBLE) {
+            view.setAlpha(0f);
+            view.setVisibility(View.VISIBLE);
+        }
+        view.animate().alpha(1f).setDuration(170).start();
+    }
+
+    private void fadeOut(View view) {
+        if (view == null || view.getVisibility() != View.VISIBLE) return;
+        view.animate().cancel();
+        view.animate().alpha(0f).setDuration(140).withEndAction(() -> {
+            view.setVisibility(View.GONE);
+            view.setAlpha(1f);
+        }).start();
+    }
+
     private void applyFullscreen() {
         boolean full = prefs == null || prefs.getBoolean("fullscreen", true);
         View decor = getWindow().getDecorView();
@@ -490,17 +510,21 @@ public final class OceanX11Activity extends AppCompatActivity {
         statusTitle.setText(title);
         statusDetail.setText(detail);
         surface.setVisibility(View.INVISIBLE);
-        menuScroll.setVisibility(View.VISIBLE);
-        transientControls.setVisibility(View.GONE);
+        fadeIn(menuScroll);
+        fadeOut(transientControls);
     }
 
     private void showConnected(String detail) {
         sessionConnected = true;
         statusTitle.setText("Display connected");
         statusDetail.setText(detail);
-        surface.setVisibility(View.VISIBLE);
-        if (!manualMenu) menuScroll.setVisibility(View.GONE);
-        transientControls.setVisibility(View.GONE);
+        if (surface.getVisibility() != View.VISIBLE) {
+            surface.setAlpha(0f);
+            surface.setVisibility(View.VISIBLE);
+            surface.animate().alpha(1f).setDuration(180).start();
+        }
+        if (!manualMenu) fadeOut(menuScroll);
+        fadeOut(transientControls);
         applyFullscreen();
     }
 
