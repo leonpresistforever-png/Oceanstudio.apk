@@ -14,12 +14,12 @@
   },
   "ubuntu": {
     "name": "Ubuntu",
-    "version": "24.04 (Noble)",
+    "version": "24.04.5 (Noble)",
     "priority": "Excellent",
     "pkg_manager": "apt, dpkg",
     "arch": "arm64",
-    "url": "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64-root.tar.xz",
-    "sha256": "fa8c5f8d44ed83674d64acac28b142f327bdb6b6576dc1db771fe3ba7c5926cf",
+    "url": "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.5-base-arm64.tar.gz",
+    "sha256": "a91d5a93010193712d346d761372b7c9db6dfcf093893161c64ca107f05914f2",
     "shell": "/bin/bash",
     "update_cmd": "apt update && apt upgrade -y",
     "description": "Large developer ecosystem; common binary target."

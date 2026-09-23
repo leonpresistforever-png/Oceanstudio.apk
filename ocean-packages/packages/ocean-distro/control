@@ -1,8 +1,8 @@
 Package: ocean-distro
-Version: 1.0.0
+Version: 1.0.1-1
 Architecture: all
 Maintainer: OceanStudio <maintainer@ocean.studio>
-Depends: proot, tar, zstd, xz-utils, gzip, bzip2, curl, ca-certificates
+Depends: bash, jq, proot, tar, coreutils, zstd, xz-utils, gzip, bzip2, curl, ca-certificates
 Section: admin
 Priority: optional
 Description: Ocean PRoot Linux distribution and rootfs manager
