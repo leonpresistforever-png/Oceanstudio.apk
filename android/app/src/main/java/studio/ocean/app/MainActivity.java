@@ -211,6 +211,15 @@ public class MainActivity extends AppCompatActivity {
             modelBtn.setOnClickListener(v -> showByokPage());
         }
         safeClick(R.id.send_button, v -> { if (agentRunner != null && agentRunner.isRunning()) agentRunner.cancel(); else submitAgentPrompt(); });
+        safeClick(R.id.starter_plan, v -> setStarterPrompt("Plan and execute this task: "));
+        safeClick(R.id.starter_terminal, v -> setStarterPrompt("Use my terminal to "));
+        safeClick(R.id.starter_build, v -> setStarterPrompt("Build or improve "));
+        safeClick(R.id.quick_search, v -> openAgentSearch());
+        safeClick(R.id.quick_files, v -> { closeDrawer(); bindQuickDestination("Files"); });
+        safeClick(R.id.quick_screenshot, v -> setStarterPrompt("Take a screenshot and inspect it"));
+        safeClick(R.id.quick_screen, v -> setStarterPrompt("Inspect my current screen and "));
+        safeClick(R.id.quick_voice, v -> Toast.makeText(this, "Voice input ready", Toast.LENGTH_SHORT).show());
+        safeClick(R.id.quick_more, v -> openAgentControls());
 
         bindGroup(R.id.group_workspace,R.id.workspace_children,R.id.chevron_workspace);
         bindGroup(R.id.group_agents,R.id.agents_children,R.id.chevron_agents);
@@ -449,6 +458,19 @@ public class MainActivity extends AppCompatActivity {
 
         scroll.addView(layout);
         contentFrame.addView(scroll);
+    }
+
+    private void setStarterPrompt(String text) {
+        EditText prompt=findViewById(R.id.prompt);
+        if(prompt==null)return;
+        prompt.setText(text);
+        prompt.setSelection(prompt.length());
+        prompt.requestFocus();
+    }
+
+    private void bindQuickDestination(String title) {
+        Toast.makeText(this, title + " · choose what Ocean should use", Toast.LENGTH_SHORT).show();
+        setStarterPrompt("Use my " + title.toLowerCase(java.util.Locale.ROOT) + " to ");
     }
 
     private void submitAgentPrompt() {
