@@ -1,2 +1,2 @@
-trigger=2026-09-19T06:16:52.178Z
-purpose=promote verified staged Ocean packages with canonical key 09D45DD2CDC37BD4F9BC2C458EC15431CA5542E2
+trigger=2026-09-23T10:25:00+05:30
+purpose=resign and publish current Ocean APT index; repair stale InRelease causing package lookup failures
