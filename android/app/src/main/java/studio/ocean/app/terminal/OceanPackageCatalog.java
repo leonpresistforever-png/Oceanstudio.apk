@@ -41,7 +41,9 @@ public final class OceanPackageCatalog {
         File lists = new File(prefix, "var/lib/apt/lists");
         Files.createDirectories(new File(lists, "partial").toPath());
         String indexName = listPrefix + "main_binary-aarch64_Packages";
-        if (hasIndex(lists, indexName)) return false;
+        long minLength = 0;
+        try { minLength = Long.parseLong(metadata.getProperty("packages_length", "0")); } catch (Exception ignored) {}
+        if (hasIndex(lists, indexName, minLength)) return false;
         try (FileChannel channel = FileChannel.open(new File(lists, "lock").toPath(),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
             FileLock lock;
@@ -49,7 +51,7 @@ public final class OceanPackageCatalog {
             catch (OverlappingFileLockException busy) { return false; }
             if (lock == null) return false;
             try {
-                if (hasIndex(lists, indexName)) return false;
+                if (hasIndex(lists, indexName, minLength)) return false;
                 byte[] compressed = verified(assets, metadata, "Packages.gz.bin");
                 byte[] release = verified(assets, metadata, "InRelease");
                 byte[] key = verified(assets, metadata, "ocean.gpg");
@@ -75,10 +77,17 @@ public final class OceanPackageCatalog {
         }
     }
 
-    private static boolean hasIndex(File lists, String name) {
-        for (String suffix : new String[]{"", ".lz4", ".gz", ".xz"}) {
+    private static boolean hasIndex(File lists, String name, long minLength) {
+        for (String suffix : new String[]{".lz4", ".gz", ".xz"}) {
             File file = new File(lists, name + suffix);
             if (file.isFile() && file.length() > 0) return true;
+        }
+        File uncompressed = new File(lists, name);
+        if (uncompressed.isFile()) {
+            if (minLength > 0 && uncompressed.lastModified() == 0L && uncompressed.length() < minLength) {
+                return false;
+            }
+            return uncompressed.length() > 0;
         }
         return false;
     }

@@ -1,21 +1,13 @@
 {
   "apk": "OceanStudio-1.2.1-arm64-debug.apk",
-  "sourceCommit": "05caf84617005b0b304f239bd71f14010cdb0aad",
-  "buildMode": "compiled-current-android-source",
-  "versionCode": 10,
-  "versionName": "1.2.1",
-  "applicationId": "studio.ocean.app",
-  "sha256": "aa26d4a4eeeb02eb990a735260788e9dfb402b28fce6326b7be65be162b99018",
-  "size": 30177221,
-  "certificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
-  "previous120CertificateSha256": "fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
-  "updateCertificateMatch": true,
-  "requiredFeatures": {
-    "pluginCenter": true,
-    "agentSettings": true,
-    "rightAgentControlsDrawer": true,
-    "crashSurvival": true,
-    "manualCrashDiagnostics": true
-  },
-  "status": "PUBLISHED"
+  "sha256": "f61c44c54cd7e3bb1522858d7718d9daa68b13ba1f472bead93ddd26134a27a7",
+  "bytes": 23712160,
+  "certificate_sha256": "certificate SHA-256 digest: fb14ae83875d1334947635f100237bc39882ea43aee78f490340ddd4da39c438",
+  "manifest": "package: name='studio.ocean.app' versionCode='10' versionName='1.2.1' compileSdkVersion='35' targetSdkVersion='28'",
+  "native_architecture_verified": true,
+  "package_catalog_count": 6482,
+  "clean_open_source_repo": true,
+  "termux_services_purged": true,
+  "signature_valid": true,
+  "build_result": "BUILD SUCCESSFUL"
 }

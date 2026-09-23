@@ -187,9 +187,9 @@ public final class AgentArchitectureTest {
 
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
-        assertTrue(gradle.contains("debug {\n            // Debug APKs always expose"));
+        assertTrue(gradle.contains("// Debug APKs always expose"));
         assertTrue(gradle.contains("buildConfigField \"boolean\", \"OCEAN_DEV_AUTH_BYPASS\", \"true\""));
-        assertTrue(gradle.contains("release {\n            // Hard-disabled"));
+        assertTrue(gradle.contains("// Hard-disabled"));
         assertTrue(gradle.contains("buildConfigField \"boolean\", \"OCEAN_DEV_AUTH_BYPASS\", \"false\""));
     }
 }

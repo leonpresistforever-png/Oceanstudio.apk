@@ -85,4 +85,14 @@ public final class OceanPackageCatalogTest {
         Files.delete(prefix.toPath().resolve("var/lib/apt/lists/" + indexName()));
         assertTrue(OceanPackageCatalog.prepare(prefix, source()));
     }
+    @Test public void olderBundledCatalogueIsUpgraded() throws Exception {
+        File prefix = temporary.newFolder();
+        Path existing = prefix.toPath().resolve("var/lib/apt/lists/" + indexName());
+        write(existing, "Package: old-tool\n");
+        assertTrue(new File(prefix, "var/lib/apt/lists/" + indexName()).setLastModified(0));
+        assertTrue(OceanPackageCatalog.prepare(prefix, source()));
+        String packages = read(existing);
+        assertTrue(packages.contains("Package: pip\n"));
+        assertTrue(packages.length() > 1000000);
+    }
 }
