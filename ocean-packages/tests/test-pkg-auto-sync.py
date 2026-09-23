@@ -25,6 +25,7 @@ class CatalogueSync(unittest.TestCase):
 printf '%s\\n' "$*" >> "$CALL_LOG"
 if [[ "$1" == update ]]; then
   [[ "${FAIL_UPDATE:-0}" == 0 ]] || exit 100
+  [[ "${EMPTY_UPDATE:-0}" == 0 ]] || exit 0
   printf 'Package: example\\n' > "$PREFIX/var/lib/apt/lists/ocean_Packages"
   exit 0
 fi
@@ -94,6 +95,24 @@ case "$1" in /proc/*/stat) exec /bin/cat /proc/self/stat;; *) exec /bin/cat "$@"
 
     def test_install_exit_status_is_preserved(self):
         self.assertEqual(self.run_pkg('install', 'example', COMMAND_STATUS='42').returncode, 42)
+
+    def test_inrelease_only_success_does_not_claim_catalogue_success(self):
+        result = self.run_pkg('update', EMPTY_UPDATE='1')
+        self.assertEqual(result.returncode, 100)
+        self.assertIn('no Packages index', result.stderr)
+        self.assertFalse((self.prefix / 'var/lib/ocean-pkg/last-success').exists())
+
+    def test_empty_update_never_proceeds_to_install(self):
+        result = self.run_pkg('install', 'ocean-glibc', EMPTY_UPDATE='1')
+        self.assertEqual(result.returncode, 100)
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_paths_uses_the_actual_ocean_prefix(self):
+        result = self.run_pkg('paths')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(str(self.prefix / 'etc/apt'), result.stdout)
+        self.assertIn(str(self.lists), result.stdout)
+        self.assertEqual(self.calls(), [])
 
 if __name__ == '__main__':
     unittest.main()

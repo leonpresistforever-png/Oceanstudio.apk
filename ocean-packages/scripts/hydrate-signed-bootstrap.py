@@ -21,6 +21,8 @@ import tempfile
 import urllib.request
 import urllib.parse
 from pathlib import Path, PurePosixPath
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 ROOT = Path(__file__).resolve().parents[2]
 PREFIX = Path("data/data/studio.ocean.app/files/usr")
@@ -43,46 +45,84 @@ def paragraphs(text: str) -> list[dict[str, str]]:
     return result
 
 
-def dependency_groups(value: str) -> list[list[str]]:
-    groups: list[list[str]] = []
-    for group in re.split(r",\s*", value):
+DEPENDENCY = re.compile(r"^([A-Za-z0-9][A-Za-z0-9+.-]*)(?::([a-z0-9-]+))?(?:\s*\((<<|<=|=|>=|>>)\s*([^()]+)\))?$")
+
+
+def dependency_groups(value):
+    groups = []
+    for group in value.replace("\n", " ").split(","):
+        if not group.strip():
+            continue
         alternatives = []
         for choice in group.split("|"):
-            name = re.split(r"[\s(]", choice.strip(), maxsplit=1)[0].split(":", 1)[0]
-            if name:
-                alternatives.append(name)
-        if alternatives:
-            groups.append(alternatives)
+            match = DEPENDENCY.fullmatch(choice.strip())
+            if not match:
+                raise RuntimeError("Malformed binary dependency: " + choice)
+            alternatives.append(match.groups())
+        groups.append(alternatives)
     return groups
 
 
+def version_matches(version, operator, required):
+    if operator is None:
+        return True
+    if version is None:
+        return False
+    status = subprocess.run(["dpkg", "--compare-versions", version, operator, required]).returncode
+    if status not in (0, 1):
+        raise RuntimeError("Invalid dependency version comparison")
+    return status == 0
+
+
 def resolve(entries: list[dict[str, str]], seeds: tuple[str, ...]) -> list[dict[str, str]]:
-    by_name: dict[str, dict[str, str]] = {}
-    providers: dict[str, str] = {}
+    # This hydrates a fixed signed candidate set. Native APT remains responsible
+    # for device-side solving, installs and upgrades; incompatible snapshots fail.
+    by_name = {}
     for entry in entries:
         name = entry.get("Package", "")
-        if name and name not in by_name:
-            by_name[name] = entry
-        for provided in dependency_groups(entry.get("Provides", "")):
-            for virtual in provided:
-                providers.setdefault(virtual, name)
-    selected: dict[str, dict[str, str]] = {}
-    pending = list(seeds)
-    while pending:
-        requested = pending.pop(0)
-        actual = requested if requested in by_name else providers.get(requested, "")
-        if not actual:
-            raise RuntimeError(f"repository cannot satisfy dependency: {requested}")
-        if actual in selected:
+        if not name or entry.get("Architecture", "all") not in ("aarch64", "all"):
             continue
-        entry = by_name[actual]
-        selected[actual] = entry
+        previous = by_name.get(name)
+        if previous is None or version_matches(entry.get("Version"), ">>", previous.get("Version", "0")):
+            by_name[name] = entry
+    providers = {}
+    for entry in by_name.values():
+        for group in dependency_groups(entry.get("Provides", "")):
+            for name, arch, operator, version in group:
+                if operator not in (None, "="):
+                    raise RuntimeError("Provides must use an exact version")
+                providers.setdefault(name, []).append((entry, version))
+
+    def choose(alternatives):
+        for name, arch, operator, required in alternatives:
+            candidates = ([(by_name[name], by_name[name].get("Version"))] if name in by_name else [])
+            candidates += providers.get(name, [])
+            for entry, version in candidates:
+                if arch not in (None, "any", "native", "aarch64", "all"):
+                    continue
+                if version_matches(version, operator, required):
+                    return entry
+        return None
+
+    pending = []
+    for seed in seeds:
+        chosen = choose([(seed, None, None, None)])
+        if chosen is None:
+            raise RuntimeError("repository cannot satisfy dependency: " + seed)
+        pending.append(chosen)
+    selected = {}
+    while pending:
+        entry = pending.pop(0)
+        name = entry["Package"]
+        if name in selected:
+            continue
+        selected[name] = entry
         for field in ("Pre-Depends", "Depends"):
             for alternatives in dependency_groups(entry.get(field, "")):
-                candidate = next((x for x in alternatives if x in by_name or x in providers), "")
-                if not candidate:
-                    raise RuntimeError(f"{actual} has unresolved dependency: {' | '.join(alternatives)}")
-                pending.append(candidate)
+                chosen = choose(alternatives)
+                if chosen is None:
+                    raise RuntimeError(f"{name} has unresolved dependency: {alternatives!r}")
+                pending.append(chosen)
     return [selected[name] for name in sorted(selected)]
 
 
@@ -113,6 +153,7 @@ def compress_zstd(source: Path, destination: Path) -> None:
 def verify_catalog_index(release: str, compressed: bytes) -> bytes:
     """Bind Packages.gz to the authenticated InRelease, not merely to HTTPS."""
     in_sha256 = False
+    checksums = {}
     for line in release.splitlines():
         if line == "SHA256:":
             in_sha256 = True
@@ -120,11 +161,17 @@ def verify_catalog_index(release: str, compressed: bytes) -> bytes:
         if in_sha256 and line and not line[0].isspace():
             break
         fields = line.split()
-        if in_sha256 and len(fields) == 3 and fields[2] == "main/binary-aarch64/Packages.gz":
-            if hashlib.sha256(compressed).hexdigest() != fields[0] or len(compressed) != int(fields[1]):
-                raise RuntimeError("Packages.gz does not match the signed repository index")
-            return gzip.decompress(compressed)
-    raise RuntimeError("Signed repository is missing the Packages.gz SHA-256")
+        if in_sha256 and len(fields) == 3:
+            if fields[2] in checksums:
+                raise RuntimeError("Duplicate signed repository checksum path")
+            checksums[fields[2]] = (fields[0], int(fields[1]))
+    name = "main/binary-aarch64/Packages"
+    if checksums.get(name + ".gz") != (hashlib.sha256(compressed).hexdigest(), len(compressed)):
+        raise RuntimeError("Packages.gz does not match the signed repository index")
+    packages = gzip.decompress(compressed)
+    if checksums.get(name) != (hashlib.sha256(packages).hexdigest(), len(packages)):
+        raise RuntimeError("Packages does not match the signed repository index")
+    return packages
 
 
 def write_catalog(output: Path, repository: str, inrelease: Path, compressed: Path,
@@ -136,6 +183,7 @@ def write_catalog(output: Path, repository: str, inrelease: Path, compressed: Pa
     output.mkdir(parents=True, exist_ok=True)
     values = {"format": "1", "repository_url": repository, "list_prefix": prefix,
               "package_count": str(len(paragraphs(packages.decode()))),
+              "packages_length": str(len(packages)),
               "packages_sha256": hashlib.sha256(packages).hexdigest()}
     # Android asset packaging strips .gz suffixes; retain gzip bytes under .bin.
     for name, source in (("InRelease", inrelease), ("Packages.gz.bin", compressed), ("ocean.gpg", key)):
@@ -175,6 +223,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository-url", default="https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/main/apt")
+    parser.add_argument("--download-url", help="Immutable snapshot URL; installed sources still use --repository-url")
     parser.add_argument("--seed", action="append", default=[])
     parser.add_argument("--catalog-only", action="store_true")
     parser.add_argument("--catalog-output", type=Path,
@@ -187,9 +236,10 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="ocean-bootstrap-") as temporary:
         work = Path(temporary)
         inrelease, compressed, key = work / "InRelease", work / "Packages.gz", work / "ocean.gpg"
-        download(f"{args.repository_url}/dists/stable/InRelease", inrelease)
-        download(f"{args.repository_url}/dists/stable/main/binary-aarch64/Packages.gz", compressed)
-        download(f"{args.repository_url}/ocean.gpg", key)
+        download_url = args.download_url or args.repository_url
+        download(f"{download_url}/dists/stable/InRelease", inrelease)
+        download(f"{download_url}/dists/stable/main/binary-aarch64/Packages.gz", compressed)
+        download(f"{download_url}/ocean.gpg", key)
         release = work / "Release"
         run("gpgv", "--keyring", key, "--output", release, inrelease, stdout=subprocess.DEVNULL)
         expected = (ROOT / "ocean-packages/keys/ocean-development-repository.fingerprint").read_text().strip()
@@ -197,6 +247,9 @@ def main() -> int:
         actual = next(line.split(":")[9] for line in shown.splitlines() if line.startswith("fpr:"))
         if actual != expected:
             raise RuntimeError(f"repository key mismatch: expected={expected} actual={actual}")
+        release_fields = paragraphs(release.read_text())[0]
+        if "Valid-Until" not in release_fields or parsedate_to_datetime(release_fields["Valid-Until"]) <= datetime.now(timezone.utc):
+            raise RuntimeError("Refusing to bundle expired repository metadata")
         packages = verify_catalog_index(release.read_text(), compressed.read_bytes())
         list_prefix = write_catalog(args.catalog_output, args.repository_url, inrelease, compressed, key, packages)
         entries = paragraphs(packages.decode())
@@ -217,7 +270,7 @@ def main() -> int:
                 if not entry.get(field):
                     raise RuntimeError(f"signed index entry lacks {field}: {entry.get('Package', '<unknown>')}")
             deb = debs / Path(entry["Filename"]).name
-            download(f"{args.repository_url}/{entry['Filename']}", deb)
+            download(f"{download_url}/{entry['Filename']}", deb)
             digest = hashlib.sha256(deb.read_bytes()).hexdigest()
             if digest != entry["SHA256"]:
                 raise RuntimeError(f"package checksum mismatch: {deb.name}")

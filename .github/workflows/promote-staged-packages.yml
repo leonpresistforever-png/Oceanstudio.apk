@@ -1,161 +1,75 @@
 name: Promote staged Ocean packages
-
 on:
   workflow_dispatch:
   push:
     paths:
       - '.github/promote-staged-packages.trigger'
-
 permissions:
   contents: read
-
 concurrency:
   group: ocean-package-promotion
   cancel-in-progress: false
-
 jobs:
   promote:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout private Ocean source
-        uses: actions/checkout@v4
-
-      - name: Checkout public package repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Checkout complete public pool and staging
+        uses: actions/checkout@v5
         with:
           repository: leonpresistforever-png/Oceanstudio-packages
           ref: main
           path: public-packages
           token: ${{ secrets.OCEAN_PACKAGES_PUBLISH_TOKEN }}
-          fetch-depth: 0
-
-      - name: Install repository tooling
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev gnupg gzip
-
-      - name: Verify and import canonical Ocean signing identity
+          fetch-depth: 1
+      - name: Validate publisher behavior
+        run: python3 public-packages/tests/test-index-publication.py
+      - name: Record complete coverage before mutation
+        working-directory: public-packages
+        continue-on-error: true
+        run: python3 scripts/audit_repository.py --json /tmp/ocean-apt-before.json
+      - name: Inventory every pool and staged candidate
+        working-directory: public-packages
+        run: python3 scripts/index_all_staged.py --plan /tmp/ocean-apt-selection.json
+      - name: Import existing archive key into an isolated signing home
         env:
           OCEAN_REPOSITORY_SIGNING_KEY: ${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}
         run: |
           set -euo pipefail
-          test -n "$OCEAN_REPOSITORY_SIGNING_KEY"
-
-          EXPECTED="$(tr -d '[:space:]' < ocean-packages/keys/ocean-development-repository.fingerprint)"
-          test "$EXPECTED" = "09D45DD2CDC37BD4F9BC2C458EC15431CA5542E2"
-
-          PUBLIC_FPR="$(gpg --batch --show-keys --with-colons public-packages/apt/ocean.gpg 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')"
-          test "$PUBLIC_FPR" = "$EXPECTED"
-
-          printf '%s' "$OCEAN_REPOSITORY_SIGNING_KEY" | gpg --batch --import
-          SECRET_FPR="$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')"
-          test "$SECRET_FPR" = "$EXPECTED"
-
-          echo "OCEAN_SIGNING_FPR=$EXPECTED" >> "$GITHUB_ENV"
-          echo "Canonical signing identity verified: $EXPECTED"
-
-      - name: Merge verified staging packages
-        id: merge
-        working-directory: public-packages
-        run: |
-          set -euo pipefail
-          BEFORE="$(grep -c '^Package: ' apt/dists/stable/main/binary-aarch64/Packages)"
-          mapfile -d '' STAGED < <(find staging -type f -name '*.deb' -print0 | sort -z)
-          test "${#STAGED[@]}" -gt 0
-
-          mkdir -p apt/pool/main
-          for deb in "${STAGED[@]}"; do
-            test -s "$deb"
-            dpkg-deb -f "$deb" Package Version Architecture >/dev/null
-            cp -f "$deb" apt/pool/main/
-          done
-
-          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
-          echo "staged=${#STAGED[@]}" >> "$GITHUB_OUTPUT"
-          echo "Merged ${#STAGED[@]} successfully staged package artifacts."
-
-      - name: Regenerate complete APT package index
-        working-directory: public-packages/apt
-        run: |
-          set -euo pipefail
-          mkdir -p dists/stable/main/binary-aarch64
-          dpkg-scanpackages --multiversion pool/main /dev/null > dists/stable/main/binary-aarch64/Packages
-          gzip -n -9 -c dists/stable/main/binary-aarch64/Packages > dists/stable/main/binary-aarch64/Packages.gz
-
-          AFTER="$(grep -c '^Package: ' dists/stable/main/binary-aarch64/Packages)"
-          test "$AFTER" -gt "${{ steps.merge.outputs.before }}"
-          echo "Indexed records after promotion: $AFTER"
-
-          while IFS= read -r deb; do
-            pkg="$(dpkg-deb -f "../$deb" Package)"
-            grep -q "^Package: $pkg$" dists/stable/main/binary-aarch64/Packages
-          done < <(cd .. && find staging -type f -name '*.deb' -printf '%p\n' | sort)
-
-      - name: Generate and sign Release metadata
-        working-directory: public-packages/apt
-        run: |
-          set -euo pipefail
-          PKG=dists/stable/main/binary-aarch64/Packages
-          PKG_GZ=dists/stable/main/binary-aarch64/Packages.gz
-          RELEASE=dists/stable/Release
-          DATE="$(date -u -R)"
-          VALID="$(date -u -R -d '+30 days')"
-
-          {
-            echo "Origin: OceanStudio"
-            echo "Label: Ocean Packages"
-            echo "Suite: stable"
-            echo "Codename: stable"
-            echo "Architectures: aarch64 all"
-            echo "Components: main"
-            echo "Description: Official Ocean APT Repository"
-            echo "Date: $DATE"
-            echo "Valid-Until: $VALID"
-            echo "MD5Sum:"
-            printf ' %s %s main/binary-aarch64/Packages\n' "$(md5sum "$PKG" | awk '{print $1}')" "$(stat -c %s "$PKG")"
-            printf ' %s %s main/binary-aarch64/Packages.gz\n' "$(md5sum "$PKG_GZ" | awk '{print $1}')" "$(stat -c %s "$PKG_GZ")"
-            echo "SHA1:"
-            printf ' %s %s main/binary-aarch64/Packages\n' "$(sha1sum "$PKG" | awk '{print $1}')" "$(stat -c %s "$PKG")"
-            printf ' %s %s main/binary-aarch64/Packages.gz\n' "$(sha1sum "$PKG_GZ" | awk '{print $1}')" "$(stat -c %s "$PKG_GZ")"
-            echo "SHA256:"
-            printf ' %s %s main/binary-aarch64/Packages\n' "$(sha256sum "$PKG" | awk '{print $1}')" "$(stat -c %s "$PKG")"
-            printf ' %s %s main/binary-aarch64/Packages.gz\n' "$(sha256sum "$PKG_GZ" | awk '{print $1}')" "$(stat -c %s "$PKG_GZ")"
-          } > "$RELEASE"
-
-          rm -f dists/stable/InRelease dists/stable/Release.gpg
-          gpg --batch --yes --local-user "$OCEAN_SIGNING_FPR" --digest-algo SHA256             --clearsign --output dists/stable/InRelease "$RELEASE"
-          gpg --batch --yes --local-user "$OCEAN_SIGNING_FPR" --digest-algo SHA256             --detach-sign --output dists/stable/Release.gpg "$RELEASE"
-
-      - name: Verify signed repository before publication
-        working-directory: public-packages
-        run: |
-          set -euo pipefail
-          gpgv --keyring apt/ocean.gpg apt/dists/stable/InRelease
-          gpgv --keyring apt/ocean.gpg apt/dists/stable/Release.gpg apt/dists/stable/Release
-
-          RELEASE_SHA="$(awk '
-            $1=="SHA256:"{inside=1;next}
-            inside && NF==3 && $3=="main/binary-aarch64/Packages.gz"{print $1;exit}
-          ' apt/dists/stable/Release)"
-          test "$RELEASE_SHA" = "$(sha256sum apt/dists/stable/main/binary-aarch64/Packages.gz | awk '{print $1}')"
-
-          test "$(gpg --batch --show-keys --with-colons apt/ocean.gpg 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')" = "$OCEAN_SIGNING_FPR"
-
-          test "$(grep -c '^Package: ocean-toybox' apt/dists/stable/main/binary-aarch64/Packages)" -ge 153
-          echo "SIGNED_REPOSITORY_VERIFICATION=PASS"
-
-      - name: Publish signed live repository
-        working-directory: public-packages
-        run: |
-          set -euo pipefail
-          git config user.name "Ocean Package Publisher"
-          git config user.email "packages@ocean.studio"
-          git add apt/pool/main apt/dists/stable
-          if git diff --cached --quiet; then
-            echo "Live APT repository already contains all staged artifacts."
-            exit 0
+          if [ -z "$OCEAN_REPOSITORY_SIGNING_KEY" ]; then
+            echo '::error::Existing OCEAN_REPOSITORY_SIGNING_KEY is unavailable; live publication is blocked.'
+            exit 1
           fi
-          git commit -m "Publish signed staged Ocean packages"
+          signing_home=$(mktemp -d)
+          chmod 700 "$signing_home"
+          echo "GNUPGHOME=$signing_home" >> "$GITHUB_ENV"
+          printf '%s\n' "$OCEAN_REPOSITORY_SIGNING_KEY" | GNUPGHOME="$signing_home" gpg --batch --import
+          expected=$(tr -d '[:space:]' < ocean-packages/keys/ocean-development-repository.fingerprint)
+          actual=$(gpg --batch --show-keys --with-colons public-packages/apt/ocean.gpg 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')
+          test "$actual" = "$expected"
+      - name: Publish through the complete canonical indexer
+        working-directory: public-packages
+        run: |
+          set -euo pipefail
+          python3 scripts/index_all_staged.py
+          python3 scripts/audit_repository.py --json /tmp/ocean-apt-after.json
+          git config user.name 'Ocean Package Publisher'
+          git config user.email 'packages@ocean.studio'
+          git add apt/pool apt/dists/stable
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(apt): publish complete verified signed snapshot [skip ci]'
+          # If main advances, rerun selection/signing from the new state.
           git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocean-private-publication-audit
+          path: /tmp/ocean-apt-*.json
+      - name: Remove imported key material
+        if: always()
+        run: |
+          if [ -n "${GNUPGHOME:-}" ]; then
+            gpgconf --kill gpg-agent || true
+            rm -rf "$GNUPGHOME"
+          fi

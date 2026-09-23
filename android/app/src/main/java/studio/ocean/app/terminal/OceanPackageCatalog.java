@@ -19,6 +19,9 @@ import java.util.zip.GZIPInputStream;
 
 /** Repairs an empty APT catalogue without replacing the runtime or installed packages. */
 public final class OceanPackageCatalog {
+    // Exact bundled September 6 snapshot. Never replace an unknown APT/user index.
+    private static final String LEGACY_INDEX_SHA256 =
+            "b295347a9a330727be05529d08c6e90259091f8a7da7b95a5184722be47acb82";
     public interface Assets { InputStream open(String name) throws IOException; }
     private OceanPackageCatalog() {}
 
@@ -41,9 +44,8 @@ public final class OceanPackageCatalog {
         File lists = new File(prefix, "var/lib/apt/lists");
         Files.createDirectories(new File(lists, "partial").toPath());
         String indexName = listPrefix + "main_binary-aarch64_Packages";
-        long minLength = 0;
-        try { minLength = Long.parseLong(metadata.getProperty("packages_length", "0")); } catch (Exception ignored) {}
-        if (hasIndex(lists, indexName, minLength)) return false;
+        String bundledHash = required(metadata, "packages_sha256");
+        if (hasIndex(lists, indexName, bundledHash)) return false;
         try (FileChannel channel = FileChannel.open(new File(lists, "lock").toPath(),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
             FileLock lock;
@@ -51,7 +53,7 @@ public final class OceanPackageCatalog {
             catch (OverlappingFileLockException busy) { return false; }
             if (lock == null) return false;
             try {
-                if (hasIndex(lists, indexName, minLength)) return false;
+                if (hasIndex(lists, indexName, bundledHash)) return false;
                 byte[] compressed = verified(assets, metadata, "Packages.gz.bin");
                 byte[] release = verified(assets, metadata, "InRelease");
                 byte[] key = verified(assets, metadata, "ocean.gpg");
@@ -60,6 +62,7 @@ public final class OceanPackageCatalog {
                     packages = read(input);
                 }
                 checkHash(packages, required(metadata, "packages_sha256"));
+                checkSignedIndex(release, compressed, packages);
                 // Verify every asset before changing any existing installation.
                 File keyring = new File(prefix, "etc/apt/keyrings/ocean.gpg");
                 if (!keyring.isFile()) atomicWrite(keyring, key);
@@ -77,17 +80,15 @@ public final class OceanPackageCatalog {
         }
     }
 
-    private static boolean hasIndex(File lists, String name, long minLength) {
-        for (String suffix : new String[]{".lz4", ".gz", ".xz"}) {
+    private static boolean hasIndex(File lists, String name, String bundledHash) throws IOException {
+        for (String suffix : new String[]{"", ".lz4", ".gz", ".xz"}) {
             File file = new File(lists, name + suffix);
-            if (file.isFile() && file.length() > 0) return true;
-        }
-        File uncompressed = new File(lists, name);
-        if (uncompressed.isFile()) {
-            if (minLength > 0 && uncompressed.lastModified() == 0L && uncompressed.length() < minLength) {
-                return false;
+            if (file.isFile() && file.length() > 0) {
+                if (suffix.isEmpty() && !LEGACY_INDEX_SHA256.equals(bundledHash)
+                        && file.length() == 509608
+                        && LEGACY_INDEX_SHA256.equals(hash(Files.readAllBytes(file.toPath())))) continue;
+                return true;
             }
-            return uncompressed.length() > 0;
         }
         return false;
     }
@@ -109,12 +110,39 @@ public final class OceanPackageCatalog {
         return value;
     }
     private static void checkHash(byte[] value, String expected) throws IOException {
+        if (!hash(value).equals(expected)) throw new IOException("Package catalogue integrity check failed");
+    }
+    private static String hash(byte[] value) throws IOException {
         try {
             byte[] bytes = MessageDigest.getInstance("SHA-256").digest(value);
             StringBuilder hex = new StringBuilder();
             for (byte b : bytes) hex.append(String.format("%02x", b & 255));
-            if (!hex.toString().equals(expected)) throw new IOException("Package catalogue integrity check failed");
+            return hex.toString();
         } catch (java.security.NoSuchAlgorithmException impossible) { throw new IOException(impossible); }
+    }
+    private static void checkSignedIndex(byte[] release, byte[] compressed, byte[] packages) throws IOException {
+        // The build verifies the OpenPGP signature. Bind both installed assets to
+        // that signed payload as well, so individually valid hashes cannot mix snapshots.
+        String signed = new String(release, StandardCharsets.UTF_8);
+        int start = signed.indexOf("\nSHA256:\n");
+        int end = signed.indexOf("-----BEGIN PGP SIGNATURE-----");
+        if (!signed.startsWith("-----BEGIN PGP SIGNED MESSAGE-----") || start < 0 || end <= start)
+            throw new IOException("Bundled signed catalogue is malformed");
+        String checksums = signed.substring(start + 9, end);
+        for (int i = 0; i < 2; i++) {
+            byte[] data = i == 0 ? packages : compressed;
+            String name = "main/binary-aarch64/Packages" + (i == 0 ? "" : ".gz");
+            boolean found = false;
+            for (String line : checksums.split("\n")) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length == 3 && parts[2].equals(name)) {
+                    if (!parts[1].equals(Integer.toString(data.length)))
+                        throw new IOException("Bundled signed catalogue size mismatch");
+                    checkHash(data, parts[0]); found = true;
+                }
+            }
+            if (!found) throw new IOException("Bundled signed catalogue is missing " + name);
+        }
     }
     private static void atomicWrite(File target, byte[] bytes) throws IOException {
         Files.createDirectories(target.getParentFile().toPath());

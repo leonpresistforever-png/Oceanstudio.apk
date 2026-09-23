@@ -96,7 +96,13 @@ refresh_catalog() {
     touch "$sync_state/last-attempt"
     if apt-get update -o APT::Update::Error-Mode=any \
             -o Acquire::Retries=0 -o Acquire::http::Timeout=15 \
-            -o Acquire::https::Timeout=15 "$@"; then
+            -o Acquire::https::Timeout=15 \
+            -o Acquire::http::No-Cache=true -o Acquire::https::No-Cache=true "$@"; then
+        if ! has_catalog; then
+            printf '%s\n' "APT returned success but no Packages index exists in $lists." \
+                'Run pkg doctor to inspect Ocean repository configuration.' >&2
+            return 100
+        fi
         touch "$sync_state/last-success"
         return 0
     else status=$?; return "$status"; fi
@@ -132,6 +138,15 @@ case "$command" in
  list-installed) dpkg-query -W "$@";;
  clean) apt-get clean "$@";;
  change-repo) ocean-change-repo "$@";;
- help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean, change-repo';;
+ paths) printf 'Ocean prefix: %s\nSources: %s\nLists: %s\nArchives: %s\nInstalled database: %s\n' \
+        "$PREFIX" "$PREFIX/etc/apt" "$lists" "$PREFIX/var/cache/apt/archives" "$PREFIX/var/lib/dpkg";;
+ doctor)
+    printf 'Ocean prefix: %s\n' "$PREFIX"
+    apt-config shell Architecture APT::Architecture Config Dir::Etc Lists Dir::State::lists Archives Dir::Cache::archives
+    printf '\nConfigured repositories and candidates:\n'
+    apt-cache policy "$@"
+    if ! has_catalog; then printf '\nNo package indexes in %s; run pkg update.\n' "$lists" >&2; exit 100; fi
+    ;;
+ help|-h|--help) printf '%s\n' 'Ocean pkg: update, upgrade, install, remove, reinstall, search, show, list-installed, clean, change-repo, paths, doctor';;
  *) echo "Unknown pkg command: $command" >&2; exit 64;;
 esac

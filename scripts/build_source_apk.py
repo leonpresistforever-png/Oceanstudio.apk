@@ -6,7 +6,7 @@ Guarantees:
 - Compiles current Java sources with all new activities and UI features
 - Full resource linking matching official SDK 28 layout and type mapping
 - Merges with complete AndroidX/base libraries from 1.2.0 without dropping classes
-- Zero unhandled null pointer or resource mismatches on app start
+- Runtime behavior still requires device testing
 """
 import os, sys, shutil, subprocess, zipfile, glob, hashlib, json
 from pathlib import Path
@@ -17,7 +17,7 @@ RELEASES = ROOT / "releases"
 BUILD_DIR = ROOT / "build/apk-compile"
 OLD_APK = RELEASES / "OceanStudio-1.2.0-arm64-debug.apk"
 OUTPUT_APK = ANDROID / "app/build/outputs/apk/debug/app-debug.apk"
-AARS_DIR = Path("/data/data/com.termux/files/usr/tmp")
+AARS_DIR = Path(os.environ.get("OCEAN_AAR_CACHE", os.environ.get("OCEAN_PREFIX", "/data/data/studio.ocean.app/files/usr") + "/tmp"))
 NO_COMPRESS = {".zst", ".tar", ".zstd", ".so", ".gz", ".br", ".bz2", ".lz4", ".xz", ".zip"}
 
 def run(cmd, cwd=None):

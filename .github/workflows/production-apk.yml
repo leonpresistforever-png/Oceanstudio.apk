@@ -1,0 +1,134 @@
+name: Build and publish verified production APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/production-apk.trigger'
+  workflow_run:
+    workflows: ['Promote staged Ocean packages']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: ocean-production-release
+  cancel-in-progress: false
+jobs:
+  production:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: Pin the package snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          package_commit=$(gh api repos/leonpresistforever-png/Oceanstudio-packages/git/ref/heads/main --jq .object.sha)
+          echo "OCEAN_PACKAGE_COMMIT=$package_commit" >> "$GITHUB_ENV"
+      - name: Hydrate catalogue only from the authenticated snapshot
+        run: |
+          python3 ocean-packages/scripts/hydrate-signed-bootstrap.py \
+            --catalog-only --output "$RUNNER_TEMP/catalog-check" \
+            --download-url "https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/$OCEAN_PACKAGE_COMMIT/apt"
+          python3 ocean-packages/tests/test-apk-package-catalog.py \
+            --assets android/app/src/main/assets/ocean/repository --min-packages 6482
+      - name: Checkout the exact package snapshot for payload verification
+        uses: actions/checkout@v5
+        with:
+          repository: leonpresistforever-png/Oceanstudio-packages
+          ref: ${{ env.OCEAN_PACKAGE_COMMIT }}
+          path: public-packages
+      - name: Verify every archive and all indexed payloads
+        working-directory: public-packages
+        run: |
+          python3 scripts/audit_repository.py --json "$RUNNER_TEMP/ocean-index-audit.json"
+          python3 scripts/audit_package_payloads.py --json "$RUNNER_TEMP/ocean-payload-audit.json"
+      - name: Refresh the native bootstrap from the same verified snapshot
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+          python3 ocean-packages/scripts/hydrate-signed-bootstrap.py \
+            --output android/app/src/main/assets/ocean/bootstrap/aarch64 \
+            --download-url "https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/$OCEAN_PACKAGE_COMMIT/apt"
+          python3 ocean-packages/scripts/verify-bootstrap.py \
+            android/app/src/main/assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json \
+            android/app/src/main/assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst
+      - name: Require existing production signing and authentication configuration
+        env:
+          OCEAN_RELEASE_KEYSTORE_BASE64: ${{ secrets.OCEAN_RELEASE_KEYSTORE_BASE64 }}
+          OCEAN_RELEASE_STORE_PASS: ${{ secrets.OCEAN_RELEASE_STORE_PASS }}
+          OCEAN_RELEASE_KEY_ALIAS: ${{ secrets.OCEAN_RELEASE_KEY_ALIAS }}
+          OCEAN_FIREBASE_API_KEY: ${{ secrets.OCEAN_FIREBASE_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in OCEAN_RELEASE_KEYSTORE_BASE64 OCEAN_RELEASE_STORE_PASS OCEAN_RELEASE_KEY_ALIAS OCEAN_FIREBASE_API_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::Production configuration missing: $name"; exit 1; fi
+          done
+          umask 077
+          printf '%s' "$OCEAN_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ocean-release.jks"
+          echo "OCEAN_RELEASE_KEYSTORE=$RUNNER_TEMP/ocean-release.jks" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - name: Install official Android build tools
+        run: sdkmanager --install 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
+      - name: Download previous published APK for certificate comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/previous-release"
+          gh release download v1.2.1 --repo "$GITHUB_REPOSITORY" --pattern 'OceanStudio-1.2.1-arm64-debug.apk' --dir "$RUNNER_TEMP/previous-release"
+      - name: Compile all current sources, test, sign and verify packaged assets
+        env:
+          OCEAN_RELEASE_STORE_PASS: ${{ secrets.OCEAN_RELEASE_STORE_PASS }}
+          OCEAN_RELEASE_KEY_ALIAS: ${{ secrets.OCEAN_RELEASE_KEY_ALIAS }}
+          OCEAN_RELEASE_KEY_PASS: ${{ secrets.OCEAN_RELEASE_KEY_PASS }}
+          OCEAN_FIREBASE_API_KEY: ${{ secrets.OCEAN_FIREBASE_API_KEY }}
+        run: |
+          python3 scripts/build_release_apk.py \
+            --previous-apk "$RUNNER_TEMP/previous-release/OceanStudio-1.2.1-arm64-debug.apk" \
+            --output "$RUNNER_TEMP/production-release"
+      - name: Publish a new release without overwriting earlier artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' android/app/build.gradle | head -n1)
+          tag="v$version"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists; refusing to overwrite it."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import os,pathlib
+          text = ("Production APK compiled from " + os.environ['GITHUB_SHA'] + ".\n\n"
+                  "Ocean package snapshot: " + os.environ['OCEAN_PACKAGE_COMMIT'] + ".\n\n"
+                  "Verification: release unit tests, native compilation, APK signing continuity, packaged runtime assets, "
+                  "authenticated package catalogue and full repository payload audit.\n\n"
+                  "Physical-device installation and execution of every package remain untested by this workflow.\n")
+          (pathlib.Path(os.environ['RUNNER_TEMP'])/'production-notes.md').write_text(text)
+          PY
+          gh release create "$tag" "$RUNNER_TEMP/production-release/"* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "OceanStudio $version" --notes-file "$RUNNER_TEMP/production-notes.md" --latest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocean-production-evidence
+          path: |
+            ${{ runner.temp }}/ocean-*-audit.json
+            ${{ runner.temp }}/production-release/
+            android/app/build/test-results/testReleaseUnitTest/
+      - name: Remove temporary APK signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/ocean-release.jks"

@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -32,6 +32,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
 
       - name: Install Android SDK packages
         run: |
@@ -93,64 +96,9 @@ jobs:
           echo "Matches OceanStudio 1.1.5 certificate: $COMPATIBLE"
           sha256sum "$FINAL"
 
-      - name: Publish marked APK build
+      - name: Release handoff
         if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-apk]')
-        env:
-          GH_TOKEN: ${{ github.token }}
-          APK: ${{ steps.apk.outputs.path }}
-          CHECKSUM: ${{ steps.apk.outputs.checksum }}
-          VERSION: ${{ steps.apk.outputs.version }}
-          CERT: ${{ steps.apk.outputs.certificate }}
-          UPDATE_COMPATIBLE: ${{ steps.apk.outputs.update_compatible }}
-        run: |
-          set -euo pipefail
-          EXPECTED_CERT="b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387"
-          SHORT="${GITHUB_SHA::7}"
-
-          if [ "$UPDATE_COMPATIBLE" = "true" ]; then
-            TAG="v$VERSION"
-            TITLE="OceanStudio $VERSION"
-            PRERELEASE=""
-            printf '%s\n' \
-              "OceanStudio $VERSION debug distribution." \
-              "" \
-              "- Built from $GITHUB_SHA." \
-              "- APK certificate matches the existing OceanStudio 1.1.5 signing certificate." \
-              "- Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements." \
-              "- Device actions remain user-authorized; Android protected screens and private app sandboxes are not bypassed." \
-              > /tmp/release-notes.md
-          else
-            TAG="v$VERSION-ci-$SHORT"
-            TITLE="OceanStudio $VERSION CI build (fresh signing certificate)"
-            PRERELEASE="--prerelease"
-            printf '%s\n' \
-              "OceanStudio $VERSION CI debug build from $GITHUB_SHA." \
-              "" \
-              "WARNING: this APK was signed with certificate:" \
-              "$CERT" \
-              "" \
-              "The currently published 1.1.5 certificate is:" \
-              "$EXPECTED_CERT" \
-              "" \
-              "Because the certificates differ, Android will not install this APK as an in-place update over 1.1.5. It is published as a prerelease rather than being marked latest." \
-              "" \
-              "Includes crash-survival diagnostics, APK Lab tooling, expanded opt-in Accessibility actions, Runtime Ports, and BYOK improvements." \
-              > /tmp/release-notes.md
-          fi
-
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" "$CHECKSUM" --repo "$GITHUB_REPOSITORY" --clobber
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file /tmp/release-notes.md
-          else
-            gh release create "$TAG" "$APK" "$CHECKSUM" --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "$TITLE" --notes-file /tmp/release-notes.md $PRERELEASE
-          fi
-
-          if [ "$UPDATE_COMPATIBLE" = "true" ]; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest
-          fi
-
-          echo "Published release tag: $TAG"
+        run: echo 'Release publication requires the Build and publish verified production APK workflow.'
 
       - name: Publication summary
         run: |

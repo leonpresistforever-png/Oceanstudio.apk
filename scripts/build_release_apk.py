@@ -1,206 +1,144 @@
 #!/usr/bin/env python3
-"""Build OceanStudio from CURRENT Android source, validate required features, align and sign it.
+"""Compile, test and sign a production APK with the existing release identity.
 
-This script intentionally refuses to:
-- repackage an existing release APK as a substitute for compilation;
-- generate a new signing key silently;
-- publish an APK that omits required 1.2.1 UI/diagnostic features.
+The caller refreshes the catalogue from an immutable, signed Ocean repository
+snapshot. This entry point never merges DEX/native code from an older APK.
 """
 from __future__ import annotations
-import hashlib, json, os, shutil, subprocess, sys, zipfile
+import argparse
+import hashlib
+import json
+import os
 from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ANDROID = ROOT / "android"
-RELEASES = ROOT / "releases"
-BUILD_APK = ANDROID / "app/build/outputs/apk/debug/app-debug.apk"
-PREVIOUS_APK = RELEASES / "OceanStudio-1.2.0-arm64-debug.apk"
-VERSION_NAME = "1.2.1"
-VERSION_CODE = 10
-OUTPUT_APK = RELEASES / f"OceanStudio-{VERSION_NAME}-arm64-debug.apk"
-LATEST_APK = RELEASES / "OceanStudio-latest-debug.apk"
+ANDROID = ROOT / 'android'
 
-def run(args, *, cwd=None, env=None, capture=False):
-    print("+", " ".join(map(str,args)), flush=True)
-    return subprocess.run(
-        list(map(str,args)), cwd=cwd, env=env, check=True, text=True,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.STDOUT if capture else None)
+
+def run(args, **kwargs):
+    print('+', ' '.join(map(str, args)), flush=True)
+    return subprocess.run(list(map(str, args)), check=True, text=True, **kwargs)
+
 
 def tool(name):
-    path=shutil.which(name)
-    if not path:
-        raise SystemExit(f"Required tool is missing: {name}")
-    return path
+    found = shutil.which(name)
+    if not found:
+        sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT', '')
+        candidate = Path(sdk) / 'build-tools/35.0.0' / name
+        if candidate.is_file():
+            return str(candidate)
+        raise RuntimeError('Required Android build tool missing: ' + name)
+    return found
 
-def cert_digest(apk: Path) -> str:
-    out=run([tool("apksigner"),"verify","--print-certs",apk],capture=True).stdout
-    for line in out.splitlines():
-        lower = line.lower()
-        target = "certificate sha-256 digest:"
-        if target in lower:
-            idx = lower.find(target)
-            return line[idx + len(target):].strip().lower().replace(":", "")
-    raise SystemExit(f"Could not read signing certificate from {apk}")
 
-def validate_compiled_features(apk: Path):
-    if not apk.is_file() or apk.stat().st_size < 1_000_000:
-        raise SystemExit("Compiled APK missing or implausibly small")
+def certificate(apk):
+    result = run([tool('apksigner'), 'verify', '--print-certs', apk], capture_output=True)
+    match = re.search(r'^Signer #1 certificate SHA-256 digest: ([0-9a-fA-F:]+)$', result.stdout, re.M)
+    if not match:
+        raise RuntimeError('Cannot verify existing APK signing identity')
+    return match.group(1).lower().replace(':', '')
 
-    with zipfile.ZipFile(apk,"r") as z:
-        dex_names=[n for n in z.namelist() if n.startswith("classes") and n.endswith(".dex")]
-        if not dex_names:
-            raise SystemExit("Compiled APK has no classes*.dex")
-        dex=b"".join(z.read(n) for n in dex_names)
 
-    required_classes=[
-        b"PluginCenterActivity",
-        b"AgentSettingsActivity",
-        b"CrashSurvival",
-        b"CrashDiagnosticsActivity",
-        b"OceanForgeActivity",
-    ]
-    missing=[x.decode() for x in required_classes if x not in dex]
-    if missing:
-        raise SystemExit("Compiled APK is missing required classes: "+", ".join(missing))
+def verify_compiled(apk, version, code):
+    with zipfile.ZipFile(apk) as archive:
+        dex = b''.join(archive.read(n) for n in archive.namelist()
+                       if re.fullmatch(r'classes(?:[0-9]+)?\.dex', n))
+        for name in (b'PluginCenterActivity', b'AgentSettingsActivity', b'CrashSurvival',
+                     b'CrashDiagnosticsActivity', b'OceanForgeActivity', b'OceanPackageCatalog'):
+            if name not in dex:
+                raise RuntimeError('Compiled feature missing: ' + name.decode())
+        for name in ('lib/arm64-v8a/liboceanpty.so', 'lib/arm64-v8a/libzstd-jni-1.5.6-9.so',
+                     'assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst'):
+            if name not in archive.namelist():
+                raise RuntimeError('Required native/bootstrap asset missing: ' + name)
+            if archive.getinfo(name).compress_type != zipfile.ZIP_STORED:
+                raise RuntimeError('Large/native runtime asset must be stored uncompressed: ' + name)
+        bootstrap = json.loads(archive.read('assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json'))
+        payload = archive.read('assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst')
+        if hashlib.sha256(payload).hexdigest() != bootstrap['archiveSha256']:
+            raise RuntimeError('Packaged bootstrap differs from its manifest')
+    badging = run([tool('aapt'), 'dump', 'badging', apk], capture_output=True).stdout
+    for value in ("package: name='studio.ocean.app'", f"versionCode='{code}'", f"versionName='{version}'"):
+        if value not in badging:
+            raise RuntimeError('APK manifest mismatch: ' + value)
+    if 'application-debuggable' in badging:
+        raise RuntimeError('Production APK is debuggable')
+    resources = run([tool('aapt'), 'dump', 'resources', apk], capture_output=True).stdout
+    for name in ('agent_controls_drawer', 'agent_controls_button', 'nav_plugins',
+                 'nav_agent_settings', 'nav_crash_diagnostics'):
+        if name not in resources:
+            raise RuntimeError('Required UI resource missing: ' + name)
+    run([sys.executable, ROOT / 'ocean-packages/tests/test-apk-package-catalog.py', apk, '--min-packages', '6482'])
 
-    aapt_tool = tool("aapt2") if shutil.which("aapt2") else tool("aapt")
-    resources = run([aapt_tool, "dump", "resources", apk], capture=True).stdout
-    if not resources and aapt_tool != tool("aapt"):
-        resources = run([tool("aapt"), "dump", "resources", apk], capture=True).stdout
-    required_ids = ["agent_controls_drawer", "agent_controls_button", "nav_plugins", "nav_agent_settings", "nav_crash_diagnostics"]
-    missing_ids = [x for x in required_ids if x not in resources]
-    if missing_ids:
-        raise SystemExit("Compiled APK is missing required UI resources: " + ", ".join(missing_ids))
-
-    manifest = run([tool("aapt"), "dump", "xmltree", apk, "AndroidManifest.xml"], capture=True).stdout
-    for activity in ["PluginCenterActivity", "AgentSettingsActivity", "CrashDiagnosticsActivity"]:
-        if activity not in manifest:
-            raise SystemExit(f"Compiled manifest is missing {activity}")
-
-    badging = run([tool("aapt"), "dump", "badging", apk], capture=True).stdout
-    expected = [f"versionCode='{VERSION_CODE}'", f"versionName='{VERSION_NAME}'", "package: name='studio.ocean.app'"]
-    for item in expected:
-        if item not in badging:
-            raise SystemExit(f"Badging validation failed: {item}")
 
 def main():
-    for required in ("java", "aapt", "zipalign", "apksigner"):
-        tool(required)
-    gradlew = ANDROID / "gradlew"
-    if not gradlew.is_file():
-        raise SystemExit("android/gradlew is missing")
-    gradlew.chmod(gradlew.stat().st_mode | 0o111)
-
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--previous-apk', required=True, type=Path,
+                        help='Actual previously published APK used to verify update signing compatibility')
+    parser.add_argument('--output', type=Path, default=ROOT / 'releases')
+    args = parser.parse_args()
     env = dict(os.environ)
-    try:
-        commit = run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture=True).stdout.strip()
-    except Exception:
-        commit = "local"
-    env["OCEAN_BUILD_COMMIT"] = commit
+    keystore = env.get('OCEAN_RELEASE_KEYSTORE', '')
+    if not keystore or not Path(keystore).is_file():
+        raise RuntimeError('Supply the existing release keystore through OCEAN_RELEASE_KEYSTORE')
+    for name in ('OCEAN_RELEASE_STORE_PASS', 'OCEAN_RELEASE_KEY_ALIAS', 'OCEAN_FIREBASE_API_KEY'):
+        if not env.get(name):
+            raise RuntimeError('Production build requires ' + name)
+    env['OCEAN_RELEASE_KEY_PASS'] = env.get('OCEAN_RELEASE_KEY_PASS') or env['OCEAN_RELEASE_STORE_PASS']
+    previous_cert = certificate(args.previous_apk)
+    source = (ANDROID / 'app/build.gradle').read_text()
+    version = re.search(r'versionName "([0-9][0-9.]+)"', source).group(1)
+    code = int(re.search(r'versionCode ([0-9]+)', source).group(1))
+    run([sys.executable, ROOT / 'ocean-packages/tests/test-apk-package-catalog.py',
+         '--assets', ANDROID / 'app/src/main/assets/ocean/repository', '--min-packages', '6482'])
+    run(['bash', ROOT / 'scripts/verify-native-only.sh'], cwd=ROOT)
+    run([sys.executable, ROOT / 'ocean-packages/tests/test-pkg-auto-sync.py'])
+    run([sys.executable, ROOT / 'ocean-packages/tests/test-hydrate-bootstrap.py'])
+    commit = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True).stdout.strip()
+    env['OCEAN_BUILD_COMMIT'] = commit
+    env['OCEAN_FORGE_REUSE_NATIVE'] = 'false'
+    (ANDROID / 'gradlew').chmod(0o755)
+    run([ANDROID / 'gradlew', 'clean', 'testReleaseUnitTest', 'assembleRelease', '--no-daemon', '--stacktrace'],
+        cwd=ANDROID, env=env)
+    build_config = ANDROID / 'app/build/generated/source/buildConfig/release/studio/ocean/app/BuildConfig.java'
+    if not re.search(r'OCEAN_DEV_AUTH_BYPASS\s*=\s*false', build_config.read_text()):
+        raise RuntimeError('Production auth bypass must be disabled')
+    unsigned = ANDROID / 'app/build/outputs/apk/release/app-release-unsigned.apk'
+    work = ROOT / 'build/production-apk'
+    work.mkdir(parents=True, exist_ok=True)
+    aligned, signed = work / 'aligned.apk', work / 'signed.apk'
+    run([tool('zipalign'), '-f', '-p', '4', unsigned, aligned])
+    run([tool('apksigner'), 'sign', '--ks', keystore, '--ks-pass', 'env:OCEAN_RELEASE_STORE_PASS',
+         '--ks-key-alias', env['OCEAN_RELEASE_KEY_ALIAS'], '--key-pass', 'env:OCEAN_RELEASE_KEY_PASS',
+         '--min-sdk-version', '28', '--out', signed, aligned], env=env)
+    current_cert = certificate(signed)
+    if current_cert != previous_cert:
+        raise RuntimeError(f'Release certificate changed: previous={previous_cert}; new={current_cert}')
+    run([tool('zipalign'), '-c', '-p', '4', signed])
+    verify_compiled(signed, version, code)
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    final = output / f'OceanStudio-{version}-arm64-release.apk'
+    if final.exists():
+        raise RuntimeError('Refusing to overwrite an existing release artifact: ' + str(final))
+    shutil.copyfile(signed, final)
+    digest = hashlib.sha256(final.read_bytes()).hexdigest()
+    final.with_suffix('.apk.sha256').write_text(f'{digest}  {final.name}\n')
+    report = {'sourceCommit': commit, 'packageSnapshot': env.get('OCEAN_PACKAGE_COMMIT'),
+              'versionName': version, 'versionCode': code, 'applicationId': 'studio.ocean.app',
+              'apk': final.name, 'sha256': digest, 'size': final.stat().st_size,
+              'certificateSha256': current_cert, 'previousCertificateSha256': previous_cert,
+              'buildType': 'release', 'nativeCodeRecompiled': True, 'catalogueSignatureVerified': True,
+              'physicalDeviceTested': False, 'allPackagesRuntimeTested': False,
+              'status': 'built-and-statically-verified'}
+    (output / f'OceanStudio-{version}-validation.json').write_text(json.dumps(report, indent=2) + '\n')
+    print(json.dumps(report, indent=2))
 
-    # Compile current Java/resources using pure on-device build_source_apk
-    source_builder = ROOT / "scripts/build_source_apk.py"
-    run([sys.executable, str(source_builder)], cwd=ROOT, env=env)
 
-    validate_compiled_features(BUILD_APK)
-
-    RELEASES.mkdir(parents=True,exist_ok=True)
-    work=ROOT/"build/release-apk"
-    if work.exists(): shutil.rmtree(work)
-    work.mkdir(parents=True)
-    aligned=work/"aligned.apk"
-    signed=work/"signed.apk"
-
-    run([tool("zipalign"),"-f","-p","4",BUILD_APK,aligned])
-    run([tool("zipalign"),"-c","-v","4",aligned])
-
-    keystore=os.environ.get("OCEAN_RELEASE_KEYSTORE","").strip()
-    if not keystore:
-        legacy=Path.home()/"oceanstudio-release.jks"
-        if legacy.is_file():
-            keystore=str(legacy)
-            print(f"Using existing local OceanStudio keystore: {legacy}")
-        else:
-            raise SystemExit(
-                "No release keystore supplied. Set OCEAN_RELEASE_KEYSTORE. "
-                "A new key will NOT be generated automatically."
-            )
-    if not Path(keystore).is_file():
-        raise SystemExit("OCEAN_RELEASE_KEYSTORE does not exist")
-
-    store_pass=os.environ.get("OCEAN_RELEASE_STORE_PASS","").strip()
-    if not store_pass and keystore == str(Path.home()/"oceanstudio-release.jks"):
-        store_pass = "oceanstudio"
-    key_alias=os.environ.get("OCEAN_RELEASE_KEY_ALIAS","oceanstudio")
-    key_pass=os.environ.get("OCEAN_RELEASE_KEY_PASS",store_pass)
-    env["OCEAN_RELEASE_STORE_PASS"]=store_pass
-    env["OCEAN_RELEASE_KEY_PASS"]=key_pass
-
-    if not store_pass:
-        raise SystemExit("Set OCEAN_RELEASE_STORE_PASS securely in the environment")
-
-    run([
-        tool("apksigner"),"sign",
-        "--ks",keystore,
-        "--ks-pass","env:OCEAN_RELEASE_STORE_PASS",
-        "--ks-key-alias",key_alias,
-        "--key-pass","env:OCEAN_RELEASE_KEY_PASS",
-        "--min-sdk-version","28",
-        "--v1-signing-enabled","true",
-        "--v2-signing-enabled","true",
-        "--v3-signing-enabled","true",
-        "--in",aligned,
-        "--out",signed,
-    ],env=env)
-
-    verify=run([tool("apksigner"),"verify","-v","--print-certs",signed],capture=True).stdout
-    print(verify)
-    run([tool("zipalign"),"-c","-v","4",signed])
-    validate_compiled_features(signed)
-
-    new_cert=cert_digest(signed)
-    previous_cert=cert_digest(PREVIOUS_APK) if PREVIOUS_APK.is_file() else ""
-    if previous_cert and new_cert != previous_cert:
-        raise SystemExit(
-            "Signing certificate mismatch with the published 1.2.0 APK. "
-            f"previous={previous_cert} new={new_cert}. Refusing update release."
-        )
-
-    data=signed.read_bytes()
-    digest=hashlib.sha256(data).hexdigest()
-    if OUTPUT_APK.exists(): OUTPUT_APK.unlink()
-    if LATEST_APK.exists(): LATEST_APK.unlink()
-    shutil.copy2(signed,OUTPUT_APK)
-    shutil.copy2(signed,LATEST_APK)
-    (OUTPUT_APK.with_suffix(OUTPUT_APK.suffix+".sha256")).write_text(digest+"\n")
-    (RELEASES/"OceanStudio-latest-debug.apk.sha256").write_text(digest+"\n")
-
-    validation={
-        "apk":OUTPUT_APK.name,
-        "sourceCommit":commit,
-        "buildMode":"compiled-current-android-source",
-        "versionCode":VERSION_CODE,
-        "versionName":VERSION_NAME,
-        "applicationId":"studio.ocean.app",
-        "sha256":digest,
-        "size":len(data),
-        "certificateSha256":new_cert,
-        "previous120CertificateSha256":previous_cert or None,
-        "updateCertificateMatch": (not previous_cert) or new_cert==previous_cert,
-        "requiredFeatures":{
-            "pluginCenter":True,
-            "agentSettings":True,
-            "rightAgentControlsDrawer":True,
-            "crashSurvival":True,
-            "manualCrashDiagnostics":True,
-        },
-        "status":"BUILT_AND_VALIDATED_NOT_PUBLISHED",
-    }
-    (RELEASES/f"OceanStudio-{VERSION_NAME}-validation.json").write_text(json.dumps(validation,indent=2)+"\n")
-    print(json.dumps(validation,indent=2))
-    print(f"READY LOCAL ARTIFACT: {OUTPUT_APK}")
-    return 0
-
-if __name__=="__main__":
-    raise SystemExit(main())
+if __name__ == '__main__':
+    main()

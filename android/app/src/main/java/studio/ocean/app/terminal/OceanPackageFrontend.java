@@ -5,10 +5,12 @@ import java.nio.channels.*;
 import java.nio.file.*;
 import java.security.MessageDigest;
 
-/** Migrate only the byte-identical Ocean-owned 1.1.0 frontend. */
+/** Migrate only byte-identical released Ocean frontends; preserve user changes. */
 public final class OceanPackageFrontend {
     private static final String LEGACY_SHA256 =
             "6e9b34f5b87d78e0cf393b4cea91f2ad90be752f5e26e9e069d89fd0a2daa33f";
+    private static final String AUTO_SYNC_SHA256 =
+            "62a376a77d995f93a69a0eb7e0a815b330851262fea3831a9dad70f09e96b1a2";
     private OceanPackageFrontend() {}
 
     public static boolean prepare(File prefix, InputStream bundled) throws IOException {
@@ -46,8 +48,11 @@ public final class OceanPackageFrontend {
     private static boolean replaceKnown(Path target, Path dpkg, byte[] replacement) throws IOException {
         if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) return false;
         byte[] original = Files.readAllBytes(target);
-        if (java.util.Arrays.equals(original, replacement) || !LEGACY_SHA256.equals(sha256(original))) return false;
-        Path backup = dpkg.resolve("ocean-pkg-1.1.0.backup");
+        String digest = sha256(original);
+        if (java.util.Arrays.equals(original, replacement)
+                || !(LEGACY_SHA256.equals(digest) || AUTO_SYNC_SHA256.equals(digest))) return false;
+        Path backup = dpkg.resolve(LEGACY_SHA256.equals(digest)
+                ? "ocean-pkg-1.1.0.backup" : "ocean-pkg-auto-sync.backup");
         if (!Files.exists(backup)) Files.copy(target, backup);
         File temporary = File.createTempFile(".ocean-pkg-", ".tmp", target.getParent().toFile());
         try {
