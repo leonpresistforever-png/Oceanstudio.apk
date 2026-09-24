@@ -674,3 +674,54 @@ Java_studio_ocean_app_StudioOpenSourceTools_nativeBuildPreviewMesh(
     json << "\"}";
     return toJString(env,json.str());
 }
+
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpConvertTransformed(
+        JNIEnv* env,jclass,jstring jinput,jstring joutput,jstring jformat,
+        jfloat px,jfloat py,jfloat pz,jfloat rx,jfloat ry,jfloat rz,jfloat sx,jfloat sy,jfloat sz) {
+    const std::string input=fromJString(env,jinput);
+    const std::string output=fromJString(env,joutput);
+    const std::string format=fromJString(env,jformat);
+
+    Assimp::Importer importer;
+    unsigned int flags =
+        aiProcess_ValidateDataStructure |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FindDegenerates |
+        aiProcess_FindInvalidData |
+        aiProcess_RemoveRedundantMaterials |
+        aiProcess_SortByPType |
+        aiProcess_OptimizeMeshes |
+        aiProcess_OptimizeGraph;
+    const aiScene* readScene=importer.ReadFile(input,flags);
+    if(!readScene||!readScene->mRootNode)return toJString(env,errorJson("assimp",importer.GetErrorString()));
+    aiScene* scene=const_cast<aiScene*>(readScene);
+
+    const float deg=(float)3.14159265358979323846/180.0f;
+    aiMatrix4x4 T,Rx,Ry,Rz,S;
+    aiMatrix4x4::Translation(aiVector3D(px,py,pz),T);
+    aiMatrix4x4::RotationX(rx*deg,Rx);
+    aiMatrix4x4::RotationY(ry*deg,Ry);
+    aiMatrix4x4::RotationZ(rz*deg,Rz);
+    aiMatrix4x4::Scaling(aiVector3D(sx,sy,sz),S);
+    aiMatrix4x4 studio=T*Rz*Ry*Rx*S;
+    scene->mRootNode->mTransformation=studio*scene->mRootNode->mTransformation;
+
+    Assimp::Exporter exporter;
+    aiReturn result=exporter.Export(scene,format.c_str(),output);
+    if(result!=aiReturn_SUCCESS)return toJString(env,errorJson("assimp",exporter.GetErrorString()));
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\",\"operation\":\"convert-transformed\","
+      << "\"format\":\"" << format << "\",\"transform\":["
+      << px << "," << py << "," << pz << "," << rx << "," << ry << "," << rz << ","
+      << sx << "," << sy << "," << sz << "],\"output\":\"";
+    for(char ch:output){if(ch=='\"'||ch=='\\')o << '\\';o << ch;}
+    o << "\"}";
+    return toJString(env,o.str());
+}
