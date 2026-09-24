@@ -31,10 +31,22 @@ public final class StudioOpenSourceTools {
   public static String inspectImage(String path){return LOADED?nativeInspectImage(path):error();}
   private static String error(){return "{\"ok\":false,\"error\":\"native open-source toolchain unavailable\"}";}
 
+  public static File createImportSession(Context context) throws IOException {
+    File base=new File(context.getFilesDir(),"studio/imports");if(!base.exists()&&!base.mkdirs())throw new IOException("Cannot create Studio import directory");
+    File session=new File(base,String.valueOf(System.currentTimeMillis()));if(!session.mkdirs())throw new IOException("Cannot create import session");
+    return session;
+  }
+
   public static File materialize(Context context,Uri uri,String displayName) throws IOException {
+    return materializeInto(context,uri,displayName,createImportSession(context));
+  }
+
+  public static File materializeInto(Context context,Uri uri,String displayName,File dir) throws IOException {
     String safe=(displayName==null||displayName.trim().isEmpty()?"asset":displayName).replaceAll("[^A-Za-z0-9._-]","_");
-    File dir=new File(context.getCacheDir(),"studio-imports");if(!dir.exists()&&!dir.mkdirs())throw new IOException("Cannot create Studio import cache");
-    File out=new File(dir,System.currentTimeMillis()+"-"+safe);
+    if(!dir.exists()&&!dir.mkdirs())throw new IOException("Cannot create Studio import directory");
+    File out=new File(dir,safe);
+    int duplicate=1;String base=safe,ext="";int dot=safe.lastIndexOf('.');if(dot>0){base=safe.substring(0,dot);ext=safe.substring(dot);}
+    while(out.exists())out=new File(dir,base+"-"+(duplicate++)+ext);
     try(InputStream in=context.getContentResolver().openInputStream(uri);FileOutputStream fos=new FileOutputStream(out)){
       if(in==null)throw new IOException("Cannot read selected document");
       byte[] buf=new byte[65536];int n;long total=0,max=512L*1024L*1024L;
