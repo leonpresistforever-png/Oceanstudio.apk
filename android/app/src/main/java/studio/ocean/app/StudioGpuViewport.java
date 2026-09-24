@@ -45,6 +45,10 @@ public final class StudioGpuViewport extends GLSurfaceView {
         requestRender();
     }
 
+    public void updateOptions(boolean grid,boolean axes,boolean spawn,boolean primitives) {
+        renderer.showGrid=grid;renderer.showAxes=axes;renderer.showSpawn=spawn;renderer.showPrimitives=primitives;requestRender();
+    }
+
     public void updateCamera(float yaw,float pitch,float distance,float tx,float ty,float tz) {
         renderer.yaw=yaw;renderer.pitch=pitch;renderer.distance=distance;
         renderer.tx=tx;renderer.ty=ty;renderer.tz=tz;
@@ -76,7 +80,8 @@ public final class StudioGpuViewport extends GLSurfaceView {
     private static final class GpuRenderer implements GLSurfaceView.Renderer {
         volatile List<StudioScene.Node> scene=Collections.emptyList();
         volatile float yaw=StudioMath3D.radians(-35f),pitch=StudioMath3D.radians(27f),distance=13f,tx=0,ty=.8f,tz=0;
-        int meshProgram,lineProgram,cubeVbo,planeVbo,gridVbo;
+        volatile boolean showGrid=true,showAxes=true,showSpawn=true,showPrimitives=true;
+        int meshProgram,lineProgram,cubeVbo,planeVbo,gridVbo,axisVbo;
         int gridVertexCount;
         final HashMap<String,GpuMesh> meshCache=new HashMap<>();
 
@@ -127,6 +132,7 @@ public final class StudioGpuViewport extends GLSurfaceView {
             float[] grid=buildGrid(10);
             gridVertexCount=grid.length/3;
             gridVbo=buffer(grid);
+            axisVbo=buffer(new float[]{-10,.012f,0,10,.012f,0, 0,0,0,0,4,0, 0,.012f,-10,0,.012f,10});
         }
 
         @Override public void onSurfaceChanged(GL10 gl,int width,int height) {
@@ -146,23 +152,35 @@ public final class StudioGpuViewport extends GLSurfaceView {
 
             GLES30.glUseProgram(lineProgram);
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(lineProgram,"uVP"),1,false,vp,0);
-            GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,gridVbo);
             GLES30.glEnableVertexAttribArray(0);
-            GLES30.glVertexAttribPointer(0,3,GLES30.GL_FLOAT,false,12,0);
-            GLES30.glUniform4f(GLES30.glGetUniformLocation(lineProgram,"uColor"),.23f,.26f,.29f,1);
-            GLES30.glDrawArrays(GLES30.GL_LINES,0,gridVertexCount);
+            if(showGrid){
+                GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,gridVbo);
+                GLES30.glVertexAttribPointer(0,3,GLES30.GL_FLOAT,false,12,0);
+                GLES30.glUniform4f(GLES30.glGetUniformLocation(lineProgram,"uColor"),.23f,.26f,.29f,1);
+                GLES30.glDrawArrays(GLES30.GL_LINES,0,gridVertexCount);
+            }
+            if(showAxes){
+                GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,axisVbo);
+                GLES30.glVertexAttribPointer(0,3,GLES30.GL_FLOAT,false,12,0);
+                int color=GLES30.glGetUniformLocation(lineProgram,"uColor");
+                GLES30.glUniform4f(color,.70f,.28f,.28f,1);GLES30.glDrawArrays(GLES30.GL_LINES,0,2);
+                GLES30.glUniform4f(color,.30f,.66f,.38f,1);GLES30.glDrawArrays(GLES30.GL_LINES,2,2);
+                GLES30.glUniform4f(color,.30f,.48f,.72f,1);GLES30.glDrawArrays(GLES30.GL_LINES,4,2);
+            }
             GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,0);
 
             List<StudioScene.Node> copy=scene;
             for(StudioScene.Node n:copy){
                 if(n==null||!n.visible||"plane".equals(n.type))continue;
                 if("spawn".equals(n.type)){
+                    if(!showSpawn)continue;
                     drawMesh(cubeVbo,36,n.x,n.y+.08f,n.z,n.rx,n.ry,n.rz,2.9f*n.sx,.16f*n.sy,1.6f*n.sz,.77f,.79f,.82f);
                 }else if("light".equals(n.type)){
                     drawMesh(cubeVbo,36,n.x,n.y,n.z,n.rx,n.ry,n.rz,.35f*n.sx,.35f*n.sy,.35f*n.sz,1f,.85f,.35f);
                 }else if("camera".equals(n.type)){
                     drawMesh(cubeVbo,36,n.x,n.y,n.z,n.rx,n.ry,n.rz,.42f*n.sx,.30f*n.sy,.58f*n.sz,.8f,.7f,.3f);
                 }else if(!"empty".equals(n.type)){
+                    if("cube".equals(n.type)&&!showPrimitives)continue;
                     float r=.38f,g=.49f,b=.60f;
                     if("gltf".equals(n.type)||"obj".equals(n.type)||"model".equals(n.type)){
                         r=.32f;g=.52f;b=.66f;
