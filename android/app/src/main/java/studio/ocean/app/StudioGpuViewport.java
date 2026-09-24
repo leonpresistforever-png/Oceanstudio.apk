@@ -302,10 +302,10 @@ public final class StudioGpuViewport extends GLSurfaceView {
 
         private static final String MESH_FS=
                 "#version 300 es\nprecision highp float;\n"+
-                "in vec3 vN; in vec3 vWorld; uniform vec3 uBase; out vec4 frag;\n"+
-                "void main(){ vec3 n=normalize(vN); vec3 l=normalize(vec3(-0.42,0.86,0.30));"+
-                "float diff=max(dot(n,l),0.0); float hemi=0.5+0.5*n.y;"+
-                "vec3 c=uBase*(0.20+0.68*diff+0.12*hemi); frag=vec4(c,1.0); }";
+                "in vec3 vN; in vec3 vWorld; uniform vec3 uBase; uniform vec3 uCamera; out vec4 frag;\n"+
+                "void main(){ vec3 n=normalize(vN); vec3 l=normalize(vec3(-0.42,0.86,0.30)); vec3 v=normalize(uCamera-vWorld); vec3 h=normalize(l+v);"+
+                "float diff=max(dot(n,l),0.0); float hemi=0.5+0.5*n.y; float spec=pow(max(dot(n,h),0.0),32.0);"+
+                "vec3 c=uBase*(0.16+0.68*diff+0.16*hemi)+vec3(0.18)*spec; frag=vec4(c,1.0); }";
 
         private static final String LINE_VS=
                 "#version 300 es\nlayout(location=0) in vec3 aPos; uniform mat4 uVP; void main(){ gl_Position=uVP*vec4(aPos,1.0); }";
