@@ -536,6 +536,7 @@ public final class OceanStudio3DActivity extends Activity {
 
       if(gpuActive&&gpuViewport!=null){
         gpuViewport.updateCamera(yaw,pitch,distance,targetX,targetY,targetZ);
+        gpuViewport.updateOptions(extensionRegistry.isEnabled("grid-overlay"),extensionRegistry.isEnabled("axis-guides"),extensionRegistry.isEnabled("spawn-marker"),extensionRegistry.isEnabled("primitive-preview"));
         gpuViewport.updateScene(scene.renderSnapshot());
         hitRects.clear();
         StudioScene.Node selectedNode=scene.selected();
