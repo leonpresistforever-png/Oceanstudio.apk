@@ -14,6 +14,12 @@
 #include "meshoptimizer.h"
 #include "tiny_obj_loader.h"
 
+#include <assimp/Importer.hpp>
+#include <assimp/Exporter.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/version.h>
+
 namespace {
 
 std::string fromJString(JNIEnv* env, jstring value) {
@@ -285,5 +291,124 @@ Java_studio_ocean_app_StudioOpenSourceTools_nativeInspectImage(
       << "\"height\":" << height << ","
       << "\"channels\":" << channels << ","
       << "\"megapixels\":" << ((double)width * (double)height / 1000000.0) << "}";
+    return toJString(env, o.str());
+}
+
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpExportFormats(
+        JNIEnv* env, jclass) {
+    Assimp::Exporter exporter;
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\",\"version\":\""
+      << aiGetVersionMajor() << "." << aiGetVersionMinor() << "." << aiGetVersionPatch()
+      << "\",\"formats\":[";
+    size_t count = exporter.GetExportFormatCount();
+    for (size_t i = 0; i < count; ++i) {
+        const aiExportFormatDesc* d = exporter.GetExportFormatDescription(i);
+        if (!d) continue;
+        if (i) o << ",";
+        o << "{\"id\":\"" << d->id
+          << "\",\"description\":\"" << d->description
+          << "\",\"extension\":\"" << d->fileExtension << "\"}";
+    }
+    o << "]}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpImportExtensions(
+        JNIEnv* env, jclass) {
+    Assimp::Importer importer;
+    aiString extensions;
+    importer.GetExtensionList(extensions);
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\",\"extensions\":\"";
+    const char* s = extensions.C_Str();
+    for (; s && *s; ++s) {
+        if (*s == '\"' || *s == '\\') o << '\\';
+        o << *s;
+    }
+    o << "\"}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpInspect(
+        JNIEnv* env, jclass, jstring jpath) {
+    const std::string path = fromJString(env, jpath);
+    Assimp::Importer importer;
+    unsigned int flags =
+        aiProcess_ValidateDataStructure |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FindInvalidData |
+        aiProcess_SortByPType;
+    const aiScene* scene = importer.ReadFile(path, flags);
+    if (!scene) return toJString(env, errorJson("assimp", importer.GetErrorString()));
+
+    size_t vertices = 0, faces = 0, bones = 0;
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        const aiMesh* m = scene->mMeshes[i];
+        if (!m) continue;
+        vertices += m->mNumVertices;
+        faces += m->mNumFaces;
+        bones += m->mNumBones;
+    }
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\","
+      << "\"meshes\":" << scene->mNumMeshes << ","
+      << "\"vertices\":" << vertices << ","
+      << "\"faces\":" << faces << ","
+      << "\"materials\":" << scene->mNumMaterials << ","
+      << "\"textures\":" << scene->mNumTextures << ","
+      << "\"animations\":" << scene->mNumAnimations << ","
+      << "\"cameras\":" << scene->mNumCameras << ","
+      << "\"lights\":" << scene->mNumLights << ","
+      << "\"bones\":" << bones << "}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpConvert(
+        JNIEnv* env, jclass, jstring jinput, jstring joutput, jstring jformat) {
+    const std::string input = fromJString(env, jinput);
+    const std::string output = fromJString(env, joutput);
+    const std::string format = fromJString(env, jformat);
+
+    Assimp::Importer importer;
+    unsigned int flags =
+        aiProcess_ValidateDataStructure |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FindDegenerates |
+        aiProcess_FindInvalidData |
+        aiProcess_RemoveRedundantMaterials |
+        aiProcess_SortByPType |
+        aiProcess_OptimizeMeshes |
+        aiProcess_OptimizeGraph;
+    const aiScene* scene = importer.ReadFile(input, flags);
+    if (!scene) return toJString(env, errorJson("assimp", importer.GetErrorString()));
+
+    Assimp::Exporter exporter;
+    aiReturn result = exporter.Export(scene, format.c_str(), output);
+    if (result != aiReturn_SUCCESS) {
+        return toJString(env, errorJson("assimp", exporter.GetErrorString()));
+    }
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\",\"operation\":\"convert\","
+      << "\"format\":\"" << format << "\",\"output\":\"";
+    for (char ch : output) {
+        if (ch == '\"' || ch == '\\') o << '\\';
+        o << ch;
+    }
+    o << "\"}";
     return toJString(env, o.str());
 }
