@@ -1,0 +1,289 @@
+#include <jni.h>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <algorithm>
+#include <cmath>
+
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include "meshoptimizer.h"
+#include "tiny_obj_loader.h"
+
+namespace {
+
+std::string fromJString(JNIEnv* env, jstring value) {
+    if (!value) return {};
+    const char* chars = env->GetStringUTFChars(value, nullptr);
+    std::string out = chars ? chars : "";
+    if (chars) env->ReleaseStringUTFChars(value, chars);
+    return out;
+}
+
+jstring toJString(JNIEnv* env, const std::string& value) {
+    return env->NewStringUTF(value.c_str());
+}
+
+std::string errorJson(const char* tool, const std::string& message) {
+    std::ostringstream o;
+    o << "{\"ok\":false,\"tool\":\"" << tool << "\",\"error\":\"";
+    for (char c : message) {
+        if (c == '\"' || c == '\\') o << '\\';
+        if (c == '\n') o << "\\n";
+        else o << c;
+    }
+    o << "\"}";
+    return o.str();
+}
+
+struct MeshData {
+    std::vector<float> positions;
+    std::vector<unsigned int> indices;
+    size_t vertexCount = 0;
+};
+
+bool loadFirstTrianglePrimitive(const std::string& path, MeshData& out, std::string& error) {
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+    cgltf_result parse = cgltf_parse_file(&options, path.c_str(), &data);
+    if (parse != cgltf_result_success || !data) {
+        error = "cgltf parse failed: " + std::to_string((int)parse);
+        return false;
+    }
+
+    cgltf_result buffers = cgltf_load_buffers(&options, data, path.c_str());
+    if (buffers != cgltf_result_success) {
+        error = "cgltf buffer load failed: " + std::to_string((int)buffers);
+        cgltf_free(data);
+        return false;
+    }
+
+    const cgltf_primitive* primitive = nullptr;
+    const cgltf_accessor* positions = nullptr;
+    for (cgltf_size mi = 0; mi < data->meshes_count && !primitive; ++mi) {
+        const cgltf_mesh& mesh = data->meshes[mi];
+        for (cgltf_size pi = 0; pi < mesh.primitives_count && !primitive; ++pi) {
+            const cgltf_primitive& candidate = mesh.primitives[pi];
+            if (candidate.type != cgltf_primitive_type_triangles) continue;
+            for (cgltf_size ai = 0; ai < candidate.attributes_count; ++ai) {
+                if (candidate.attributes[ai].type == cgltf_attribute_type_position) {
+                    primitive = &candidate;
+                    positions = candidate.attributes[ai].data;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!primitive || !positions || positions->count < 3) {
+        error = "No triangle primitive with POSITION accessor";
+        cgltf_free(data);
+        return false;
+    }
+
+    out.vertexCount = (size_t)positions->count;
+    out.positions.resize(out.vertexCount * 3);
+    cgltf_size unpacked = cgltf_accessor_unpack_floats(
+        positions, out.positions.data(), (cgltf_size)out.positions.size());
+    if (unpacked < out.vertexCount * 3) {
+        error = "POSITION accessor could not be fully unpacked";
+        cgltf_free(data);
+        return false;
+    }
+
+    if (primitive->indices) {
+        out.indices.resize((size_t)primitive->indices->count);
+        for (cgltf_size i = 0; i < primitive->indices->count; ++i) {
+            out.indices[(size_t)i] = (unsigned int)cgltf_accessor_read_index(primitive->indices, i);
+        }
+    } else {
+        out.indices.resize(out.vertexCount);
+        for (size_t i = 0; i < out.vertexCount; ++i) out.indices[i] = (unsigned int)i;
+    }
+
+    cgltf_free(data);
+    if (out.indices.size() < 3) {
+        error = "Primitive has fewer than three indices";
+        return false;
+    }
+    return true;
+}
+
+} // namespace
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeInspectGltf(
+        JNIEnv* env, jclass, jstring jpath) {
+    const std::string path = fromJString(env, jpath);
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+    cgltf_result parse = cgltf_parse_file(&options, path.c_str(), &data);
+    if (parse != cgltf_result_success || !data) {
+        return toJString(env, errorJson("cgltf", "parse failed code " + std::to_string((int)parse)));
+    }
+
+    cgltf_result validation = cgltf_validate(data);
+    cgltf_result buffers = cgltf_load_buffers(&options, data, path.c_str());
+
+    size_t primitives = 0;
+    size_t vertices = 0;
+    size_t indices = 0;
+    for (cgltf_size mi = 0; mi < data->meshes_count; ++mi) {
+        const cgltf_mesh& mesh = data->meshes[mi];
+        primitives += (size_t)mesh.primitives_count;
+        for (cgltf_size pi = 0; pi < mesh.primitives_count; ++pi) {
+            const cgltf_primitive& p = mesh.primitives[pi];
+            if (p.indices) indices += (size_t)p.indices->count;
+            for (cgltf_size ai = 0; ai < p.attributes_count; ++ai) {
+                if (p.attributes[ai].type == cgltf_attribute_type_position && p.attributes[ai].data) {
+                    vertices += (size_t)p.attributes[ai].data->count;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"cgltf\","
+      << "\"valid\":" << (validation == cgltf_result_success ? "true" : "false") << ","
+      << "\"validationCode\":" << (int)validation << ","
+      << "\"buffersLoaded\":" << (buffers == cgltf_result_success ? "true" : "false") << ","
+      << "\"nodes\":" << data->nodes_count << ","
+      << "\"meshes\":" << data->meshes_count << ","
+      << "\"primitives\":" << primitives << ","
+      << "\"vertices\":" << vertices << ","
+      << "\"indices\":" << indices << ","
+      << "\"materials\":" << data->materials_count << ","
+      << "\"textures\":" << data->textures_count << ","
+      << "\"images\":" << data->images_count << ","
+      << "\"animations\":" << data->animations_count << ","
+      << "\"cameras\":" << data->cameras_count << ","
+      << "\"lights\":" << data->lights_count
+      << "}";
+    cgltf_free(data);
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeSimplifyGltf(
+        JNIEnv* env, jclass, jstring jpath, jfloat jratio) {
+    const std::string path = fromJString(env, jpath);
+    MeshData mesh;
+    std::string error;
+    if (!loadFirstTrianglePrimitive(path, mesh, error)) {
+        return toJString(env, errorJson("meshoptimizer", error));
+    }
+
+    float ratio = std::max(0.05f, std::min(1.0f, (float)jratio));
+    size_t original = mesh.indices.size();
+    size_t target = (size_t)std::floor((double)original * ratio);
+    target -= target % 3;
+    target = std::max((size_t)3, std::min(original, target));
+
+    std::vector<unsigned int> simplified(original);
+    float resultError = 0.0f;
+    size_t result = meshopt_simplify(
+        simplified.data(), mesh.indices.data(), original,
+        mesh.positions.data(), mesh.vertexCount, sizeof(float) * 3,
+        target, 0.02f, 0, &resultError);
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"meshoptimizer\","
+      << "\"operation\":\"simplify\","
+      << "\"vertices\":" << mesh.vertexCount << ","
+      << "\"originalIndices\":" << original << ","
+      << "\"targetIndices\":" << target << ","
+      << "\"resultIndices\":" << result << ","
+      << "\"resultTriangles\":" << result / 3 << ","
+      << "\"ratio\":" << ratio << ","
+      << "\"error\":" << resultError << "}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeVertexCacheGltf(
+        JNIEnv* env, jclass, jstring jpath) {
+    const std::string path = fromJString(env, jpath);
+    MeshData mesh;
+    std::string error;
+    if (!loadFirstTrianglePrimitive(path, mesh, error)) {
+        return toJString(env, errorJson("meshoptimizer", error));
+    }
+
+    meshopt_VertexCacheStatistics before =
+        meshopt_analyzeVertexCache(mesh.indices.data(), mesh.indices.size(), mesh.vertexCount, 16, 0, 0);
+    std::vector<unsigned int> optimized(mesh.indices.size());
+    meshopt_optimizeVertexCache(
+        optimized.data(), mesh.indices.data(), mesh.indices.size(), mesh.vertexCount);
+    meshopt_VertexCacheStatistics after =
+        meshopt_analyzeVertexCache(optimized.data(), optimized.size(), mesh.vertexCount, 16, 0, 0);
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"meshoptimizer\","
+      << "\"operation\":\"vertex-cache\","
+      << "\"indices\":" << mesh.indices.size() << ","
+      << "\"vertices\":" << mesh.vertexCount << ","
+      << "\"acmrBefore\":" << before.acmr << ","
+      << "\"acmrAfter\":" << after.acmr << ","
+      << "\"atvrBefore\":" << before.atvr << ","
+      << "\"atvrAfter\":" << after.atvr << "}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeInspectObj(
+        JNIEnv* env, jclass, jstring jpath) {
+    const std::string path = fromJString(env, jpath);
+    tinyobj::ObjReaderConfig config;
+    config.triangulate = true;
+    tinyobj::ObjReader reader;
+    if (!reader.ParseFromFile(path, config)) {
+        std::string message = reader.Error().empty() ? "OBJ parse failed" : reader.Error();
+        return toJString(env, errorJson("tinyobjloader", message));
+    }
+
+    const auto& attrib = reader.GetAttrib();
+    const auto& shapes = reader.GetShapes();
+    const auto& materials = reader.GetMaterials();
+    size_t faces = 0;
+    size_t indices = 0;
+    for (const auto& shape : shapes) {
+        faces += shape.mesh.num_face_vertices.size();
+        indices += shape.mesh.indices.size();
+    }
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"tinyobjloader\","
+      << "\"vertices\":" << attrib.vertices.size() / 3 << ","
+      << "\"normals\":" << attrib.normals.size() / 3 << ","
+      << "\"texcoords\":" << attrib.texcoords.size() / 2 << ","
+      << "\"shapes\":" << shapes.size() << ","
+      << "\"materials\":" << materials.size() << ","
+      << "\"faces\":" << faces << ","
+      << "\"indices\":" << indices << ","
+      << "\"warning\":\"" << (reader.Warning().empty() ? "" : "present") << "\"}";
+    return toJString(env, o.str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeInspectImage(
+        JNIEnv* env, jclass, jstring jpath) {
+    const std::string path = fromJString(env, jpath);
+    int width = 0, height = 0, channels = 0;
+    if (!stbi_info(path.c_str(), &width, &height, &channels)) {
+        const char* reason = stbi_failure_reason();
+        return toJString(env, errorJson("stb_image", reason ? reason : "unsupported image"));
+    }
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"stb_image\","
+      << "\"width\":" << width << ","
+      << "\"height\":" << height << ","
+      << "\"channels\":" << channels << ","
+      << "\"megapixels\":" << ((double)width * (double)height / 1000000.0) << "}";
+    return toJString(env, o.str());
+}
