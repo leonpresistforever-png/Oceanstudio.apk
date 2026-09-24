@@ -359,7 +359,7 @@ public final class OceanStudio3DActivity extends Activity {
     new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene 1").setItems(items,(d,w)->{
       if(w==0){try{java.io.File f=projectStore.save("Scene_1",scene.snapshot());Toast.makeText(this,"Saved "+f.getName(),Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"Save failed: "+e.getMessage(),Toast.LENGTH_LONG).show();}}
       else if(w==1)Toast.makeText(this,scene.size()+" scene nodes · "+projectStore.list().length+" saved projects",Toast.LENGTH_LONG).show();
-      else {viewport.zoom=1;viewport.panX=viewport.panY=0;viewport.invalidate();}
+      else viewport.resetCamera();
     }).show();
   }
   void select(String s){selection.setText(s+"  ·  Inspector");if(extensionRegistry.isEnabled("auto-inspector"))inspector.setVisibility(View.VISIBLE);}
@@ -367,22 +367,194 @@ public final class OceanStudio3DActivity extends Activity {
   @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}\n\n  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
 
   final class StudioViewport extends View {
-    Paint p=new Paint(3); Paint line=new Paint(3); float yaw=-.45f,pitch=.52f,zoom=1f,panX=0,panY=0; String tool="Select"; float lastX,lastY; int pointers;
-    StudioViewport(Context c){super(c);line.setStrokeWidth(dp(1));setBackgroundColor(0xff161b20);}
-    void proj(Canvas c,float x,float z,float y,Paint paint){ }
-    @Override protected void onDraw(Canvas c){super.onDraw(c);int w=getWidth(),h=getHeight();float horizon=h*.36f+panY;
-      LinearGradient sky=new LinearGradient(0,0,0,horizon,0xff11171d,0xff29343d,Shader.TileMode.CLAMP);p.setShader(sky);c.drawRect(0,0,w,horizon,p);p.setShader(null);
-      p.setColor(0xff262b31);c.drawRect(0,horizon,w,h,p);
-      float spacing=dp(34)*zoom;float vanX=w*.50f+panX;
-      if(extensionRegistry.isEnabled("grid-overlay")){line.setColor(0xff3a4148);for(int i=-20;i<=20;i++){float bx=vanX+i*spacing;c.drawLine(vanX,horizon,bx,h,line);}for(int i=1;i<22;i++){float t=i/22f;float yy=horizon+(h-horizon)*(t*t);c.drawLine(0,yy,w,yy,line);}}
-      if(extensionRegistry.isEnabled("axis-guides")){line.setColor(0xff785454);c.drawLine(0,horizon+(h-horizon)*.62f,w,horizon+(h-horizon)*.62f,line);line.setColor(0xff506d82);c.drawLine(vanX,horizon,vanX,h,line);}
-      if(extensionRegistry.isEnabled("spawn-marker"))drawSpawn(c,w*.5f+panX,h*.62f+panY);
-      if(extensionRegistry.isEnabled("primitive-preview"))drawCube(c,w*.64f+panX,h*.57f+panY,dp(58)*zoom);
-      if(extensionRegistry.isEnabled("viewport-hud")){p.setColor(0xcc0a0a0a);c.drawRoundRect(dp(12),dp(66),dp(205),dp(102),dp(10),dp(10),p);p.setColor(WHITE);p.setTextSize(dp(12));c.drawText("Perspective  ·  "+tool,dp(24),dp(89),p);}
+    final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),line=new Paint(Paint.ANTI_ALIAS_FLAG);
+    final LinkedHashMap<Long,RectF> hitRects=new LinkedHashMap<>();
+    float yaw=StudioMath3D.radians(-35f),pitch=StudioMath3D.radians(27f),distance=13f;
+    float targetX=0f,targetY=.8f,targetZ=0f;
+    String tool="Select";
+    float lastX,lastY,lastSpan; boolean moved;
+    StudioMath3D.Camera camera;
+
+    final class Face {
+      int[] idx; float depth; int color;
+      Face(int[] idx,float depth,int color){this.idx=idx;this.depth=depth;this.color=color;}
     }
-    void drawCube(Canvas c,float x,float y,float s){p.setColor(0xff778fa4);c.drawRect(x-s/2,y-s/2,x+s/2,y+s/2,p);p.setColor(0xff92a8ba);Path q=new Path();q.moveTo(x-s/2,y-s/2);q.lineTo(x-s*.25f,y-s*.72f);q.lineTo(x+s*.75f,y-s*.72f);q.lineTo(x+s/2,y-s/2);q.close();c.drawPath(q,p);p.setColor(0xff52697d);Path r=new Path();r.moveTo(x+s/2,y-s/2);r.lineTo(x+s*.75f,y-s*.72f);r.lineTo(x+s*.75f,y+s*.28f);r.lineTo(x+s/2,y+s/2);r.close();c.drawPath(r,p);}
-    void drawSpawn(Canvas c,float x,float y){float ww=dp(120)*zoom,hh=dp(54)*zoom;p.setColor(0xffd8dadd);c.drawRoundRect(x-ww/2,y-hh/2,x+ww/2,y+hh/2,dp(9),dp(9),p);p.setColor(0xff202226);p.setStrokeWidth(dp(4));for(int i=0;i<8;i++){double a=i*Math.PI/4;c.drawLine(x,y,x+(float)Math.cos(a)*ww*.28f,y+(float)Math.sin(a)*hh*.34f,p);}c.drawCircle(x,y,dp(5),p);}
+
+    StudioViewport(Context c){super(c);line.setStrokeWidth(dp(1));setBackgroundColor(0xff12161b);}
+
+    void resetCamera(){yaw=StudioMath3D.radians(-35f);pitch=StudioMath3D.radians(27f);distance=13f;targetX=0;targetY=.8f;targetZ=0;invalidate();}
+
+    @Override protected void onDraw(Canvas canvas){
+      super.onDraw(canvas);
+      int w=getWidth(),h=getHeight();if(w<=0||h<=0)return;
+      camera=StudioMath3D.orbit(new StudioMath3D.Vec3(targetX,targetY,targetZ),yaw,pitch,distance,52f);
+
+      LinearGradient sky=new LinearGradient(0,0,0,h,0xff10151a,0xff262c32,Shader.TileMode.CLAMP);
+      p.setShader(sky);canvas.drawRect(0,0,w,h,p);p.setShader(null);
+
+      drawBaseplate(canvas,w,h);
+      if(extensionRegistry.isEnabled("grid-overlay"))drawGrid(canvas,w,h);
+      if(extensionRegistry.isEnabled("axis-guides"))drawAxes(canvas,w,h);
+
+      hitRects.clear();
+      for(StudioScene.Node n:scene.all()){
+        if(!n.visible||n.type.equals("plane"))continue;
+        if(n.type.equals("spawn")){
+          if(extensionRegistry.isEnabled("spawn-marker"))drawSpawn3D(canvas,n,w,h);
+        }else if(n.type.equals("camera"))drawMarkerBox(canvas,n,w,h,0xffd8c46c,.35f,.35f,.55f);
+        else if(n.type.equals("light"))drawMarkerBox(canvas,n,w,h,0xffffe8a3,.3f,.3f,.3f);
+        else if(n.type.equals("empty"))drawGizmo(canvas,n,w,h);
+        else if(extensionRegistry.isEnabled("primitive-preview"))drawNodeBox(canvas,n,w,h);
+      }
+
+      if(extensionRegistry.isEnabled("viewport-hud")){
+        p.setColor(0xd20a0a0a);canvas.drawRoundRect(dp(12),dp(66),dp(250),dp(110),dp(10),dp(10),p);
+        p.setColor(WHITE);p.setTextSize(dp(12));canvas.drawText("Perspective · "+tool,dp(24),dp(86),p);
+        p.setColor(0xff9b9b9b);p.setTextSize(dp(10));canvas.drawText("FOV 52° · "+String.format(Locale.US,"%.1f",distance)+" m",dp(24),dp(102),p);
+      }
+    }
+
+    boolean project(StudioMath3D.Vec3 world,float[] out,int w,int h){return StudioMath3D.project(world,camera,w,h,out);}
+
+    void drawBaseplate(Canvas c,int w,int h){
+      StudioMath3D.Vec3[] q={new StudioMath3D.Vec3(-9,-.025f,-9),new StudioMath3D.Vec3(9,-.025f,-9),new StudioMath3D.Vec3(9,-.025f,9),new StudioMath3D.Vec3(-9,-.025f,9)};
+      float[][] s=new float[4][3];for(int i=0;i<4;i++)if(!project(q[i],s[i],w,h))return;
+      Path path=new Path();path.moveTo(s[0][0],s[0][1]);for(int i=1;i<4;i++)path.lineTo(s[i][0],s[i][1]);path.close();
+      p.setColor(0xff242a30);c.drawPath(path,p);
+    }
+
+    void drawGrid(Canvas c,int w,int h){
+      line.setStrokeWidth(dp(.7f));line.setColor(0xff3b4249);
+      final int r=10;
+      float[] a=new float[3],b=new float[3];
+      for(int x=-r;x<=r;x++){
+        for(int z=-r;z<r;z++){
+          if(project(new StudioMath3D.Vec3(x,0,z),a,w,h)&&project(new StudioMath3D.Vec3(x,0,z+1),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
+        }
+      }
+      for(int z=-r;z<=r;z++){
+        for(int x=-r;x<r;x++){
+          if(project(new StudioMath3D.Vec3(x,0,z),a,w,h)&&project(new StudioMath3D.Vec3(x+1,0,z),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
+        }
+      }
+    }
+
+    void drawAxes(Canvas c,int w,int h){
+      drawWorldLine(c,new StudioMath3D.Vec3(-10,.012f,0),new StudioMath3D.Vec3(10,.012f,0),0xffa75454,w,h,dp(1.4f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,.012f,-10),new StudioMath3D.Vec3(0,.012f,10),0xff507ca0,w,h,dp(1.4f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,0,0),new StudioMath3D.Vec3(0,4,0),0xff63a66d,w,h,dp(1.4f));
+    }
+
+    void drawWorldLine(Canvas c,StudioMath3D.Vec3 a,StudioMath3D.Vec3 b,int color,int w,int h,float stroke){
+      float[] pa=new float[3],pb=new float[3];if(!project(a,pa,w,h)||!project(b,pb,w,h))return;
+      line.setColor(color);line.setStrokeWidth(stroke);c.drawLine(pa[0],pa[1],pb[0],pb[1],line);
+    }
+
+    StudioMath3D.Vec3[] boxCorners(StudioScene.Node n,float sx,float sy,float sz){
+      StudioMath3D.Vec3[] local={
+        new StudioMath3D.Vec3(-sx,-sy,-sz),new StudioMath3D.Vec3(sx,-sy,-sz),
+        new StudioMath3D.Vec3(sx,sy,-sz),new StudioMath3D.Vec3(-sx,sy,-sz),
+        new StudioMath3D.Vec3(-sx,-sy,sz),new StudioMath3D.Vec3(sx,-sy,sz),
+        new StudioMath3D.Vec3(sx,sy,sz),new StudioMath3D.Vec3(-sx,sy,sz)};
+      StudioMath3D.Vec3[] world=new StudioMath3D.Vec3[8];
+      for(int i=0;i<8;i++)world[i]=StudioMath3D.transformPoint(local[i],n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);
+      return world;
+    }
+
+    void drawNodeBox(Canvas c,StudioScene.Node n,int w,int h){drawBox(c,n,w,h,0xff73879a,.5f,.5f,.5f);}
+    void drawMarkerBox(Canvas c,StudioScene.Node n,int w,int h,int color,float sx,float sy,float sz){drawBox(c,n,w,h,color,sx,sy,sz);}
+
+    void drawBox(Canvas c,StudioScene.Node n,int w,int h,int base,float sx,float sy,float sz){
+      StudioMath3D.Vec3[] world=boxCorners(n,sx,sy,sz);
+      float[][] s=new float[8][3];boolean[] visible=new boolean[8];
+      float minX=Float.MAX_VALUE,minY=Float.MAX_VALUE,maxX=-Float.MAX_VALUE,maxY=-Float.MAX_VALUE;
+      for(int i=0;i<8;i++){visible[i]=project(world[i],s[i],w,h);if(visible[i]){minX=Math.min(minX,s[i][0]);minY=Math.min(minY,s[i][1]);maxX=Math.max(maxX,s[i][0]);maxY=Math.max(maxY,s[i][1]);}}
+      int[][] fi={{0,1,2,3},{4,5,6,7},{0,4,7,3},{1,5,6,2},{0,1,5,4},{3,2,6,7}};
+      int[] shade={0xff5f7181,0xff8094a6,0xff65798b,0xff526676,0xff485966,0xff91a4b4};
+      ArrayList<Face> faces=new ArrayList<>();
+      for(int k=0;k<fi.length;k++){
+        boolean ok=true;float depth=0;for(int idx:fi[k]){ok&=visible[idx];depth+=s[idx][2];}
+        if(ok)faces.add(new Face(fi[k],depth/4f,shade[k]));
+      }
+      Collections.sort(faces,(a,b)->Float.compare(b.depth,a.depth));
+      for(Face face:faces){
+        Path path=new Path();path.moveTo(s[face.idx[0]][0],s[face.idx[0]][1]);for(int j=1;j<face.idx.length;j++)path.lineTo(s[face.idx[j]][0],s[face.idx[j]][1]);path.close();
+        p.setColor(blendColor(face.color,base,.45f));c.drawPath(path,p);line.setColor(0xff27323a);line.setStrokeWidth(dp(.8f));c.drawPath(path,line);
+      }
+      if(minX!=Float.MAX_VALUE){
+        RectF rect=new RectF(minX-dp(8),minY-dp(8),maxX+dp(8),maxY+dp(8));hitRects.put(n.id,rect);
+        StudioScene.Node selected=scene.selected();
+        if(selected!=null&&selected.id==n.id){
+          line.setColor(0xfff0f0f0);line.setStrokeWidth(dp(1.7f));c.drawRect(rect,line);drawGizmo(c,n,w,h);
+        }
+      }
+    }
+
+    int blendColor(int a,int b,float t){
+      int ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255,br=(b>>16)&255,bg=(b>>8)&255,bb=b&255;
+      int r=(int)(ar*(1-t)+br*t),g=(int)(ag*(1-t)+bg*t),bl=(int)(ab*(1-t)+bb*t);
+      return 0xff000000|(r<<16)|(g<<8)|bl;
+    }
+
+    void drawGizmo(Canvas c,StudioScene.Node n,int w,int h){
+      StudioMath3D.Vec3 o=new StudioMath3D.Vec3(n.x,n.y,n.z);
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x+1.25f,n.y,n.z),0xffe05a5a,w,h,dp(2));
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y+1.25f,n.z),0xff63c173,w,h,dp(2));
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y,n.z+1.25f),0xff5f91e8,w,h,dp(2));
+    }
+
+    void drawSpawn3D(Canvas c,StudioScene.Node n,int w,int h){
+      StudioScene.Node fake=new StudioScene.Node(n.id,n.name,n.type);fake.x=n.x;fake.y=.08f+n.y;fake.z=n.z;fake.rx=n.rx;fake.ry=n.ry;fake.rz=n.rz;fake.sx=n.sx;fake.sy=n.sy;fake.sz=n.sz;
+      drawBox(c,fake,w,h,0xffd5d7da,1.45f,.08f,.8f);
+      float[] center=new float[3],tip=new float[3];
+      StudioMath3D.Vec3 wc=new StudioMath3D.Vec3(n.x,n.y+.18f,n.z);
+      if(project(wc,center,w,h)){
+        line.setColor(0xff202327);line.setStrokeWidth(dp(2));
+        for(int i=0;i<8;i++){double a=i*Math.PI/4;StudioMath3D.Vec3 wt=new StudioMath3D.Vec3(n.x+(float)Math.cos(a)*.65f,n.y+.18f,n.z+(float)Math.sin(a)*.65f);if(project(wt,tip,w,h))c.drawLine(center[0],center[1],tip[0],tip[1],line);}
+      }
+    }
+
     void addPrimitive(String s){invalidate();Toast.makeText(OceanStudio3DActivity.this,s+" added to scene",Toast.LENGTH_SHORT).show();}
-    @Override public boolean onTouchEvent(android.view.MotionEvent e){pointers=e.getPointerCount();if(e.getActionMasked()==MotionEvent.ACTION_DOWN){lastX=e.getX();lastY=e.getY();if(e.getY()>getHeight()*.48f&&e.getX()>getWidth()*.54f)select("Cube");else if(e.getY()>getHeight()*.48f)select("Spawn");return true;}if(e.getActionMasked()==MotionEvent.ACTION_MOVE){float dx=e.getX()-lastX,dy=e.getY()-lastY;if(pointers>1){if(extensionRegistry.isEnabled("multitouch-pan")){panX+=dx*.5f;panY+=dy*.5f;}}else if(extensionRegistry.isEnabled("touch-orbit")){yaw+=dx*.006f;pitch+=dy*.006f;panX+=dx*.12f;}lastX=e.getX();lastY=e.getY();invalidate();return true;}return true;}
+
+    float span(MotionEvent e){if(e.getPointerCount()<2)return 0;float dx=e.getX(0)-e.getX(1),dy=e.getY(0)-e.getY(1);return (float)Math.sqrt(dx*dx+dy*dy);}
+
+    @Override public boolean onTouchEvent(MotionEvent e){
+      int action=e.getActionMasked();
+      if(action==MotionEvent.ACTION_DOWN){
+        lastX=e.getX();lastY=e.getY();lastSpan=0;moved=false;return true;
+      }
+      if(action==MotionEvent.ACTION_POINTER_DOWN&&e.getPointerCount()>=2){
+        lastX=(e.getX(0)+e.getX(1))*.5f;lastY=(e.getY(0)+e.getY(1))*.5f;lastSpan=span(e);moved=true;return true;
+      }
+      if(action==MotionEvent.ACTION_MOVE){
+        if(e.getPointerCount()>=2){
+          float mx=(e.getX(0)+e.getX(1))*.5f,my=(e.getY(0)+e.getY(1))*.5f,dx=mx-lastX,dy=my-lastY;
+          if(extensionRegistry.isEnabled("multitouch-pan")){
+            StudioMath3D.Vec3 right=camera.right,up=camera.up;float scale=distance*.0018f;
+            targetX-=right.x*dx*scale;targetY+=up.y*dy*scale;targetZ-=right.z*dx*scale;
+          }
+          float now=span(e);if(lastSpan>1&&now>1){distance=StudioMath3D.clamp(distance*(lastSpan/now),2f,60f);}lastSpan=now;lastX=mx;lastY=my;moved=true;invalidate();return true;
+        }
+        float dx=e.getX()-lastX,dy=e.getY()-lastY;
+        if(Math.abs(dx)+Math.abs(dy)>dp(2))moved=true;
+        if(extensionRegistry.isEnabled("touch-orbit")){
+          yaw-=dx*.007f;pitch=StudioMath3D.clamp(pitch-dy*.0055f,StudioMath3D.radians(-80f),StudioMath3D.radians(80f));
+        }
+        lastX=e.getX();lastY=e.getY();invalidate();return true;
+      }
+      if(action==MotionEvent.ACTION_UP){
+        if(!moved){
+          ArrayList<Map.Entry<Long,RectF>> entries=new ArrayList<>(hitRects.entrySet());
+          for(int i=entries.size()-1;i>=0;i--){
+            Map.Entry<Long,RectF> entry=entries.get(i);
+            if(entry.getValue().contains(e.getX(),e.getY())){
+              scene.select(entry.getKey());StudioScene.Node n=scene.selected();if(n!=null)select(n.name);invalidate();return true;
+            }
+          }
+        }
+        return true;
+      }
+      return true;
+    }
   }
 }
