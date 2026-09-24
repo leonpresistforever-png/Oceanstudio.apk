@@ -412,3 +412,57 @@ Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpConvert(
     o << "\"}";
     return toJString(env, o.str());
 }
+
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpProcess(
+        JNIEnv* env, jclass, jstring jinput, jstring joutput, jint jmode) {
+    const std::string input = fromJString(env, jinput);
+    const std::string output = fromJString(env, joutput);
+    int mode = (int)jmode;
+
+    unsigned int flags = aiProcess_ValidateDataStructure | aiProcess_Triangulate;
+    const char* operation = "process";
+    switch (mode) {
+        case 1: operation = "triangulate"; break;
+        case 2: operation = "smooth-normals"; flags |= aiProcess_GenSmoothNormals; break;
+        case 3: operation = "tangents"; flags |= aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace; break;
+        case 4: operation = "join-identical"; flags |= aiProcess_JoinIdenticalVertices; break;
+        case 5: operation = "cache-locality"; flags |= aiProcess_JoinIdenticalVertices | aiProcess_ImproveCacheLocality; break;
+        case 6: operation = "optimize-meshes"; flags |= aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes; break;
+        case 7: operation = "optimize-graph"; flags |= aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph; break;
+        case 8: operation = "remove-redundant-materials"; flags |= aiProcess_RemoveRedundantMaterials; break;
+        case 9: operation = "flip-uvs"; flags |= aiProcess_FlipUVs; break;
+        case 10: operation = "repair-invalid"; flags |= aiProcess_FindDegenerates | aiProcess_FindInvalidData | aiProcess_JoinIdenticalVertices; break;
+        default: return toJString(env, errorJson("assimp", "unknown process mode"));
+    }
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(input, flags);
+    if (!scene) return toJString(env, errorJson("assimp", importer.GetErrorString()));
+
+    Assimp::Exporter exporter;
+    aiReturn result = exporter.Export(scene, "glb2", output);
+    if (result != aiReturn_SUCCESS) {
+        return toJString(env, errorJson("assimp", exporter.GetErrorString()));
+    }
+
+    size_t vertices = 0, faces = 0;
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        const aiMesh* m = scene->mMeshes[i];
+        if (!m) continue;
+        vertices += m->mNumVertices;
+        faces += m->mNumFaces;
+    }
+
+    std::ostringstream o;
+    o << "{\"ok\":true,\"tool\":\"assimp\",\"operation\":\"" << operation << "\","
+      << "\"meshes\":" << scene->mNumMeshes << ",\"vertices\":" << vertices
+      << ",\"faces\":" << faces << ",\"output\":\"";
+    for (char ch : output) {
+        if (ch == '\"' || ch == '\\') o << '\\';
+        o << ch;
+    }
+    o << "\"}";
+    return toJString(env, o.str());
+}
