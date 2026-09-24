@@ -28,6 +28,7 @@ public final class StudioOpenSourceTools {
   public static native String nativeAssimpInspect(String path);
   public static native String nativeAssimpConvert(String inputPath,String outputPath,String formatId);
   public static native String nativeAssimpProcess(String inputPath,String outputPath,int mode);
+  public static native String nativeXatlasUvObj(String inputPath,String outputPath);
 
   public static String inspectGltf(String path){return LOADED?nativeInspectGltf(path):error();}
   public static String simplifyGltf(String path,float ratio){return LOADED?nativeSimplifyGltf(path,ratio):error();}
@@ -39,6 +40,7 @@ public final class StudioOpenSourceTools {
   public static String assimpInspect(String path){return LOADED?nativeAssimpInspect(path):error();}
   public static String assimpConvert(String inputPath,String outputPath,String formatId){return LOADED?nativeAssimpConvert(inputPath,outputPath,formatId):error();}
   public static String assimpProcess(String inputPath,String outputPath,int mode){return LOADED?nativeAssimpProcess(inputPath,outputPath,mode):error();}
+  public static String xatlasUvObj(String inputPath,String outputPath){return LOADED?nativeXatlasUvObj(inputPath,outputPath):error();}
   private static String error(){return "{\"ok\":false,\"error\":\"native open-source toolchain unavailable\"}";}
 
   public static File createImportSession(Context context) throws IOException {
