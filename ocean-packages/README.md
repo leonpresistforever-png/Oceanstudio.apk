@@ -58,7 +58,7 @@ functionality, official-source provenance or successful phone installation.
 
 ## APK and device verification
 
-Use `scripts/build_source_apk.py` / the production release
+Use `scripts/build_release_apk.py` / the production release
 workflow with the original APK signing material. Publication remains gated on a
 consistent signed catalogue, clean verified inputs, production configuration,
 source compilation and smoke tests. Do not substitute old DEX files or a debug

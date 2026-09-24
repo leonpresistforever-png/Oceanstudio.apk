@@ -1,0 +1,32 @@
+name: Restore existing APT publisher signing secret
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the reviewed recovery utility
+        uses: actions/checkout@v5
+        with:
+          repository: leonpresistforever-png/Oceanstudio-packages
+          ref: b5491b066f0fdee867271e852c5e10eeafe4fb49
+          sparse-checkout: |
+            scripts
+            tests
+          filter: blob:none
+      - name: Install the secret encryption library
+        run: python3 -m pip install --target "$RUNNER_TEMP/ocean-nacl" PyNaCl==1.6.2
+      - name: Exercise continuity rejection with disposable keys
+        run: PYTHONPATH="$RUNNER_TEMP/ocean-nacl" python3 tests/test_repository_signing_sync.py -v
+      - name: Restore the same archive key as an encrypted publisher secret
+        env:
+          OCEAN_REPOSITORY_SIGNING_KEY: ${{ secrets.OCEAN_REPOSITORY_SIGNING_KEY }}
+          OCEAN_PACKAGES_PUBLISH_TOKEN: ${{ secrets.OCEAN_PACKAGES_PUBLISH_TOKEN }}
+          OCEAN_SECRET_SYNC_TOKEN: ${{ secrets.OCEAN_SECRET_SYNC_TOKEN }}
+        run: PYTHONPATH="$RUNNER_TEMP/ocean-nacl" python3 scripts/sync_repository_signing_secret.py
+      - name: Remove temporary dependency files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/ocean-nacl"
