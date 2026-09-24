@@ -6,9 +6,9 @@ public final class StudioScene {
   public static final class Node {
     public final long id; public String name,type;
     public float x,y,z,rx,ry,rz,sx=1,sy=1,sz=1;
-    public boolean visible=true,locked=false; public String sourcePath="",metadata="";
+    public boolean visible=true,locked=false; public String sourcePath="",metadata="",previewPath="";
     Node(long i,String n,String t){id=i;name=n;type=t;}
-    Node copy(){Node q=new Node(id,name,type);q.x=x;q.y=y;q.z=z;q.rx=rx;q.ry=ry;q.rz=rz;q.sx=sx;q.sy=sy;q.sz=sz;q.visible=visible;q.locked=locked;q.sourcePath=sourcePath;q.metadata=metadata;return q;}
+    Node copy(){Node q=new Node(id,name,type);q.x=x;q.y=y;q.z=z;q.rx=rx;q.ry=ry;q.rz=rz;q.sx=sx;q.sy=sy;q.sz=sz;q.visible=visible;q.locked=locked;q.sourcePath=sourcePath;q.metadata=metadata;q.previewPath=previewPath;return q;}
   }
   private final LinkedHashMap<Long,Node> nodes=new LinkedHashMap<>();
   private final ArrayDeque<State> undo=new ArrayDeque<>(),redo=new ArrayDeque<>();
@@ -22,6 +22,7 @@ public final class StudioScene {
   public Node add(String name,String type){checkpoint();return rawAdd(name,type);}
   public Node addImported(String name,String type,String sourcePath){checkpoint();Node n=rawAdd(name,type);n.sourcePath=sourcePath==null?"":sourcePath;return n;}
   public boolean setMetadata(long id,String metadata){Node n=nodes.get(id);if(n==null)return false;n.metadata=metadata==null?"":metadata;return true;}
+  public boolean setPreviewPath(long id,String path){Node n=nodes.get(id);if(n==null)return false;n.previewPath=path==null?"":path;return true;}
   public boolean remove(long id){if(!nodes.containsKey(id))return false;checkpoint();nodes.remove(id);if(Objects.equals(selected,id))selected=null;return true;}
   public Node selected(){return selected==null?null:nodes.get(selected);}
   public void select(long id){if(nodes.containsKey(id))selected=id;}
@@ -46,6 +47,6 @@ public final class StudioScene {
   public boolean undo(){if(undo.isEmpty())return false;redo.push(capture());restore(undo.pop());return true;}
   public boolean redo(){if(redo.isEmpty())return false;undo.push(capture());restore(redo.pop());return true;}
   public boolean canUndo(){return !undo.isEmpty();}public boolean canRedo(){return !redo.isEmpty();}
-  public String snapshot(){StringBuilder b=new StringBuilder();b.append("{\"nodes\":[");boolean first=true;for(Node n:nodes.values()){if(!first)b.append(',');first=false;b.append("{\"id\":").append(n.id).append(",\"name\":\"").append(escape(n.name)).append("\",\"type\":\"").append(escape(n.type)).append("\",\"p\":[").append(n.x).append(',').append(n.y).append(',').append(n.z).append("],\"r\":[").append(n.rx).append(',').append(n.ry).append(',').append(n.rz).append("],\"s\":[").append(n.sx).append(',').append(n.sy).append(',').append(n.sz).append("],\"visible\":").append(n.visible).append(",\"locked\":").append(n.locked).append(",\"sourcePath\":\"").append(escape(n.sourcePath)).append("\",\"metadata\":\"").append(escape(n.metadata)).append("\"}");}return b.append("]}").toString();}
+  public String snapshot(){StringBuilder b=new StringBuilder();b.append("{\"nodes\":[");boolean first=true;for(Node n:nodes.values()){if(!first)b.append(',');first=false;b.append("{\"id\":").append(n.id).append(",\"name\":\"").append(escape(n.name)).append("\",\"type\":\"").append(escape(n.type)).append("\",\"p\":[").append(n.x).append(',').append(n.y).append(',').append(n.z).append("],\"r\":[").append(n.rx).append(',').append(n.ry).append(',').append(n.rz).append("],\"s\":[").append(n.sx).append(',').append(n.sy).append(',').append(n.sz).append("],\"visible\":").append(n.visible).append(",\"locked\":").append(n.locked).append(",\"sourcePath\":\"").append(escape(n.sourcePath)).append("\",\"metadata\":\"").append(escape(n.metadata)).append("\",\"previewPath\":\"").append(escape(n.previewPath)).append("\"}");}return b.append("]}").toString();}
   private String escape(String s){return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r").replace("\t","\\t");}
 }
