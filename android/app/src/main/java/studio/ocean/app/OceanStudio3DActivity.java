@@ -18,17 +18,22 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
-  static final int REQ_IMPORT=771;
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
+  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="";
+  static final int REQ_IMPORT=771,REQ_EXPORT=772;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
   void applySystemBars(){
     boolean dark=extensionRegistry!=null&&extensionRegistry.isEnabled("dark-system-bars");
     getWindow().setStatusBarColor(dark?BLACK:0xff202020);
@@ -54,7 +59,7 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void buildBottom(){
     bottom=new LinearLayout(this);bottom.setGravity(Gravity.CENTER);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));bottom.setBackgroundColor(0xdd070707);
-    String[] tools={"＋ Add","Asset","Import","Export","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Plugin","Extensions","Settings"};
+    String[] tools={"＋ Add","Asset","Import","Engine","Export","Tools","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Plugin","Extensions","Settings"};
     for(String s:tools){TextView b=button(s);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(38));lp.rightMargin=dp(6);bottom.addView(b,lp);b.setOnClickListener(v->toolAction(s));}
     HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);hs.addView(bottom);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);root.addView(hs,bp);
   }
@@ -73,6 +78,9 @@ public final class OceanStudio3DActivity extends Activity {
     else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
     else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();
     else if(s.equals("Import")||s.equals("Asset"))openImporter();
+    else if(s.equals("Engine"))showEngineTargets();
+    else if(s.equals("Export"))showExportCenter();
+    else if(s.equals("Tools"))showQuickTools();
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
   }
   void openImporter(){
@@ -83,6 +91,10 @@ public final class OceanStudio3DActivity extends Activity {
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
+    if(request==REQ_EXPORT){
+      if(result==RESULT_OK&&data!=null&&data.getData()!=null)performPendingExport(data.getData());
+      return;
+    }
     if(request!=REQ_IMPORT||result!=RESULT_OK||data==null)return;
     ArrayList<Uri> uris=new ArrayList<>();
     if(data.getData()!=null)uris.add(data.getData());
@@ -154,6 +166,84 @@ public final class OceanStudio3DActivity extends Activity {
       });
     });
   }
+  void showEngineTargets(){
+    List<StudioEngineTargetRegistry.Target> all=engineTargetRegistry.all();
+    String[] labels=new String[all.size()];
+    StudioEngineTargetRegistry.Target selected=engineTargetRegistry.selected();
+    for(int i=0;i<all.size();i++){
+      StudioEngineTargetRegistry.Target t=all.get(i);
+      labels[i]=(t.id.equals(selected.id)?"✓  ":"")+t.name+"\n"+t.description;
+    }
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Target Engine").setItems(labels,(d,w)->{
+      StudioEngineTargetRegistry.Target t=all.get(w);engineTargetRegistry.select(t.id);
+      Toast.makeText(this,"Target: "+t.name+" · "+t.upAxis+" up · "+t.forwardAxis+" forward · "+t.handedness+"-handed",Toast.LENGTH_LONG).show();
+    }).setNegativeButton("Close",null).show();
+  }
+
+  void showQuickTools(){
+    List<StudioQuickToolRegistry.Tool> all=quickToolRegistry.all();
+    String[] labels=new String[all.size()];
+    for(int i=0;i<all.size();i++)labels[i]=all.get(i).name+"\n"+all.get(i).description;
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Quick Tools · 10").setItems(labels,(d,w)->{
+      StudioQuickToolRegistry.Result r=quickToolRegistry.run(all.get(w).id,scene);
+      if(r.changed)viewport.invalidate();Toast.makeText(this,r.message,Toast.LENGTH_SHORT).show();
+    }).setNegativeButton("Close",null).show();
+  }
+
+  void showExportCenter(){
+    StudioScene.Node node=scene.selected();
+    if(node==null||node.sourcePath==null||node.sourcePath.isEmpty()){Toast.makeText(this,"Select an imported model first",Toast.LENGTH_SHORT).show();return;}
+    Toast.makeText(this,"Reading compiled export formats…",Toast.LENGTH_SHORT).show();
+    externalExecutor.execute(()->{
+      try{
+        JSONObject rootJson=new JSONObject(StudioOpenSourceTools.assimpExportFormats());
+        if(!rootJson.optBoolean("ok"))throw new IllegalStateException(rootJson.optString("error","Assimp unavailable"));
+        JSONArray formats=rootJson.getJSONArray("formats");
+        ArrayList<JSONObject> options=new ArrayList<>();LinkedHashSet<String> ids=new LinkedHashSet<>();
+        for(int i=0;i<formats.length();i++){JSONObject o=formats.getJSONObject(i);options.add(o);ids.add(o.optString("id"));}
+        String preferred=engineTargetRegistry.choosePreferred(ids);
+        StudioEngineTargetRegistry.Target target=engineTargetRegistry.selected();
+        String[] labels=new String[options.size()];
+        for(int i=0;i<options.size();i++){
+          JSONObject o=options.get(i);String id=o.optString("id"),ext=o.optString("extension");
+          labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]";
+        }
+        runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+          .setTitle("Export · "+target.name+" · "+options.size()+" formats")
+          .setMessage("Target profile: "+target.upAxis+" up, "+target.forwardAxis+" forward, "+target.handedness+"-handed. Ocean does not pre-rotate portable formats; target importers handle their documented coordinate conversion.")
+          .setItems(labels,(d,w)->{
+            JSONObject o=options.get(w);beginExport(node,o.optString("id"),o.optString("extension"));
+          }).setNegativeButton("Close",null).show());
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export formats unavailable: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+    });
+  }
+
+  void beginExport(StudioScene.Node node,String formatId,String extension){
+    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportExt=extension==null||extension.isEmpty()?"bin":extension;
+    String base=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=base.lastIndexOf('.');if(dot>0)base=base.substring(0,dot);
+    Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,base+"."+pendingExportExt);startActivityForResult(i,REQ_EXPORT);
+  }
+
+  void performPendingExport(Uri destination){
+    final StudioScene.Node node=pendingExportNode;final String format=pendingExportFormatId,ext=pendingExportExt;
+    if(node==null||format==null||format.isEmpty())return;
+    externalExecutor.execute(()->{
+      File temp=null;
+      try{
+        File dir=new File(getCacheDir(),"studio-export");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create export workspace");
+        temp=new File(dir,"export-"+System.currentTimeMillis()+"."+ext);
+        String result=StudioOpenSourceTools.assimpConvert(node.sourcePath,temp.getAbsolutePath(),format);
+        JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
+        try(FileInputStream in=new FileInputStream(temp);OutputStream out=getContentResolver().openOutputStream(destination,"w")){
+          if(out==null)throw new java.io.IOException("Cannot open destination");
+          byte[] buf=new byte[65536];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.flush();
+        }
+        runOnUiThread(()->Toast.makeText(this,"Exported "+format+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+      finally{if(temp!=null)temp.delete();pendingExportNode=null;pendingExportFormatId="";pendingExportExt="";}
+    });
+  }
+
   void showOutliner(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(12),dp(8),dp(12),dp(8));
     for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});row.setOnLongClickListener(v->{if(n.metadata!=null&&!n.metadata.isEmpty())new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(n.name+" · analysis").setMessage(n.metadata).setPositiveButton("Done",null).show();else Toast.makeText(this,"No analysis metadata yet",Toast.LENGTH_SHORT).show();return true;});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
@@ -168,13 +258,13 @@ public final class OceanStudio3DActivity extends Activity {
       LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(58));lp.bottomMargin=dp(6);box.addView(row,lp);
       row.setOnClickListener(v->runPlugin(p));
     }
-    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · 15");extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · 25");extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
     for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
       LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
       LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);
       row.setOnClickListener(v->runExternalPlugin(p));
     }
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · 30").setView(sv).setNegativeButton("Close",null).show();
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · 40").setView(sv).setNegativeButton("Close",null).show();
   }
   LinearLayout pluginRow(String nameText,String descText,String sourceText){
     LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(5),dp(12),dp(5));row.setBackground(bg(PANEL,12,BORDER));
@@ -186,12 +276,33 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void runExternalPlugin(StudioExternalPluginRegistry.Plugin p){
     StudioScene.Node node=scene.selected();
-    if(node==null){Toast.makeText(this,"Select an imported asset first",Toast.LENGTH_SHORT).show();return;}
-    if(!p.accepts.equals(node.type)){Toast.makeText(this,p.name+" expects "+p.accepts+" · selected "+node.type,Toast.LENGTH_LONG).show();return;}
+    if(node==null||node.sourcePath==null||node.sourcePath.isEmpty()){Toast.makeText(this,"Select an imported asset first",Toast.LENGTH_SHORT).show();return;}
+    boolean accepts=p.accepts.equals(node.type)||(p.accepts.equals("*model")&&!node.type.equals("image")&&!node.type.equals("sidecar"));
+    if(!accepts){Toast.makeText(this,p.name+" expects "+p.accepts+" · selected "+node.type,Toast.LENGTH_LONG).show();return;}
     Toast.makeText(this,"Running "+p.name+"…",Toast.LENGTH_SHORT).show();
+    if(p.processMode>0){runAssimpProcessPlugin(p,node);return;}
     externalExecutor.execute(()->{
       String result=externalPluginRegistry.run(p,node);
       runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage(result).setPositiveButton("Done",null).show());
+    });
+  }
+  void runAssimpProcessPlugin(StudioExternalPluginRegistry.Plugin p,StudioScene.Node node){
+    externalExecutor.execute(()->{
+      try{
+        File dir=new File(getFilesDir(),"studio/processed");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create processed output directory");
+        String safe=node.name.replaceAll("[^A-Za-z0-9._-]","_");
+        int dot=safe.lastIndexOf('.');if(dot>0)safe=safe.substring(0,dot);
+        File out=new File(dir,System.currentTimeMillis()+"-"+safe+"-"+p.id+".glb");
+        String result=StudioOpenSourceTools.assimpProcess(node.sourcePath,out.getAbsolutePath(),p.processMode);
+        JSONObject j=new JSONObject(result);
+        if(j.optBoolean("ok")){
+          runOnUiThread(()->{
+            StudioScene.Node created=scene.addImported(out.getName(),"gltf",out.getAbsolutePath());
+            objects.add(created.name);viewport.invalidate();runExternalImportExtensions(created);
+            new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage("Created a processed GLB copy.\n\n"+result).setPositiveButton("Done",null).show();
+          });
+        }else runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name+" failed").setMessage(result).setPositiveButton("Done",null).show());
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Process failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
     });
   }
   void runPlugin(StudioPluginRegistry.Plugin p){
