@@ -8,6 +8,7 @@ import android.graphics.LinearGradient;
 import android.graphics.Shader;
 import android.os.Bundle;
 import android.content.Intent;
+import android.content.ClipData;
 import android.net.Uri;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
@@ -77,22 +78,38 @@ public final class OceanStudio3DActivity extends Activity {
   void openImporter(){
     Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
     i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"model/gltf-binary","model/gltf+json","model/obj","application/octet-stream","application/json","text/plain","image/*"});
+    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
     startActivityForResult(i,REQ_IMPORT);
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
-    if(request!=REQ_IMPORT||result!=RESULT_OK||data==null||data.getData()==null)return;
-    Uri uri=data.getData();if(extensionRegistry.isEnabled("persistent-import-access")){try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}}
-    String name=StudioOpenSourceTools.displayName(this,uri);
-    String low=name.toLowerCase(Locale.US);
-    String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":low.endsWith(".obj")?"obj":(low.endsWith(".png")||low.endsWith(".jpg")||low.endsWith(".jpeg")||low.endsWith(".bmp")||low.endsWith(".tga")||low.endsWith(".hdr"))?"image":"asset";
+    if(request!=REQ_IMPORT||result!=RESULT_OK||data==null)return;
+    ArrayList<Uri> uris=new ArrayList<>();
+    if(data.getData()!=null)uris.add(data.getData());
+    ClipData clips=data.getClipData();
+    if(clips!=null)for(int i=0;i<clips.getItemCount();i++){Uri u=clips.getItemAt(i).getUri();if(u!=null&&!uris.contains(u))uris.add(u);}
+    if(uris.isEmpty())return;
     if(!extensionRegistry.isEnabled("import-scene-nodes")){Toast.makeText(this,"Import node extension is disabled",Toast.LENGTH_SHORT).show();return;}
     try{
-      File local=StudioOpenSourceTools.materialize(this,uri,name);
-      StudioScene.Node node=scene.addImported(name,type,local.getAbsolutePath());
-      objects.add(name);viewport.invalidate();
-      Toast.makeText(this,"Imported "+name+" · analyzing open-source tools…",Toast.LENGTH_SHORT).show();
-      runExternalImportExtensions(node);
+      File session=StudioOpenSourceTools.createImportSession(this);
+      ArrayList<File> locals=new ArrayList<>();
+      ArrayList<String> names=new ArrayList<>();
+      for(Uri uri:uris){
+        if(extensionRegistry.isEnabled("persistent-import-access")){try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}}
+        String name=StudioOpenSourceTools.displayName(this,uri);
+        locals.add(StudioOpenSourceTools.materializeInto(this,uri,name,session));
+        names.add(name);
+      }
+      int sceneNodes=0;
+      for(int i=0;i<locals.size();i++){
+        String name=names.get(i),low=name.toLowerCase(Locale.US);
+        String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":low.endsWith(".obj")?"obj":(low.endsWith(".png")||low.endsWith(".jpg")||low.endsWith(".jpeg")||low.endsWith(".bmp")||low.endsWith(".tga")||low.endsWith(".hdr"))?"image":"sidecar";
+        if(type.equals("sidecar"))continue;
+        StudioScene.Node node=scene.addImported(name,type,locals.get(i).getAbsolutePath());
+        objects.add(name);sceneNodes++;runExternalImportExtensions(node);
+      }
+      viewport.invalidate();
+      Toast.makeText(this,"Imported "+uris.size()+" files · "+sceneNodes+" scene assets · sidecars preserved",Toast.LENGTH_SHORT).show();
     }catch(Exception ex){Toast.makeText(this,"Import failed: "+ex.getMessage(),Toast.LENGTH_LONG).show();}
   }
   void runExternalImportExtensions(StudioScene.Node node){
