@@ -22,6 +22,8 @@ public final class OceanPackageCatalog {
     // Exact bundled September 6 snapshot. Never replace an unknown APT/user index.
     private static final String LEGACY_INDEX_SHA256 =
             "b295347a9a330727be05529d08c6e90259091f8a7da7b95a5184722be47acb82";
+    private static final String PREVIOUS_6482_INDEX_SHA256 =
+            "b5a3ada5f67b4c2a1f4961fc0da20cbae359b0de2e2c38cc68c8561c24df04b5";
     public interface Assets { InputStream open(String name) throws IOException; }
     private OceanPackageCatalog() {}
 
@@ -65,7 +67,7 @@ public final class OceanPackageCatalog {
                 checkSignedIndex(release, compressed, packages);
                 // Verify every asset before changing any existing installation.
                 File keyring = new File(prefix, "etc/apt/keyrings/ocean.gpg");
-                if (!keyring.isFile()) atomicWrite(keyring, key);
+                if (!keyring.isFile() || !hash(Files.readAllBytes(keyring.toPath())).equals(required(metadata, "ocean.gpg_sha256"))) atomicWrite(keyring, key);
                 if (!sources.isFile() || sources.length() == 0) {
                     String source = "deb [signed-by=" + keyring.getAbsolutePath() + "] " + repository + " stable main\n";
                     atomicWrite(sources, source.getBytes(StandardCharsets.UTF_8));
@@ -87,6 +89,9 @@ public final class OceanPackageCatalog {
                 if (suffix.isEmpty() && !LEGACY_INDEX_SHA256.equals(bundledHash)
                         && file.length() == 509608
                         && LEGACY_INDEX_SHA256.equals(hash(Files.readAllBytes(file.toPath())))) continue;
+                if (suffix.isEmpty() && !PREVIOUS_6482_INDEX_SHA256.equals(bundledHash)
+                        && file.length() == 3781194
+                        && PREVIOUS_6482_INDEX_SHA256.equals(hash(Files.readAllBytes(file.toPath())))) continue;
                 return true;
             }
         }
