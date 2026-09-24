@@ -30,7 +30,7 @@ public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
   final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
-  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip;
+  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip; Set<String> assimpImportExtCache;
   static final int REQ_IMPORT=771,REQ_EXPORT=772;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
@@ -118,7 +118,7 @@ public final class OceanStudio3DActivity extends Activity {
       int sceneNodes=0;
       for(int i=0;i<locals.size();i++){
         String name=names.get(i),low=name.toLowerCase(Locale.US);
-        String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":low.endsWith(".obj")?"obj":(low.endsWith(".png")||low.endsWith(".jpg")||low.endsWith(".jpeg")||low.endsWith(".bmp")||low.endsWith(".tga")||low.endsWith(".hdr"))?"image":"sidecar";
+        String type=classifyImportedType(low);
         if(type.equals("sidecar"))continue;
         StudioScene.Node node=scene.addImported(name,type,locals.get(i).getAbsolutePath());
         objects.add(name);sceneNodes++;runExternalImportExtensions(node);
@@ -127,6 +127,30 @@ public final class OceanStudio3DActivity extends Activity {
       Toast.makeText(this,"Imported "+uris.size()+" files · "+sceneNodes+" scene assets · sidecars preserved",Toast.LENGTH_SHORT).show();
     }catch(Exception ex){Toast.makeText(this,"Import failed: "+ex.getMessage(),Toast.LENGTH_LONG).show();}
   }
+  String classifyImportedType(String low){
+    if(low.endsWith(".glb")||low.endsWith(".gltf"))return "gltf";
+    if(low.endsWith(".obj"))return "obj";
+    if(low.endsWith(".png")||low.endsWith(".jpg")||low.endsWith(".jpeg")||low.endsWith(".bmp")||low.endsWith(".tga")||low.endsWith(".hdr")||low.endsWith(".webp"))return "image";
+    return isAssimpModelExtension(low)?"model":"sidecar";
+  }
+
+  boolean isAssimpModelExtension(String lowerName){
+    if(assimpImportExtCache==null){
+      assimpImportExtCache=new HashSet<>();
+      try{
+        JSONObject j=new JSONObject(StudioOpenSourceTools.assimpImportExtensions());
+        String raw=j.optString("extensions","");
+        for(String token:raw.split(";")){
+          String x=token.trim().toLowerCase(Locale.US);
+          if(x.startsWith("*."))x=x.substring(2);else if(x.startsWith("."))x=x.substring(1);
+          if(!x.isEmpty())assimpImportExtCache.add(x);
+        }
+      }catch(Throwable ignored){}
+    }
+    int dot=lowerName.lastIndexOf('.');if(dot<0||dot==lowerName.length()-1)return false;
+    return assimpImportExtCache.contains(lowerName.substring(dot+1));
+  }
+
   void runExternalImportExtensions(StudioScene.Node node){
     externalExecutor.execute(()->{
       StringBuilder meta=new StringBuilder();
@@ -153,6 +177,8 @@ public final class OceanStudio3DActivity extends Activity {
           if(externalExtensionRegistry.isEnabled("auto-obj-summary"))meta.append("tinyobj: ").append(inspect).append('\n');
           if(externalExtensionRegistry.isEnabled("auto-obj-face-stats"))meta.append("faces: ").append(j.optLong("faces")).append(" · indices ").append(j.optLong("indices")).append('\n');
           if(externalExtensionRegistry.isEnabled("auto-obj-material-stats"))meta.append("materials: ").append(j.optInt("materials")).append(" · shapes ").append(j.optInt("shapes")).append('\n');
+        }else if(node.type.equals("model")){
+          if(externalExtensionRegistry.isEnabled("auto-assimp-summary"))meta.append("assimp: ").append(StudioOpenSourceTools.assimpInspect(node.sourcePath)).append('\n');
         }else if(node.type.equals("image")){
           String inspect=StudioOpenSourceTools.inspectImage(node.sourcePath);
           JSONObject j=new JSONObject(inspect);
@@ -408,7 +434,7 @@ public final class OceanStudio3DActivity extends Activity {
     for(StudioExtensionRegistry.Entry e:extensionRegistry.builtins()){
       CheckBox row=new CheckBox(this);row.setText(e.name+"   "+e.version+"\n"+e.description);row.setTextColor(WHITE);row.setTextSize(12);row.setChecked(extensionRegistry.isEnabled(e.id,e.enabled));row.setOnCheckedChangeListener((b,on)->{extensionRegistry.setEnabled(e.id,on);if(e.id.equals("dark-system-bars"))applySystemBars();viewport.invalidate();});box.addView(row,new LinearLayout.LayoutParams(-1,dp(58)));
     }
-    TextView externalTitle=new TextView(this);externalTitle.setText("EXTERNAL OPEN SOURCE · 15");externalTitle.setTextColor(MUTED);externalTitle.setTextSize(10);externalTitle.setLetterSpacing(.14f);box.addView(externalTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+    TextView externalTitle=new TextView(this);externalTitle.setText("EXTERNAL OPEN SOURCE · "+externalExtensionRegistry.all().size());externalTitle.setTextColor(MUTED);externalTitle.setTextSize(10);externalTitle.setLetterSpacing(.14f);box.addView(externalTitle,new LinearLayout.LayoutParams(-1,dp(34)));
     for(StudioExternalExtensionRegistry.Extension e:externalExtensionRegistry.all()){
       CheckBox row=new CheckBox(this);row.setText(e.name+"\n"+e.sourceRepo+" · "+e.tool+" · "+e.description);row.setTextColor(WHITE);row.setTextSize(11);row.setChecked(externalExtensionRegistry.isEnabled(e.id));row.setOnCheckedChangeListener((b,on)->externalExtensionRegistry.setEnabled(e.id,on));box.addView(row,new LinearLayout.LayoutParams(-1,dp(70)));
     }
