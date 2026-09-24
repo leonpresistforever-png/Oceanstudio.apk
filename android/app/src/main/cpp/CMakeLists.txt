@@ -63,6 +63,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(assimp)
 
+# xatlas powers real automatic UV charting/unwrapping.
+FetchContent_Declare(
+  xatlas_src
+  URL https://github.com/jpcy/xatlas/archive/f700c7790aaa030e794b52ba7791a05c085faf0c.tar.gz
+)
+FetchContent_GetProperties(xatlas_src)
+if(NOT xatlas_src_POPULATED)
+  FetchContent_Populate(xatlas_src)
+endif()
+add_library(xatlas STATIC ${xatlas_src_SOURCE_DIR}/source/xatlas/xatlas.cpp)
+target_include_directories(xatlas PUBLIC ${xatlas_src_SOURCE_DIR}/source/xatlas)
+
 add_library(oceanstudio_ext SHARED studio_external_tools.cpp)
 set_target_properties(oceanstudio_ext PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_include_directories(oceanstudio_ext PRIVATE
@@ -70,4 +82,4 @@ target_include_directories(oceanstudio_ext PRIVATE
   ${stb_SOURCE_DIR}
 )
 target_compile_options(oceanstudio_ext PRIVATE -Wall -Wextra)
-target_link_libraries(oceanstudio_ext log meshoptimizer tinyobjloader assimp)
+target_link_libraries(oceanstudio_ext log meshoptimizer tinyobjloader assimp xatlas)
