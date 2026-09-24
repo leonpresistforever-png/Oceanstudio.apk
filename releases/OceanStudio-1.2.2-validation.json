@@ -1,0 +1,14 @@
+{
+  "apk": "OceanStudio-1.2.2-arm64-debug.apk",
+  "sha256": "51975fd4a60c4133a83e1cc240d818cc3940b4a8b210bd558a3b7dbc1fa0fda2",
+  "bytes": 23712160,
+  "minSdkVersion": 28,
+  "targetSdkVersion": 28,
+  "applicationId": "studio.ocean.app",
+  "package_catalog_count": 6483,
+  "clean_open_source_repo": true,
+  "termux_services_purged": true,
+  "zipalign_verified": true,
+  "apksigner_verified": true,
+  "status": "READY_FOR_INSTALLATION"
+}
