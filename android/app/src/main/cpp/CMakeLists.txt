@@ -48,6 +48,21 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyobjloader)
 
+# Assimp supplies Ocean Studio's broad format import/export bridge.
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ZLIB ON CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT ON CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  assimp
+  URL https://github.com/assimp/assimp/archive/fb375dd8c0a032106a2122815fb18dffe0283721.tar.gz
+)
+FetchContent_MakeAvailable(assimp)
+
 add_library(oceanstudio_ext SHARED studio_external_tools.cpp)
 set_target_properties(oceanstudio_ext PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_include_directories(oceanstudio_ext PRIVATE
@@ -55,4 +70,4 @@ target_include_directories(oceanstudio_ext PRIVATE
   ${stb_SOURCE_DIR}
 )
 target_compile_options(oceanstudio_ext PRIVATE -Wall -Wextra)
-target_link_libraries(oceanstudio_ext log meshoptimizer tinyobjloader)
+target_link_libraries(oceanstudio_ext log meshoptimizer tinyobjloader assimp)
