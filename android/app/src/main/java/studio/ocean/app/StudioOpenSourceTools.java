@@ -23,12 +23,20 @@ public final class StudioOpenSourceTools {
   public static native String nativeVertexCacheGltf(String path);
   public static native String nativeInspectObj(String path);
   public static native String nativeInspectImage(String path);
+  public static native String nativeAssimpExportFormats();
+  public static native String nativeAssimpImportExtensions();
+  public static native String nativeAssimpInspect(String path);
+  public static native String nativeAssimpConvert(String inputPath,String outputPath,String formatId);
 
   public static String inspectGltf(String path){return LOADED?nativeInspectGltf(path):error();}
   public static String simplifyGltf(String path,float ratio){return LOADED?nativeSimplifyGltf(path,ratio):error();}
   public static String vertexCacheGltf(String path){return LOADED?nativeVertexCacheGltf(path):error();}
   public static String inspectObj(String path){return LOADED?nativeInspectObj(path):error();}
   public static String inspectImage(String path){return LOADED?nativeInspectImage(path):error();}
+  public static String assimpExportFormats(){return LOADED?nativeAssimpExportFormats():error();}
+  public static String assimpImportExtensions(){return LOADED?nativeAssimpImportExtensions():error();}
+  public static String assimpInspect(String path){return LOADED?nativeAssimpInspect(path):error();}
+  public static String assimpConvert(String inputPath,String outputPath,String formatId){return LOADED?nativeAssimpConvert(inputPath,outputPath,formatId):error();}
   private static String error(){return "{\"ok\":false,\"error\":\"native open-source toolchain unavailable\"}";}
 
   public static File createImportSession(Context context) throws IOException {
