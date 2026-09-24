@@ -1,6 +1,10 @@
 name: Restore existing APT publisher signing secret
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/restore-apt-signing.yml
 permissions:
   contents: read
 jobs:
