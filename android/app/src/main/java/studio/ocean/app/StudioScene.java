@@ -26,6 +26,7 @@ public final class StudioScene {
   public Node selected(){return selected==null?null:nodes.get(selected);}
   public void select(long id){if(nodes.containsKey(id))selected=id;}
   public Collection<Node> all(){return Collections.unmodifiableCollection(nodes.values());}
+  public List<Node> renderSnapshot(){ArrayList<Node> out=new ArrayList<>();for(Node n:nodes.values())out.add(n.copy());return out;}
   public int size(){return nodes.size();}
   public void transform(long id,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz){Node n=nodes.get(id);if(n==null||n.locked)return;checkpoint();n.x=x;n.y=y;n.z=z;n.rx=rx;n.ry=ry;n.rz=rz;n.sx=sx;n.sy=sy;n.sz=sz;}
   public Node duplicateSelected(){Node n=selected();if(n==null)return null;checkpoint();Node q=rawAdd(n.name+" Copy",n.type);q.x=n.x+1f;q.y=n.y;q.z=n.z;q.rx=n.rx;q.ry=n.ry;q.rz=n.rz;q.sx=n.sx;q.sy=n.sy;q.sz=n.sz;q.visible=n.visible;q.locked=false;return q;}
