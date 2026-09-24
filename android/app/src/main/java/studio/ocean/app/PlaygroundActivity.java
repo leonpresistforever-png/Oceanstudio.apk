@@ -120,7 +120,7 @@ public final class PlaygroundActivity extends Activity {
         TextView studio = pill("◇  Studio");
         studio.setTextColor(0xFFB2B2B2);
         studio.setContentDescription("Studio");
-        studio.setOnClickListener(v -> Toast.makeText(this,"Studio shell ready — behavior comes next.",Toast.LENGTH_SHORT).show());
+        studio.setOnClickListener(v -> startActivity(new Intent(this, OceanStudio3DActivity.class)));
         top.addView(studio,new LinearLayout.LayoutParams(-2,dp(38)));
 
         FrameLayout body = new FrameLayout(this);
