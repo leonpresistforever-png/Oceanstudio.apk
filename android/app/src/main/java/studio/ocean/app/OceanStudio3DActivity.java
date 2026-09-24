@@ -6,7 +6,7 @@ import android.graphics.*;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.LinearGradient;
 import android.graphics.Shader;
-import android.os.Bundle;
+import android.os.Bundle;\nimport android.content.Intent;\nimport android.net.Uri;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
@@ -16,7 +16,7 @@ import java.util.*;
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore;
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore;\n  static final int REQ_IMPORT=771;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
@@ -57,8 +57,21 @@ public final class OceanStudio3DActivity extends Activity {
     if(s.equals("Plugin"))showCatalog("Plugins",new String[]{"Mesh Doctor","UV Toolkit","Material Lab","Terrain Brush","Rig Helper","LOD Builder","Collision Tools","Scene Optimizer","GLTF Tools","Measure Pro","Procedural Shapes","Lighting Assistant"});
     else if(s.equals("Extensions"))showExtensions();
     else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
-    else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});\n    else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();
+    else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});\n    else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();\n    else if(s.equals("Import")||s.equals("Asset"))openImporter();
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  }
+  void openImporter(){
+    Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
+    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"model/gltf-binary","model/gltf+json","application/octet-stream","application/json","image/*"});
+    startActivityForResult(i,REQ_IMPORT);
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);
+    if(request!=REQ_IMPORT||result!=RESULT_OK||data==null||data.getData()==null)return;
+    Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}
+    String name=uri.getLastPathSegment();if(name==null)name="Imported Asset";
+    String low=name.toLowerCase(Locale.US);String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":"asset";
+    scene.add(name,type);objects.add(name);viewport.invalidate();Toast.makeText(this,"Imported "+name+" into project",Toast.LENGTH_SHORT).show();
   }
   void showOutliner(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(12),dp(8),dp(12),dp(8));
