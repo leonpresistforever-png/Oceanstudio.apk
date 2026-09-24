@@ -27,6 +27,7 @@ public final class StudioOpenSourceTools {
   public static native String nativeAssimpImportExtensions();
   public static native String nativeAssimpInspect(String path);
   public static native String nativeAssimpConvert(String inputPath,String outputPath,String formatId);
+  public static native String nativeAssimpConvertTransformed(String inputPath,String outputPath,String formatId,float px,float py,float pz,float rx,float ry,float rz,float sx,float sy,float sz);
   public static native String nativeAssimpProcess(String inputPath,String outputPath,int mode);
   public static native String nativeXatlasUvObj(String inputPath,String outputPath);
   public static native String nativeBuildPreviewMesh(String inputPath,String outputPath,int maxTriangles);
@@ -40,6 +41,7 @@ public final class StudioOpenSourceTools {
   public static String assimpImportExtensions(){return LOADED?nativeAssimpImportExtensions():error();}
   public static String assimpInspect(String path){return LOADED?nativeAssimpInspect(path):error();}
   public static String assimpConvert(String inputPath,String outputPath,String formatId){return LOADED?nativeAssimpConvert(inputPath,outputPath,formatId):error();}
+  public static String assimpConvertTransformed(String inputPath,String outputPath,String formatId,float px,float py,float pz,float rx,float ry,float rz,float sx,float sy,float sz){return LOADED?nativeAssimpConvertTransformed(inputPath,outputPath,formatId,px,py,pz,rx,ry,rz,sx,sy,sz):error();}
   public static String assimpProcess(String inputPath,String outputPath,int mode){return LOADED?nativeAssimpProcess(inputPath,outputPath,mode):error();}
   public static String xatlasUvObj(String inputPath,String outputPath){return LOADED?nativeXatlasUvObj(inputPath,outputPath):error();}
   public static String buildPreviewMesh(String inputPath,String outputPath,int maxTriangles){return LOADED?nativeBuildPreviewMesh(inputPath,outputPath,maxTriangles):error();}
