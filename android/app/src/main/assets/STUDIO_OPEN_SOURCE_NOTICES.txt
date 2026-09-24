@@ -46,3 +46,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Ocean Studio's Java/JNI bridge and UI integration are separate Ocean code.
+
+
+5. Assimp (Open Asset Import Library)
+   Source: https://github.com/assimp/assimp
+   Pinned release commit: fb375dd8c0a032106a2122815fb18dffe0283721 (v6.0.2)
+   Copyright (c) 2006-2021, assimp team
+   License: BSD 3-Clause
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that source redistributions retain the
+   copyright notice, conditions and disclaimer; binary redistributions reproduce
+   them in documentation/materials; and the assimp team/contributor names are
+   not used for endorsement without prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   WITHOUT EXPRESS OR IMPLIED WARRANTIES. THE COPYRIGHT OWNER OR CONTRIBUTORS
+   ARE NOT LIABLE FOR DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+   CONSEQUENTIAL DAMAGES ARISING FROM ITS USE.
