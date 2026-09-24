@@ -39,7 +39,8 @@ public final class StudioExternalPluginRegistry {
     new Plugin("assimp-optimize-graph","Optimize Scene Graph","assimp/assimp","Assimp","Optimize node graph and mesh structure for runtime use.","*model",7),
     new Plugin("assimp-clean-materials","Clean Redundant Materials","assimp/assimp","Assimp","Remove duplicate/redundant material slots and export a cleaned GLB.","*model",8),
     new Plugin("assimp-flip-uv","Flip UV Coordinates","assimp/assimp","Assimp","Flip texture V coordinates for pipelines that require opposite UV origin.","*model",9),
-    new Plugin("assimp-repair","Repair Invalid Geometry","assimp/assimp","Assimp","Find degenerate/invalid mesh data, weld vertices and export repaired GLB.","*model",10)
+    new Plugin("assimp-repair","Repair Invalid Geometry","assimp/assimp","Assimp","Find degenerate/invalid mesh data, weld vertices and export repaired GLB.","*model",10),
+    new Plugin("xatlas-auto-uv","Auto UV Unwrap 2048","jpcy/xatlas","xatlas","Generate real UV charts and packing with xatlas, then write a UV-unwrapped OBJ copy.","gltf")
   );
 
   public List<Plugin> all(){return plugins;}
