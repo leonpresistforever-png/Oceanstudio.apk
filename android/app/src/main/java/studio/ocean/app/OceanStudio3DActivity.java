@@ -16,11 +16,11 @@ import java.util.*;
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>();
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);objects.add("Baseplate");objects.add("Spawn");build();}
   void build(){
     root=new FrameLayout(this);root.setBackgroundColor(BLACK);setContentView(root);
     viewport=new StudioViewport(this);root.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
@@ -62,18 +62,18 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void showCatalog(String title,String[] items){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    for(String s:items){TextView b=button(s);b.setGravity(Gravity.CENTER_VERTICAL);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(44));lp.bottomMargin=dp(6);box.addView(b,lp);b.setOnClickListener(v->{if(title.equals("Add Object")){objects.add(s);viewport.addPrimitive(s);}else Toast.makeText(this,s+" ready",Toast.LENGTH_SHORT).show();});}
+    for(String s:items){TextView b=button(s);b.setGravity(Gravity.CENTER_VERTICAL);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(44));lp.bottomMargin=dp(6);box.addView(b,lp);b.setOnClickListener(v->{if(title.equals("Add Object")){objects.add(s);scene.add(s,s.toLowerCase(Locale.US));viewport.addPrimitive(s);}else Toast.makeText(this,s+" ready",Toast.LENGTH_SHORT).show();});}
     ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(title).setView(sv).setNegativeButton("Close",null).show();
   }
   void showAI(){
     LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(14),dp(12),dp(14),dp(12));
     TextView h=new TextView(this);h.setText("✦  Ocean AI\nScene-aware studio agent");h.setTextColor(WHITE);h.setTextSize(18);h.setTypeface(null,Typeface.BOLD);panel.addView(h,new LinearLayout.LayoutParams(-1,dp(58)));
-    TextView scope=new TextView(this);scope.setText("Can inspect the scene graph, selection, transforms, materials and Studio tools. Changes require an explicit command.");scope.setTextColor(MUTED);scope.setTextSize(12);panel.addView(scope,new LinearLayout.LayoutParams(-1,dp(52)));
+    TextView scope=new TextView(this);scope.setText("Can inspect the scene graph, selection, transforms, materials and Studio tools. Scene context is generated locally; changes require an explicit command.");scope.setTextColor(MUTED);scope.setTextSize(12);panel.addView(scope,new LinearLayout.LayoutParams(-1,dp(52)));
     aiInput=new EditText(this);aiInput.setHint("Build or edit this scene…");aiInput.setHintTextColor(0xff777777);aiInput.setTextColor(WHITE);aiInput.setBackground(bg(0xff151515,16,BORDER));aiInput.setPadding(dp(12),dp(8),dp(12),dp(8));panel.addView(aiInput,new LinearLayout.LayoutParams(-1,dp(70)));
     LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.RIGHT);TextView inspect=button("Inspect scene");TextView send=button("Run ↗");actions.addView(inspect,new LinearLayout.LayoutParams(-2,dp(40)));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-2,dp(40));sp.leftMargin=dp(8);actions.addView(send,sp);panel.addView(actions,new LinearLayout.LayoutParams(-1,dp(48)));
     AlertDialog d=new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setView(panel).create();
-    inspect.setOnClickListener(v->Toast.makeText(this,"Scene: "+objects.size()+" objects · tool "+viewport.tool,Toast.LENGTH_LONG).show());
-    send.setOnClickListener(v->{String q=aiInput.getText().toString().trim();if(q.isEmpty())return;history.add(q);Toast.makeText(this,"Agent command queued for Studio runtime",Toast.LENGTH_SHORT).show();});
+    inspect.setOnClickListener(v->Toast.makeText(this,"Scene: "+scene.size()+" objects · tool "+viewport.tool,Toast.LENGTH_LONG).show());
+    send.setOnClickListener(v->{String q=aiInput.getText().toString().trim();if(q.isEmpty())return;history.add(q+"\nCONTEXT "+scene.snapshot());Toast.makeText(this,"Agent command queued with scene context",Toast.LENGTH_SHORT).show();});
     d.show();
   }
   void handleTop(String s){if(s.equals("▶"))Toast.makeText(this,"Preview mode",Toast.LENGTH_SHORT).show();else if(s.equals("□"))finish();else Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
