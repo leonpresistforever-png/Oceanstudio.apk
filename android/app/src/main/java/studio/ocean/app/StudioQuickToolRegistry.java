@@ -48,6 +48,7 @@ public final class StudioQuickToolRegistry {
       }
       default:return new Result(false,"Unknown tool");
     }
-    return new Result(changed,changed?tools.stream().filter(t->t.id.equals(id)).findFirst().get().name+" applied":"Tool could not modify selection");
+    String name=id;for(Tool t:tools)if(t.id.equals(id)){name=t.name;break;}
+    return new Result(changed,changed?name+" applied":"Tool could not modify selection");
   }
 }
