@@ -46,5 +46,5 @@ public final class StudioScene {
   public boolean redo(){if(redo.isEmpty())return false;undo.push(capture());restore(redo.pop());return true;}
   public boolean canUndo(){return !undo.isEmpty();}public boolean canRedo(){return !redo.isEmpty();}
   public String snapshot(){StringBuilder b=new StringBuilder();b.append("{\"nodes\":[");boolean first=true;for(Node n:nodes.values()){if(!first)b.append(',');first=false;b.append("{\"id\":").append(n.id).append(",\"name\":\"").append(escape(n.name)).append("\",\"type\":\"").append(escape(n.type)).append("\",\"p\":[").append(n.x).append(',').append(n.y).append(',').append(n.z).append("],\"r\":[").append(n.rx).append(',').append(n.ry).append(',').append(n.rz).append("],\"s\":[").append(n.sx).append(',').append(n.sy).append(',').append(n.sz).append("],\"visible\":").append(n.visible).append(",\"locked\":").append(n.locked).append(",\"sourcePath\":\"").append(escape(n.sourcePath)).append("\",\"metadata\":\"").append(escape(n.metadata)).append("\"}");}return b.append("]}").toString();}
-  private String escape(String s){return s.replace("\\","\\\\").replace("\"","\\\"");}
+  private String escape(String s){return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r").replace("\t","\\t");}
 }
