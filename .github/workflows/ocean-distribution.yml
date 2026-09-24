@@ -28,6 +28,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Stop retired binary-cache distribution route
+        run: |
+          echo '::error::This legacy distribution route is retired. Use the pinned official-source builder and canonical signed publisher described in ocean-packages/README.md. No cached binaries were imported.'
+          exit 78
       - name: Validate catalogue, closure, downloader, and package lock
         run: |
           python3 ocean-packages/scripts/catalog.py validate

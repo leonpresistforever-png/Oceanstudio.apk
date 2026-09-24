@@ -1,75 +1,53 @@
 #!/usr/bin/env bash
-
-# Checksum-addressed, resumable downloader used by the pinned Android package
-# builder. A recipe may provide verified fallback URLs separated by `|`; every
-# candidate is accepted only after matching the recipe's SHA-256.
-termux_download() {
-	if [[ $# != 2 && $# != 3 ]]; then
-		echo "termux_download(): expected <URL[|MIRROR...]> <DESTINATION> [<SHA256>]" >&2
-		return 1
-	fi
-	local url_spec="$1" destination="$2" checksum="${3:-SKIP_CHECKSUM}"
-	local partial_file
-	mkdir -p "$TERMUX_PKG_TMPDIR"
-
-	verify() {
-		[[ -f "$1" ]] || return 1
-		# Recipe sources always provide a digest. The upstream builder also uses
-		# this helper for host packages selected from signed Ubuntu indexes; those
-		# calls intentionally retain its SKIP_CHECKSUM contract.
-		[[ "$checksum" == "SKIP_CHECKSUM" ]] && return 0
-		[[ -n "$checksum" ]] || return 1
-		[[ "$(sha256sum "$1" | cut -d' ' -f1)" == "$checksum" ]]
-	}
-
-	if verify "$destination"; then return 0; fi
-	rm -f "$destination"
-	IFS='|' read -r -a urls <<< "$url_spec"
-	for url in "${urls[@]}"; do
-		if [[ "$url" =~ ^file://(/[^/]+)+$ ]]; then
-			local source="${url:7}"
-			[[ -f "$source" ]] || continue
-			cp -f "$source" "$destination"
-			verify "$destination" || { rm -f "$destination"; continue; }
-		else
-			partial_file="$TERMUX_PKG_TMPDIR/.partial-${checksum:-$(printf %s "$url" | sha256sum | cut -d' ' -f1)}"
-			echo "Downloading $url"
-			# curl retries transient HTTP failures (including 429/5xx), connection
-			# resets, refused connections, and timeouts with exponential backoff.
-			# A stable partial file allows safe byte-range resume across attempts.
-			if ! curl --fail --location --continue-at - \
-				--retry 10 --retry-all-errors --retry-connrefused \
-				--retry-max-time 900 \
-				--connect-timeout 30 --max-time 1200 \
-				--speed-limit 1024 --speed-time 90 \
-				--output "$partial_file" "$url"; then
-				# Some verified mirrors do not implement byte ranges. Retry that
-				# candidate once from byte zero; the checksum remains authoritative.
-				rm -f "$partial_file"
-				if ! curl --fail --location \
-					--retry 10 --retry-all-errors --retry-connrefused \
-					--retry-max-time 900 \
-					--connect-timeout 30 --max-time 1200 \
-					--speed-limit 1024 --speed-time 90 \
-					--output "$partial_file" "$url"; then
-					echo "Source candidate failed after resumed and clean retries: $url" >&2
-				continue
-				fi
-			fi
-			if ! verify "$partial_file"; then
-				echo "Checksum rejected source candidate: $url" >&2
-				rm -f "$partial_file"
-				continue
-			fi
-			mv "$partial_file" "$destination"
-		fi
-
-		if verify "$destination"; then
-			return 0
-		fi
-	done
-	echo "All verified source candidates failed: $url_spec" >&2
-	return 1
+# Ocean source downloader. Every source, mirror and reused cache must match the
+# official upstream SHA256 supplied by the recipe; no unchecked mode exists.
+ocean_download() {
+    if [[ $# != 3 || ! "$3" =~ ^[0-9a-fA-F]{64}$ ]]; then
+        echo 'ocean_download: expected <HTTPS_URL[|MIRROR...]> <DESTINATION> <SHA256>' >&2
+        return 1
+    fi
+    local url_spec="$1" destination="$2" checksum="${3,,}"
+    local cache="${OCEAN_PKG_TMPDIR:-${TMPDIR:-/tmp}/ocean-source-downloads}"
+    local url partial attempt actual
+    local -a urls
+    mkdir -p "$cache" "$(dirname "$destination")" || return 1
+    if [[ -f "$destination" ]]; then
+        read -r actual _ < <(sha256sum "$destination")
+        [[ "$actual" == "$checksum" ]] && return 0
+    fi
+    partial="$cache/.partial-$checksum"
+    IFS='|' read -r -a urls <<< "$url_spec"
+    for url in "${urls[@]}"; do
+        if [[ "$url" == file:///* ]]; then
+            # Local verified source archives are useful for offline builds.
+            [[ -f "${url:7}" ]] || continue
+            cp -- "${url:7}" "$partial" || continue
+            read -r actual _ < <(sha256sum "$partial")
+            if [[ "$actual" == "$checksum" ]]; then
+                mv -f -- "$partial" "$destination" && return 0
+            fi
+            rm -f -- "$partial"
+            continue
+        fi
+        [[ "$url" == https://* ]] || { echo "Source must use HTTPS: $url" >&2; continue; }
+        for attempt in 1 2; do
+            # A transport failure OR a successful but corrupt resumed response
+            # gets a clean restart before trying the next verified mirror.
+            if curl --fail --location --proto '=https' --proto-redir '=https' \
+                --continue-at - --retry 3 --retry-all-errors --retry-connrefused \
+                --retry-max-time 600 --connect-timeout 30 --max-time 1200 \
+                --speed-limit 1024 --speed-time 90 --output "$partial" "$url"; then
+                read -r actual _ < <(sha256sum "$partial")
+                if [[ "$actual" == "$checksum" ]]; then
+                    mv -f -- "$partial" "$destination" && return 0
+                fi
+                echo "Checksum rejected source candidate; retrying clean: $url" >&2
+            fi
+            rm -f -- "$partial"
+        done
+    done
+    echo 'No source candidate passed SHA256 verification.' >&2
+    return 1
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then termux_download "$@"; fi
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then ocean_download "$@"; fi
