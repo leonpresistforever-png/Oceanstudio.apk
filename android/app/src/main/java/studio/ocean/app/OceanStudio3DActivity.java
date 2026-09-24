@@ -23,12 +23,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipEntry;
 
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
   final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
-  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="";
+  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip;
   static final int REQ_IMPORT=771,REQ_EXPORT=772;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
@@ -207,7 +209,7 @@ public final class OceanStudio3DActivity extends Activity {
         String[] labels=new String[options.size()];
         for(int i=0;i<options.size();i++){
           JSONObject o=options.get(i);String id=o.optString("id"),ext=o.optString("extension");
-          labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]";
+          labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]"+(formatNeedsPackage(id)?" · ZIP keeps sidecars":"");
         }
         runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
           .setTitle("Export · "+target.name+" · "+options.size()+" formats")
@@ -219,30 +221,57 @@ public final class OceanStudio3DActivity extends Activity {
     });
   }
 
+  boolean formatNeedsPackage(String id){return id.equals("gltf2")||id.equals("obj")||id.equals("collada");}
+
   void beginExport(StudioScene.Node node,String formatId,String extension){
-    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportExt=extension==null||extension.isEmpty()?"bin":extension;
+    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportDataExt=extension==null||extension.isEmpty()?"bin":extension;pendingExportZip=formatNeedsPackage(formatId);pendingExportExt=pendingExportZip?"zip":pendingExportDataExt;
     String base=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=base.lastIndexOf('.');if(dot>0)base=base.substring(0,dot);
-    Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,base+"."+pendingExportExt);startActivityForResult(i,REQ_EXPORT);
+    String title=pendingExportZip?base+"-"+formatId+"-package.zip":base+"."+pendingExportExt;
+    Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(pendingExportZip?"application/zip":"application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,title);startActivityForResult(i,REQ_EXPORT);
   }
 
   void performPendingExport(Uri destination){
-    final StudioScene.Node node=pendingExportNode;final String format=pendingExportFormatId,ext=pendingExportExt;
+    final StudioScene.Node node=pendingExportNode;final String format=pendingExportFormatId,dataExt=pendingExportDataExt;final boolean zip=pendingExportZip;
     if(node==null||format==null||format.isEmpty())return;
     externalExecutor.execute(()->{
-      File temp=null;
+      File workspace=null;
       try{
-        File dir=new File(getCacheDir(),"studio-export");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create export workspace");
-        temp=new File(dir,"export-"+System.currentTimeMillis()+"."+ext);
-        String result=StudioOpenSourceTools.assimpConvert(node.sourcePath,temp.getAbsolutePath(),format);
+        File root=new File(getCacheDir(),"studio-export");if(!root.exists()&&!root.mkdirs())throw new java.io.IOException("Cannot create export workspace");
+        workspace=new File(root,"job-"+System.currentTimeMillis());if(!workspace.mkdirs())throw new java.io.IOException("Cannot create export job");
+        File main=new File(workspace,"asset."+dataExt);
+        String result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),format);
         JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
-        try(FileInputStream in=new FileInputStream(temp);OutputStream out=getContentResolver().openOutputStream(destination,"w")){
+        File deliver=main;
+        if(zip){
+          deliver=new File(root,"package-"+System.currentTimeMillis()+".zip");
+          zipDirectory(workspace,deliver);
+        }
+        try(FileInputStream in=new FileInputStream(deliver);OutputStream out=getContentResolver().openOutputStream(destination,"w")){
           if(out==null)throw new java.io.IOException("Cannot open destination");
           byte[] buf=new byte[65536];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.flush();
         }
-        runOnUiThread(()->Toast.makeText(this,"Exported "+format+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
+        if(zip&&deliver.exists())deliver.delete();
+        runOnUiThread(()->Toast.makeText(this,"Exported "+format+(zip?" package":"")+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
       }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
-      finally{if(temp!=null)temp.delete();pendingExportNode=null;pendingExportFormatId="";pendingExportExt="";}
+      finally{if(workspace!=null)deleteRecursive(workspace);pendingExportNode=null;pendingExportFormatId="";pendingExportExt="";pendingExportDataExt="";pendingExportZip=false;}
     });
+  }
+
+  void zipDirectory(File dir,File zipFile) throws java.io.IOException {
+    try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(zipFile))){
+      File[] files=dir.listFiles();if(files==null)return;
+      byte[] buf=new byte[65536];
+      for(File f:files){
+        if(!f.isFile())continue;
+        zip.putNextEntry(new ZipEntry(f.getName()));
+        try(FileInputStream in=new FileInputStream(f)){int n;while((n=in.read(buf))>0)zip.write(buf,0,n);}
+        zip.closeEntry();
+      }
+    }
+  }
+
+  void deleteRecursive(File f){
+    if(f==null||!f.exists())return;if(f.isDirectory()){File[] children=f.listFiles();if(children!=null)for(File x:children)deleteRecursive(x);}f.delete();
   }
 
   void showOutliner(){
