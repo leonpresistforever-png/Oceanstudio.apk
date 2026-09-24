@@ -7,6 +7,11 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Typeface;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+import android.content.res.Configuration;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -53,6 +58,11 @@ public final class PlaygroundActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setStatusBarColor(BLACK);
         getWindow().setNavigationBarColor(BLACK);
+        if (android.os.Build.VERSION.SDK_INT >= 23) getWindow().getDecorView().setSystemUiVisibility(0);
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController controller=getWindow().getInsetsController();
+            if(controller!=null) controller.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+        }
         build();
     }
 
@@ -119,19 +129,19 @@ public final class PlaygroundActivity extends Activity {
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setGravity(Gravity.CENTER);
-        hero.setPadding(dp(26),0,dp(26),dp(30));
+        hero.setPadding(dp(22),0,dp(22),dp(18));
         body.addView(hero,new FrameLayout.LayoutParams(-1,-1));
 
         PlaygroundMark mark = new PlaygroundMark(this);
         hero.addView(mark,new LinearLayout.LayoutParams(dp(76),dp(76)));
 
-        TextView heading=text("What do you want to make?",31,WHITE);
+        TextView heading=text("What will you build?",30,WHITE);
         heading.setGravity(Gravity.CENTER);
         heading.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
         LinearLayout.LayoutParams hLp=new LinearLayout.LayoutParams(-1,-2); hLp.topMargin=dp(22);
         hero.addView(heading,hLp);
 
-        TextView sub=text("Build, inspect and shape ideas in one focused space.",14,MUTED);
+        TextView sub=text("Create with models, files and assets in a focused workspace.",14,MUTED);
         sub.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams sLp=new LinearLayout.LayoutParams(-1,-2); sLp.topMargin=dp(9);
         hero.addView(sub,sLp);
@@ -141,7 +151,7 @@ public final class PlaygroundActivity extends Activity {
         prompts.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams pLp=new LinearLayout.LayoutParams(-2,dp(38)); pLp.topMargin=dp(22);
         hero.addView(prompts,pLp);
-        String[] starters={"Create","Explore","Prototype"};
+        String[] starters={"Build a scene","Prototype an idea","Work with an asset"};
         for(String s:starters){
             TextView p=pill(s);
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-1); lp.leftMargin=dp(5); lp.rightMargin=dp(5);
@@ -154,7 +164,7 @@ public final class PlaygroundActivity extends Activity {
 
         LinearLayout composerWrap=new LinearLayout(this);
         composerWrap.setOrientation(LinearLayout.VERTICAL);
-        composerWrap.setPadding(dp(12),0,dp(12),dp(12));
+        composerWrap.setPadding(dp(12),0,dp(12),dp(10));
         page.addView(composerWrap,new LinearLayout.LayoutParams(-1,-2));
 
         attachmentStrip=new LinearLayout(this);
@@ -200,7 +210,9 @@ public final class PlaygroundActivity extends Activity {
         actions.addView(store,storeLp);
         store.setOnClickListener(v -> Toast.makeText(this,"Asset Store entry point ready — catalog comes next.",Toast.LENGTH_SHORT).show());
 
-        modelButton=pill("Model  ⌄");
+        OceanByokManager configuredManager=new OceanByokManager(this);
+        String modelLabel=configuredManager.isVerified()?configuredManager.getModel():"Model";
+        modelButton=pill(modelLabel+"  ⌄");
         LinearLayout.LayoutParams modelLp=new LinearLayout.LayoutParams(0,dp(38),1); modelLp.leftMargin=dp(7);
         actions.addView(modelButton,modelLp);
         modelButton.setOnClickListener(this::showModels);
@@ -253,6 +265,7 @@ public final class PlaygroundActivity extends Activity {
         addDrawerItem("Scene","Workspace objects and structure");
         addDrawerItem("Inspector","Selection and properties");
         addDrawerItem("History","Playground sessions");
+        addDrawerItem("Models","Runtime and model selection");
 
         View spacer=new View(this); drawer.addView(spacer,new LinearLayout.LayoutParams(-1,0,1));
         TextView back=pill("←  Back to OceanStudio"); back.setGravity(Gravity.CENTER_VERTICAL); back.setPadding(dp(14),0,dp(14),0);
@@ -269,8 +282,15 @@ public final class PlaygroundActivity extends Activity {
         row.setOnClickListener(v -> Toast.makeText(this,name+" tool shell ready.",Toast.LENGTH_SHORT).show());
     }
 
-    private void openDrawer(){ scrim.setVisibility(View.VISIBLE); drawer.animate().translationX(0).setDuration(190).start(); }
-    private void closeDrawer(){ drawer.animate().translationX(-drawer.getWidth()).setDuration(170).withEndAction(() -> scrim.setVisibility(View.GONE)).start(); }
+    private void openDrawer(){
+        scrim.setAlpha(0f); scrim.setVisibility(View.VISIBLE); scrim.animate().alpha(1f).setDuration(160).start();
+        drawer.animate().translationX(0).setDuration(210).start();
+    }
+    private void closeDrawer(){
+        int width=drawer.getWidth()>0?drawer.getWidth():dp(286);
+        scrim.animate().alpha(0f).setDuration(150).start();
+        drawer.animate().translationX(-width).setDuration(180).withEndAction(() -> scrim.setVisibility(View.GONE)).start();
+    }
 
     private void chooseFiles() {
         Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -302,8 +322,7 @@ public final class PlaygroundActivity extends Activity {
     private void renderAttachments() {
         attachmentStrip.removeAllViews();
         for(Uri uri:attachments){
-            String raw=uri.getLastPathSegment();
-            String label=raw==null?"Asset":raw;
+            String label=displayName(uri);
             if(label.length()>24) label="…"+label.substring(label.length()-23);
             TextView chip=pill(label+"  ×");
             chip.setTextSize(11);
@@ -313,6 +332,32 @@ public final class PlaygroundActivity extends Activity {
         }
         View scroll=findViewById(0x4f434e02);
         if(scroll!=null) scroll.setVisibility(attachments.isEmpty()?View.GONE:View.VISIBLE);
+    }
+
+    private String displayName(Uri uri) {
+        String fallback=uri.getLastPathSegment();
+        if(fallback==null || fallback.trim().isEmpty()) fallback="Asset";
+        Cursor cursor=null;
+        try {
+            cursor=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null);
+            if(cursor!=null && cursor.moveToFirst()){
+                int idx=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if(idx>=0){ String name=cursor.getString(idx); if(name!=null && !name.trim().isEmpty()) return name; }
+            }
+        } catch(Throwable ignored) {
+        } finally { if(cursor!=null) cursor.close(); }
+        return fallback;
+    }
+
+    @Override protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putParcelableArrayList("playground_attachments",new ArrayList<>(attachments));
+    }
+
+    @Override protected void onRestoreInstanceState(Bundle state) {
+        super.onRestoreInstanceState(state);
+        ArrayList<Uri> saved=state.getParcelableArrayList("playground_attachments");
+        if(saved!=null){ attachments.clear(); attachments.addAll(saved); renderAttachments(); }
     }
 
     private void showModels(View anchor) {
@@ -348,8 +393,14 @@ public final class PlaygroundActivity extends Activity {
             outer.lineTo(cx+s*.52f,cy+s*.42f); outer.lineTo(cx-s*.44f,cy+s*.52f); outer.close();
             c.drawPath(outer,paint);
             paint.setColor(BLACK);
-            float hole=s*.19f;
-            c.drawRect(cx-hole,cy-hole,cx+hole,cy+hole,paint);
+            float hole=s*.18f;
+            Path cut=new Path();
+            cut.moveTo(cx-hole*.95f,cy-hole);
+            cut.lineTo(cx+hole,cy-hole*.78f);
+            cut.lineTo(cx+hole*.78f,cy+hole);
+            cut.lineTo(cx-hole,cy+hole*.82f);
+            cut.close();
+            c.drawPath(cut,paint);
             c.restore();
         }
     }
