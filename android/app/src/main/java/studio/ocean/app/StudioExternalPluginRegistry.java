@@ -6,8 +6,12 @@ import java.util.*;
 public final class StudioExternalPluginRegistry {
   public static final class Plugin {
     public final String id,name,sourceRepo,tool,description,accepts;
+    public final int processMode;
     Plugin(String id,String name,String sourceRepo,String tool,String description,String accepts){
-      this.id=id;this.name=name;this.sourceRepo=sourceRepo;this.tool=tool;this.description=description;this.accepts=accepts;
+      this(id,name,sourceRepo,tool,description,accepts,0);
+    }
+    Plugin(String id,String name,String sourceRepo,String tool,String description,String accepts,int processMode){
+      this.id=id;this.name=name;this.sourceRepo=sourceRepo;this.tool=tool;this.description=description;this.accepts=accepts;this.processMode=processMode;
     }
   }
   private final List<Plugin> plugins=Arrays.asList(
@@ -25,7 +29,17 @@ public final class StudioExternalPluginRegistry {
     new Plugin("tinyobj-materials","OBJ Material Counter","tinyobjloader/tinyobjloader","tinyobjloader","Count materials in the selected OBJ.","obj"),
     new Plugin("tinyobj-faces","OBJ Face Counter","tinyobjloader/tinyobjloader","tinyobjloader","Count faces and indices in the selected OBJ.","obj"),
     new Plugin("stb-texture","Texture Probe","nothings/stb","stb_image","Inspect selected texture dimensions, channel count and megapixels.","image"),
-    new Plugin("stb-memory","Texture Memory Estimate","nothings/stb","stb_image","Estimate uncompressed base-level texture memory from real image dimensions and channels.","image")
+    new Plugin("stb-memory","Texture Memory Estimate","nothings/stb","stb_image","Estimate uncompressed base-level texture memory from real image dimensions and channels.","image"),
+    new Plugin("assimp-triangulate","Triangulate Geometry","assimp/assimp","Assimp","Convert polygonal faces to triangles and write a processed GLB copy.","*model",1),
+    new Plugin("assimp-normals","Rebuild Smooth Normals","assimp/assimp","Assimp","Generate smooth vertex normals and write a processed GLB copy.","*model",2),
+    new Plugin("assimp-tangents","Build Tangent Space","assimp/assimp","Assimp","Generate tangent/bitangent data for normal-mapped materials.","*model",3),
+    new Plugin("assimp-weld","Weld Identical Vertices","assimp/assimp","Assimp","Join identical vertices to reduce duplicate geometry.","*model",4),
+    new Plugin("assimp-cache","Improve Cache Locality","assimp/assimp","Assimp","Reorder mesh data for improved post-transform vertex cache locality.","*model",5),
+    new Plugin("assimp-optimize-mesh","Optimize Mesh Batches","assimp/assimp","Assimp","Optimize mesh batches while preserving scene content.","*model",6),
+    new Plugin("assimp-optimize-graph","Optimize Scene Graph","assimp/assimp","Assimp","Optimize node graph and mesh structure for runtime use.","*model",7),
+    new Plugin("assimp-clean-materials","Clean Redundant Materials","assimp/assimp","Assimp","Remove duplicate/redundant material slots and export a cleaned GLB.","*model",8),
+    new Plugin("assimp-flip-uv","Flip UV Coordinates","assimp/assimp","Assimp","Flip texture V coordinates for pipelines that require opposite UV origin.","*model",9),
+    new Plugin("assimp-repair","Repair Invalid Geometry","assimp/assimp","Assimp","Find degenerate/invalid mesh data, weld vertices and export repaired GLB.","*model",10)
   );
 
   public List<Plugin> all(){return plugins;}
