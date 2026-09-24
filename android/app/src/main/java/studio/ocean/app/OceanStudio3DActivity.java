@@ -453,7 +453,9 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void select(String s){selection.setText(s+"  ·  Inspector");if(extensionRegistry.isEnabled("auto-inspector"))inspector.setVisibility(View.VISIBLE);}
 
-  @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}\n\n  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
+  @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}
+
+  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
 
   final class StudioViewport extends View {
     final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),line=new Paint(Paint.ANTI_ALIAS_FLAG);
