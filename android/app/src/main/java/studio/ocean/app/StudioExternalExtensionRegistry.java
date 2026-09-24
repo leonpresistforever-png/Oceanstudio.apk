@@ -24,6 +24,7 @@ public final class StudioExternalExtensionRegistry {
     new Extension("auto-meshopt-lod50","Auto LOD 50% Analysis","zeux/meshoptimizer","meshoptimizer","Run meshoptimizer simplification analysis at 50% target indices.","gltf",false),
     new Extension("auto-meshopt-lod25","Auto LOD 25% Analysis","zeux/meshoptimizer","meshoptimizer","Run meshoptimizer simplification analysis at 25% target indices.","gltf",false),
     new Extension("auto-meshopt-cache","Auto Vertex Cache Analysis","zeux/meshoptimizer","meshoptimizer","Compare vertex-cache statistics before and after meshoptimizer reordering.","gltf",false),
+    new Extension("auto-assimp-summary","Auto Universal Model Summary","assimp/assimp","Assimp","Inspect imported non-glTF/OBJ model formats with Assimp and attach model statistics.","model",true),
     new Extension("auto-obj-summary","Auto OBJ Summary","tinyobjloader/tinyobjloader","tinyobjloader","Parse imported OBJ geometry and attach scene counts.","obj",true),
     new Extension("auto-obj-face-stats","Auto OBJ Face Stats","tinyobjloader/tinyobjloader","tinyobjloader","Attach OBJ face and index counts.","obj",false),
     new Extension("auto-obj-material-stats","Auto OBJ Material Stats","tinyobjloader/tinyobjloader","tinyobjloader","Attach OBJ material and shape counts.","obj",false),
