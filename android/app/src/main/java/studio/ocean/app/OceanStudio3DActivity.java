@@ -206,10 +206,14 @@ public final class OceanStudio3DActivity extends Activity {
         for(int i=0;i<formats.length();i++){JSONObject o=formats.getJSONObject(i);options.add(o);ids.add(o.optString("id"));}
         String preferred=engineTargetRegistry.choosePreferred(ids);
         StudioEngineTargetRegistry.Target target=engineTargetRegistry.selected();
+        if(target.id.equals("godot4")){
+          JSONObject godot=new JSONObject();godot.put("id","__godot4__");godot.put("description","Godot 4 Scene Package (GLB + .tscn)");godot.put("extension","zip");options.add(0,godot);
+        }
         String[] labels=new String[options.size()];
         for(int i=0;i<options.size();i++){
           JSONObject o=options.get(i);String id=o.optString("id"),ext=o.optString("extension");
-          labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]"+(formatNeedsPackage(id)?" · ZIP keeps sidecars":"");
+          if(id.equals("__godot4__"))labels[i]="★  "+o.optString("description")+" · ready-to-drop Godot scene";
+          else labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]"+(formatNeedsPackage(id)?" · ZIP keeps sidecars":"");
         }
         runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
           .setTitle("Export · "+target.name+" · "+options.size()+" formats")
@@ -221,12 +225,12 @@ public final class OceanStudio3DActivity extends Activity {
     });
   }
 
-  boolean formatNeedsPackage(String id){return id.equals("gltf2")||id.equals("obj")||id.equals("collada");}
+  boolean formatNeedsPackage(String id){return id.equals("__godot4__")||id.equals("gltf2")||id.equals("obj")||id.equals("collada");}
 
   void beginExport(StudioScene.Node node,String formatId,String extension){
-    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportDataExt=extension==null||extension.isEmpty()?"bin":extension;pendingExportZip=formatNeedsPackage(formatId);pendingExportExt=pendingExportZip?"zip":pendingExportDataExt;
+    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportDataExt=formatId.equals("__godot4__")?"glb":(extension==null||extension.isEmpty()?"bin":extension);pendingExportZip=formatNeedsPackage(formatId);pendingExportExt=pendingExportZip?"zip":pendingExportDataExt;
     String base=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=base.lastIndexOf('.');if(dot>0)base=base.substring(0,dot);
-    String title=pendingExportZip?base+"-"+formatId+"-package.zip":base+"."+pendingExportExt;
+    String title=formatId.equals("__godot4__")?base+"-godot4.zip":(pendingExportZip?base+"-"+formatId+"-package.zip":base+"."+pendingExportExt);
     Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(pendingExportZip?"application/zip":"application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,title);startActivityForResult(i,REQ_EXPORT);
   }
 
@@ -239,8 +243,16 @@ public final class OceanStudio3DActivity extends Activity {
         File root=new File(getCacheDir(),"studio-export");if(!root.exists()&&!root.mkdirs())throw new java.io.IOException("Cannot create export workspace");
         workspace=new File(root,"job-"+System.currentTimeMillis());if(!workspace.mkdirs())throw new java.io.IOException("Cannot create export job");
         File main=new File(workspace,"asset."+dataExt);
-        String result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),format);
-        JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
+        String result;
+        if(format.equals("__godot4__")){
+          main=new File(workspace,"OceanAsset.glb");
+          result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),"glb2");
+          JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Godot GLB export failed"));
+          writeGodotSceneFiles(workspace,node);
+        }else{
+          result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),format);
+          JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
+        }
         File deliver=main;
         if(zip){
           deliver=new File(root,"package-"+System.currentTimeMillis()+".zip");
@@ -251,10 +263,24 @@ public final class OceanStudio3DActivity extends Activity {
           byte[] buf=new byte[65536];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.flush();
         }
         if(zip&&deliver.exists())deliver.delete();
-        runOnUiThread(()->Toast.makeText(this,"Exported "+format+(zip?" package":"")+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
+        final String shownFormat=format.equals("__godot4__")?"Godot 4 scene":format;runOnUiThread(()->Toast.makeText(this,"Exported "+shownFormat+(zip?" package":"")+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
       }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
       finally{if(workspace!=null)deleteRecursive(workspace);pendingExportNode=null;pendingExportFormatId="";pendingExportExt="";pendingExportDataExt="";pendingExportZip=false;}
     });
+  }
+
+  void writeGodotSceneFiles(File dir,StudioScene.Node node) throws java.io.IOException {
+    String tscn="[gd_scene load_steps=2 format=3]\n\n"+
+      "[ext_resource type=\"PackedScene\" path=\"res://OceanAsset.glb\" id=\"1_ocean\"]\n\n"+
+      "[node name=\"OceanAsset\" instance=ExtResource(\"1_ocean\")]\n";
+    String readme="Ocean Studio → Godot 4\n\n"+
+      "1. Copy OceanAsset.glb and OceanImport.tscn into the same Godot project folder.\n"+
+      "2. Open or instantiate OceanImport.tscn.\n"+
+      "3. Godot's glTF importer performs its standard coordinate/material conversion.\n\n"+
+      "Ocean intentionally does not pre-rotate the GLB, avoiding a second coordinate conversion.\n"+
+      "Source node: "+node.name+"\n";
+    try(FileOutputStream out=new FileOutputStream(new File(dir,"OceanImport.tscn"))){out.write(tscn.getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
+    try(FileOutputStream out=new FileOutputStream(new File(dir,"README.txt"))){out.write(readme.getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
   }
 
   void zipDirectory(File dir,File zipFile) throws java.io.IOException {
