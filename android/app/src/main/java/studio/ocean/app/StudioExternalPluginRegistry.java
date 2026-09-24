@@ -30,6 +30,7 @@ public final class StudioExternalPluginRegistry {
     new Plugin("tinyobj-faces","OBJ Face Counter","tinyobjloader/tinyobjloader","tinyobjloader","Count faces and indices in the selected OBJ.","obj"),
     new Plugin("stb-texture","Texture Probe","nothings/stb","stb_image","Inspect selected texture dimensions, channel count and megapixels.","image"),
     new Plugin("stb-memory","Texture Memory Estimate","nothings/stb","stb_image","Estimate uncompressed base-level texture memory from real image dimensions and channels.","image"),
+    new Plugin("assimp-summary","Universal Model Inspector","assimp/assimp","Assimp","Inspect any model format supported by the compiled Assimp importer and report meshes, vertices, faces, materials, animation, cameras, lights and bones.","*model"),
     new Plugin("assimp-triangulate","Triangulate Geometry","assimp/assimp","Assimp","Convert polygonal faces to triangles and write a processed GLB copy.","*model",1),
     new Plugin("assimp-normals","Rebuild Smooth Normals","assimp/assimp","Assimp","Generate smooth vertex normals and write a processed GLB copy.","*model",2),
     new Plugin("assimp-tangents","Build Tangent Space","assimp/assimp","Assimp","Generate tangent/bitangent data for normal-mapped materials.","*model",3),
@@ -79,6 +80,7 @@ public final class StudioExternalPluginRegistry {
         case "tinyobj-faces":
           j=new JSONObject(StudioOpenSourceTools.inspectObj(node.sourcePath));
           return j.optBoolean("ok")?"faces="+j.optLong("faces")+" · indices="+j.optLong("indices")+" · vertices="+j.optLong("vertices"):j.optString("error","OBJ parse failed");
+        case "assimp-summary": return pretty(StudioOpenSourceTools.assimpInspect(node.sourcePath));
         case "stb-texture": return pretty(StudioOpenSourceTools.inspectImage(node.sourcePath));
         case "stb-memory":
           j=new JSONObject(StudioOpenSourceTools.inspectImage(node.sourcePath));
