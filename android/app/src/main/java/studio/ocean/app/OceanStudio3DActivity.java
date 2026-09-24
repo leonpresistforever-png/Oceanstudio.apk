@@ -209,8 +209,8 @@ public final class OceanStudio3DActivity extends Activity {
           File cache=new File(dir,"node-"+node.id+"-"+Math.abs(node.sourcePath.hashCode())+".omsh");
           String preview=StudioOpenSourceTools.buildPreviewMesh(node.sourcePath,cache.getAbsolutePath(),250000);
           JSONObject pj=new JSONObject(preview);
-          if(pj.optBoolean("ok")){previewPath=cache.getAbsolutePath();meta.append(meta.length()>0?'\n':"").append("GPU preview: ").append(pj.optInt("triangles")).append(" triangles");}
-        }catch(Throwable t){meta.append(meta.length()>0?'\n':"").append("GPU preview error: ").append(t.getMessage());}
+          if(pj.optBoolean("ok")){previewPath=cache.getAbsolutePath();if(meta.length()>0)meta.append('\n');meta.append("GPU preview: ").append(pj.optInt("triangles")).append(" triangles");}
+        }catch(Throwable t){if(meta.length()>0)meta.append('\n');meta.append("GPU preview error: ").append(t.getMessage());}
       }
       final String result=meta.toString().trim();
       final String finalPreviewPath=previewPath;
