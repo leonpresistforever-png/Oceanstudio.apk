@@ -64,3 +64,18 @@ Ocean Studio's Java/JNI bridge and UI integration are separate Ocean code.
    WITHOUT EXPRESS OR IMPLIED WARRANTIES. THE COPYRIGHT OWNER OR CONTRIBUTORS
    ARE NOT LIABLE FOR DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
    CONSEQUENTIAL DAMAGES ARISING FROM ITS USE.
+
+
+6. xatlas
+   Source: https://github.com/jpcy/xatlas
+   Pinned commit: f700c7790aaa030e794b52ba7791a05c085faf0c
+   Copyright (c) 2018-2020 Jonathan Young
+   License: MIT
+
+   Permission is granted, free of charge, to use, copy, modify, merge, publish,
+   distribute, sublicense, and/or sell copies of the software, provided that
+   the copyright and permission notice are included in substantial copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT.
