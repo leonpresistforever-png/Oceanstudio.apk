@@ -55,10 +55,24 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void toolAction(String s){
     if(s.equals("Plugin"))showCatalog("Plugins",new String[]{"Mesh Doctor","UV Toolkit","Material Lab","Terrain Brush","Rig Helper","LOD Builder","Collision Tools","Scene Optimizer","GLTF Tools","Measure Pro","Procedural Shapes","Lighting Assistant"});
-    else if(s.equals("Extensions"))showCatalog("Extensions",new String[]{"glTF Pipeline","OBJ/STL Import","Scene Export","Script Console","Asset Sources","HDRI Library","Shader Pack","QuickJS Tools","Automation Hooks","Custom Source…"});
+    else if(s.equals("Extensions"))showExtensions();
     else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
     else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  }
+  void showExtensions(){
+    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
+    TextView note=new TextView(this);note.setText("Built-ins are packaged with Ocean Studio. External sources are metadata-only until reviewed and explicitly enabled.");note.setTextColor(MUTED);note.setTextSize(12);box.addView(note,new LinearLayout.LayoutParams(-1,dp(52)));
+    for(StudioExtensionRegistry.Entry e:extensionRegistry.builtins()){
+      CheckBox row=new CheckBox(this);row.setText(e.name+"   "+e.version+"  ·  "+e.kind);row.setTextColor(WHITE);row.setChecked(extensionRegistry.isEnabled(e.id,e.enabled));row.setOnCheckedChangeListener((b,on)->extensionRegistry.setEnabled(e.id,on));box.addView(row,new LinearLayout.LayoutParams(-1,dp(44)));
+    }
+    TextView source=button("＋ Add HTTPS extension source");box.addView(source,new LinearLayout.LayoutParams(-1,dp(42)));
+    source.setOnClickListener(v->promptSource());
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Extensions").setView(sv).setNegativeButton("Close",null).show();
+  }
+  void promptSource(){
+    EditText e=new EditText(this);e.setHint("https://example.com/ocean-extension-index.json");e.setSingleLine(true);
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Add extension source").setMessage("Sources are not executed automatically. Ocean stores the index location; installation must be explicitly approved.").setView(e).setPositiveButton("Add",(d,w)->{try{extensionRegistry.addSource(e.getText().toString());Toast.makeText(this,"Source added",Toast.LENGTH_SHORT).show();}catch(Exception ex){Toast.makeText(this,ex.getMessage(),Toast.LENGTH_LONG).show();}}).setNegativeButton("Cancel",null).show();
   }
   void showCatalog(String title,String[] items){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
