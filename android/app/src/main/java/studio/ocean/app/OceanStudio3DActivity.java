@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.graphics.*;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import android.os.Bundle;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
@@ -39,7 +41,7 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void buildBottom(){
     bottom=new LinearLayout(this);bottom.setGravity(Gravity.CENTER);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));bottom.setBackgroundColor(0xdd070707);
-    String[] tools={"＋ Add","Asset","Scene","Layers","Material","Terrain","Sculpt","Paint","Rig","Animate","Timeline","Physics","Lighting","Camera","Audio","Particles","Code","Plugin","Extensions","Settings"};
+    String[] tools={"＋ Add","Asset","Import","Export","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Plugin","Extensions","Settings"};
     for(String s:tools){TextView b=button(s);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(38));lp.rightMargin=dp(6);bottom.addView(b,lp);b.setOnClickListener(v->toolAction(s));}
     HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);hs.addView(bottom);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);root.addView(hs,bp);
   }
@@ -54,7 +56,7 @@ public final class OceanStudio3DActivity extends Activity {
   void toolAction(String s){
     if(s.equals("Plugin"))showCatalog("Plugins",new String[]{"Mesh Doctor","UV Toolkit","Material Lab","Terrain Brush","Rig Helper","LOD Builder","Collision Tools","Scene Optimizer","GLTF Tools","Measure Pro","Procedural Shapes","Lighting Assistant"});
     else if(s.equals("Extensions"))showCatalog("Extensions",new String[]{"glTF Pipeline","OBJ/STL Import","Scene Export","Script Console","Asset Sources","HDRI Library","Shader Pack","QuickJS Tools","Automation Hooks","Custom Source…"});
-    else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions"});
+    else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
     else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
   }
