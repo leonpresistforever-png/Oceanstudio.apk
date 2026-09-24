@@ -36,6 +36,10 @@ public final class StudioScene {
   public boolean scaleSelected(float factor){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx*factor,n.sy*factor,n.sz*factor);return true;}
   public boolean snapSelected(float step){Node n=selected();if(n==null||n.locked||step<=0)return false;transform(n.id,Math.round(n.x/step)*step,Math.round(n.y/step)*step,Math.round(n.z/step)*step,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
   public boolean mirrorSelectedX(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,-n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean groundSelected(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x,0f,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean centerSelectedXZ(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,0f,n.y,0f,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean normalizeSelectedAngles(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x,n.y,n.z,normalizeDeg(n.rx),normalizeDeg(n.ry),normalizeDeg(n.rz),n.sx,n.sy,n.sz);return true;}
+  private float normalizeDeg(float v){float r=v%360f;if(r>180f)r-=360f;if(r<=-180f)r+=360f;return r;}
   public boolean toggleSelectedVisibility(){Node n=selected();if(n==null)return false;checkpoint();n.visible=!n.visible;return true;}
   public boolean toggleSelectedLock(){Node n=selected();if(n==null)return false;checkpoint();n.locked=!n.locked;return true;}
   public boolean undo(){if(undo.isEmpty())return false;redo.push(capture());restore(undo.pop());return true;}
