@@ -13,7 +13,7 @@ set(FETCHCONTENT_QUIET OFF)
 
 FetchContent_Declare(
   cgltf
-  URL https://github.com/jkuhlmann/cgltf/archive/85cd62382dfea638278962690cf515023f33ed00.tar.gz
+  URL https://github.com/jkuhlmann/cgltf/archive/360db1a95480fe102ae9c69b27c5d101167ff5ba.tar.gz
 )
 FetchContent_GetProperties(cgltf)
 if(NOT cgltf_POPULATED)
@@ -34,7 +34,7 @@ set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "" FORCE)
 set(MESHOPT_BUILD_GLTFPACK OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
   meshoptimizer
-  URL https://github.com/zeux/meshoptimizer/archive/717ca3489b457f781e5cd3e3a8bbc0229619415c.tar.gz
+  URL https://github.com/zeux/meshoptimizer/archive/9d9890c73011d75920af614485296d1e03e95448.tar.gz
 )
 FetchContent_MakeAvailable(meshoptimizer)
 
