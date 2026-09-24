@@ -90,6 +90,7 @@ public final class StudioGpuViewport extends GLSurfaceView {
             float minx,miny,minz,maxx,maxy,maxz;
         }
         final float[] projection=new float[16],view=new float[16],model=new float[16],vp=new float[16],mvp=new float[16],normal=new float[16],inverse=new float[16];
+        float cameraX,cameraY,cameraZ;
 
         private static final float[] CUBE={
             // front
@@ -144,6 +145,7 @@ public final class StudioGpuViewport extends GLSurfaceView {
             GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT|GLES30.GL_DEPTH_BUFFER_BIT);
             float cp=(float)Math.cos(pitch),sp=(float)Math.sin(pitch),sy=(float)Math.sin(yaw),cy=(float)Math.cos(yaw);
             float cx=tx+distance*cp*sy,cyPos=ty+distance*sp,cz=tz+distance*cp*cy;
+            cameraX=cx;cameraY=cyPos;cameraZ=cz;
             Matrix.setLookAtM(view,0,cx,cyPos,cz,tx,ty,tz,0,1,0);
             Matrix.multiplyMM(vp,0,projection,0,view,0);
 
@@ -244,6 +246,7 @@ public final class StudioGpuViewport extends GLSurfaceView {
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(meshProgram,"uModel"),1,false,model,0);
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(meshProgram,"uNormal"),1,false,normal,0);
             GLES30.glUniform3f(GLES30.glGetUniformLocation(meshProgram,"uBase"),r,g,b);
+            GLES30.glUniform3f(GLES30.glGetUniformLocation(meshProgram,"uCamera"),cameraX,cameraY,cameraZ);
         }
 
         private void drawMesh(int vbo,int vertices,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz,float r,float g,float b){
