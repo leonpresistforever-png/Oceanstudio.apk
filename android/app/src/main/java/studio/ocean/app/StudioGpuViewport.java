@@ -9,6 +9,10 @@ import android.opengl.Matrix;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.io.File;
+import java.io.FileInputStream;
+import java.nio.channels.FileChannel;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +78,12 @@ public final class StudioGpuViewport extends GLSurfaceView {
         volatile float yaw=StudioMath3D.radians(-35f),pitch=StudioMath3D.radians(27f),distance=13f,tx=0,ty=.8f,tz=0;
         int meshProgram,lineProgram,cubeVbo,planeVbo,gridVbo;
         int gridVertexCount;
+        final HashMap<String,GpuMesh> meshCache=new HashMap<>();
+
+        static final class GpuMesh {
+            int vbo,ibo,indexCount;
+            float minx,miny,minz,maxx,maxy,maxz;
+        }
         final float[] projection=new float[16],view=new float[16],model=new float[16],vp=new float[16],mvp=new float[16],normal=new float[16],inverse=new float[16];
 
         private static final float[] CUBE={
@@ -109,6 +119,7 @@ public final class StudioGpuViewport extends GLSurfaceView {
             GLES30.glEnable(GLES30.GL_CULL_FACE);
             GLES30.glCullFace(GLES30.GL_BACK);
             GLES30.glEnable(GLES30.GL_MULTISAMPLE);
+            meshCache.clear();
             meshProgram=program(MESH_VS,MESH_FS);
             lineProgram=program(LINE_VS,LINE_FS);
             cubeVbo=buffer(CUBE);
@@ -153,13 +164,56 @@ public final class StudioGpuViewport extends GLSurfaceView {
                     drawMesh(cubeVbo,36,n.x,n.y,n.z,n.rx,n.ry,n.rz,.42f*n.sx,.30f*n.sy,.58f*n.sz,.8f,.7f,.3f);
                 }else if(!"empty".equals(n.type)){
                     float r=.38f,g=.49f,b=.60f;
-                    if("gltf".equals(n.type)||"obj".equals(n.type)||"model".equals(n.type)){r=.32f;g=.52f;b=.66f;}
+                    if("gltf".equals(n.type)||"obj".equals(n.type)||"model".equals(n.type)){
+                        r=.32f;g=.52f;b=.66f;
+                        GpuMesh gm=n.previewPath==null||n.previewPath.isEmpty()?null:getPreviewMesh(n.previewPath);
+                        if(gm!=null){drawIndexedMesh(gm,n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz,r,g,b);continue;}
+                    }
                     drawMesh(cubeVbo,36,n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz,r,g,b);
                 }
             }
         }
 
-        private void drawMesh(int vbo,int vertices,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz,float r,float g,float b){
+        private GpuMesh getPreviewMesh(String path){
+            GpuMesh cached=meshCache.get(path);if(cached!=null)return cached;
+            File file=new File(path);if(!file.isFile()||file.length()<40||file.length()>128L*1024L*1024L)return null;
+            try(FileInputStream in=new FileInputStream(file);FileChannel channel=in.getChannel()){
+                int size=(int)channel.size();
+                ByteBuffer all=ByteBuffer.allocateDirect(size).order(ByteOrder.LITTLE_ENDIAN);
+                while(all.hasRemaining()&&channel.read(all)>0){}
+                all.flip();
+                int magic=all.getInt(),version=all.getInt(),vertexCount=all.getInt(),indexCount=all.getInt();
+                if(magic!=0x48534d4f||version!=1||vertexCount<=0||indexCount<=0)return null;
+                GpuMesh gm=new GpuMesh();
+                gm.minx=all.getFloat();gm.miny=all.getFloat();gm.minz=all.getFloat();gm.maxx=all.getFloat();gm.maxy=all.getFloat();gm.maxz=all.getFloat();
+                long expected=16L+24L+(long)vertexCount*24L+(long)indexCount*4L;
+                if(expected>size)return null;
+
+                ByteBuffer vb=all.slice().order(ByteOrder.LITTLE_ENDIAN);vb.limit(vertexCount*24);
+                int[] ids=new int[2];GLES30.glGenBuffers(2,ids,0);gm.vbo=ids[0];gm.ibo=ids[1];gm.indexCount=indexCount;
+                GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,gm.vbo);
+                GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER,vertexCount*24,vb,GLES30.GL_STATIC_DRAW);
+                all.position(all.position()+vertexCount*24);
+                ByteBuffer ib=all.slice().order(ByteOrder.LITTLE_ENDIAN);ib.limit(indexCount*4);
+                GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER,gm.ibo);
+                GLES30.glBufferData(GLES30.GL_ELEMENT_ARRAY_BUFFER,indexCount*4,ib,GLES30.GL_STATIC_DRAW);
+                GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,0);GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER,0);
+                meshCache.put(path,gm);return gm;
+            }catch(Throwable ignored){return null;}
+        }
+
+        private void drawIndexedMesh(GpuMesh gm,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz,float r,float g,float b){
+            prepareModel(x,y,z,rx,ry,rz,sx,sy,sz,r,g,b);
+            GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,gm.vbo);
+            GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER,gm.ibo);
+            GLES30.glEnableVertexAttribArray(0);GLES30.glEnableVertexAttribArray(1);
+            GLES30.glVertexAttribPointer(0,3,GLES30.GL_FLOAT,false,24,0);
+            GLES30.glVertexAttribPointer(1,3,GLES30.GL_FLOAT,false,24,12);
+            GLES30.glDrawElements(GLES30.GL_TRIANGLES,gm.indexCount,GLES30.GL_UNSIGNED_INT,0);
+            GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER,0);GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,0);
+        }
+
+        private void prepareModel(float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz,float r,float g,float b){
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,rz,0,0,1);
@@ -168,12 +222,15 @@ public final class StudioGpuViewport extends GLSurfaceView {
             Matrix.scaleM(model,0,sx,sy,sz);
             Matrix.multiplyMM(mvp,0,vp,0,model,0);
             if(Matrix.invertM(inverse,0,model,0))Matrix.transposeM(normal,0,inverse,0);else Matrix.setIdentityM(normal,0);
-
             GLES30.glUseProgram(meshProgram);
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(meshProgram,"uMVP"),1,false,mvp,0);
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(meshProgram,"uModel"),1,false,model,0);
             GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(meshProgram,"uNormal"),1,false,normal,0);
             GLES30.glUniform3f(GLES30.glGetUniformLocation(meshProgram,"uBase"),r,g,b);
+        }
+
+        private void drawMesh(int vbo,int vertices,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz,float r,float g,float b){
+            prepareModel(x,y,z,rx,ry,rz,sx,sy,sz,r,g,b);
             GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,vbo);
             GLES30.glEnableVertexAttribArray(0);GLES30.glEnableVertexAttribArray(1);
             GLES30.glVertexAttribPointer(0,3,GLES30.GL_FLOAT,false,24,0);
