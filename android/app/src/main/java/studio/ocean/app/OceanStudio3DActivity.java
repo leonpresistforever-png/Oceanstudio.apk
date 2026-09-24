@@ -16,11 +16,11 @@ import java.util.*;
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry;
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);objects.add("Baseplate");objects.add("Spawn");build();}
   void build(){
     root=new FrameLayout(this);root.setBackgroundColor(BLACK);setContentView(root);
     viewport=new StudioViewport(this);root.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
@@ -57,8 +57,13 @@ public final class OceanStudio3DActivity extends Activity {
     if(s.equals("Plugin"))showCatalog("Plugins",new String[]{"Mesh Doctor","UV Toolkit","Material Lab","Terrain Brush","Rig Helper","LOD Builder","Collision Tools","Scene Optimizer","GLTF Tools","Measure Pro","Procedural Shapes","Lighting Assistant"});
     else if(s.equals("Extensions"))showExtensions();
     else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
-    else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
+    else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});\n    else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  }
+  void showOutliner(){
+    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(12),dp(8),dp(12),dp(8));
+    for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene Outliner").setView(sv).setNegativeButton("Close",null).show();
   }
   void showExtensions(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
@@ -90,7 +95,21 @@ public final class OceanStudio3DActivity extends Activity {
     send.setOnClickListener(v->{String q=aiInput.getText().toString().trim();if(q.isEmpty())return;history.add(q+"\nCONTEXT "+scene.snapshot());Toast.makeText(this,"Agent command queued with scene context",Toast.LENGTH_SHORT).show();});
     d.show();
   }
-  void handleTop(String s){if(s.equals("▶"))Toast.makeText(this,"Preview mode",Toast.LENGTH_SHORT).show();else if(s.equals("□"))finish();else Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  void handleTop(String s){
+    if(s.equals("↶")){if(scene.undo()){viewport.invalidate();Toast.makeText(this,"Undo",Toast.LENGTH_SHORT).show();}}
+    else if(s.equals("↷")){if(scene.redo()){viewport.invalidate();Toast.makeText(this,"Redo",Toast.LENGTH_SHORT).show();}}
+    else if(s.equals("▶"))Toast.makeText(this,"Preview mode",Toast.LENGTH_SHORT).show();
+    else if(s.equals("□"))finish();
+    else showProjectMenu();
+  }
+  void showProjectMenu(){
+    String[] items={"Save project","Project info","Reset camera"};
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene 1").setItems(items,(d,w)->{
+      if(w==0){try{java.io.File f=projectStore.save("Scene_1",scene.snapshot());Toast.makeText(this,"Saved "+f.getName(),Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"Save failed: "+e.getMessage(),Toast.LENGTH_LONG).show();}}
+      else if(w==1)Toast.makeText(this,scene.size()+" scene nodes · "+projectStore.list().length+" saved projects",Toast.LENGTH_LONG).show();
+      else {viewport.zoom=1;viewport.panX=viewport.panY=0;viewport.invalidate();}
+    }).show();
+  }
   void select(String s){selection.setText(s+"  ·  Inspector");inspector.setVisibility(View.VISIBLE);}
 
   final class StudioViewport extends View {
