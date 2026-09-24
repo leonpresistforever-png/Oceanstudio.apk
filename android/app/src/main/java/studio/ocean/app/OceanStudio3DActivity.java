@@ -31,13 +31,13 @@ import java.util.zip.ZipEntry;
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; StudioGpuViewport gpuViewport; boolean gpuActive; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; StudioRenderSettings renderSettings; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
   StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip; Set<String> assimpImportExtCache;
   static final int REQ_IMPORT=771,REQ_EXPORT=772;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();gpuActive=supportsGles3();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();renderSettings=new StudioRenderSettings(this);gpuActive=supportsGles3();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
   boolean supportsGles3(){
     try{
       ActivityManager am=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
@@ -91,7 +91,7 @@ public final class OceanStudio3DActivity extends Activity {
     if(s.equals("Add-ons"))showAddons();
     else if(s.equals("Plugin"))showPlugins();
     else if(s.equals("Extensions"))showExtensions();
-    else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
+    else if(s.equals("Settings"))showStudioSettings();
     else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
     else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();
     else if(s.equals("Import")||s.equals("Asset"))openImporter();
@@ -207,7 +207,7 @@ public final class OceanStudio3DActivity extends Activity {
         try{
           File dir=new File(getFilesDir(),"studio/meshcache");if(!dir.exists())dir.mkdirs();
           File cache=new File(dir,"node-"+node.id+"-"+Math.abs(node.sourcePath.hashCode())+".omsh");
-          String preview=StudioOpenSourceTools.buildPreviewMesh(node.sourcePath,cache.getAbsolutePath(),250000);
+          String preview=StudioOpenSourceTools.buildPreviewMesh(node.sourcePath,cache.getAbsolutePath(),renderSettings.previewTriangleCap());
           JSONObject pj=new JSONObject(preview);
           if(pj.optBoolean("ok")){previewPath=cache.getAbsolutePath();if(meta.length()>0)meta.append('\n');meta.append("GPU preview: ").append(pj.optInt("triangles")).append(" triangles");}
         }catch(Throwable t){if(meta.length()>0)meta.append('\n');meta.append("GPU preview error: ").append(t.getMessage());}
@@ -222,6 +222,48 @@ public final class OceanStudio3DActivity extends Activity {
       });
     });
   }
+  void showStudioSettings(){
+    String renderer=gpuActive?"OpenGL ES 3 GPU · depth test · lit meshes · MSAA request":"Canvas compatibility renderer";
+    String[] items={
+      "Renderer\n"+renderer,
+      "Render quality\n"+renderSettings.qualityLabel(),
+      "Target engine\n"+engineTargetRegistry.selected().name,
+      "Rebuild selected GPU preview",
+      "Extensions\n"+externalExtensionRegistry.all().size()+" external + "+extensionRegistry.builtins().size()+" built-in"
+    };
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Settings").setItems(items,(d,w)->{
+      if(w==0)Toast.makeText(this,renderer,Toast.LENGTH_LONG).show();
+      else if(w==1)showQualityPicker();
+      else if(w==2)showEngineTargets();
+      else if(w==3)rebuildSelectedPreview();
+      else showExtensions();
+    }).setNegativeButton("Close",null).show();
+  }
+
+  void showQualityPicker(){
+    String[] ids={"performance","balanced","high","ultra"};
+    String[] labels={"Performance · 75k triangles","Balanced · 150k triangles","High · 250k triangles","Ultra · 500k triangles"};
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("GPU Preview Quality").setItems(labels,(d,w)->{
+      renderSettings.setQuality(ids[w]);
+      Toast.makeText(this,renderSettings.qualityLabel()+" · rebuild previews to apply",Toast.LENGTH_LONG).show();
+    }).setNegativeButton("Cancel",null).show();
+  }
+
+  void rebuildSelectedPreview(){
+    StudioScene.Node n=scene.selected();
+    if(n==null||n.sourcePath==null||n.sourcePath.isEmpty()||n.type.equals("image")){Toast.makeText(this,"Select an imported model first",Toast.LENGTH_SHORT).show();return;}
+    externalExecutor.execute(()->{
+      try{
+        File dir=new File(getFilesDir(),"studio/meshcache");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create mesh cache");
+        File cache=new File(dir,"node-"+n.id+"-"+Math.abs(n.sourcePath.hashCode())+"-"+renderSettings.quality()+".omsh");
+        String raw=StudioOpenSourceTools.buildPreviewMesh(n.sourcePath,cache.getAbsolutePath(),renderSettings.previewTriangleCap());
+        JSONObject j=new JSONObject(raw);
+        if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","preview build failed"));
+        runOnUiThread(()->{scene.setPreviewPath(n.id,cache.getAbsolutePath());viewport.invalidate();Toast.makeText(this,"GPU preview rebuilt · "+j.optInt("triangles")+" triangles",Toast.LENGTH_LONG).show();});
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Preview rebuild failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+    });
+  }
+
   void showEngineTargets(){
     List<StudioEngineTargetRegistry.Target> all=engineTargetRegistry.all();
     String[] labels=new String[all.size()];
