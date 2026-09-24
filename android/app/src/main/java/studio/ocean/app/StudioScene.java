@@ -14,7 +14,7 @@ public final class StudioScene {
   private final ArrayDeque<State> undo=new ArrayDeque<>(),redo=new ArrayDeque<>();
   private long next=1; private Long selected;
   static final class State {LinkedHashMap<Long,Node> nodes=new LinkedHashMap<>();long next;Long selected;}
-  public StudioScene(){rawAdd("Baseplate","plane");rawAdd("Spawn","spawn");undo.clear();}
+  public StudioScene(){rawAdd("Baseplate","plane");rawAdd("Spawn","spawn");Node cube=rawAdd("Starter Cube","cube");cube.x=2.5f;cube.y=.5f;undo.clear();}
   private Node rawAdd(String name,String type){Node n=new Node(next++,name,type);nodes.put(n.id,n);selected=n.id;return n;}
   private State capture(){State s=new State();for(Node n:nodes.values())s.nodes.put(n.id,n.copy());s.next=next;s.selected=selected;return s;}
   private void restore(State s){nodes.clear();for(Node n:s.nodes.values())nodes.put(n.id,n.copy());next=s.next;selected=s.selected;}
