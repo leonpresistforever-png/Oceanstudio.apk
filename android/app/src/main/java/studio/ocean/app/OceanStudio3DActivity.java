@@ -59,7 +59,7 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void buildBottom(){
     bottom=new LinearLayout(this);bottom.setGravity(Gravity.CENTER);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));bottom.setBackgroundColor(0xdd070707);
-    String[] tools={"＋ Add","Asset","Import","Engine","Export","Tools","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Plugin","Extensions","Settings"};
+    String[] tools={"＋ Add","Asset","Import","Engine","Export","Tools","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Add-ons","Plugin","Extensions","Settings"};
     for(String s:tools){TextView b=button(s);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(38));lp.rightMargin=dp(6);bottom.addView(b,lp);b.setOnClickListener(v->toolAction(s));}
     HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);hs.addView(bottom);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);root.addView(hs,bp);
   }
@@ -72,7 +72,8 @@ public final class OceanStudio3DActivity extends Activity {
     FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(dp(230),-2,Gravity.TOP|Gravity.LEFT);ip.topMargin=dp(64);ip.leftMargin=dp(10);root.addView(inspector,ip);
   }
   void toolAction(String s){
-    if(s.equals("Plugin"))showPlugins();
+    if(s.equals("Add-ons"))showAddons();
+    else if(s.equals("Plugin"))showPlugins();
     else if(s.equals("Extensions"))showExtensions();
     else if(s.equals("Settings"))showCatalog("Studio Settings",new String[]{"Renderer","Quality","Grid & Snapping","Autosave","Input & Gestures","Performance","Extensions Sources","AI Permissions","Memory Budget","Thermal Mode","Touch Sensitivity","Project Units"});
     else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
@@ -249,6 +250,21 @@ public final class OceanStudio3DActivity extends Activity {
     for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});row.setOnLongClickListener(v->{if(n.metadata!=null&&!n.metadata.isEmpty())new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(n.name+" · analysis").setMessage(n.metadata).setPositiveButton("Done",null).show();else Toast.makeText(this,"No analysis metadata yet",Toast.LENGTH_SHORT).show();return true;});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
     ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene Outliner").setView(sv).setNegativeButton("Close",null).show();
   }
+  void showAddons(){
+    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
+    TextView note=new TextView(this);note.setText("Open-source add-ons below call real native libraries. Process add-ons create new files/nodes instead of only changing UI state.");note.setTextColor(MUTED);note.setTextSize(11);box.addView(note,new LinearLayout.LayoutParams(-1,dp(52)));
+    String last="";
+    for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
+      String category=p.tool.equals("Assimp")?"MODELING & GEOMETRY":p.tool.equals("meshoptimizer")?"OPTIMIZATION":p.tool.equals("xatlas")?"UV & TEXTURING":p.tool.equals("stb_image")?"TEXTURES":"IMPORT / INSPECTION";
+      if(!category.equals(last)){
+        TextView h=new TextView(this);h.setText(category);h.setTextColor(0xff7f878e);h.setTextSize(10);h.setLetterSpacing(.14f);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(32));hp.topMargin=dp(8);box.addView(h,hp);last=category;
+      }
+      LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);row.setOnClickListener(v->runExternalPlugin(p));
+    }
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Open-source Add-ons · "+externalPluginRegistry.all().size()).setView(sv).setNegativeButton("Close",null).show();
+  }
+
   void showPlugins(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
     TextView nativeState=new TextView(this);nativeState.setText(StudioOpenSourceTools.available()?"External native toolchain: loaded":"External native toolchain: unavailable · "+StudioOpenSourceTools.unavailableReason());nativeState.setTextColor(StudioOpenSourceTools.available()?0xff9ad7b1:0xffff9b8f);nativeState.setTextSize(11);box.addView(nativeState,new LinearLayout.LayoutParams(-1,dp(36)));
@@ -258,13 +274,13 @@ public final class OceanStudio3DActivity extends Activity {
       LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(58));lp.bottomMargin=dp(6);box.addView(row,lp);
       row.setOnClickListener(v->runPlugin(p));
     }
-    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · 25");extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · "+externalPluginRegistry.all().size());extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
     for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
       LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
       LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);
       row.setOnClickListener(v->runExternalPlugin(p));
     }
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · 40").setView(sv).setNegativeButton("Close",null).show();
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · "+(pluginRegistry.all().size()+externalPluginRegistry.all().size())).setView(sv).setNegativeButton("Close",null).show();
   }
   LinearLayout pluginRow(String nameText,String descText,String sourceText){
     LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(5),dp(12),dp(5));row.setBackground(bg(PANEL,12,BORDER));
@@ -280,12 +296,30 @@ public final class OceanStudio3DActivity extends Activity {
     boolean accepts=p.accepts.equals(node.type)||(p.accepts.equals("*model")&&!node.type.equals("image")&&!node.type.equals("sidecar"));
     if(!accepts){Toast.makeText(this,p.name+" expects "+p.accepts+" · selected "+node.type,Toast.LENGTH_LONG).show();return;}
     Toast.makeText(this,"Running "+p.name+"…",Toast.LENGTH_SHORT).show();
+    if(p.id.equals("xatlas-auto-uv")){runXatlasPlugin(p,node);return;}
     if(p.processMode>0){runAssimpProcessPlugin(p,node);return;}
     externalExecutor.execute(()->{
       String result=externalPluginRegistry.run(p,node);
       runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage(result).setPositiveButton("Done",null).show());
     });
   }
+  void runXatlasPlugin(StudioExternalPluginRegistry.Plugin p,StudioScene.Node node){
+    externalExecutor.execute(()->{
+      try{
+        File dir=new File(getFilesDir(),"studio/processed");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create processed output directory");
+        String safe=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=safe.lastIndexOf('.');if(dot>0)safe=safe.substring(0,dot);
+        File out=new File(dir,System.currentTimeMillis()+"-"+safe+"-xatlas.obj");
+        String result=StudioOpenSourceTools.xatlasUvObj(node.sourcePath,out.getAbsolutePath());
+        JSONObject j=new JSONObject(result);
+        if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","xatlas failed"));
+        runOnUiThread(()->{
+          StudioScene.Node created=scene.addImported(out.getName(),"obj",out.getAbsolutePath());objects.add(created.name);viewport.invalidate();runExternalImportExtensions(created);
+          new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage("Created UV-unwrapped OBJ.\n\n"+result).setPositiveButton("Done",null).show();
+        });
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"xatlas failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+    });
+  }
+
   void runAssimpProcessPlugin(StudioExternalPluginRegistry.Plugin p,StudioScene.Node node){
     externalExecutor.execute(()->{
       try{
