@@ -299,11 +299,11 @@ public final class OceanStudio3DActivity extends Activity {
         String result;
         if(format.equals("__godot4__")){
           main=new File(workspace,"OceanAsset.glb");
-          result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),"glb2");
+          result=StudioOpenSourceTools.assimpConvertTransformed(node.sourcePath,main.getAbsolutePath(),"glb2",node.x,node.y,node.z,node.rx,node.ry,node.rz,node.sx,node.sy,node.sz);
           JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Godot GLB export failed"));
           writeGodotSceneFiles(workspace,node);
         }else{
-          result=StudioOpenSourceTools.assimpConvert(node.sourcePath,main.getAbsolutePath(),format);
+          result=StudioOpenSourceTools.assimpConvertTransformed(node.sourcePath,main.getAbsolutePath(),format,node.x,node.y,node.z,node.rx,node.ry,node.rz,node.sx,node.sy,node.sz);
           JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
         }
         File deliver=main;
