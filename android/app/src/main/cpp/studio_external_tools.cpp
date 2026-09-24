@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <cstdint>
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
@@ -568,4 +569,108 @@ Java_studio_ocean_app_StudioOpenSourceTools_nativeXatlasUvObj(
     json << "\"}";
     xatlas::Destroy(atlas);
     return toJString(env, json.str());
+}
+
+
+namespace {
+struct PreviewVertex {
+    float px,py,pz,nx,ny,nz;
+};
+
+void collectPreviewNode(const aiScene* scene,const aiNode* node,const aiMatrix4x4& parent,
+                        std::vector<PreviewVertex>& vertices,std::vector<uint32_t>& indices,
+                        size_t maxTriangles,size_t& triangleCount) {
+    if (!node || triangleCount >= maxTriangles) return;
+    aiMatrix4x4 world = parent * node->mTransformation;
+    aiMatrix3x3 normalMatrix(world);
+    normalMatrix.Inverse().Transpose();
+
+    for (unsigned int mi=0; mi<node->mNumMeshes && triangleCount<maxTriangles; ++mi) {
+        unsigned int meshIndex=node->mMeshes[mi];
+        if (meshIndex>=scene->mNumMeshes) continue;
+        const aiMesh* mesh=scene->mMeshes[meshIndex];
+        if (!mesh || mesh->mNumVertices==0) continue;
+
+        uint32_t base=(uint32_t)vertices.size();
+        vertices.reserve(vertices.size()+mesh->mNumVertices);
+        for (unsigned int vi=0; vi<mesh->mNumVertices; ++vi) {
+            aiVector3D pos=world*mesh->mVertices[vi];
+            aiVector3D normal=mesh->HasNormals()?normalMatrix*mesh->mNormals[vi]:aiVector3D(0,1,0);
+            if (normal.SquareLength()>1e-12f) normal.Normalize(); else normal=aiVector3D(0,1,0);
+            vertices.push_back({pos.x,pos.y,pos.z,normal.x,normal.y,normal.z});
+        }
+
+        for (unsigned int fi=0; fi<mesh->mNumFaces && triangleCount<maxTriangles; ++fi) {
+            const aiFace& face=mesh->mFaces[fi];
+            if (face.mNumIndices!=3) continue;
+            indices.push_back(base+face.mIndices[0]);
+            indices.push_back(base+face.mIndices[1]);
+            indices.push_back(base+face.mIndices[2]);
+            triangleCount++;
+        }
+    }
+    for (unsigned int ci=0; ci<node->mNumChildren && triangleCount<maxTriangles; ++ci)
+        collectPreviewNode(scene,node->mChildren[ci],world,vertices,indices,maxTriangles,triangleCount);
+}
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeBuildPreviewMesh(
+        JNIEnv* env,jclass,jstring jinput,jstring joutput,jint jmaxTriangles) {
+    const std::string input=fromJString(env,jinput);
+    const std::string output=fromJString(env,joutput);
+    size_t maxTriangles=(size_t)std::max(1000,(int)jmaxTriangles);
+
+    Assimp::Importer importer;
+    unsigned int flags =
+        aiProcess_ValidateDataStructure |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FindInvalidData |
+        aiProcess_SortByPType;
+    const aiScene* scene=importer.ReadFile(input,flags);
+    if(!scene||!scene->mRootNode)return toJString(env,errorJson("assimp-preview",importer.GetErrorString()));
+
+    std::vector<PreviewVertex> vertices;
+    std::vector<uint32_t> indices;
+    size_t triangleCount=0;
+    aiMatrix4x4 identity;
+    collectPreviewNode(scene,scene->mRootNode,identity,vertices,indices,maxTriangles,triangleCount);
+    if(vertices.empty()||indices.empty())return toJString(env,errorJson("assimp-preview","no renderable triangles"));
+
+    float minx=vertices[0].px,miny=vertices[0].py,minz=vertices[0].pz;
+    float maxx=minx,maxy=miny,maxz=minz;
+    for(const PreviewVertex& v:vertices){
+        minx=std::min(minx,v.px);miny=std::min(miny,v.py);minz=std::min(minz,v.pz);
+        maxx=std::max(maxx,v.px);maxy=std::max(maxy,v.py);maxz=std::max(maxz,v.pz);
+    }
+
+    std::ofstream out(output,std::ios::binary|std::ios::trunc);
+    if(!out)return toJString(env,errorJson("assimp-preview","cannot create preview cache"));
+    uint32_t magic=0x48534d4fU; // bytes: O M S H
+    uint32_t version=1;
+    uint32_t vertexCount=(uint32_t)vertices.size();
+    uint32_t indexCount=(uint32_t)indices.size();
+    out.write(reinterpret_cast<const char*>(&magic),sizeof(magic));
+    out.write(reinterpret_cast<const char*>(&version),sizeof(version));
+    out.write(reinterpret_cast<const char*>(&vertexCount),sizeof(vertexCount));
+    out.write(reinterpret_cast<const char*>(&indexCount),sizeof(indexCount));
+    float bounds[6]={minx,miny,minz,maxx,maxy,maxz};
+    out.write(reinterpret_cast<const char*>(bounds),sizeof(bounds));
+    out.write(reinterpret_cast<const char*>(vertices.data()),(std::streamsize)(vertices.size()*sizeof(PreviewVertex)));
+    out.write(reinterpret_cast<const char*>(indices.data()),(std::streamsize)(indices.size()*sizeof(uint32_t)));
+    out.close();
+
+    std::ostringstream json;
+    json << "{\"ok\":true,\"tool\":\"assimp-preview\","
+         << "\"vertices\":" << vertexCount << ",\"indices\":" << indexCount
+         << ",\"triangles\":" << triangleCount << ",\"truncated\":"
+         << (triangleCount>=maxTriangles?"true":"false") << ","
+         << "\"bounds\":[" << minx << "," << miny << "," << minz << "," << maxx << "," << maxy << "," << maxz << "],"
+         << "\"output\":\"";
+    for(char ch:output){if(ch=='\"'||ch=='\\')json << '\\';json << ch;}
+    json << "\"}";
+    return toJString(env,json.str());
 }
