@@ -202,9 +202,22 @@ public final class OceanStudio3DActivity extends Activity {
           if(externalExtensionRegistry.isEnabled("estimate-texture-memory"))meta.append("texture memory ≈ ").append(String.format(Locale.US,"%.2f",((long)w*h*ch)/1048576.0)).append(" MiB base level\n");
         }
       }catch(Throwable t){meta.append("external analysis error: ").append(t.getClass().getSimpleName()).append(" · ").append(t.getMessage());}
+      String previewPath="";
+      if(gpuActive&&(node.type.equals("gltf")||node.type.equals("obj")||node.type.equals("model"))){
+        try{
+          File dir=new File(getFilesDir(),"studio/meshcache");if(!dir.exists())dir.mkdirs();
+          File cache=new File(dir,"node-"+node.id+"-"+Math.abs(node.sourcePath.hashCode())+".omsh");
+          String preview=StudioOpenSourceTools.buildPreviewMesh(node.sourcePath,cache.getAbsolutePath(),250000);
+          JSONObject pj=new JSONObject(preview);
+          if(pj.optBoolean("ok")){previewPath=cache.getAbsolutePath();meta.append(meta.length()>0?'\n':"").append("GPU preview: ").append(pj.optInt("triangles")).append(" triangles");}
+        }catch(Throwable t){meta.append(meta.length()>0?'\n':"").append("GPU preview error: ").append(t.getMessage());}
+      }
       final String result=meta.toString().trim();
+      final String finalPreviewPath=previewPath;
       runOnUiThread(()->{
         scene.setMetadata(node.id,result);
+        if(!finalPreviewPath.isEmpty())scene.setPreviewPath(node.id,finalPreviewPath);
+        viewport.invalidate();
         if(!result.isEmpty())Toast.makeText(this,"Open-source analysis attached to "+node.name,Toast.LENGTH_SHORT).show();
       });
     });
