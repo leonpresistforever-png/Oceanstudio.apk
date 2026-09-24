@@ -26,6 +26,16 @@ public final class StudioScene {
   public Collection<Node> all(){return Collections.unmodifiableCollection(nodes.values());}
   public int size(){return nodes.size();}
   public void transform(long id,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz){Node n=nodes.get(id);if(n==null||n.locked)return;checkpoint();n.x=x;n.y=y;n.z=z;n.rx=rx;n.ry=ry;n.rz=rz;n.sx=sx;n.sy=sy;n.sz=sz;}
+  public Node duplicateSelected(){Node n=selected();if(n==null)return null;checkpoint();Node q=rawAdd(n.name+" Copy",n.type);q.x=n.x+1f;q.y=n.y;q.z=n.z;q.rx=n.rx;q.ry=n.ry;q.rz=n.rz;q.sx=n.sx;q.sy=n.sy;q.sz=n.sz;q.visible=n.visible;q.locked=false;return q;}
+  public boolean deleteSelected(){Node n=selected();return n!=null&&remove(n.id);}
+  public boolean resetSelectedTransform(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,0,0,0,0,0,0,1,1,1);return true;}
+  public boolean offsetSelected(float dx,float dy,float dz){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x+dx,n.y+dy,n.z+dz,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean rotateSelected(float dx,float dy,float dz){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x,n.y,n.z,n.rx+dx,n.ry+dy,n.rz+dz,n.sx,n.sy,n.sz);return true;}
+  public boolean scaleSelected(float factor){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx*factor,n.sy*factor,n.sz*factor);return true;}
+  public boolean snapSelected(float step){Node n=selected();if(n==null||n.locked||step<=0)return false;transform(n.id,Math.round(n.x/step)*step,Math.round(n.y/step)*step,Math.round(n.z/step)*step,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean mirrorSelectedX(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,-n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
+  public boolean toggleSelectedVisibility(){Node n=selected();if(n==null)return false;checkpoint();n.visible=!n.visible;return true;}
+  public boolean toggleSelectedLock(){Node n=selected();if(n==null)return false;checkpoint();n.locked=!n.locked;return true;}
   public boolean undo(){if(undo.isEmpty())return false;redo.push(capture());restore(undo.pop());return true;}
   public boolean redo(){if(redo.isEmpty())return false;undo.push(capture());restore(redo.pop());return true;}
   public boolean canUndo(){return !undo.isEmpty();}public boolean canRedo(){return !redo.isEmpty();}
