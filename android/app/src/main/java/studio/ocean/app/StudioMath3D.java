@@ -26,6 +26,23 @@ public final class StudioMath3D {
   public static float clamp(float v,float lo,float hi){return Math.max(lo,Math.min(hi,v));}
   public static float snap(float value,float step){return step<=0?value:Math.round(value/step)*step;}
 
+  /** Rotate a vector by local X, then Y, then Z Euler rotations in degrees. */
+  public static Vec3 rotateXYZ(Vec3 v,float rxDeg,float ryDeg,float rzDeg){
+    float rx=radians(rxDeg),ry=radians(ryDeg),rz=radians(rzDeg);
+    float cx=(float)Math.cos(rx),sx=(float)Math.sin(rx);
+    float cy=(float)Math.cos(ry),sy=(float)Math.sin(ry);
+    float cz=(float)Math.cos(rz),sz=(float)Math.sin(rz);
+    float x1=v.x,y1=v.y*cx-v.z*sx,z1=v.y*sx+v.z*cx;
+    float x2=x1*cy+z1*sy,y2=y1,z2=-x1*sy+z1*cy;
+    return new Vec3(x2*cz-y2*sz,x2*sz+y2*cz,z2);
+  }
+
+  public static Vec3 transformPoint(Vec3 local,float px,float py,float pz,float rx,float ry,float rz,float sx,float sy,float sz){
+    Vec3 scaled=new Vec3(local.x*sx,local.y*sy,local.z*sz);
+    Vec3 rotated=rotateXYZ(scaled,rx,ry,rz);
+    return new Vec3(rotated.x+px,rotated.y+py,rotated.z+pz);
+  }
+
   public static final class Camera {
     public Vec3 position,target,right,up,forward;
     public float fovYRadians,near;
