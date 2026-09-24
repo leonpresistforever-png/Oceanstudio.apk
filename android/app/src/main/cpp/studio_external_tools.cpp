@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
@@ -13,6 +14,7 @@
 
 #include "meshoptimizer.h"
 #include "tiny_obj_loader.h"
+#include "xatlas.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/Exporter.hpp>
@@ -465,4 +467,105 @@ Java_studio_ocean_app_StudioOpenSourceTools_nativeAssimpProcess(
     }
     o << "\"}";
     return toJString(env, o.str());
+}
+
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_studio_ocean_app_StudioOpenSourceTools_nativeXatlasUvObj(
+        JNIEnv* env, jclass, jstring jinput, jstring joutput) {
+    const std::string input = fromJString(env, jinput);
+    const std::string output = fromJString(env, joutput);
+    MeshData mesh;
+    std::string error;
+    if (!loadFirstTrianglePrimitive(input, mesh, error)) {
+        return toJString(env, errorJson("xatlas", error));
+    }
+
+    xatlas::Atlas* atlas = xatlas::Create();
+    if (!atlas) return toJString(env, errorJson("xatlas", "atlas allocation failed"));
+
+    xatlas::MeshDecl decl = {};
+    decl.vertexPositionData = mesh.positions.data();
+    decl.vertexCount = (uint32_t)mesh.vertexCount;
+    decl.vertexPositionStride = sizeof(float) * 3;
+    decl.indexData = mesh.indices.data();
+    decl.indexCount = (uint32_t)mesh.indices.size();
+    decl.indexFormat = xatlas::IndexFormat::UInt32;
+
+    xatlas::AddMeshError add = xatlas::AddMesh(atlas, decl, 1);
+    if (add != xatlas::AddMeshError::Success) {
+        std::string msg = xatlas::StringForEnum(add);
+        xatlas::Destroy(atlas);
+        return toJString(env, errorJson("xatlas", msg));
+    }
+
+    xatlas::ChartOptions chart;
+    chart.maxIterations = 4;
+    xatlas::PackOptions pack;
+    pack.resolution = 2048;
+    pack.padding = 4;
+    pack.bilinear = true;
+    pack.rotateCharts = true;
+    pack.rotateChartsToAxis = true;
+    pack.bruteForce = false;
+    xatlas::Generate(atlas, chart, pack);
+
+    if (atlas->meshCount < 1 || atlas->width == 0 || atlas->height == 0) {
+        xatlas::Destroy(atlas);
+        return toJString(env, errorJson("xatlas", "UV generation produced no atlas"));
+    }
+
+    const xatlas::Mesh& outMesh = atlas->meshes[0];
+    std::ofstream out(output, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        xatlas::Destroy(atlas);
+        return toJString(env, errorJson("xatlas", "cannot open output OBJ"));
+    }
+
+    out << "# Ocean Studio xatlas UV unwrap\n";
+    for (uint32_t i = 0; i < outMesh.vertexCount; ++i) {
+        const xatlas::Vertex& v = outMesh.vertexArray[i];
+        size_t src = (size_t)v.xref;
+        if (src >= mesh.vertexCount) {
+            xatlas::Destroy(atlas);
+            return toJString(env, errorJson("xatlas", "output vertex references invalid source vertex"));
+        }
+        out << "v " << mesh.positions[src * 3 + 0] << " "
+                    << mesh.positions[src * 3 + 1] << " "
+                    << mesh.positions[src * 3 + 2] << "\n";
+    }
+    for (uint32_t i = 0; i < outMesh.vertexCount; ++i) {
+        const xatlas::Vertex& v = outMesh.vertexArray[i];
+        float u = v.uv[0] / (float)atlas->width;
+        float tv = 1.0f - v.uv[1] / (float)atlas->height;
+        out << "vt " << u << " " << tv << "\n";
+    }
+    for (uint32_t i = 0; i + 2 < outMesh.indexCount; i += 3) {
+        uint32_t a = outMesh.indexArray[i + 0] + 1;
+        uint32_t b = outMesh.indexArray[i + 1] + 1;
+        uint32_t d = outMesh.indexArray[i + 2] + 1;
+        out << "f " << a << "/" << a << " "
+                    << b << "/" << b << " "
+                    << d << "/" << d << "\n";
+    }
+    out.close();
+
+    float utilization = atlas->atlasCount > 0 && atlas->utilization ? atlas->utilization[0] : 0.0f;
+    std::ostringstream json;
+    json << "{\"ok\":true,\"tool\":\"xatlas\",\"operation\":\"uv-unwrap\","
+         << "\"resolution\":\"" << atlas->width << "x" << atlas->height << "\","
+         << "\"charts\":" << atlas->chartCount << ","
+         << "\"atlasCount\":" << atlas->atlasCount << ","
+         << "\"inputVertices\":" << mesh.vertexCount << ","
+         << "\"outputVertices\":" << outMesh.vertexCount << ","
+         << "\"indices\":" << outMesh.indexCount << ","
+         << "\"utilization\":" << utilization << ","
+         << "\"output\":\"";
+    for (char ch : output) {
+        if (ch == '\"' || ch == '\\') json << '\\';
+        json << ch;
+    }
+    json << "\"}";
+    xatlas::Destroy(atlas);
+    return toJString(env, json.str());
 }
