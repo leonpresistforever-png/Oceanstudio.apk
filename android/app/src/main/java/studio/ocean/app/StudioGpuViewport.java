@@ -123,7 +123,6 @@ public final class StudioGpuViewport extends GLSurfaceView {
             GLES30.glDepthFunc(GLES30.GL_LEQUAL);
             GLES30.glEnable(GLES30.GL_CULL_FACE);
             GLES30.glCullFace(GLES30.GL_BACK);
-            GLES30.glEnable(GLES30.GL_MULTISAMPLE);
             meshCache.clear();
             meshProgram=program(MESH_VS,MESH_FS);
             lineProgram=program(LINE_VS,LINE_FS);
