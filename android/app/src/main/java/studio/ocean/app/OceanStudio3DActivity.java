@@ -2,6 +2,7 @@ package studio.ocean.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ActivityManager;
 import android.graphics.*;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.LinearGradient;
@@ -13,6 +14,7 @@ import android.net.Uri;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
+import android.content.pm.ConfigurationInfo;
 import android.widget.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -28,14 +30,22 @@ import java.util.zip.ZipEntry;
 
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
-  FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
+  FrameLayout root; StudioViewport viewport; StudioGpuViewport gpuViewport; boolean gpuActive; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
   final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
   StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip; Set<String> assimpImportExtCache;
   static final int REQ_IMPORT=771,REQ_EXPORT=772;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();gpuActive=supportsGles3();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+  boolean supportsGles3(){
+    try{
+      ActivityManager am=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+      ConfigurationInfo info=am==null?null:am.getDeviceConfigurationInfo();
+      return info!=null&&info.reqGlEsVersion>=0x30000;
+    }catch(Throwable ignored){return false;}
+  }
+
   void applySystemBars(){
     boolean dark=extensionRegistry!=null&&extensionRegistry.isEnabled("dark-system-bars");
     getWindow().setStatusBarColor(dark?BLACK:0xff202020);
@@ -43,6 +53,10 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void build(){
     root=new FrameLayout(this);root.setBackgroundColor(BLACK);setContentView(root);
+    if(gpuActive){
+      try{gpuViewport=new StudioGpuViewport(this);root.addView(gpuViewport,new FrameLayout.LayoutParams(-1,-1));}
+      catch(Throwable t){gpuActive=false;gpuViewport=null;}
+    }
     viewport=new StudioViewport(this);root.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
     LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(10),dp(7),dp(10),dp(7));top.setBackgroundColor(0xbb050505);
     FrameLayout.LayoutParams tl=new FrameLayout.LayoutParams(-1,dp(54),Gravity.TOP);root.addView(top,tl);
@@ -481,7 +495,8 @@ public final class OceanStudio3DActivity extends Activity {
 
   @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}
 
-  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
+  @Override protected void onResume(){super.onResume();if(gpuActive&&gpuViewport!=null)gpuViewport.onResume();}
+  @Override protected void onPause(){if(gpuActive&&gpuViewport!=null)gpuViewport.onPause();super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
 
   final class StudioViewport extends View {
     final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),line=new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -497,7 +512,7 @@ public final class OceanStudio3DActivity extends Activity {
       Face(int[] idx,float depth,int color){this.idx=idx;this.depth=depth;this.color=color;}
     }
 
-    StudioViewport(Context c){super(c);line.setStrokeWidth(dp(1));setBackgroundColor(0xff12161b);}
+    StudioViewport(Context c){super(c);line.setStrokeWidth(dp(1));setBackgroundColor(gpuActive?0x00000000:0xff12161b);}
 
     void resetCamera(){yaw=StudioMath3D.radians(-35f);pitch=StudioMath3D.radians(27f);distance=13f;targetX=0;targetY=.8f;targetZ=0;invalidate();}
 
@@ -505,6 +520,27 @@ public final class OceanStudio3DActivity extends Activity {
       super.onDraw(canvas);
       int w=getWidth(),h=getHeight();if(w<=0||h<=0)return;
       camera=StudioMath3D.orbit(new StudioMath3D.Vec3(targetX,targetY,targetZ),yaw,pitch,distance,52f);
+
+      if(gpuActive&&gpuViewport!=null){
+        gpuViewport.updateCamera(yaw,pitch,distance,targetX,targetY,targetZ);
+        gpuViewport.updateScene(scene.renderSnapshot());
+        hitRects.clear();
+        StudioScene.Node selectedNode=scene.selected();
+        for(StudioScene.Node n:scene.all()){
+          if(!n.visible||n.type.equals("plane"))continue;
+          if(n.type.equals("spawn"))computeHitRect(n,1.45f,.08f,.8f,w,h);
+          else if(n.type.equals("camera"))computeHitRect(n,.35f,.35f,.55f,w,h);
+          else if(n.type.equals("light"))computeHitRect(n,.3f,.3f,.3f,w,h);
+          else computeHitRect(n,.5f,.5f,.5f,w,h);
+          if(selectedNode!=null&&selectedNode.id==n.id)drawGizmo(canvas,n,w,h);
+        }
+        if(extensionRegistry.isEnabled("viewport-hud")){
+          p.setColor(0xd20a0a0a);canvas.drawRoundRect(dp(12),dp(66),dp(285),dp(112),dp(10),dp(10),p);
+          p.setColor(WHITE);p.setTextSize(dp(12));canvas.drawText("GPU Perspective · "+tool,dp(24),dp(86),p);
+          p.setColor(0xff9b9b9b);p.setTextSize(dp(10));canvas.drawText("OpenGL ES 3 · 4× MSAA request · FOV 52°",dp(24),dp(103),p);
+        }
+        return;
+      }
 
       LinearGradient sky=new LinearGradient(0,0,0,h,0xff10151a,0xff262c32,Shader.TileMode.CLAMP);
       p.setShader(sky);canvas.drawRect(0,0,w,h,p);p.setShader(null);
@@ -576,6 +612,13 @@ public final class OceanStudio3DActivity extends Activity {
       StudioMath3D.Vec3[] world=new StudioMath3D.Vec3[8];
       for(int i=0;i<8;i++)world[i]=StudioMath3D.transformPoint(local[i],n.x,n.y,n.z,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);
       return world;
+    }
+
+    void computeHitRect(StudioScene.Node n,float sx,float sy,float sz,int w,int h){
+      StudioMath3D.Vec3[] world=boxCorners(n,sx,sy,sz);
+      float[] s=new float[3];float minX=Float.MAX_VALUE,minY=Float.MAX_VALUE,maxX=-Float.MAX_VALUE,maxY=-Float.MAX_VALUE;
+      for(StudioMath3D.Vec3 v:world)if(project(v,s,w,h)){minX=Math.min(minX,s[0]);minY=Math.min(minY,s[1]);maxX=Math.max(maxX,s[0]);maxY=Math.max(maxY,s[1]);}
+      if(minX!=Float.MAX_VALUE)hitRects.put(n.id,new RectF(minX-dp(10),minY-dp(10),maxX+dp(10),maxY+dp(10)));
     }
 
     void drawNodeBox(Canvas c,StudioScene.Node n,int w,int h){drawBox(c,n,w,h,0xff73879a,.5f,.5f,.5f);}
