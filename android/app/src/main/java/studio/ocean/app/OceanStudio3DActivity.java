@@ -14,16 +14,20 @@ import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
 import android.widget.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.json.JSONObject;
+import java.io.File;
 
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry;
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
   static final int REQ_IMPORT=771;
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
   void applySystemBars(){
     boolean dark=extensionRegistry!=null&&extensionRegistry.isEnabled("dark-system-bars");
     getWindow().setStatusBarColor(dark?BLACK:0xff202020);
@@ -72,34 +76,106 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void openImporter(){
     Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
-    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"model/gltf-binary","model/gltf+json","application/octet-stream","application/json","image/*"});
+    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"model/gltf-binary","model/gltf+json","model/obj","application/octet-stream","application/json","text/plain","image/*"});
     startActivityForResult(i,REQ_IMPORT);
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
     if(request!=REQ_IMPORT||result!=RESULT_OK||data==null||data.getData()==null)return;
     Uri uri=data.getData();if(extensionRegistry.isEnabled("persistent-import-access")){try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}}
-    String name=uri.getLastPathSegment();if(name==null)name="Imported Asset";
-    String low=name.toLowerCase(Locale.US);String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":"asset";
-    if(extensionRegistry.isEnabled("import-scene-nodes")){scene.add(name,type);objects.add(name);viewport.invalidate();Toast.makeText(this,"Imported "+name+" into project",Toast.LENGTH_SHORT).show();}else Toast.makeText(this,"Import node extension is disabled",Toast.LENGTH_SHORT).show();
+    String name=StudioOpenSourceTools.displayName(this,uri);
+    String low=name.toLowerCase(Locale.US);
+    String type=(low.endsWith(".glb")||low.endsWith(".gltf"))?"gltf":low.endsWith(".obj")?"obj":(low.endsWith(".png")||low.endsWith(".jpg")||low.endsWith(".jpeg")||low.endsWith(".bmp")||low.endsWith(".tga")||low.endsWith(".hdr"))?"image":"asset";
+    if(!extensionRegistry.isEnabled("import-scene-nodes")){Toast.makeText(this,"Import node extension is disabled",Toast.LENGTH_SHORT).show();return;}
+    try{
+      File local=StudioOpenSourceTools.materialize(this,uri,name);
+      StudioScene.Node node=scene.addImported(name,type,local.getAbsolutePath());
+      objects.add(name);viewport.invalidate();
+      Toast.makeText(this,"Imported "+name+" · analyzing open-source tools…",Toast.LENGTH_SHORT).show();
+      runExternalImportExtensions(node);
+    }catch(Exception ex){Toast.makeText(this,"Import failed: "+ex.getMessage(),Toast.LENGTH_LONG).show();}
+  }
+  void runExternalImportExtensions(StudioScene.Node node){
+    externalExecutor.execute(()->{
+      StringBuilder meta=new StringBuilder();
+      try{
+        if(node.type.equals("gltf")){
+          String inspect=null;
+          boolean needInspect=externalExtensionRegistry.isEnabled("auto-cgltf-summary")||externalExtensionRegistry.isEnabled("auto-cgltf-validation")||externalExtensionRegistry.isEnabled("auto-cgltf-mesh-stats")||externalExtensionRegistry.isEnabled("auto-cgltf-material-stats")||externalExtensionRegistry.isEnabled("auto-cgltf-animation-stats");
+          if(needInspect)inspect=StudioOpenSourceTools.inspectGltf(node.sourcePath);
+          if(externalExtensionRegistry.isEnabled("auto-cgltf-summary"))meta.append("cgltf summary: ").append(inspect).append('\n');
+          if(inspect!=null){
+            JSONObject j=new JSONObject(inspect);
+            if(externalExtensionRegistry.isEnabled("auto-cgltf-validation"))meta.append("validation: valid=").append(j.optBoolean("valid")).append(" buffers=").append(j.optBoolean("buffersLoaded")).append('\n');
+            if(externalExtensionRegistry.isEnabled("auto-cgltf-mesh-stats"))meta.append("mesh: ").append(j.optInt("meshes")).append(" meshes, ").append(j.optInt("primitives")).append(" primitives, ").append(j.optLong("vertices")).append(" vertices, ").append(j.optLong("indices")).append(" indices\n");
+            if(externalExtensionRegistry.isEnabled("auto-cgltf-material-stats"))meta.append("materials: ").append(j.optInt("materials")).append(" · textures ").append(j.optInt("textures")).append(" · images ").append(j.optInt("images")).append('\n');
+            if(externalExtensionRegistry.isEnabled("auto-cgltf-animation-stats"))meta.append("animation: ").append(j.optInt("animations")).append(" · cameras ").append(j.optInt("cameras")).append(" · lights ").append(j.optInt("lights")).append('\n');
+          }
+          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod75"))meta.append("LOD75: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.75f)).append('\n');
+          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod50"))meta.append("LOD50: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.50f)).append('\n');
+          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod25"))meta.append("LOD25: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.25f)).append('\n');
+          if(externalExtensionRegistry.isEnabled("auto-meshopt-cache"))meta.append("cache: ").append(StudioOpenSourceTools.vertexCacheGltf(node.sourcePath)).append('\n');
+        }else if(node.type.equals("obj")){
+          String inspect=StudioOpenSourceTools.inspectObj(node.sourcePath);
+          JSONObject j=new JSONObject(inspect);
+          if(externalExtensionRegistry.isEnabled("auto-obj-summary"))meta.append("tinyobj: ").append(inspect).append('\n');
+          if(externalExtensionRegistry.isEnabled("auto-obj-face-stats"))meta.append("faces: ").append(j.optLong("faces")).append(" · indices ").append(j.optLong("indices")).append('\n');
+          if(externalExtensionRegistry.isEnabled("auto-obj-material-stats"))meta.append("materials: ").append(j.optInt("materials")).append(" · shapes ").append(j.optInt("shapes")).append('\n');
+        }else if(node.type.equals("image")){
+          String inspect=StudioOpenSourceTools.inspectImage(node.sourcePath);
+          JSONObject j=new JSONObject(inspect);
+          if(externalExtensionRegistry.isEnabled("auto-texture-probe"))meta.append("stb: ").append(inspect).append('\n');
+          int w=j.optInt("width"),h=j.optInt("height"),ch=Math.max(1,j.optInt("channels"));
+          if(externalExtensionRegistry.isEnabled("warn-4k-textures")&&(w>4096||h>4096))meta.append("warning: texture exceeds 4096px on one axis\n");
+          if(externalExtensionRegistry.isEnabled("estimate-texture-memory"))meta.append("texture memory ≈ ").append(String.format(Locale.US,"%.2f",((long)w*h*ch)/1048576.0)).append(" MiB base level\n");
+        }
+      }catch(Throwable t){meta.append("external analysis error: ").append(t.getClass().getSimpleName()).append(" · ").append(t.getMessage());}
+      final String result=meta.toString().trim();
+      runOnUiThread(()->{
+        scene.setMetadata(node.id,result);
+        if(!result.isEmpty())Toast.makeText(this,"Open-source analysis attached to "+node.name,Toast.LENGTH_SHORT).show();
+      });
+    });
   }
   void showOutliner(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(12),dp(8),dp(12),dp(8));
-    for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
+    for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});row.setOnLongClickListener(v->{if(n.metadata!=null&&!n.metadata.isEmpty())new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(n.name+" · analysis").setMessage(n.metadata).setPositiveButton("Done",null).show();else Toast.makeText(this,"No analysis metadata yet",Toast.LENGTH_SHORT).show();return true;});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
     ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene Outliner").setView(sv).setNegativeButton("Close",null).show();
   }
   void showPlugins(){
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    TextView note=new TextView(this);note.setText("15 built-in plugins below execute real scene operations. They are packaged with Studio; none are placeholder downloads.");note.setTextColor(MUTED);note.setTextSize(12);box.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
+    TextView nativeState=new TextView(this);nativeState.setText(StudioOpenSourceTools.available()?"External native toolchain: loaded":"External native toolchain: unavailable · "+StudioOpenSourceTools.unavailableReason());nativeState.setTextColor(StudioOpenSourceTools.available()?0xff9ad7b1:0xffff9b8f);nativeState.setTextSize(11);box.addView(nativeState,new LinearLayout.LayoutParams(-1,dp(36)));
+    TextView builtTitle=new TextView(this);builtTitle.setText("OCEAN BUILT-IN · 15");builtTitle.setTextColor(MUTED);builtTitle.setTextSize(10);builtTitle.setLetterSpacing(.14f);box.addView(builtTitle,new LinearLayout.LayoutParams(-1,dp(28)));
     for(StudioPluginRegistry.Plugin p:pluginRegistry.all()){
-      LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(6),dp(12),dp(6));row.setBackground(bg(PANEL,12,BORDER));
-      TextView name=new TextView(this);name.setText(p.name);name.setTextColor(WHITE);name.setTextSize(13);name.setTypeface(null,Typeface.BOLD);
-      TextView desc=new TextView(this);desc.setText(p.description);desc.setTextColor(MUTED);desc.setTextSize(10);
-      row.addView(name,new LinearLayout.LayoutParams(-1,dp(22)));row.addView(desc,new LinearLayout.LayoutParams(-1,dp(20)));
-      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(54));lp.bottomMargin=dp(6);box.addView(row,lp);
+      LinearLayout row=pluginRow(p.name,p.description,"Built-in");
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(58));lp.bottomMargin=dp(6);box.addView(row,lp);
       row.setOnClickListener(v->runPlugin(p));
     }
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · 15").setView(sv).setNegativeButton("Close",null).show();
+    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · 15");extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+    for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
+      LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);
+      row.setOnClickListener(v->runExternalPlugin(p));
+    }
+    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · 30").setView(sv).setNegativeButton("Close",null).show();
+  }
+  LinearLayout pluginRow(String nameText,String descText,String sourceText){
+    LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(5),dp(12),dp(5));row.setBackground(bg(PANEL,12,BORDER));
+    TextView name=new TextView(this);name.setText(nameText);name.setTextColor(WHITE);name.setTextSize(13);name.setTypeface(null,Typeface.BOLD);
+    TextView desc=new TextView(this);desc.setText(descText);desc.setTextColor(MUTED);desc.setTextSize(10);
+    TextView source=new TextView(this);source.setText(sourceText);source.setTextColor(0xff727c86);source.setTextSize(9);
+    row.addView(name,new LinearLayout.LayoutParams(-1,dp(20)));row.addView(desc,new LinearLayout.LayoutParams(-1,dp(20)));row.addView(source,new LinearLayout.LayoutParams(-1,dp(18)));
+    return row;
+  }
+  void runExternalPlugin(StudioExternalPluginRegistry.Plugin p){
+    StudioScene.Node node=scene.selected();
+    if(node==null){Toast.makeText(this,"Select an imported asset first",Toast.LENGTH_SHORT).show();return;}
+    if(!p.accepts.equals(node.type)){Toast.makeText(this,p.name+" expects "+p.accepts+" · selected "+node.type,Toast.LENGTH_LONG).show();return;}
+    Toast.makeText(this,"Running "+p.name+"…",Toast.LENGTH_SHORT).show();
+    externalExecutor.execute(()->{
+      String result=externalPluginRegistry.run(p,node);
+      runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage(result).setPositiveButton("Done",null).show());
+    });
   }
   void runPlugin(StudioPluginRegistry.Plugin p){
     if(p.id.equals("delete")&&extensionRegistry.isEnabled("confirm-destructive")){
@@ -114,6 +190,10 @@ public final class OceanStudio3DActivity extends Activity {
     TextView note=new TextView(this);note.setText("Built-ins are packaged with Ocean Studio. External sources are metadata-only until reviewed and explicitly enabled.");note.setTextColor(MUTED);note.setTextSize(12);box.addView(note,new LinearLayout.LayoutParams(-1,dp(52)));
     for(StudioExtensionRegistry.Entry e:extensionRegistry.builtins()){
       CheckBox row=new CheckBox(this);row.setText(e.name+"   "+e.version+"\n"+e.description);row.setTextColor(WHITE);row.setTextSize(12);row.setChecked(extensionRegistry.isEnabled(e.id,e.enabled));row.setOnCheckedChangeListener((b,on)->{extensionRegistry.setEnabled(e.id,on);if(e.id.equals("dark-system-bars"))applySystemBars();viewport.invalidate();});box.addView(row,new LinearLayout.LayoutParams(-1,dp(58)));
+    }
+    TextView externalTitle=new TextView(this);externalTitle.setText("EXTERNAL OPEN SOURCE · 15");externalTitle.setTextColor(MUTED);externalTitle.setTextSize(10);externalTitle.setLetterSpacing(.14f);box.addView(externalTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+    for(StudioExternalExtensionRegistry.Extension e:externalExtensionRegistry.all()){
+      CheckBox row=new CheckBox(this);row.setText(e.name+"\n"+e.sourceRepo+" · "+e.tool+" · "+e.description);row.setTextColor(WHITE);row.setTextSize(11);row.setChecked(externalExtensionRegistry.isEnabled(e.id));row.setOnCheckedChangeListener((b,on)->externalExtensionRegistry.setEnabled(e.id,on));box.addView(row,new LinearLayout.LayoutParams(-1,dp(70)));
     }
     TextView source=button("＋ Add HTTPS extension source");box.addView(source,new LinearLayout.LayoutParams(-1,dp(42)));
     source.setOnClickListener(v->promptSource());
@@ -156,7 +236,7 @@ public final class OceanStudio3DActivity extends Activity {
   }
   void select(String s){selection.setText(s+"  ·  Inspector");if(extensionRegistry.isEnabled("auto-inspector"))inspector.setVisibility(View.VISIBLE);}
 
-  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
+  @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}\n\n  @Override protected void onPause(){super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
 
   final class StudioViewport extends View {
     Paint p=new Paint(3); Paint line=new Paint(3); float yaw=-.45f,pitch=.52f,zoom=1f,panX=0,panY=0; String tool="Select"; float lastX,lastY; int pointers;
