@@ -7,8 +7,19 @@ public final class StudioScene {
     public final long id; public String name,type;
     public float x,y,z,rx,ry,rz,sx=1,sy=1,sz=1;
     public boolean visible=true,locked=false; public String sourcePath="",metadata="",previewPath="";
+    public float vx=0,vy=0,vz=0;
+    public float mass=1.0f;
+    public float bounciness=0.55f;
+    public boolean isDynamic=false;
+    public int tintColor=0;
     Node(long i,String n,String t){id=i;name=n;type=t;}
-    Node copy(){Node q=new Node(id,name,type);q.x=x;q.y=y;q.z=z;q.rx=rx;q.ry=ry;q.rz=rz;q.sx=sx;q.sy=sy;q.sz=sz;q.visible=visible;q.locked=locked;q.sourcePath=sourcePath;q.metadata=metadata;q.previewPath=previewPath;return q;}
+    Node copy(){
+      Node q=new Node(id,name,type);
+      q.x=x;q.y=y;q.z=z;q.rx=rx;q.ry=ry;q.rz=rz;q.sx=sx;q.sy=sy;q.sz=sz;
+      q.visible=visible;q.locked=locked;q.sourcePath=sourcePath;q.metadata=metadata;q.previewPath=previewPath;
+      q.vx=vx;q.vy=vy;q.vz=vz;q.mass=mass;q.bounciness=bounciness;q.isDynamic=isDynamic;q.tintColor=tintColor;
+      return q;
+    }
   }
   private final LinkedHashMap<Long,Node> nodes=new LinkedHashMap<>();
   private final ArrayDeque<State> undo=new ArrayDeque<>(),redo=new ArrayDeque<>();
@@ -30,7 +41,7 @@ public final class StudioScene {
   public List<Node> renderSnapshot(){ArrayList<Node> out=new ArrayList<>();for(Node n:nodes.values())out.add(n.copy());return out;}
   public int size(){return nodes.size();}
   public void transform(long id,float x,float y,float z,float rx,float ry,float rz,float sx,float sy,float sz){Node n=nodes.get(id);if(n==null||n.locked)return;checkpoint();n.x=x;n.y=y;n.z=z;n.rx=rx;n.ry=ry;n.rz=rz;n.sx=sx;n.sy=sy;n.sz=sz;}
-  public Node duplicateSelected(){Node n=selected();if(n==null)return null;checkpoint();Node q=rawAdd(n.name+" Copy",n.type);q.x=n.x+1f;q.y=n.y;q.z=n.z;q.rx=n.rx;q.ry=n.ry;q.rz=n.rz;q.sx=n.sx;q.sy=n.sy;q.sz=n.sz;q.visible=n.visible;q.locked=false;return q;}
+  public Node duplicateSelected(){Node n=selected();if(n==null)return null;checkpoint();Node q=rawAdd(n.name+" Copy",n.type);q.x=n.x+1f;q.y=n.y;q.z=n.z;q.rx=n.rx;q.ry=n.ry;q.rz=n.rz;q.sx=n.sx;q.sy=n.sy;q.sz=n.sz;q.visible=n.visible;q.locked=false;q.tintColor=n.tintColor;q.isDynamic=n.isDynamic;return q;}
   public boolean deleteSelected(){Node n=selected();return n!=null&&remove(n.id);}
   public boolean resetSelectedTransform(){Node n=selected();if(n==null||n.locked)return false;transform(n.id,0,0,0,0,0,0,1,1,1);return true;}
   public boolean offsetSelected(float dx,float dy,float dz){Node n=selected();if(n==null||n.locked)return false;transform(n.id,n.x+dx,n.y+dy,n.z+dz,n.rx,n.ry,n.rz,n.sx,n.sy,n.sz);return true;}
@@ -44,9 +55,37 @@ public final class StudioScene {
   private float normalizeDeg(float v){float r=v%360f;if(r>180f)r-=360f;if(r<=-180f)r+=360f;return r;}
   public boolean toggleSelectedVisibility(){Node n=selected();if(n==null)return false;checkpoint();n.visible=!n.visible;return true;}
   public boolean toggleSelectedLock(){Node n=selected();if(n==null)return false;checkpoint();n.locked=!n.locked;return true;}
+  public boolean toggleSelectedPhysics(){Node n=selected();if(n==null||n.locked||"plane".equals(n.type))return false;checkpoint();n.isDynamic=!n.isDynamic;n.vx=0;n.vy=0;n.vz=0;return true;}
+  public boolean setSelectedTint(int color){Node n=selected();if(n==null||n.locked)return false;checkpoint();n.tintColor=color;return true;}
+
+  public void stepPhysics(float dt){
+    if(dt<=0||dt>0.1f)dt=0.016f;
+    float gravity=-9.8f;
+    for(Node n:nodes.values()){
+      if(!n.visible||n.locked||!n.isDynamic||"plane".equals(n.type))continue;
+      n.vy+=gravity*dt;
+      n.x+=n.vx*dt;
+      n.y+=n.vy*dt;
+      n.z+=n.vz*dt;
+      float halfH=Math.max(0.05f,n.sy*0.5f);
+      if("spawn".equals(n.type))halfH=0.08f;
+      if(n.y-halfH<0f){
+        n.y=halfH;
+        if(n.vy<0){
+          n.vy=-n.vy*n.bounciness;
+          if(Math.abs(n.vy)<0.2f)n.vy=0;
+          n.vx*=0.92f;n.vz*=0.92f;
+          if(Math.abs(n.vx)<0.02f)n.vx=0;
+          if(Math.abs(n.vz)<0.02f)n.vz=0;
+        }
+      }
+    }
+  }
+
   public boolean undo(){if(undo.isEmpty())return false;redo.push(capture());restore(undo.pop());return true;}
   public boolean redo(){if(redo.isEmpty())return false;undo.push(capture());restore(redo.pop());return true;}
   public boolean canUndo(){return !undo.isEmpty();}public boolean canRedo(){return !redo.isEmpty();}
-  public String snapshot(){StringBuilder b=new StringBuilder();b.append("{\"nodes\":[");boolean first=true;for(Node n:nodes.values()){if(!first)b.append(',');first=false;b.append("{\"id\":").append(n.id).append(",\"name\":\"").append(escape(n.name)).append("\",\"type\":\"").append(escape(n.type)).append("\",\"p\":[").append(n.x).append(',').append(n.y).append(',').append(n.z).append("],\"r\":[").append(n.rx).append(',').append(n.ry).append(',').append(n.rz).append("],\"s\":[").append(n.sx).append(',').append(n.sy).append(',').append(n.sz).append("],\"visible\":").append(n.visible).append(",\"locked\":").append(n.locked).append(",\"sourcePath\":\"").append(escape(n.sourcePath)).append("\",\"metadata\":\"").append(escape(n.metadata)).append("\",\"previewPath\":\"").append(escape(n.previewPath)).append("\"}");}return b.append("]}").toString();}
-  private String escape(String s){return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r").replace("\t","\\t");}
+  public String snapshot(){StringBuilder b=new StringBuilder();b.append("{"nodes":[");boolean first=true;for(Node n:nodes.values()){if(!first)b.append(',');first=false;b.append("{"id":").append(n.id).append(","name":"").append(escape(n.name)).append("","type":"").append(escape(n.type)).append("","p":[").append(n.x).append(',').append(n.y).append(',').append(n.z).append("],"r":[").append(n.rx).append(',').append(n.ry).append(',').append(n.rz).append("],"s":[").append(n.sx).append(',').append(n.sy).append(',').append(n.sz).append("],"visible":").append(n.visible).append(","locked":").append(n.locked).append(","isDynamic":").append(n.isDynamic).append(","tint":").append(n.tintColor).append(","sourcePath":"").append(escape(n.sourcePath)).append("","metadata":"").append(escape(n.metadata)).append("","previewPath":"").append(escape(n.previewPath)).append(""}");}return b.append("]}").toString();}
+  private String escape(String s){return s.replace("\","\\").replace(""","\"").replace("
+","\n").replace("","\r").replace("	","\t");}
 }

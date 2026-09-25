@@ -77,4 +77,37 @@ public final class StudioMath3D {
     out[2]=z;
     return Float.isFinite(out[0])&&Float.isFinite(out[1])&&Float.isFinite(out[2]);
   }
+
+  /**
+   * Unproject screen pixel coordinates into a normalized world-space ray direction.
+   */
+  public static Vec3 screenToRayDir(float screenX, float screenY, int width, int height, Camera c) {
+    float focal = (height * 0.5f) / (float) Math.tan(c.fovYRadians * 0.5f);
+    float x = (screenX - width * 0.5f) / focal;
+    float y = -(screenY - height * 0.5f) / focal;
+    Vec3 camRay = c.right.mul(x).add(c.up.mul(y)).add(c.forward);
+    return normalize(camRay);
+  }
+
+  /**
+   * Raycast from world rayOrigin along rayDir against horizontal plane Y = planeY.
+   * Returns intersection point in world space, or null if ray is parallel or pointing away.
+   */
+  public static Vec3 raycastPlaneY(Vec3 rayOrigin, Vec3 rayDir, float planeY) {
+    if (Math.abs(rayDir.y) < 1e-6f) return null;
+    float t = (planeY - rayOrigin.y) / rayDir.y;
+    if (t < 0.01f || t > 1000f) return null;
+    return rayOrigin.add(rayDir.mul(t));
+  }
+
+  /**
+   * Shortest distance from a 3D ray to a 3D point.
+   */
+  public static float distanceRayToPoint(Vec3 rayOrigin, Vec3 rayDir, Vec3 point) {
+    Vec3 diff = point.sub(rayOrigin);
+    float t = dot(diff, rayDir);
+    if (t < 0) return length(diff);
+    Vec3 projection = rayOrigin.add(rayDir.mul(t));
+    return length(point.sub(projection));
+  }
 }

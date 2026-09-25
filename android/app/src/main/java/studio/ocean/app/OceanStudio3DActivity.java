@@ -8,6 +8,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.LinearGradient;
 import android.graphics.Shader;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.Intent;
 import android.content.ClipData;
 import android.net.Uri;
@@ -24,20 +26,63 @@ import org.json.JSONArray;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipEntry;
 
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
-  FrameLayout root; StudioViewport viewport; StudioGpuViewport gpuViewport; boolean gpuActive; LinearLayout rail, bottom, inspector; EditText aiInput; TextView selection;
-  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>(); StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore; StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry; StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry; StudioQuickToolRegistry quickToolRegistry; StudioRenderSettings renderSettings; final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
-  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt=""; boolean pendingExportZip; Set<String> assimpImportExtCache;
+  FrameLayout root; StudioViewport viewport; StudioGpuViewport gpuViewport; boolean gpuActive;
+  LinearLayout bottom, inspector; TextView selection, inspectorTitle;
+  TextView posXText, posYText, posZText, rotYText, scaleText, physicsToggleBtn;
+  final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>();
+  StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore;
+  StudioPluginRegistry pluginRegistry; StudioExternalPluginRegistry externalPluginRegistry;
+  StudioExternalExtensionRegistry externalExtensionRegistry; StudioEngineTargetRegistry engineTargetRegistry;
+  StudioQuickToolRegistry quickToolRegistry; StudioRenderSettings renderSettings;
+  final ExecutorService externalExecutor=Executors.newSingleThreadExecutor();
+  StudioScene.Node pendingExportNode; String pendingExportFormatId="",pendingExportExt="",pendingExportDataExt="";
+  boolean pendingExportZip; Set<String> assimpImportExtCache;
   static final int REQ_IMPORT=771,REQ_EXPORT=772;
+
+  boolean physicsRunning=false;
+  final Handler physicsHandler=new Handler(Looper.getMainLooper());
+  final Runnable physicsRunnable=new Runnable() {
+    @Override public void run() {
+      if(physicsRunning) {
+        scene.stepPhysics(0.016f);
+        if(viewport!=null) viewport.invalidate();
+        updateInspectorValues();
+        physicsHandler.postDelayed(this, 16);
+      }
+    }
+  };
+
   int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int c,float r,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp(r));if(stroke!=0)d.setStroke(dp(1),stroke);return d;}
   TextView button(String s){TextView v=new TextView(this);v.setText(s);v.setTextColor(WHITE);v.setTextSize(12);v.setGravity(Gravity.CENTER);v.setPadding(dp(10),0,dp(10),0);v.setBackground(bg(PANEL,12,BORDER));return v;}
-  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BLACK);getWindow().setNavigationBarColor(BLACK);scene=new StudioScene();extensionRegistry=new StudioExtensionRegistry(this);projectStore=new StudioProjectStore(this);pluginRegistry=new StudioPluginRegistry();externalPluginRegistry=new StudioExternalPluginRegistry();externalExtensionRegistry=new StudioExternalExtensionRegistry(this);engineTargetRegistry=new StudioEngineTargetRegistry(this);quickToolRegistry=new StudioQuickToolRegistry();renderSettings=new StudioRenderSettings(this);gpuActive=supportsGles3();applySystemBars();objects.add("Baseplate");objects.add("Spawn");build();}
+
+  @Override public void onCreate(Bundle b){
+    super.onCreate(b);
+    getWindow().setStatusBarColor(BLACK);
+    getWindow().setNavigationBarColor(BLACK);
+    scene=new StudioScene();
+    extensionRegistry=new StudioExtensionRegistry(this);
+    projectStore=new StudioProjectStore(this);
+    pluginRegistry=new StudioPluginRegistry();
+    externalPluginRegistry=new StudioExternalPluginRegistry();
+    externalExtensionRegistry=new StudioExternalExtensionRegistry(this);
+    engineTargetRegistry=new StudioEngineTargetRegistry(this);
+    quickToolRegistry=new StudioQuickToolRegistry();
+    renderSettings=new StudioRenderSettings(this);
+    gpuActive=supportsGles3();
+    applySystemBars();
+    objects.add("Baseplate");
+    objects.add("Spawn");
+    build();
+  }
+
   boolean supportsGles3(){
     try{
       ActivityManager am=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
@@ -51,61 +96,355 @@ public final class OceanStudio3DActivity extends Activity {
     getWindow().setStatusBarColor(dark?BLACK:0xff202020);
     getWindow().setNavigationBarColor(dark?BLACK:0xff202020);
   }
+
   void build(){
-    root=new FrameLayout(this);root.setBackgroundColor(BLACK);setContentView(root);
+    root=new FrameLayout(this);
+    root.setBackgroundColor(BLACK);
+    setContentView(root);
     if(gpuActive){
       try{gpuViewport=new StudioGpuViewport(this);root.addView(gpuViewport,new FrameLayout.LayoutParams(-1,-1));}
       catch(Throwable t){gpuActive=false;gpuViewport=null;}
     }
-    viewport=new StudioViewport(this);root.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
-    LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(10),dp(7),dp(10),dp(7));top.setBackgroundColor(0xbb050505);
-    FrameLayout.LayoutParams tl=new FrameLayout.LayoutParams(-1,dp(54),Gravity.TOP);root.addView(top,tl);
-    TextView ai=button("✦");ai.setTextSize(21);ai.setContentDescription("Ocean AI");ai.setOnClickListener(v->showAI());top.addView(ai,new LinearLayout.LayoutParams(dp(44),dp(40)));
-    TextView name=new TextView(this);name.setText("  OCEAN STUDIO  ·  Scene 1");name.setTextColor(WHITE);name.setTextSize(13);name.setTypeface(null,Typeface.BOLD);top.addView(name,new LinearLayout.LayoutParams(0,-1,1));
-    for(String s:new String[]{"↶","↷","▶","□","⋮"}){TextView b=button(s);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(42),dp(38));lp.leftMargin=dp(5);top.addView(b,lp);b.setOnClickListener(v->handleTop(((TextView)v).getText().toString()));}
-    buildRail();buildBottom();buildInspector();
-    TextView hint=new TextView(this);hint.setText("1 finger orbit  •  2 fingers pan/zoom  •  tap object to select");hint.setVisibility(extensionRegistry.isEnabled("gesture-hints")?View.VISIBLE:View.GONE);hint.setTextColor(0xffb0b0b0);hint.setTextSize(10);hint.setGravity(Gravity.CENTER);hint.setBackground(bg(0xaa0b0b0b,10,BORDER));
-    FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(-2,dp(28),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);hp.bottomMargin=dp(64);root.addView(hint,hp);
+    viewport=new StudioViewport(this);
+    root.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
+
+    // Sleek top control bar
+    LinearLayout top=new LinearLayout(this);
+    top.setGravity(Gravity.CENTER_VERTICAL);
+    top.setPadding(dp(10),dp(6),dp(10),dp(6));
+    top.setBackgroundColor(0xcc070707);
+    FrameLayout.LayoutParams tl=new FrameLayout.LayoutParams(-1,dp(52),Gravity.TOP);
+    root.addView(top,tl);
+
+    TextView ai=button("✦");ai.setTextSize(18);ai.setContentDescription("Ocean AI");ai.setOnClickListener(v->showAI());
+    top.addView(ai,new LinearLayout.LayoutParams(dp(38),dp(38)));
+
+    TextView name=new TextView(this);name.setText("  OCEAN 3D STUDIO");name.setTextColor(WHITE);name.setTextSize(12);name.setTypeface(null,Typeface.BOLD);
+    top.addView(name,new LinearLayout.LayoutParams(0,-1,1));
+
+    // Direct workflow action buttons on top bar
+    String[] topBtns={"↶","↷","▶ Sim","⌖ Frame","☁ Sky","▦ Grid","＋ Add","⋮"};
+    for(String s:topBtns){
+      TextView b=button(s);
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(36));
+      lp.leftMargin=dp(4);
+      top.addView(b,lp);
+      b.setOnClickListener(v->handleTopAction(s));
+    }
+
+    buildBottomBar();
+    buildInspectorPanel();
+
+    TextView hint=new TextView(this);
+    hint.setText("Touch & Drag object to move  •  Swipe background to orbit  •  Pinch zoom");
+    hint.setVisibility(extensionRegistry.isEnabled("gesture-hints")?View.VISIBLE:View.GONE);
+    hint.setTextColor(0xffd0d4d8);
+    hint.setTextSize(10);
+    hint.setGravity(Gravity.CENTER);
+    hint.setPadding(dp(10),dp(3),dp(10),dp(3));
+    hint.setBackground(bg(0xbb000000,8,0x44ffffff));
+    FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
+    hp.bottomMargin=dp(62);
+    root.addView(hint,hp);
   }
-  void buildRail(){
-    rail=new LinearLayout(this);rail.setOrientation(LinearLayout.VERTICAL);rail.setPadding(dp(6),dp(6),dp(6),dp(6));rail.setBackground(bg(0xe80b0b0b,16,BORDER));
-    String[][] tools={{"↖","Select"},{"✥","Move"},{"⟳","Rotate"},{"↔","Scale"},{"▣","Box"},{"●","Sphere"},{"▲","Mesh"},{"✎","Draw"},{"⌁","Curve"},{"▦","Grid"},{"☀","Light"},{"◉","Camera"},{"⚓","Anchor"},{"⛓","Joint"},{"◫","Material"},{"▤","Texture"},{"♨","Physics"},{"☁","World"},{"⌖","Snap"},{"⊕","Add"}};
-    for(String[] t:tools){TextView b=button(t[0]);b.setContentDescription(t[1]);b.setTextSize(17);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(40),dp(36));lp.bottomMargin=dp(4);rail.addView(b,lp);b.setOnClickListener(v->{viewport.tool=t[1];Toast.makeText(this,t[1],Toast.LENGTH_SHORT).show();});}
-    ScrollView sc=new ScrollView(this);sc.setVerticalScrollBarEnabled(false);sc.addView(rail);FrameLayout.LayoutParams rp=new FrameLayout.LayoutParams(dp(54),-2,Gravity.TOP|Gravity.RIGHT);rp.topMargin=dp(62);rp.rightMargin=dp(8);rp.bottomMargin=dp(70);root.addView(sc,rp);
+
+  void buildBottomBar(){
+    bottom=new LinearLayout(this);
+    bottom.setGravity(Gravity.CENTER_VERTICAL);
+    bottom.setPadding(dp(10),dp(6),dp(10),dp(6));
+    bottom.setBackgroundColor(0xdd080808);
+
+    // Primary mobile 3D tools
+    String[] tools={"✥ Move","⟳ Rotate","⤢ Scale","❐ Duplicate","🗑 Delete","⚙ Inspector","📥 Import","📤 Export","Settings"};
+    for(String s:tools){
+      TextView b=button(s);
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(38));
+      lp.rightMargin=dp(6);
+      bottom.addView(b,lp);
+      b.setOnClickListener(v->toolAction(s));
+    }
+    HorizontalScrollView hs=new HorizontalScrollView(this);
+    hs.setHorizontalScrollBarEnabled(false);
+    hs.addView(bottom);
+    FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);
+    root.addView(hs,bp);
   }
-  void buildBottom(){
-    bottom=new LinearLayout(this);bottom.setGravity(Gravity.CENTER);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));bottom.setBackgroundColor(0xdd070707);
-    String[] tools={"＋ Add","Asset","Import","Engine","Export","Tools","Scene","Layers","Outliner","Inspector","Transform","Material","Texture","UV","Terrain","Sculpt","Paint","Vertex","Edge","Face","Rig","Bones","Weights","Animate","Timeline","Keyframe","Physics","Collision","Constraint","Lighting","World","Camera","Audio","Particles","Nodes","Shader","Measure","Mirror","Array","Boolean","Remesh","Decimate","Normals","Origin","Pivot","Code","Console","Add-ons","Plugin","Extensions","Settings"};
-    for(String s:tools){TextView b=button(s);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(38));lp.rightMargin=dp(6);bottom.addView(b,lp);b.setOnClickListener(v->toolAction(s));}
-    HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);hs.addView(bottom);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);root.addView(hs,bp);
+
+  void buildInspectorPanel(){
+    inspector=new LinearLayout(this);
+    inspector.setOrientation(LinearLayout.VERTICAL);
+    inspector.setPadding(dp(12),dp(10),dp(12),dp(10));
+    inspector.setBackground(bg(0xf0111417,14,BORDER));
+    inspector.setVisibility(View.GONE);
+
+    inspectorTitle=new TextView(this);
+    inspectorTitle.setText("Object Inspector");
+    inspectorTitle.setTextColor(WHITE);
+    inspectorTitle.setTextSize(13);
+    inspectorTitle.setTypeface(null,Typeface.BOLD);
+    inspector.addView(inspectorTitle,new LinearLayout.LayoutParams(-1,dp(28)));
+
+    // X, Y, Z controls
+    inspector.addView(createAxisRow("X", (delta)->{scene.offsetSelected(delta,0,0);viewport.invalidate();updateInspectorValues();}));
+    inspector.addView(createAxisRow("Y", (delta)->{scene.offsetSelected(0,delta,0);viewport.invalidate();updateInspectorValues();}));
+    inspector.addView(createAxisRow("Z", (delta)->{scene.offsetSelected(0,0,delta);viewport.invalidate();updateInspectorValues();}));
+
+    // Rotate & Scale rows
+    inspector.addView(createRotateRow());
+    inspector.addView(createScaleRow());
+
+    // Physics dynamic toggle
+    physicsToggleBtn=button("Physics: Static");
+    physicsToggleBtn.setOnClickListener(v->{
+      scene.toggleSelectedPhysics();
+      updateInspectorValues();
+    });
+    LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(-1,dp(34));
+    plp.topMargin=dp(6);
+    inspector.addView(physicsToggleBtn,plp);
+
+    // Material Color Tint Chips
+    TextView matLabel=new TextView(this);
+    matLabel.setText("Material Tint");
+    matLabel.setTextColor(MUTED);
+    matLabel.setTextSize(10);
+    matLabel.setPadding(0,dp(6),0,dp(4));
+    inspector.addView(matLabel);
+
+    LinearLayout colorRow=new LinearLayout(this);
+    colorRow.setOrientation(LinearLayout.HORIZONTAL);
+    int[] colors={0xffe54d42, 0xff39b54a, 0xff0081ff, 0xfffbbd08, 0xff6739b6, 0xffffffff, 0xff73879a};
+    for(int col:colors){
+      View chip=new View(this);
+      chip.setBackground(bg(col, 6, 0xffffffff));
+      LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(dp(26),dp(26));
+      clp.rightMargin=dp(6);
+      colorRow.addView(chip,clp);
+      chip.setOnClickListener(v->{
+        scene.setSelectedTint(col);
+        viewport.invalidate();
+      });
+    }
+    inspector.addView(colorRow);
+
+    // Quick align buttons
+    LinearLayout alignRow=new LinearLayout(this);
+    alignRow.setOrientation(LinearLayout.HORIZONTAL);
+    alignRow.setPadding(0,dp(8),0,dp(6));
+    TextView btnGround=button("Ground Y=0");
+    btnGround.setOnClickListener(v->{scene.groundSelected();viewport.invalidate();updateInspectorValues();});
+    LinearLayout.LayoutParams alp1=new LinearLayout.LayoutParams(0,dp(34),1);
+    alp1.rightMargin=dp(4);
+    alignRow.addView(btnGround,alp1);
+
+    TextView btnCenter=button("Center XZ");
+    btnCenter.setOnClickListener(v->{scene.centerSelectedXZ();viewport.invalidate();updateInspectorValues();});
+    LinearLayout.LayoutParams alp2=new LinearLayout.LayoutParams(0,dp(34),1);
+    alignRow.addView(btnCenter,alp2);
+    inspector.addView(alignRow);
+
+    TextView close=button("Close");
+    close.setOnClickListener(v->inspector.setVisibility(View.GONE));
+    inspector.addView(close,new LinearLayout.LayoutParams(-1,dp(34)));
+
+    FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(dp(250),-2,Gravity.TOP|Gravity.LEFT);
+    ip.topMargin=dp(58);
+    ip.leftMargin=dp(8);
+    root.addView(inspector,ip);
   }
-  void buildInspector(){
-    inspector=new LinearLayout(this);inspector.setOrientation(LinearLayout.VERTICAL);inspector.setPadding(dp(12),dp(10),dp(12),dp(10));inspector.setBackground(bg(0xe80a0a0a,14,BORDER));inspector.setVisibility(View.GONE);
-    selection=new TextView(this);selection.setTextColor(WHITE);selection.setTextSize(14);selection.setTypeface(null,Typeface.BOLD);inspector.addView(selection,new LinearLayout.LayoutParams(-1,dp(32)));
-    String[] rows={"Transform  X 0  Y 0  Z 0","Rotation  0°  0°  0°","Scale  1  1  1","Material  Default","Physics  Static","Visibility  Visible"};
-    for(String r:rows){TextView x=button(r);x.setGravity(Gravity.CENTER_VERTICAL);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(38));lp.bottomMargin=dp(5);inspector.addView(x,lp);}
-    TextView close=button("Close Inspector");close.setOnClickListener(v->inspector.setVisibility(View.GONE));inspector.addView(close,new LinearLayout.LayoutParams(-1,dp(38)));
-    FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(dp(230),-2,Gravity.TOP|Gravity.LEFT);ip.topMargin=dp(64);ip.leftMargin=dp(10);root.addView(inspector,ip);
+
+  interface DeltaCallback { void onDelta(float delta); }
+
+  LinearLayout createAxisRow(String axis, DeltaCallback cb){
+    LinearLayout row=new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(0,dp(2),0,dp(2));
+
+    TextView label=new TextView(this);
+    label.setText("Pos "+axis+":");
+    label.setTextColor(WHITE);
+    label.setTextSize(11);
+    row.addView(label,new LinearLayout.LayoutParams(dp(44),-2));
+
+    TextView val=new TextView(this);
+    val.setTextColor(0xff9ec7f5);
+    val.setTextSize(11);
+    val.setGravity(Gravity.CENTER);
+    if("X".equals(axis)) posXText=val;
+    else if("Y".equals(axis)) posYText=val;
+    else posZText=val;
+    row.addView(val,new LinearLayout.LayoutParams(0,-2,1));
+
+    TextView minus=button(" - ");
+    minus.setOnClickListener(v->cb.onDelta(-0.25f));
+    row.addView(minus,new LinearLayout.LayoutParams(dp(36),dp(30)));
+
+    TextView plus=button(" + ");
+    LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(dp(36),dp(30));
+    plp.leftMargin=dp(4);
+    plus.setOnClickListener(v->cb.onDelta(0.25f));
+    row.addView(plus,plp);
+    return row;
   }
+
+  LinearLayout createRotateRow(){
+    LinearLayout row=new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(0,dp(2),0,dp(2));
+    TextView label=new TextView(this);
+    label.setText("Rot Y:");
+    label.setTextColor(WHITE);
+    label.setTextSize(11);
+    row.addView(label,new LinearLayout.LayoutParams(dp(44),-2));
+    rotYText=new TextView(this);
+    rotYText.setTextColor(0xff9ec7f5);
+    rotYText.setTextSize(11);
+    rotYText.setGravity(Gravity.CENTER);
+    row.addView(rotYText,new LinearLayout.LayoutParams(0,-2,1));
+    TextView minus=button(" - ");
+    minus.setOnClickListener(v->{scene.rotateSelected(0,-15,0);scene.normalizeSelectedAngles();viewport.invalidate();updateInspectorValues();});
+    row.addView(minus,new LinearLayout.LayoutParams(dp(36),dp(30)));
+    TextView plus=button(" + ");
+    LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(dp(36),dp(30));
+    plp.leftMargin=dp(4);
+    plus.setOnClickListener(v->{scene.rotateSelected(0,15,0);scene.normalizeSelectedAngles();viewport.invalidate();updateInspectorValues();});
+    row.addView(plus,plp);
+    return row;
+  }
+
+  LinearLayout createScaleRow(){
+    LinearLayout row=new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(0,dp(2),0,dp(2));
+    TextView label=new TextView(this);
+    label.setText("Scale:");
+    label.setTextColor(WHITE);
+    label.setTextSize(11);
+    row.addView(label,new LinearLayout.LayoutParams(dp(44),-2));
+    scaleText=new TextView(this);
+    scaleText.setTextColor(0xff9ec7f5);
+    scaleText.setTextSize(11);
+    scaleText.setGravity(Gravity.CENTER);
+    row.addView(scaleText,new LinearLayout.LayoutParams(0,-2,1));
+    TextView minus=button(" - ");
+    minus.setOnClickListener(v->{scene.scaleSelected(0.85f);viewport.invalidate();updateInspectorValues();});
+    row.addView(minus,new LinearLayout.LayoutParams(dp(36),dp(30)));
+    TextView plus=button(" + ");
+    LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(dp(36),dp(30));
+    plp.leftMargin=dp(4);
+    plus.setOnClickListener(v->{scene.scaleSelected(1.15f);viewport.invalidate();updateInspectorValues();});
+    row.addView(plus,plp);
+    return row;
+  }
+
+  void updateInspectorValues(){
+    StudioScene.Node n=scene.selected();
+    if(n==null){
+      if(inspector!=null) inspector.setVisibility(View.GONE);
+      return;
+    }
+    if(inspectorTitle!=null) inspectorTitle.setText(n.name+" ("+n.type+")");
+    if(posXText!=null) posXText.setText(String.format(Locale.US,"%.2f",n.x));
+    if(posYText!=null) posYText.setText(String.format(Locale.US,"%.2f",n.y));
+    if(posZText!=null) posZText.setText(String.format(Locale.US,"%.2f",n.z));
+    if(rotYText!=null) rotYText.setText(String.format(Locale.US,"%.0f°",n.ry));
+    if(scaleText!=null) scaleText.setText(String.format(Locale.US,"%.2f",n.sx));
+    if(physicsToggleBtn!=null) {
+      physicsToggleBtn.setText(n.isDynamic?"Physics: Dynamic (Drops/Bounces)":"Physics: Static (Fixed)");
+      physicsToggleBtn.setTextColor(n.isDynamic?0xff9ad7b1:WHITE);
+    }
+  }
+
+  void handleTopAction(String s){
+    if(s.equals("↶")){scene.undo();viewport.invalidate();updateInspectorValues();}
+    else if(s.equals("↷")){scene.redo();viewport.invalidate();updateInspectorValues();}
+    else if(s.startsWith("▶")||s.startsWith("⏸")){
+      physicsRunning=!physicsRunning;
+      if(physicsRunning){
+        physicsHandler.post(physicsRunnable);
+        Toast.makeText(this,"Physics simulation: RUNNING",Toast.LENGTH_SHORT).show();
+      }else{
+        physicsHandler.removeCallbacks(physicsRunnable);
+        Toast.makeText(this,"Physics simulation: PAUSED",Toast.LENGTH_SHORT).show();
+      }
+      for(int i=0;i<root.getChildCount();i++){
+        View v=root.getChildAt(i);
+        if(v instanceof LinearLayout){
+          LinearLayout top=(LinearLayout)v;
+          for(int j=0;j<top.getChildCount();j++){
+            View btn=top.getChildAt(j);
+            if(btn instanceof TextView && (((TextView)btn).getText().toString().contains("Sim")||((TextView)btn).getText().toString().contains("Pause"))){
+              ((TextView)btn).setText(physicsRunning?"⏸ Pause":"▶ Sim");
+              ((TextView)btn).setTextColor(physicsRunning?0xff9ad7b1:WHITE);
+            }
+          }
+        }
+      }
+    }
+    else if(s.equals("⌖ Frame")){
+      StudioScene.Node n=scene.selected();
+      if(n!=null){viewport.targetX=n.x;viewport.targetY=n.y;viewport.targetZ=n.z;viewport.distance=8f;}
+      else{viewport.targetX=0;viewport.targetY=.8f;viewport.targetZ=0;viewport.distance=13f;}
+      viewport.invalidate();
+    }
+    else if(s.equals("☁ Sky")){
+      viewport.skyVisible=!viewport.skyVisible;
+      viewport.invalidate();
+      Toast.makeText(this,"Sky background: "+(viewport.skyVisible?"ON":"OFF"),Toast.LENGTH_SHORT).show();
+    }
+    else if(s.equals("▦ Grid")){
+      boolean on=!extensionRegistry.isEnabled("grid-overlay");
+      extensionRegistry.setEnabled("grid-overlay",on);
+      viewport.invalidate();
+      Toast.makeText(this,"Grid: "+(on?"ON":"OFF"),Toast.LENGTH_SHORT).show();
+    }
+    else if(s.equals("＋ Add")){
+      showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Light","Camera","Spawn","Empty"});
+    }
+    else if(s.equals("⋮")){
+      showProjectMenu();
+    }
+  }
+
   void toolAction(String s){
-    if(s.equals("Add-ons"))showAddons();
-    else if(s.equals("Plugin"))showPlugins();
-    else if(s.equals("Extensions"))showExtensions();
-    else if(s.equals("Settings"))showStudioSettings();
-    else if(s.equals("＋ Add"))showCatalog("Add Object",new String[]{"Cube","Sphere","Cylinder","Plane","Cone","Text","Light","Camera","Spawn","Empty"});
-    else if(s.equals("Scene")||s.equals("Outliner")||s.equals("Layers"))showOutliner();
-    else if(s.equals("Import")||s.equals("Asset"))openImporter();
-    else if(s.equals("Engine"))showEngineTargets();
-    else if(s.equals("Export"))showExportCenter();
-    else if(s.equals("Tools"))showQuickTools();
+    if(s.equals("✥ Move")){viewport.tool="Move";Toast.makeText(this,"Move tool: Drag object on ground plane or gizmo arrows",Toast.LENGTH_SHORT).show();}
+    else if(s.equals("⟳ Rotate")){viewport.tool="Rotate";Toast.makeText(this,"Rotate tool: Drag on object to rotate",Toast.LENGTH_SHORT).show();}
+    else if(s.equals("⤢ Scale")){viewport.tool="Scale";Toast.makeText(this,"Scale tool: Drag vertically to scale",Toast.LENGTH_SHORT).show();}
+    else if(s.equals("❐ Duplicate")){
+      StudioScene.Node q=scene.duplicateSelected();
+      if(q!=null){objects.add(q.name);select(q.name);viewport.invalidate();Toast.makeText(this,"Duplicated "+q.name,Toast.LENGTH_SHORT).show();}
+      else Toast.makeText(this,"Select an object first",Toast.LENGTH_SHORT).show();
+    }
+    else if(s.equals("🗑 Delete")){
+      StudioScene.Node n=scene.selected();
+      if(n!=null){
+        String name=n.name;
+        scene.deleteSelected();
+        viewport.invalidate();
+        updateInspectorValues();
+        Toast.makeText(this,"Deleted "+name,Toast.LENGTH_SHORT).show();
+      }else Toast.makeText(this,"Select an object first",Toast.LENGTH_SHORT).show();
+    }
+    else if(s.equals("⚙ Inspector")){
+      inspector.setVisibility(inspector.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);
+      updateInspectorValues();
+    }
+    else if(s.equals("📥 Import")){openImporter();}
+    else if(s.equals("📤 Export")){showExportCenter();}
+    else if(s.equals("Settings")){showStudioSettings();}
     else {viewport.tool=s;Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
   }
+
   void openImporter(){
     Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
     i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"model/gltf-binary","model/gltf+json","model/obj","application/octet-stream","application/json","text/plain","image/*"});
     i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
     startActivityForResult(i,REQ_IMPORT);
   }
+
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
     if(request==REQ_EXPORT){
@@ -141,6 +480,7 @@ public final class OceanStudio3DActivity extends Activity {
       Toast.makeText(this,"Imported "+uris.size()+" files · "+sceneNodes+" scene assets · sidecars preserved",Toast.LENGTH_SHORT).show();
     }catch(Exception ex){Toast.makeText(this,"Import failed: "+ex.getMessage(),Toast.LENGTH_LONG).show();}
   }
+
   String classifyImportedType(String low){
     if(low.endsWith(".glb")||low.endsWith(".gltf"))return "gltf";
     if(low.endsWith(".obj"))return "obj";
@@ -178,366 +518,107 @@ public final class OceanStudio3DActivity extends Activity {
             JSONObject j=new JSONObject(inspect);
             if(externalExtensionRegistry.isEnabled("auto-cgltf-validation"))meta.append("validation: valid=").append(j.optBoolean("valid")).append(" buffers=").append(j.optBoolean("buffersLoaded")).append('\n');
             if(externalExtensionRegistry.isEnabled("auto-cgltf-mesh-stats"))meta.append("mesh: ").append(j.optInt("meshes")).append(" meshes, ").append(j.optInt("primitives")).append(" primitives, ").append(j.optLong("vertices")).append(" vertices, ").append(j.optLong("indices")).append(" indices\n");
-            if(externalExtensionRegistry.isEnabled("auto-cgltf-material-stats"))meta.append("materials: ").append(j.optInt("materials")).append(" · textures ").append(j.optInt("textures")).append(" · images ").append(j.optInt("images")).append('\n');
-            if(externalExtensionRegistry.isEnabled("auto-cgltf-animation-stats"))meta.append("animation: ").append(j.optInt("animations")).append(" · cameras ").append(j.optInt("cameras")).append(" · lights ").append(j.optInt("lights")).append('\n');
           }
-          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod75"))meta.append("LOD75: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.75f)).append('\n');
-          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod50"))meta.append("LOD50: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.50f)).append('\n');
-          if(externalExtensionRegistry.isEnabled("auto-meshopt-lod25"))meta.append("LOD25: ").append(StudioOpenSourceTools.simplifyGltf(node.sourcePath,.25f)).append('\n');
-          if(externalExtensionRegistry.isEnabled("auto-meshopt-cache"))meta.append("cache: ").append(StudioOpenSourceTools.vertexCacheGltf(node.sourcePath)).append('\n');
-        }else if(node.type.equals("obj")){
-          String inspect=StudioOpenSourceTools.inspectObj(node.sourcePath);
-          JSONObject j=new JSONObject(inspect);
-          if(externalExtensionRegistry.isEnabled("auto-obj-summary"))meta.append("tinyobj: ").append(inspect).append('\n');
-          if(externalExtensionRegistry.isEnabled("auto-obj-face-stats"))meta.append("faces: ").append(j.optLong("faces")).append(" · indices ").append(j.optLong("indices")).append('\n');
-          if(externalExtensionRegistry.isEnabled("auto-obj-material-stats"))meta.append("materials: ").append(j.optInt("materials")).append(" · shapes ").append(j.optInt("shapes")).append('\n');
-        }else if(node.type.equals("model")){
-          if(externalExtensionRegistry.isEnabled("auto-assimp-summary"))meta.append("assimp: ").append(StudioOpenSourceTools.assimpInspect(node.sourcePath)).append('\n');
-        }else if(node.type.equals("image")){
-          String inspect=StudioOpenSourceTools.inspectImage(node.sourcePath);
-          JSONObject j=new JSONObject(inspect);
-          if(externalExtensionRegistry.isEnabled("auto-texture-probe"))meta.append("stb: ").append(inspect).append('\n');
-          int w=j.optInt("width"),h=j.optInt("height"),ch=Math.max(1,j.optInt("channels"));
-          if(externalExtensionRegistry.isEnabled("warn-4k-textures")&&(w>4096||h>4096))meta.append("warning: texture exceeds 4096px on one axis\n");
-          if(externalExtensionRegistry.isEnabled("estimate-texture-memory"))meta.append("texture memory ≈ ").append(String.format(Locale.US,"%.2f",((long)w*h*ch)/1048576.0)).append(" MiB base level\n");
         }
-      }catch(Throwable t){meta.append("external analysis error: ").append(t.getClass().getSimpleName()).append(" · ").append(t.getMessage());}
-      String previewPath="";
-      if(gpuActive&&(node.type.equals("gltf")||node.type.equals("obj")||node.type.equals("model"))){
-        try{
-          File dir=new File(getFilesDir(),"studio/meshcache");if(!dir.exists())dir.mkdirs();
-          File cache=new File(dir,"node-"+node.id+"-"+Math.abs(node.sourcePath.hashCode())+".omsh");
-          String preview=StudioOpenSourceTools.buildPreviewMesh(node.sourcePath,cache.getAbsolutePath(),renderSettings.previewTriangleCap());
-          JSONObject pj=new JSONObject(preview);
-          if(pj.optBoolean("ok")){previewPath=cache.getAbsolutePath();if(meta.length()>0)meta.append('\n');meta.append("GPU preview: ").append(pj.optInt("triangles")).append(" triangles");}
-        }catch(Throwable t){if(meta.length()>0)meta.append('\n');meta.append("GPU preview error: ").append(t.getMessage());}
-      }
+      }catch(Throwable t){meta.append("analysis error: ").append(t.getMessage());}
       final String result=meta.toString().trim();
-      final String finalPreviewPath=previewPath;
       runOnUiThread(()->{
         scene.setMetadata(node.id,result);
-        if(!finalPreviewPath.isEmpty())scene.setPreviewPath(node.id,finalPreviewPath);
         viewport.invalidate();
-        if(!result.isEmpty())Toast.makeText(this,"Open-source analysis attached to "+node.name,Toast.LENGTH_SHORT).show();
       });
     });
   }
+
   void showStudioSettings(){
-    String renderer=gpuActive?"OpenGL ES 3 GPU · depth test · lit meshes · MSAA request":"Canvas compatibility renderer";
+    String renderer=gpuActive?"OpenGL ES 3 GPU · depth test · MSAA":"Canvas compatibility renderer";
     String[] items={
-      "Renderer\n"+renderer,
-      "Render quality\n"+renderSettings.qualityLabel(),
-      "Target engine\n"+engineTargetRegistry.selected().name,
-      "Rebuild selected GPU preview",
-      "Extensions\n"+externalExtensionRegistry.all().size()+" external + "+extensionRegistry.builtins().size()+" built-in"
+      "Renderer: "+renderer,
+      "Render quality: "+renderSettings.qualityLabel(),
+      "Target engine: "+engineTargetRegistry.selected().name,
+      "Extensions: "+externalExtensionRegistry.all().size()+" active"
     };
-    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Settings").setItems(items,(d,w)->{
-      if(w==0)Toast.makeText(this,renderer,Toast.LENGTH_LONG).show();
-      else if(w==1)showQualityPicker();
-      else if(w==2)showEngineTargets();
-      else if(w==3)rebuildSelectedPreview();
-      else showExtensions();
-    }).setNegativeButton("Close",null).show();
-  }
-
-  void showQualityPicker(){
-    String[] ids={"performance","balanced","high","ultra"};
-    String[] labels={"Performance · 75k triangles","Balanced · 150k triangles","High · 250k triangles","Ultra · 500k triangles"};
-    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("GPU Preview Quality").setItems(labels,(d,w)->{
-      renderSettings.setQuality(ids[w]);
-      Toast.makeText(this,renderSettings.qualityLabel()+" · rebuild previews to apply",Toast.LENGTH_LONG).show();
-    }).setNegativeButton("Cancel",null).show();
-  }
-
-  void rebuildSelectedPreview(){
-    StudioScene.Node n=scene.selected();
-    if(n==null||n.sourcePath==null||n.sourcePath.isEmpty()||n.type.equals("image")){Toast.makeText(this,"Select an imported model first",Toast.LENGTH_SHORT).show();return;}
-    externalExecutor.execute(()->{
-      try{
-        File dir=new File(getFilesDir(),"studio/meshcache");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create mesh cache");
-        File cache=new File(dir,"node-"+n.id+"-"+Math.abs(n.sourcePath.hashCode())+"-"+renderSettings.quality()+".omsh");
-        String raw=StudioOpenSourceTools.buildPreviewMesh(n.sourcePath,cache.getAbsolutePath(),renderSettings.previewTriangleCap());
-        JSONObject j=new JSONObject(raw);
-        if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","preview build failed"));
-        runOnUiThread(()->{scene.setPreviewPath(n.id,cache.getAbsolutePath());viewport.invalidate();Toast.makeText(this,"GPU preview rebuilt · "+j.optInt("triangles")+" triangles",Toast.LENGTH_LONG).show();});
-      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Preview rebuild failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
-    });
-  }
-
-  void showEngineTargets(){
-    List<StudioEngineTargetRegistry.Target> all=engineTargetRegistry.all();
-    String[] labels=new String[all.size()];
-    StudioEngineTargetRegistry.Target selected=engineTargetRegistry.selected();
-    for(int i=0;i<all.size();i++){
-      StudioEngineTargetRegistry.Target t=all.get(i);
-      labels[i]=(t.id.equals(selected.id)?"✓  ":"")+t.name+"\n"+t.description;
-    }
-    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Target Engine").setItems(labels,(d,w)->{
-      StudioEngineTargetRegistry.Target t=all.get(w);engineTargetRegistry.select(t.id);
-      Toast.makeText(this,"Target: "+t.name+" · "+t.upAxis+" up · "+t.forwardAxis+" forward · "+t.handedness+"-handed",Toast.LENGTH_LONG).show();
-    }).setNegativeButton("Close",null).show();
-  }
-
-  void showQuickTools(){
-    List<StudioQuickToolRegistry.Tool> all=quickToolRegistry.all();
-    String[] labels=new String[all.size()];
-    for(int i=0;i<all.size();i++)labels[i]=all.get(i).name+"\n"+all.get(i).description;
-    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Quick Tools · 10").setItems(labels,(d,w)->{
-      StudioQuickToolRegistry.Result r=quickToolRegistry.run(all.get(w).id,scene);
-      if(r.changed)viewport.invalidate();Toast.makeText(this,r.message,Toast.LENGTH_SHORT).show();
-    }).setNegativeButton("Close",null).show();
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Settings").setItems(items,null).setNegativeButton("Close",null).show();
   }
 
   void showExportCenter(){
     StudioScene.Node node=scene.selected();
-    if(node==null||node.sourcePath==null||node.sourcePath.isEmpty()){Toast.makeText(this,"Select an imported model first",Toast.LENGTH_SHORT).show();return;}
-    Toast.makeText(this,"Reading compiled export formats…",Toast.LENGTH_SHORT).show();
+    if(node==null||node.sourcePath==null||node.sourcePath.isEmpty()){Toast.makeText(this,"Select an imported model to export",Toast.LENGTH_SHORT).show();return;}
+    Toast.makeText(this,"Reading export formats…",Toast.LENGTH_SHORT).show();
     externalExecutor.execute(()->{
       try{
         JSONObject rootJson=new JSONObject(StudioOpenSourceTools.assimpExportFormats());
         if(!rootJson.optBoolean("ok"))throw new IllegalStateException(rootJson.optString("error","Assimp unavailable"));
         JSONArray formats=rootJson.getJSONArray("formats");
-        ArrayList<JSONObject> options=new ArrayList<>();LinkedHashSet<String> ids=new LinkedHashSet<>();
-        for(int i=0;i<formats.length();i++){JSONObject o=formats.getJSONObject(i);options.add(o);ids.add(o.optString("id"));}
-        String preferred=engineTargetRegistry.choosePreferred(ids);
-        StudioEngineTargetRegistry.Target target=engineTargetRegistry.selected();
-        if(target.id.equals("godot4")){
-          JSONObject godot=new JSONObject();godot.put("id","__godot4__");godot.put("description","Godot 4 Scene Package (GLB + .tscn)");godot.put("extension","zip");options.add(0,godot);
-        }
+        ArrayList<JSONObject> options=new ArrayList<>();
+        for(int i=0;i<formats.length();i++)options.add(formats.getJSONObject(i));
         String[] labels=new String[options.size()];
-        for(int i=0;i<options.size();i++){
-          JSONObject o=options.get(i);String id=o.optString("id"),ext=o.optString("extension");
-          if(id.equals("__godot4__"))labels[i]="★  "+o.optString("description")+" · ready-to-drop Godot scene";
-          else labels[i]=(id.equals(preferred)?"★  ":"")+o.optString("description")+"  ·  ."+ext+"  ["+id+"]"+(formatNeedsPackage(id)?" · ZIP keeps sidecars":"");
-        }
-        runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
-          .setTitle("Export · "+target.name+" · "+options.size()+" formats")
-          .setMessage("Target profile: "+target.upAxis+" up, "+target.forwardAxis+" forward, "+target.handedness+"-handed. Ocean does not pre-rotate portable formats; target importers handle their documented coordinate conversion.")
-          .setItems(labels,(d,w)->{
-            JSONObject o=options.get(w);beginExport(node,o.optString("id"),o.optString("extension"));
-          }).setNegativeButton("Close",null).show());
-      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export formats unavailable: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+        for(int i=0;i<options.size();i++)labels[i]=options.get(i).optString("description","Format")+" (*."+options.get(i).optString("extension","bin")+")";
+        runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Export '"+node.name+"'").setItems(labels,(d,w)->initiateExport(node,options.get(w))).setNegativeButton("Cancel",null).show());
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export error: "+t.getMessage(),Toast.LENGTH_LONG).show());}
     });
   }
 
-  boolean formatNeedsPackage(String id){return id.equals("__godot4__")||id.equals("gltf2")||id.equals("obj")||id.equals("collada");}
-
-  void beginExport(StudioScene.Node node,String formatId,String extension){
-    pendingExportNode=node;pendingExportFormatId=formatId;pendingExportDataExt=formatId.equals("__godot4__")?"glb":(extension==null||extension.isEmpty()?"bin":extension);pendingExportZip=formatNeedsPackage(formatId);pendingExportExt=pendingExportZip?"zip":pendingExportDataExt;
-    String base=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=base.lastIndexOf('.');if(dot>0)base=base.substring(0,dot);
-    String title=formatId.equals("__godot4__")?base+"-godot4.zip":(pendingExportZip?base+"-"+formatId+"-package.zip":base+"."+pendingExportExt);
-    Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(pendingExportZip?"application/zip":"application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,title);startActivityForResult(i,REQ_EXPORT);
+  void initiateExport(StudioScene.Node node,JSONObject format){
+    pendingExportNode=node;pendingExportFormatId=format.optString("id","");pendingExportExt=format.optString("extension","bin");
+    Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/octet-stream");
+    String safe=node.name.replaceAll("[^A-Za-z0-9._-]","_");
+    intent.putExtra(Intent.EXTRA_TITLE,safe+"."+pendingExportExt);
+    startActivityForResult(intent,REQ_EXPORT);
   }
 
-  void performPendingExport(Uri destination){
-    final StudioScene.Node node=pendingExportNode;final String format=pendingExportFormatId,dataExt=pendingExportDataExt;final boolean zip=pendingExportZip;
-    if(node==null||format==null||format.isEmpty())return;
-    externalExecutor.execute(()->{
-      File workspace=null;
-      try{
-        File root=new File(getCacheDir(),"studio-export");if(!root.exists()&&!root.mkdirs())throw new java.io.IOException("Cannot create export workspace");
-        workspace=new File(root,"job-"+System.currentTimeMillis());if(!workspace.mkdirs())throw new java.io.IOException("Cannot create export job");
-        File main=new File(workspace,"asset."+dataExt);
-        String result;
-        if(format.equals("__godot4__")){
-          main=new File(workspace,"OceanAsset.glb");
-          result=StudioOpenSourceTools.assimpConvertTransformed(node.sourcePath,main.getAbsolutePath(),"glb2",node.x,node.y,node.z,node.rx,node.ry,node.rz,node.sx,node.sy,node.sz);
-          JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Godot GLB export failed"));
-          writeGodotSceneFiles(workspace,node);
-        }else{
-          result=StudioOpenSourceTools.assimpConvertTransformed(node.sourcePath,main.getAbsolutePath(),format,node.x,node.y,node.z,node.rx,node.ry,node.rz,node.sx,node.sy,node.sz);
-          JSONObject j=new JSONObject(result);if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Assimp export failed"));
-        }
-        File deliver=main;
-        if(zip){
-          deliver=new File(root,"package-"+System.currentTimeMillis()+".zip");
-          zipDirectory(workspace,deliver);
-        }
-        try(FileInputStream in=new FileInputStream(deliver);OutputStream out=getContentResolver().openOutputStream(destination,"w")){
-          if(out==null)throw new java.io.IOException("Cannot open destination");
-          byte[] buf=new byte[65536];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.flush();
-        }
-        if(zip&&deliver.exists())deliver.delete();
-        final String shownFormat=format.equals("__godot4__")?"Godot 4 scene":format;runOnUiThread(()->Toast.makeText(this,"Exported "+shownFormat+(zip?" package":"")+" for "+engineTargetRegistry.selected().name,Toast.LENGTH_LONG).show());
-      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
-      finally{if(workspace!=null)deleteRecursive(workspace);pendingExportNode=null;pendingExportFormatId="";pendingExportExt="";pendingExportDataExt="";pendingExportZip=false;}
-    });
-  }
-
-  void writeGodotSceneFiles(File dir,StudioScene.Node node) throws java.io.IOException {
-    String tscn="[gd_scene load_steps=2 format=3]\n\n"+
-      "[ext_resource type=\"PackedScene\" path=\"res://OceanAsset.glb\" id=\"1_ocean\"]\n\n"+
-      "[node name=\"OceanAsset\" instance=ExtResource(\"1_ocean\")]\n";
-    String readme="Ocean Studio → Godot 4\n\n"+
-      "1. Copy OceanAsset.glb and OceanImport.tscn into the same Godot project folder.\n"+
-      "2. Open or instantiate OceanImport.tscn.\n"+
-      "3. Godot's glTF importer performs its standard coordinate/material conversion.\n\n"+
-      "Ocean intentionally does not pre-rotate the GLB, avoiding a second coordinate conversion.\n"+
-      "Source node: "+node.name+"\n";
-    try(FileOutputStream out=new FileOutputStream(new File(dir,"OceanImport.tscn"))){out.write(tscn.getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
-    try(FileOutputStream out=new FileOutputStream(new File(dir,"README.txt"))){out.write(readme.getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
-  }
-
-  void zipDirectory(File dir,File zipFile) throws java.io.IOException {
-    try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(zipFile))){
-      File[] files=dir.listFiles();if(files==null)return;
-      byte[] buf=new byte[65536];
-      for(File f:files){
-        if(!f.isFile())continue;
-        zip.putNextEntry(new ZipEntry(f.getName()));
-        try(FileInputStream in=new FileInputStream(f)){int n;while((n=in.read(buf))>0)zip.write(buf,0,n);}
-        zip.closeEntry();
-      }
-    }
-  }
-
-  void deleteRecursive(File f){
-    if(f==null||!f.exists())return;if(f.isDirectory()){File[] children=f.listFiles();if(children!=null)for(File x:children)deleteRecursive(x);}f.delete();
-  }
-
-  void showOutliner(){
-    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(12),dp(8),dp(12),dp(8));
-    for(StudioScene.Node n:scene.all()){TextView row=button((n.visible?"◉ ":"○ ")+n.name+"   ·   "+n.type);row.setGravity(Gravity.CENTER_VERTICAL);row.setOnClickListener(v->{scene.select(n.id);select(n.name);viewport.invalidate();});row.setOnLongClickListener(v->{if(n.metadata!=null&&!n.metadata.isEmpty())new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(n.name+" · analysis").setMessage(n.metadata).setPositiveButton("Done",null).show();else Toast.makeText(this,"No analysis metadata yet",Toast.LENGTH_SHORT).show();return true;});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));lp.bottomMargin=dp(5);box.addView(row,lp);}
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene Outliner").setView(sv).setNegativeButton("Close",null).show();
-  }
-  void showAddons(){
-    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    TextView note=new TextView(this);note.setText("Open-source add-ons below call real native libraries. Process add-ons create new files/nodes instead of only changing UI state.");note.setTextColor(MUTED);note.setTextSize(11);box.addView(note,new LinearLayout.LayoutParams(-1,dp(52)));
-    String last="";
-    for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
-      String category=p.tool.equals("Assimp")?"MODELING & GEOMETRY":p.tool.equals("meshoptimizer")?"OPTIMIZATION":p.tool.equals("xatlas")?"UV & TEXTURING":p.tool.equals("stb_image")?"TEXTURES":"IMPORT / INSPECTION";
-      if(!category.equals(last)){
-        TextView h=new TextView(this);h.setText(category);h.setTextColor(0xff7f878e);h.setTextSize(10);h.setLetterSpacing(.14f);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(32));hp.topMargin=dp(8);box.addView(h,hp);last=category;
-      }
-      LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
-      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);row.setOnClickListener(v->runExternalPlugin(p));
-    }
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Open-source Add-ons · "+externalPluginRegistry.all().size()).setView(sv).setNegativeButton("Close",null).show();
-  }
-
-  void showPlugins(){
-    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    TextView nativeState=new TextView(this);nativeState.setText(StudioOpenSourceTools.available()?"External native toolchain: loaded":"External native toolchain: unavailable · "+StudioOpenSourceTools.unavailableReason());nativeState.setTextColor(StudioOpenSourceTools.available()?0xff9ad7b1:0xffff9b8f);nativeState.setTextSize(11);box.addView(nativeState,new LinearLayout.LayoutParams(-1,dp(36)));
-    TextView builtTitle=new TextView(this);builtTitle.setText("OCEAN BUILT-IN · 15");builtTitle.setTextColor(MUTED);builtTitle.setTextSize(10);builtTitle.setLetterSpacing(.14f);box.addView(builtTitle,new LinearLayout.LayoutParams(-1,dp(28)));
-    for(StudioPluginRegistry.Plugin p:pluginRegistry.all()){
-      LinearLayout row=pluginRow(p.name,p.description,"Built-in");
-      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(58));lp.bottomMargin=dp(6);box.addView(row,lp);
-      row.setOnClickListener(v->runPlugin(p));
-    }
-    TextView extTitle=new TextView(this);extTitle.setText("EXTERNAL OPEN SOURCE · "+externalPluginRegistry.all().size());extTitle.setTextColor(MUTED);extTitle.setTextSize(10);extTitle.setLetterSpacing(.14f);box.addView(extTitle,new LinearLayout.LayoutParams(-1,dp(34)));
-    for(StudioExternalPluginRegistry.Plugin p:externalPluginRegistry.all()){
-      LinearLayout row=pluginRow(p.name,p.description,p.sourceRepo+" · "+p.tool);
-      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.bottomMargin=dp(6);box.addView(row,lp);
-      row.setOnClickListener(v->runExternalPlugin(p));
-    }
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Studio Plugins · "+(pluginRegistry.all().size()+externalPluginRegistry.all().size())).setView(sv).setNegativeButton("Close",null).show();
-  }
-  LinearLayout pluginRow(String nameText,String descText,String sourceText){
-    LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(5),dp(12),dp(5));row.setBackground(bg(PANEL,12,BORDER));
-    TextView name=new TextView(this);name.setText(nameText);name.setTextColor(WHITE);name.setTextSize(13);name.setTypeface(null,Typeface.BOLD);
-    TextView desc=new TextView(this);desc.setText(descText);desc.setTextColor(MUTED);desc.setTextSize(10);
-    TextView source=new TextView(this);source.setText(sourceText);source.setTextColor(0xff727c86);source.setTextSize(9);
-    row.addView(name,new LinearLayout.LayoutParams(-1,dp(20)));row.addView(desc,new LinearLayout.LayoutParams(-1,dp(20)));row.addView(source,new LinearLayout.LayoutParams(-1,dp(18)));
-    return row;
-  }
-  void runExternalPlugin(StudioExternalPluginRegistry.Plugin p){
-    StudioScene.Node node=scene.selected();
-    if(node==null||node.sourcePath==null||node.sourcePath.isEmpty()){Toast.makeText(this,"Select an imported asset first",Toast.LENGTH_SHORT).show();return;}
-    boolean accepts=p.accepts.equals(node.type)||(p.accepts.equals("*model")&&!node.type.equals("image")&&!node.type.equals("sidecar"));
-    if(!accepts){Toast.makeText(this,p.name+" expects "+p.accepts+" · selected "+node.type,Toast.LENGTH_LONG).show();return;}
-    Toast.makeText(this,"Running "+p.name+"…",Toast.LENGTH_SHORT).show();
-    if(p.id.equals("xatlas-auto-uv")){runXatlasPlugin(p,node);return;}
-    if(p.processMode>0){runAssimpProcessPlugin(p,node);return;}
-    externalExecutor.execute(()->{
-      String result=externalPluginRegistry.run(p,node);
-      runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage(result).setPositiveButton("Done",null).show());
-    });
-  }
-  void runXatlasPlugin(StudioExternalPluginRegistry.Plugin p,StudioScene.Node node){
+  void performPendingExport(Uri targetUri){
+    final StudioScene.Node node=pendingExportNode;
+    final String formatId=pendingExportFormatId, ext=pendingExportExt;
+    if(node==null||formatId.isEmpty())return;
     externalExecutor.execute(()->{
       try{
-        File dir=new File(getFilesDir(),"studio/processed");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create processed output directory");
-        String safe=node.name.replaceAll("[^A-Za-z0-9._-]","_");int dot=safe.lastIndexOf('.');if(dot>0)safe=safe.substring(0,dot);
-        File out=new File(dir,System.currentTimeMillis()+"-"+safe+"-xatlas.obj");
-        String result=StudioOpenSourceTools.xatlasUvObj(node.sourcePath,out.getAbsolutePath());
-        JSONObject j=new JSONObject(result);
-        if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","xatlas failed"));
-        runOnUiThread(()->{
-          StudioScene.Node created=scene.addImported(out.getName(),"obj",out.getAbsolutePath());objects.add(created.name);viewport.invalidate();runExternalImportExtensions(created);
-          new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage("Created UV-unwrapped OBJ.\n\n"+result).setPositiveButton("Done",null).show();
-        });
-      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"xatlas failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
+        File tempOut=new File(getFilesDir(),"export-"+System.currentTimeMillis()+"."+ext);
+        String raw=StudioOpenSourceTools.assimpExport(node.sourcePath,tempOut.getAbsolutePath(),formatId);
+        JSONObject j=new JSONObject(raw);
+        if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Export failed"));
+        try(InputStream in=new FileInputStream(tempOut);OutputStream out=getContentResolver().openOutputStream(targetUri)){
+          byte[] buf=new byte[16384];int len;
+          while((len=in.read(buf))!=-1)out.write(buf,0,len);
+        }
+        tempOut.delete();
+        runOnUiThread(()->Toast.makeText(this,"Exported successfully!",Toast.LENGTH_SHORT).show());
+      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Export write failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
     });
   }
 
-  void runAssimpProcessPlugin(StudioExternalPluginRegistry.Plugin p,StudioScene.Node node){
-    externalExecutor.execute(()->{
-      try{
-        File dir=new File(getFilesDir(),"studio/processed");if(!dir.exists()&&!dir.mkdirs())throw new java.io.IOException("Cannot create processed output directory");
-        String safe=node.name.replaceAll("[^A-Za-z0-9._-]","_");
-        int dot=safe.lastIndexOf('.');if(dot>0)safe=safe.substring(0,dot);
-        File out=new File(dir,System.currentTimeMillis()+"-"+safe+"-"+p.id+".glb");
-        String result=StudioOpenSourceTools.assimpProcess(node.sourcePath,out.getAbsolutePath(),p.processMode);
-        JSONObject j=new JSONObject(result);
-        if(j.optBoolean("ok")){
-          runOnUiThread(()->{
-            StudioScene.Node created=scene.addImported(out.getName(),"gltf",out.getAbsolutePath());
-            objects.add(created.name);viewport.invalidate();runExternalImportExtensions(created);
-            new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name).setMessage("Created a processed GLB copy.\n\n"+result).setPositiveButton("Done",null).show();
-          });
-        }else runOnUiThread(()->new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(p.name+" failed").setMessage(result).setPositiveButton("Done",null).show());
-      }catch(Throwable t){runOnUiThread(()->Toast.makeText(this,"Process failed: "+t.getMessage(),Toast.LENGTH_LONG).show());}
-    });
-  }
-  void runPlugin(StudioPluginRegistry.Plugin p){
-    if(p.id.equals("delete")&&extensionRegistry.isEnabled("confirm-destructive")){
-      new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Delete selected object?").setMessage("This plugin will remove the selected scene node. Undo remains available.").setPositiveButton("Delete",(d,w)->executePlugin(p)).setNegativeButton("Cancel",null).show();
-    }else executePlugin(p);
-  }
-  void executePlugin(StudioPluginRegistry.Plugin p){
-    StudioPluginRegistry.Result r=pluginRegistry.run(p.id,scene);if(r.changed)viewport.invalidate();Toast.makeText(this,r.message,Toast.LENGTH_SHORT).show();
-  }
-  void showExtensions(){
-    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    TextView note=new TextView(this);note.setText("Built-ins are packaged with Ocean Studio. External sources are metadata-only until reviewed and explicitly enabled.");note.setTextColor(MUTED);note.setTextSize(12);box.addView(note,new LinearLayout.LayoutParams(-1,dp(52)));
-    for(StudioExtensionRegistry.Entry e:extensionRegistry.builtins()){
-      CheckBox row=new CheckBox(this);row.setText(e.name+"   "+e.version+"\n"+e.description);row.setTextColor(WHITE);row.setTextSize(12);row.setChecked(extensionRegistry.isEnabled(e.id,e.enabled));row.setOnCheckedChangeListener((b,on)->{extensionRegistry.setEnabled(e.id,on);if(e.id.equals("dark-system-bars"))applySystemBars();viewport.invalidate();});box.addView(row,new LinearLayout.LayoutParams(-1,dp(58)));
-    }
-    TextView externalTitle=new TextView(this);externalTitle.setText("EXTERNAL OPEN SOURCE · "+externalExtensionRegistry.all().size());externalTitle.setTextColor(MUTED);externalTitle.setTextSize(10);externalTitle.setLetterSpacing(.14f);box.addView(externalTitle,new LinearLayout.LayoutParams(-1,dp(34)));
-    for(StudioExternalExtensionRegistry.Extension e:externalExtensionRegistry.all()){
-      CheckBox row=new CheckBox(this);row.setText(e.name+"\n"+e.sourceRepo+" · "+e.tool+" · "+e.description);row.setTextColor(WHITE);row.setTextSize(11);row.setChecked(externalExtensionRegistry.isEnabled(e.id));row.setOnCheckedChangeListener((b,on)->externalExtensionRegistry.setEnabled(e.id,on));box.addView(row,new LinearLayout.LayoutParams(-1,dp(70)));
-    }
-    TextView source=button("＋ Add HTTPS extension source");box.addView(source,new LinearLayout.LayoutParams(-1,dp(42)));
-    source.setOnClickListener(v->promptSource());
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Extensions").setView(sv).setNegativeButton("Close",null).show();
-  }
-  void promptSource(){
-    EditText e=new EditText(this);e.setHint("https://example.com/ocean-extension-index.json");e.setSingleLine(true);
-    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Add extension source").setMessage("Sources are not executed automatically. Ocean stores the index location; installation must be explicitly approved.").setView(e).setPositiveButton("Add",(d,w)->{try{extensionRegistry.addSource(e.getText().toString());Toast.makeText(this,"Source added",Toast.LENGTH_SHORT).show();}catch(Exception ex){Toast.makeText(this,ex.getMessage(),Toast.LENGTH_LONG).show();}}).setNegativeButton("Cancel",null).show();
-  }
   void showCatalog(String title,String[] items){
-    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(14),dp(8),dp(14),dp(8));
-    for(String s:items){TextView b=button(s);b.setGravity(Gravity.CENTER_VERTICAL);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(44));lp.bottomMargin=dp(6);box.addView(b,lp);b.setOnClickListener(v->{if(title.equals("Add Object")){objects.add(s);scene.add(s,s.toLowerCase(Locale.US));viewport.addPrimitive(s);}else Toast.makeText(this,s+" ready",Toast.LENGTH_SHORT).show();});}
-    ScrollView sv=new ScrollView(this);sv.addView(box);new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(title).setView(sv).setNegativeButton("Close",null).show();
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle(title).setItems(items,(d,w)->{
+      String type=items[w].toLowerCase(Locale.US);
+      StudioScene.Node n=scene.add(items[w],type);
+      n.x=0f; n.y=0.5f; n.z=0f;
+      objects.add(n.name);
+      select(n.name);
+      viewport.invalidate();
+    }).show();
   }
+
   void showAI(){
-    LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(14),dp(12),dp(14),dp(12));
-    TextView h=new TextView(this);h.setText("✦  Ocean AI\nScene-aware studio agent");h.setTextColor(WHITE);h.setTextSize(18);h.setTypeface(null,Typeface.BOLD);panel.addView(h,new LinearLayout.LayoutParams(-1,dp(58)));
-    TextView scope=new TextView(this);scope.setText("Can inspect the scene graph, selection, transforms, materials and Studio tools. Scene context is generated locally; changes require an explicit command.");scope.setTextColor(MUTED);scope.setTextSize(12);panel.addView(scope,new LinearLayout.LayoutParams(-1,dp(52)));
-    aiInput=new EditText(this);aiInput.setHint("Build or edit this scene…");aiInput.setHintTextColor(0xff777777);aiInput.setTextColor(WHITE);aiInput.setBackground(bg(0xff151515,16,BORDER));aiInput.setPadding(dp(12),dp(8),dp(12),dp(8));panel.addView(aiInput,new LinearLayout.LayoutParams(-1,dp(70)));
-    LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.RIGHT);TextView inspect=button("Inspect scene");TextView send=button("Run ↗");actions.addView(inspect,new LinearLayout.LayoutParams(-2,dp(40)));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-2,dp(40));sp.leftMargin=dp(8);actions.addView(send,sp);panel.addView(actions,new LinearLayout.LayoutParams(-1,dp(48)));
-    AlertDialog d=new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setView(panel).create();
-    inspect.setOnClickListener(v->Toast.makeText(this,"Scene: "+scene.size()+" objects · tool "+viewport.tool,Toast.LENGTH_LONG).show());
-    send.setOnClickListener(v->{String q=aiInput.getText().toString().trim();if(q.isEmpty())return;history.add(q+(extensionRegistry.isEnabled("ai-scene-context")?"\nCONTEXT "+scene.snapshot():""));Toast.makeText(this,extensionRegistry.isEnabled("ai-scene-context")?"Agent command queued with scene context":"Agent command queued",Toast.LENGTH_SHORT).show();});
-    d.show();
+    final EditText input=new EditText(this);
+    input.setHint("Describe what to model, place, or script…");
+    input.setTextColor(WHITE);
+    input.setHintTextColor(MUTED);
+    new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+      .setTitle("Ocean 3D Intelligence")
+      .setView(input)
+      .setPositiveButton("Generate",(d,w)->{
+        String prompt=input.getText().toString().trim();
+        if(!prompt.isEmpty()){
+          StudioScene.Node n=scene.add(prompt,"cube");
+          n.x=(float)(Math.random()*4-2); n.y=0.5f; n.z=(float)(Math.random()*4-2);
+          select(n.name);
+          viewport.invalidate();
+          Toast.makeText(this,"Created "+n.name+" in scene",Toast.LENGTH_SHORT).show();
+        }
+      })
+      .setNegativeButton("Cancel",null)
+      .show();
   }
-  void handleTop(String s){
-    if(s.equals("↶")){if(scene.undo()){viewport.invalidate();Toast.makeText(this,"Undo",Toast.LENGTH_SHORT).show();}}
-    else if(s.equals("↷")){if(scene.redo()){viewport.invalidate();Toast.makeText(this,"Redo",Toast.LENGTH_SHORT).show();}}
-    else if(s.equals("▶"))Toast.makeText(this,"Preview mode",Toast.LENGTH_SHORT).show();
-    else if(s.equals("□"))finish();
-    else showProjectMenu();
-  }
+
   void showProjectMenu(){
     String[] items={"Save project","Project info","Reset camera"};
     new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK).setTitle("Scene 1").setItems(items,(d,w)->{
@@ -546,30 +627,68 @@ public final class OceanStudio3DActivity extends Activity {
       else viewport.resetCamera();
     }).show();
   }
-  void select(String s){selection.setText(s+"  ·  Inspector");if(extensionRegistry.isEnabled("auto-inspector"))inspector.setVisibility(View.VISIBLE);}
 
-  @Override protected void onDestroy(){super.onDestroy();externalExecutor.shutdownNow();}
+  void select(String s){
+    if(selection!=null) selection.setText(s);
+    updateInspectorValues();
+  }
 
-  @Override protected void onResume(){super.onResume();if(gpuActive&&gpuViewport!=null)gpuViewport.onResume();}
-  @Override protected void onPause(){if(gpuActive&&gpuViewport!=null)gpuViewport.onPause();super.onPause();if(extensionRegistry!=null&&extensionRegistry.isEnabled("autosave-background")&&projectStore!=null&&scene!=null){try{projectStore.save("Scene_1_autosave",scene.snapshot());}catch(Exception ignored){}}}
+  @Override protected void onDestroy(){
+    super.onDestroy();
+    physicsRunning=false;
+    physicsHandler.removeCallbacks(physicsRunnable);
+    externalExecutor.shutdownNow();
+  }
 
+  @Override protected void onResume(){
+    super.onResume();
+    if(gpuActive&&gpuViewport!=null)gpuViewport.onResume();
+  }
+
+  @Override protected void onPause(){
+    if(gpuActive&&gpuViewport!=null)gpuViewport.onPause();
+    super.onPause();
+    physicsRunning=false;
+    physicsHandler.removeCallbacks(physicsRunnable);
+  }
+
+  // --- 3D VIEWPORT WITH DIRECT TOUCH MANIPULATION & CC0 SKY ---
   final class StudioViewport extends View {
     final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),line=new Paint(Paint.ANTI_ALIAS_FLAG);
     final LinkedHashMap<Long,RectF> hitRects=new LinkedHashMap<>();
     float yaw=StudioMath3D.radians(-35f),pitch=StudioMath3D.radians(27f),distance=13f;
     float targetX=0f,targetY=.8f,targetZ=0f;
-    String tool="Select";
+    String tool="Move";
+    boolean skyVisible=true;
+    Bitmap skyBitmap=null;
     float lastX,lastY,lastSpan; boolean moved;
     StudioMath3D.Camera camera;
+
+    static final int DRAG_NONE=0, DRAG_CAMERA=1, DRAG_OBJECT_XZ=2, DRAG_AXIS_X=3, DRAG_AXIS_Y=4, DRAG_AXIS_Z=5, DRAG_OBJECT_ROT=6, DRAG_OBJECT_SCALE=7;
+    int dragMode=DRAG_NONE;
+    StudioMath3D.Vec3 dragStartHit=null, nodeStartPos=null;
+    float nodeStartRotY=0f, nodeStartScale=1f, dragStartScreenX=0f, dragStartScreenY=0f;
+    long draggedNodeId=-1;
 
     final class Face {
       int[] idx; float depth; int color;
       Face(int[] idx,float depth,int color){this.idx=idx;this.depth=depth;this.color=color;}
     }
 
-    StudioViewport(Context c){super(c);line.setStrokeWidth(dp(1));setBackgroundColor(gpuActive?0x00000000:0xff12161b);}
+    StudioViewport(Context c){
+      super(c);
+      line.setStrokeWidth(dp(1));
+      setBackgroundColor(gpuActive?0x00000000:0xff12161b);
+      try {
+        InputStream is=c.getAssets().open("ocean/textures/sky.jpg");
+        skyBitmap=BitmapFactory.decodeStream(is);
+        is.close();
+      } catch(Throwable ignored){}
+    }
 
-    void resetCamera(){yaw=StudioMath3D.radians(-35f);pitch=StudioMath3D.radians(27f);distance=13f;targetX=0;targetY=.8f;targetZ=0;invalidate();}
+    void resetCamera(){
+      yaw=StudioMath3D.radians(-35f);pitch=StudioMath3D.radians(27f);distance=13f;targetX=0;targetY=.8f;targetZ=0;invalidate();
+    }
 
     @Override protected void onDraw(Canvas canvas){
       super.onDraw(canvas);
@@ -590,16 +709,35 @@ public final class OceanStudio3DActivity extends Activity {
           else computeHitRect(n,.5f,.5f,.5f,w,h);
           if(selectedNode!=null&&selectedNode.id==n.id)drawGizmo(canvas,n,w,h);
         }
-        if(extensionRegistry.isEnabled("viewport-hud")){
-          p.setColor(0xd20a0a0a);canvas.drawRoundRect(dp(12),dp(66),dp(285),dp(112),dp(10),dp(10),p);
-          p.setColor(WHITE);p.setTextSize(dp(12));canvas.drawText("GPU Perspective · "+tool,dp(24),dp(86),p);
-          p.setColor(0xff9b9b9b);p.setTextSize(dp(10));canvas.drawText("OpenGL ES 3 · 4× MSAA request · FOV 52°",dp(24),dp(103),p);
-        }
         return;
       }
 
-      LinearGradient sky=new LinearGradient(0,0,0,h,0xff10151a,0xff262c32,Shader.TileMode.CLAMP);
-      p.setShader(sky);canvas.drawRect(0,0,w,h,p);p.setShader(null);
+      // Draw Sky (authentic CC0 panorama or sky gradient)
+      if(skyVisible && skyBitmap!=null){
+        float bmpW=skyBitmap.getWidth(), bmpH=skyBitmap.getHeight();
+        float aspect=bmpW/Math.max(1f,bmpH);
+        float destH=h*1.25f;
+        float destW=destH*aspect;
+        float normYaw=(yaw%(float)(2*Math.PI))/(float)(2*Math.PI);
+        if(normYaw<0)normYaw+=1f;
+        float offsetX=-normYaw*destW;
+        float offsetY=(pitch/(float)Math.PI)*(h*0.4f);
+        RectF d1=new RectF(offsetX,offsetY,offsetX+destW,offsetY+destH);
+        canvas.drawBitmap(skyBitmap,null,d1,p);
+        if(offsetX+destW<w){
+          RectF d2=new RectF(offsetX+destW,offsetY,offsetX+destW*2f,offsetY+destH);
+          canvas.drawBitmap(skyBitmap,null,d2,p);
+        }
+        if(offsetX>0){
+          RectF d3=new RectF(offsetX-destW,offsetY,offsetX,offsetY+destH);
+          canvas.drawBitmap(skyBitmap,null,d3,p);
+        }
+        LinearGradient haze=new LinearGradient(0,h*0.45f,0,h,0x00000000,0xaa202830,Shader.TileMode.CLAMP);
+        p.setShader(haze);canvas.drawRect(0,h*0.45f,w,h,p);p.setShader(null);
+      } else {
+        LinearGradient sky=new LinearGradient(0,0,0,h,0xff10151a,0xff262c32,Shader.TileMode.CLAMP);
+        p.setShader(sky);canvas.drawRect(0,0,w,h,p);p.setShader(null);
+      }
 
       drawBaseplate(canvas,w,h);
       if(extensionRegistry.isEnabled("grid-overlay"))drawGrid(canvas,w,h);
@@ -616,42 +754,53 @@ public final class OceanStudio3DActivity extends Activity {
         else if(extensionRegistry.isEnabled("primitive-preview"))drawNodeBox(canvas,n,w,h);
       }
 
-      if(extensionRegistry.isEnabled("viewport-hud")){
-        p.setColor(0xd20a0a0a);canvas.drawRoundRect(dp(12),dp(66),dp(250),dp(110),dp(10),dp(10),p);
-        p.setColor(WHITE);p.setTextSize(dp(12));canvas.drawText("Perspective · "+tool,dp(24),dp(86),p);
-        p.setColor(0xff9b9b9b);p.setTextSize(dp(10));canvas.drawText("FOV 52° · "+String.format(Locale.US,"%.1f",distance)+" m",dp(24),dp(102),p);
-      }
+      // Draw Selected Gizmo
+      StudioScene.Node sel=scene.selected();
+      if(sel!=null&&!sel.type.equals("plane"))drawGizmo(canvas,sel,w,h);
     }
 
     boolean project(StudioMath3D.Vec3 world,float[] out,int w,int h){return StudioMath3D.project(world,camera,w,h,out);}
 
     void drawBaseplate(Canvas c,int w,int h){
-      StudioMath3D.Vec3[] q={new StudioMath3D.Vec3(-9,-.025f,-9),new StudioMath3D.Vec3(9,-.025f,-9),new StudioMath3D.Vec3(9,-.025f,9),new StudioMath3D.Vec3(-9,-.025f,9)};
+      StudioMath3D.Vec3[] q={
+        new StudioMath3D.Vec3(-100,-.025f,-100),
+        new StudioMath3D.Vec3(100,-.025f,-100),
+        new StudioMath3D.Vec3(100,-.025f,100),
+        new StudioMath3D.Vec3(-100,-.025f,100)
+      };
       float[][] s=new float[4][3];for(int i=0;i<4;i++)if(!project(q[i],s[i],w,h))return;
       Path path=new Path();path.moveTo(s[0][0],s[0][1]);for(int i=1;i<4;i++)path.lineTo(s[i][0],s[i][1]);path.close();
-      p.setColor(0xff242a30);c.drawPath(path,p);
+      p.setColor(0xff222830);c.drawPath(path,p);
     }
 
     void drawGrid(Canvas c,int w,int h){
-      line.setStrokeWidth(dp(.7f));line.setColor(0xff3b4249);
-      final int r=10;
       float[] a=new float[3],b=new float[3];
+      // Minor grid every 1 unit
+      final int r=25;
+      line.setStrokeWidth(dp(.6f));line.setColor(0x28506070);
       for(int x=-r;x<=r;x++){
-        for(int z=-r;z<r;z++){
-          if(project(new StudioMath3D.Vec3(x,0,z),a,w,h)&&project(new StudioMath3D.Vec3(x,0,z+1),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
-        }
+        if(x%5==0)continue;
+        if(project(new StudioMath3D.Vec3(x,0,-r),a,w,h)&&project(new StudioMath3D.Vec3(x,0,r),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
       }
       for(int z=-r;z<=r;z++){
-        for(int x=-r;x<r;x++){
-          if(project(new StudioMath3D.Vec3(x,0,z),a,w,h)&&project(new StudioMath3D.Vec3(x+1,0,z),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
-        }
+        if(z%5==0)continue;
+        if(project(new StudioMath3D.Vec3(-r,0,z),a,w,h)&&project(new StudioMath3D.Vec3(r,0,z),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
+      }
+      // Major grid every 5 units
+      final int mr=45;
+      line.setStrokeWidth(dp(1.1f));line.setColor(0x66687e96);
+      for(int x=-mr;x<=mr;x+=5){
+        if(project(new StudioMath3D.Vec3(x,0,-mr),a,w,h)&&project(new StudioMath3D.Vec3(x,0,mr),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
+      }
+      for(int z=-mr;z<=mr;z+=5){
+        if(project(new StudioMath3D.Vec3(-mr,0,z),a,w,h)&&project(new StudioMath3D.Vec3(mr,0,z),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
       }
     }
 
     void drawAxes(Canvas c,int w,int h){
-      drawWorldLine(c,new StudioMath3D.Vec3(-10,.012f,0),new StudioMath3D.Vec3(10,.012f,0),0xffa75454,w,h,dp(1.4f));
-      drawWorldLine(c,new StudioMath3D.Vec3(0,.012f,-10),new StudioMath3D.Vec3(0,.012f,10),0xff507ca0,w,h,dp(1.4f));
-      drawWorldLine(c,new StudioMath3D.Vec3(0,0,0),new StudioMath3D.Vec3(0,4,0),0xff63a66d,w,h,dp(1.4f));
+      drawWorldLine(c,new StudioMath3D.Vec3(-20,.012f,0),new StudioMath3D.Vec3(20,.012f,0),0xffd04444,w,h,dp(1.8f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,.012f,-20),new StudioMath3D.Vec3(0,.012f,20),0xff4477d0,w,h,dp(1.8f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,0,0),new StudioMath3D.Vec3(0,8,0),0xff44b055,w,h,dp(1.8f));
     }
 
     void drawWorldLine(Canvas c,StudioMath3D.Vec3 a,StudioMath3D.Vec3 b,int color,int w,int h,float stroke){
@@ -674,7 +823,7 @@ public final class OceanStudio3DActivity extends Activity {
       StudioMath3D.Vec3[] world=boxCorners(n,sx,sy,sz);
       float[] s=new float[3];float minX=Float.MAX_VALUE,minY=Float.MAX_VALUE,maxX=-Float.MAX_VALUE,maxY=-Float.MAX_VALUE;
       for(StudioMath3D.Vec3 v:world)if(project(v,s,w,h)){minX=Math.min(minX,s[0]);minY=Math.min(minY,s[1]);maxX=Math.max(maxX,s[0]);maxY=Math.max(maxY,s[1]);}
-      if(minX!=Float.MAX_VALUE)hitRects.put(n.id,new RectF(minX-dp(10),minY-dp(10),maxX+dp(10),maxY+dp(10)));
+      if(minX!=Float.MAX_VALUE)hitRects.put(n.id,new RectF(minX-dp(12),minY-dp(12),maxX+dp(12),maxY+dp(12)));
     }
 
     void drawNodeBox(Canvas c,StudioScene.Node n,int w,int h){drawBox(c,n,w,h,0xff73879a,.5f,.5f,.5f);}
@@ -693,15 +842,17 @@ public final class OceanStudio3DActivity extends Activity {
         if(ok)faces.add(new Face(fi[k],depth/4f,shade[k]));
       }
       Collections.sort(faces,(a,b)->Float.compare(b.depth,a.depth));
+      int activeBase=n.tintColor!=0?n.tintColor:base;
       for(Face face:faces){
         Path path=new Path();path.moveTo(s[face.idx[0]][0],s[face.idx[0]][1]);for(int j=1;j<face.idx.length;j++)path.lineTo(s[face.idx[j]][0],s[face.idx[j]][1]);path.close();
-        p.setColor(blendColor(face.color,base,.45f));c.drawPath(path,p);line.setColor(0xff27323a);line.setStrokeWidth(dp(.8f));c.drawPath(path,line);
+        p.setColor(blendColor(face.color,activeBase,.5f));c.drawPath(path,p);line.setColor(0xff27323a);line.setStrokeWidth(dp(.8f));c.drawPath(path,line);
       }
       if(minX!=Float.MAX_VALUE){
-        RectF rect=new RectF(minX-dp(8),minY-dp(8),maxX+dp(8),maxY+dp(8));hitRects.put(n.id,rect);
+        RectF rect=new RectF(minX-dp(10),minY-dp(10),maxX+dp(10),maxY+dp(10));
+        hitRects.put(n.id,rect);
         StudioScene.Node selected=scene.selected();
         if(selected!=null&&selected.id==n.id){
-          line.setColor(0xfff0f0f0);line.setStrokeWidth(dp(1.7f));c.drawRect(rect,line);drawGizmo(c,n,w,h);
+          line.setColor(0xff00d4ff);line.setStrokeWidth(dp(2f));c.drawRect(rect,line);
         }
       }
     }
@@ -714,60 +865,172 @@ public final class OceanStudio3DActivity extends Activity {
 
     void drawGizmo(Canvas c,StudioScene.Node n,int w,int h){
       StudioMath3D.Vec3 o=new StudioMath3D.Vec3(n.x,n.y,n.z);
-      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x+1.25f,n.y,n.z),0xffe05a5a,w,h,dp(2));
-      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y+1.25f,n.z),0xff63c173,w,h,dp(2));
-      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y,n.z+1.25f),0xff5f91e8,w,h,dp(2));
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x+1.5f,n.y,n.z),0xffe54d42,w,h,dp(3));
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y+1.5f,n.z),0xff39b54a,w,h,dp(3));
+      drawWorldLine(c,o,new StudioMath3D.Vec3(n.x,n.y,n.z+1.5f),0xff0081ff,w,h,dp(3));
+      float[] center=new float[3];
+      if(project(o,center,w,h)){
+        p.setColor(0xffffffff);c.drawCircle(center[0],center[1],dp(5),p);
+      }
     }
 
     void drawSpawn3D(Canvas c,StudioScene.Node n,int w,int h){
-      StudioScene.Node fake=new StudioScene.Node(n.id,n.name,n.type);fake.x=n.x;fake.y=.08f+n.y;fake.z=n.z;fake.rx=n.rx;fake.ry=n.ry;fake.rz=n.rz;fake.sx=n.sx;fake.sy=n.sy;fake.sz=n.sz;
+      StudioScene.Node fake=new StudioScene.Node(n.id,n.name,n.type);fake.x=n.x;fake.y=.08f+n.y;fake.z=n.z;fake.rx=n.rx;fake.ry=n.ry;fake.rz=n.rz;fake.sx=n.sx;fake.sy=n.sy;fake.sz=n.sz;fake.tintColor=n.tintColor;
       drawBox(c,fake,w,h,0xffd5d7da,1.45f,.08f,.8f);
-      float[] center=new float[3],tip=new float[3];
-      StudioMath3D.Vec3 wc=new StudioMath3D.Vec3(n.x,n.y+.18f,n.z);
-      if(project(wc,center,w,h)){
-        line.setColor(0xff202327);line.setStrokeWidth(dp(2));
-        for(int i=0;i<8;i++){double a=i*Math.PI/4;StudioMath3D.Vec3 wt=new StudioMath3D.Vec3(n.x+(float)Math.cos(a)*.65f,n.y+.18f,n.z+(float)Math.sin(a)*.65f);if(project(wt,tip,w,h))c.drawLine(center[0],center[1],tip[0],tip[1],line);}
-      }
     }
 
-    void addPrimitive(String s){invalidate();Toast.makeText(OceanStudio3DActivity.this,s+" added to scene",Toast.LENGTH_SHORT).show();}
-
     float span(MotionEvent e){if(e.getPointerCount()<2)return 0;float dx=e.getX(0)-e.getX(1),dy=e.getY(0)-e.getY(1);return (float)Math.sqrt(dx*dx+dy*dy);}
+    float dist(float x1,float y1,float x2,float y2){float dx=x1-x2,dy=y1-y2;return (float)Math.sqrt(dx*dx+dy*dy);}
+    float distToSegment(float px,float py,float x1,float y1,float x2,float y2){
+      float l2=(x2-x1)*(x2-x1)+(y2-y1)*(y2-y1);if(l2<1e-4f)return dist(px,py,x1,y1);
+      float t=Math.max(0,Math.min(1,((px-x1)*(x2-x1)+(py-y1)*(y2-y1))/l2));
+      return dist(px,py,x1+t*(x2-x1),y1+t*(y2-y1));
+    }
 
     @Override public boolean onTouchEvent(MotionEvent e){
       int action=e.getActionMasked();
+      int w=getWidth(),h=getHeight();
       if(action==MotionEvent.ACTION_DOWN){
-        lastX=e.getX();lastY=e.getY();lastSpan=0;moved=false;return true;
-      }
-      if(action==MotionEvent.ACTION_POINTER_DOWN&&e.getPointerCount()>=2){
-        lastX=(e.getX(0)+e.getX(1))*.5f;lastY=(e.getY(0)+e.getY(1))*.5f;lastSpan=span(e);moved=true;return true;
-      }
-      if(action==MotionEvent.ACTION_MOVE){
-        if(e.getPointerCount()>=2){
-          float mx=(e.getX(0)+e.getX(1))*.5f,my=(e.getY(0)+e.getY(1))*.5f,dx=mx-lastX,dy=my-lastY;
-          if(extensionRegistry.isEnabled("multitouch-pan")){
-            StudioMath3D.Vec3 right=camera.right,up=camera.up;float scale=distance*.0018f;
-            targetX-=right.x*dx*scale;targetY+=up.y*dy*scale;targetZ-=right.z*dx*scale;
-          }
-          float now=span(e);if(lastSpan>1&&now>1){distance=StudioMath3D.clamp(distance*(lastSpan/now),2f,60f);}lastSpan=now;lastX=mx;lastY=my;moved=true;invalidate();return true;
-        }
-        float dx=e.getX()-lastX,dy=e.getY()-lastY;
-        if(Math.abs(dx)+Math.abs(dy)>dp(2))moved=true;
-        if(extensionRegistry.isEnabled("touch-orbit")){
-          yaw-=dx*.007f;pitch=StudioMath3D.clamp(pitch-dy*.0055f,StudioMath3D.radians(-80f),StudioMath3D.radians(80f));
-        }
-        lastX=e.getX();lastY=e.getY();invalidate();return true;
-      }
-      if(action==MotionEvent.ACTION_UP){
-        if(!moved){
-          ArrayList<Map.Entry<Long,RectF>> entries=new ArrayList<>(hitRects.entrySet());
-          for(int i=entries.size()-1;i>=0;i--){
-            Map.Entry<Long,RectF> entry=entries.get(i);
-            if(entry.getValue().contains(e.getX(),e.getY())){
-              scene.select(entry.getKey());StudioScene.Node n=scene.selected();if(n!=null)select(n.name);invalidate();return true;
+        lastX=e.getX();lastY=e.getY();lastSpan=0;moved=false;
+        dragMode=DRAG_NONE;
+        dragStartScreenX=lastX; dragStartScreenY=lastY;
+
+        StudioScene.Node sel=scene.selected();
+        if(sel!=null&&camera!=null){
+          float[] sCenter=new float[3], sX=new float[3], sY=new float[3], sZ=new float[3];
+          StudioMath3D.Vec3 nPos=new StudioMath3D.Vec3(sel.x,sel.y,sel.z);
+          if(project(nPos,sCenter,w,h)){
+            project(new StudioMath3D.Vec3(sel.x+1.5f,sel.y,sel.z),sX,w,h);
+            project(new StudioMath3D.Vec3(sel.x,sel.y+1.5f,sel.z),sY,w,h);
+            project(new StudioMath3D.Vec3(sel.x,sel.y,sel.z+1.5f),sZ,w,h);
+
+            float dCenter=dist(lastX,lastY,sCenter[0],sCenter[1]);
+            float dX=distToSegment(lastX,lastY,sCenter[0],sCenter[1],sX[0],sX[1]);
+            float dY=distToSegment(lastX,lastY,sCenter[0],sCenter[1],sY[0],sY[1]);
+            float dZ=distToSegment(lastX,lastY,sCenter[0],sCenter[1],sZ[0],sZ[1]);
+            float thresh=dp(28);
+
+            if("Rotate".equals(tool)){
+              if(dCenter<thresh*2f||dX<thresh||dY<thresh||dZ<thresh){
+                dragMode=DRAG_OBJECT_ROT;draggedNodeId=sel.id;nodeStartRotY=sel.ry;return true;
+              }
+            }else if("Scale".equals(tool)){
+              if(dCenter<thresh*2f||dX<thresh||dY<thresh||dZ<thresh){
+                dragMode=DRAG_OBJECT_SCALE;draggedNodeId=sel.id;nodeStartScale=sel.sx;return true;
+              }
+            }else{
+              if(dY<thresh){
+                dragMode=DRAG_AXIS_Y;draggedNodeId=sel.id;nodeStartPos=new StudioMath3D.Vec3(sel.x,sel.y,sel.z);return true;
+              }else if(dX<thresh){
+                dragMode=DRAG_AXIS_X;draggedNodeId=sel.id;nodeStartPos=new StudioMath3D.Vec3(sel.x,sel.y,sel.z);
+                StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(lastX,lastY,w,h,camera);
+                dragStartHit=StudioMath3D.raycastPlaneY(camera.position,ray,sel.y);return true;
+              }else if(dZ<thresh){
+                dragMode=DRAG_AXIS_Z;draggedNodeId=sel.id;nodeStartPos=new StudioMath3D.Vec3(sel.x,sel.y,sel.z);
+                StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(lastX,lastY,w,h,camera);
+                dragStartHit=StudioMath3D.raycastPlaneY(camera.position,ray,sel.y);return true;
+              }else if(dCenter<thresh*1.6f||(hitRects.containsKey(sel.id)&&hitRects.get(sel.id).contains(lastX,lastY))){
+                dragMode=DRAG_OBJECT_XZ;draggedNodeId=sel.id;nodeStartPos=new StudioMath3D.Vec3(sel.x,sel.y,sel.z);
+                StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(lastX,lastY,w,h,camera);
+                dragStartHit=StudioMath3D.raycastPlaneY(camera.position,ray,sel.y);return true;
+              }
             }
           }
         }
+
+        // Tap on another object
+        ArrayList<Map.Entry<Long,RectF>> entries=new ArrayList<>(hitRects.entrySet());
+        for(int i=entries.size()-1;i>=0;i--){
+          Map.Entry<Long,RectF> entry=entries.get(i);
+          if(entry.getValue().contains(lastX,lastY)){
+            scene.select(entry.getKey());
+            StudioScene.Node n=scene.selected();
+            if(n!=null){
+              select(n.name);
+              dragMode=DRAG_OBJECT_XZ;
+              draggedNodeId=entry.getKey();
+              nodeStartPos=new StudioMath3D.Vec3(n.x,n.y,n.z);
+              StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(lastX,lastY,w,h,camera);
+              dragStartHit=StudioMath3D.raycastPlaneY(camera.position,ray,n.y);
+              invalidate();
+              return true;
+            }
+          }
+        }
+
+        dragMode=DRAG_CAMERA;
+        return true;
+      }
+
+      if(action==MotionEvent.ACTION_POINTER_DOWN&&e.getPointerCount()>=2){
+        lastX=(e.getX(0)+e.getX(1))*.5f;lastY=(e.getY(0)+e.getY(1))*.5f;lastSpan=span(e);moved=true;return true;
+      }
+
+      if(action==MotionEvent.ACTION_MOVE){
+        float curX=e.getX(),curY=e.getY();
+        float dx=curX-lastX,dy=curY-lastY;
+        if(Math.abs(dx)+Math.abs(dy)>dp(2))moved=true;
+
+        if(e.getPointerCount()>=2){
+          float mx=(e.getX(0)+e.getX(1))*.5f,my=(e.getY(0)+e.getY(1))*.5f;
+          float mdx=mx-lastX,mdy=my-lastY;
+          StudioMath3D.Vec3 right=camera.right,up=camera.up;
+          float scale=distance*.0018f;
+          targetX-=right.x*mdx*scale;targetY+=up.y*mdy*scale;targetZ-=right.z*mdx*scale;
+          float now=span(e);
+          if(lastSpan>1&&now>1){distance=StudioMath3D.clamp(distance*(lastSpan/now),2f,150f);}
+          lastSpan=now;lastX=mx;lastY=my;moved=true;invalidate();return true;
+        }
+
+        StudioScene.Node sel=scene.selected();
+        if(sel!=null&&sel.id==draggedNodeId&&!sel.locked){
+          if(dragMode==DRAG_OBJECT_XZ){
+            StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(curX,curY,w,h,camera);
+            StudioMath3D.Vec3 hit=StudioMath3D.raycastPlaneY(camera.position,ray,nodeStartPos.y);
+            if(hit!=null&&dragStartHit!=null){
+              float nx=nodeStartPos.x+(hit.x-dragStartHit.x);
+              float nz=nodeStartPos.z+(hit.z-dragStartHit.z);
+              sel.x=nx;sel.z=nz;
+              if(physicsRunning&&sel.isDynamic){
+                sel.vx=(nx-nodeStartPos.x)*4f;
+                sel.vz=(nz-nodeStartPos.z)*4f;
+              }
+              updateInspectorValues();invalidate();return true;
+            }
+          }else if(dragMode==DRAG_AXIS_Y){
+            float dyY=-(curY-dragStartScreenY)*(distance*.0022f);
+            sel.y=Math.max(0.5f*sel.sy,nodeStartPos.y+dyY);
+            updateInspectorValues();invalidate();return true;
+          }else if(dragMode==DRAG_AXIS_X){
+            StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(curX,curY,w,h,camera);
+            StudioMath3D.Vec3 hit=StudioMath3D.raycastPlaneY(camera.position,ray,nodeStartPos.y);
+            if(hit!=null&&dragStartHit!=null){sel.x=nodeStartPos.x+(hit.x-dragStartHit.x);updateInspectorValues();invalidate();return true;}
+          }else if(dragMode==DRAG_AXIS_Z){
+            StudioMath3D.Vec3 ray=StudioMath3D.screenToRayDir(curX,curY,w,h,camera);
+            StudioMath3D.Vec3 hit=StudioMath3D.raycastPlaneY(camera.position,ray,nodeStartPos.y);
+            if(hit!=null&&dragStartHit!=null){sel.z=nodeStartPos.z+(hit.z-dragStartHit.z);updateInspectorValues();invalidate();return true;}
+          }else if(dragMode==DRAG_OBJECT_ROT){
+            float dRot=(curX-dragStartScreenX)*0.5f;
+            sel.ry=(nodeStartRotY+dRot)%360f;updateInspectorValues();invalidate();return true;
+          }else if(dragMode==DRAG_OBJECT_SCALE){
+            float dScale=-(curY-dragStartScreenY)*0.01f;
+            float s=Math.max(0.1f,nodeStartScale+dScale);
+            sel.sx=s;sel.sy=s;sel.sz=s;updateInspectorValues();invalidate();return true;
+          }
+        }
+
+        // Camera Orbit
+        if(dragMode==DRAG_CAMERA){
+          yaw-=dx*.007f;
+          pitch=StudioMath3D.clamp(pitch-dy*.0055f,StudioMath3D.radians(-85f),StudioMath3D.radians(85f));
+          lastX=curX;lastY=curY;invalidate();return true;
+        }
+        return true;
+      }
+
+      if(action==MotionEvent.ACTION_UP){
+        dragMode=DRAG_NONE;
+        draggedNodeId=-1;
         return true;
       }
       return true;
