@@ -110,7 +110,7 @@ jobs:
             gh release create "$TAG" "$APK" "$CHECKSUM" \
               --repo "$GITHUB_REPOSITORY" \
               --title "OceanStudio ${{ steps.apk.outputs.version }} — Official Source Build" \
-              --notes "Fully compiled from current Android source with 6,501 verified Ocean packages. Architecture: arm64-v8a (minSdk 28). Checksum: $(cat $CHECKSUM)" \
+              --notes "Fully compiled from current Android source with 6,502 verified Ocean packages. Architecture: arm64-v8a (minSdk 28). Checksum: $(cat $CHECKSUM)" \
               --latest
           else
             gh release upload "$TAG" "$APK" "$CHECKSUM" --repo "$GITHUB_REPOSITORY" --clobber
