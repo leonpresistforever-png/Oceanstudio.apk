@@ -573,7 +573,7 @@ public final class OceanStudio3DActivity extends Activity {
     externalExecutor.execute(()->{
       try{
         File tempOut=new File(getFilesDir(),"export-"+System.currentTimeMillis()+"."+ext);
-        String raw=StudioOpenSourceTools.assimpExport(node.sourcePath,tempOut.getAbsolutePath(),formatId);
+        String raw=StudioOpenSourceTools.assimpConvert(node.sourcePath,tempOut.getAbsolutePath(),formatId);
         JSONObject j=new JSONObject(raw);
         if(!j.optBoolean("ok"))throw new java.io.IOException(j.optString("error","Export failed"));
         try(InputStream in=new FileInputStream(tempOut);OutputStream out=getContentResolver().openOutputStream(targetUri)){
