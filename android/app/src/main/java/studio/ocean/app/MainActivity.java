@@ -241,7 +241,18 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.agent_controls_device, v -> startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)));
         safeClick(R.id.agent_controls_runtime, v -> startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
         
-        // Add Playground + BYOK Models into sidebar Tools children. Playground launches a fully isolated product surface.\n        LinearLayout toolsChildren = findViewById(R.id.tools_children);\n        if (toolsChildren != null) {\n            TextView playgroundNav = new TextView(this);\n            playgroundNav.setText("Playground");\n            playgroundNav.setTextColor(getColor(R.color.ocean_ink));\n            playgroundNav.setTextSize(14f);\n            playgroundNav.setPadding(dp(24),dp(16),dp(24),dp(16));\n            playgroundNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_agent), null, null, null);\n            playgroundNav.setCompoundDrawablePadding(dp(12));\n            playgroundNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PlaygroundActivity.class)); });\n            toolsChildren.addView(playgroundNav, 0);
+        // Add Playground + BYOK Models into sidebar Tools children. Playground launches a fully isolated product surface.
+        LinearLayout toolsChildren = findViewById(R.id.tools_children);
+        if (toolsChildren != null) {
+            TextView playgroundNav = new TextView(this);
+            playgroundNav.setText("Playground");
+            playgroundNav.setTextColor(getColor(R.color.ocean_ink));
+            playgroundNav.setTextSize(14f);
+            playgroundNav.setPadding(dp(24),dp(16),dp(24),dp(16));
+            playgroundNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_agent), null, null, null);
+            playgroundNav.setCompoundDrawablePadding(dp(12));
+            playgroundNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PlaygroundActivity.class)); });
+            toolsChildren.addView(playgroundNav, 0);
             TextView deviceNav = new TextView(this); deviceNav.setText("Device Access"); deviceNav.setTextSize(14); deviceNav.setTextColor(0xFF44464B); deviceNav.setPadding(dp(24),dp(16),dp(24),dp(16)); deviceNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); }); toolsChildren.addView(deviceNav);
 
             TextView byokNav = new TextView(this);
