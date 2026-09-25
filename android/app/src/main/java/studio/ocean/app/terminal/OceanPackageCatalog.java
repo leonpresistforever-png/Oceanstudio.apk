@@ -24,6 +24,8 @@ public final class OceanPackageCatalog {
             "b295347a9a330727be05529d08c6e90259091f8a7da7b95a5184722be47acb82";
     private static final String PREVIOUS_6482_INDEX_SHA256 =
             "b5a3ada5f67b4c2a1f4961fc0da20cbae359b0de2e2c38cc68c8561c24df04b5";
+    private static final String PREVIOUS_6483_INDEX_SHA256 =
+            "e58470cf9e68f4934bee8d5090abe2c67ea770e963f2472516c3868e501d567a";
     private static final String PREVIOUS_ARCHIVE_KEY_SHA256 =
             "badf3406f3ba399c01d47589c48b47b4714dcaa8e146a5646581254042a4678e";
     private static final String[] MANAGED_KEYRINGS = {
@@ -143,6 +145,9 @@ public final class OceanPackageCatalog {
                 if (suffix.isEmpty() && !PREVIOUS_6482_INDEX_SHA256.equals(bundledHash)
                         && file.length() == 3781194
                         && PREVIOUS_6482_INDEX_SHA256.equals(hash(Files.readAllBytes(file.toPath())))) continue;
+                if (suffix.isEmpty() && !PREVIOUS_6483_INDEX_SHA256.equals(bundledHash)
+                        && file.length() == 3782118
+                        && PREVIOUS_6483_INDEX_SHA256.equals(hash(Files.readAllBytes(file.toPath())))) continue;
                 return true;
             }
         }
