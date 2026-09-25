@@ -9,6 +9,7 @@ public final class StudioExtensionRegistry {
     public final String id,name,kind,version,source,description;
     public final boolean enabled,builtin;
     Entry(String i,String n,String k,String v,String s,String d,boolean e,boolean b){id=i;name=n;kind=k;version=v;source=s;description=d;enabled=e;builtin=b;}
+    Entry(String i,String n,String k,String v,String d,boolean e,boolean b){this(i,n,k,v,"builtin",d,e,b);}
   }
   private static final String PREF="ocean_studio_extensions";
   private final SharedPreferences prefs;
