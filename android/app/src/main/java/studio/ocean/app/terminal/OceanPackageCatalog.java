@@ -24,6 +24,11 @@ public final class OceanPackageCatalog {
             "b295347a9a330727be05529d08c6e90259091f8a7da7b95a5184722be47acb82";
     private static final String PREVIOUS_6482_INDEX_SHA256 =
             "b5a3ada5f67b4c2a1f4961fc0da20cbae359b0de2e2c38cc68c8561c24df04b5";
+    private static final String PREVIOUS_ARCHIVE_KEY_SHA256 =
+            "badf3406f3ba399c01d47589c48b47b4714dcaa8e146a5646581254042a4678e";
+    private static final String[] MANAGED_KEYRINGS = {
+            "etc/apt/keyrings/ocean.gpg", "etc/apt/trusted.gpg.d/ocean.gpg"
+    };
     public interface Assets { InputStream open(String name) throws IOException; }
     private OceanPackageCatalog() {}
 
@@ -47,7 +52,9 @@ public final class OceanPackageCatalog {
         Files.createDirectories(new File(lists, "partial").toPath());
         String indexName = listPrefix + "main_binary-aarch64_Packages";
         String bundledHash = required(metadata, "packages_sha256");
-        if (hasIndex(lists, indexName, bundledHash)) return false;
+        // Index ownership and archive-key migration are independent. A current
+        // compressed APT list must not prevent rotation of a known bundled key.
+        if (hasIndex(lists, indexName, bundledHash) && !hasPreviousKey(prefix)) return false;
         try (FileChannel channel = FileChannel.open(new File(lists, "lock").toPath(),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
             FileLock lock;
@@ -55,7 +62,10 @@ public final class OceanPackageCatalog {
             catch (OverlappingFileLockException busy) { return false; }
             if (lock == null) return false;
             try {
-                if (hasIndex(lists, indexName, bundledHash)) return false;
+                if (hasIndex(lists, indexName, bundledHash)) {
+                    if (!hasPreviousKey(prefix)) return false;
+                    return migratePreviousKeys(prefix, verified(assets, metadata, "ocean.gpg"));
+                }
                 byte[] compressed = verified(assets, metadata, "Packages.gz.bin");
                 byte[] release = verified(assets, metadata, "InRelease");
                 byte[] key = verified(assets, metadata, "ocean.gpg");
@@ -67,7 +77,16 @@ public final class OceanPackageCatalog {
                 checkSignedIndex(release, compressed, packages);
                 // Verify every asset before changing any existing installation.
                 File keyring = new File(prefix, "etc/apt/keyrings/ocean.gpg");
-                if (!keyring.isFile() || !hash(Files.readAllBytes(keyring.toPath())).equals(required(metadata, "ocean.gpg_sha256"))) atomicWrite(keyring, key);
+                if (Files.isSymbolicLink(keyring.toPath()))
+                    throw new IOException("Preserving a user-managed Ocean keyring symlink");
+                if (keyring.isFile()) {
+                    String currentHash = hash(Files.readAllBytes(keyring.toPath()));
+                    if (!currentHash.equals(required(metadata, "ocean.gpg_sha256"))
+                            && !currentHash.equals(PREVIOUS_ARCHIVE_KEY_SHA256))
+                        throw new IOException("Preserving an unknown Ocean repository keyring");
+                }
+                migratePreviousKeys(prefix, key);
+                if (!keyring.isFile()) atomicWrite(keyring, key);
                 if (!sources.isFile() || sources.length() == 0) {
                     String source = "deb [signed-by=" + keyring.getAbsolutePath() + "] " + repository + " stable main\n";
                     atomicWrite(sources, source.getBytes(StandardCharsets.UTF_8));
@@ -80,6 +99,38 @@ public final class OceanPackageCatalog {
                 return true;
             } finally { lock.release(); }
         }
+    }
+
+    private static boolean hasPreviousKey(File prefix) throws IOException {
+        for (String path : MANAGED_KEYRINGS) {
+            File keyring = new File(prefix, path);
+            if (!Files.isSymbolicLink(keyring.toPath()) && keyring.isFile()
+                    && PREVIOUS_ARCHIVE_KEY_SHA256.equals(hash(Files.readAllBytes(keyring.toPath()))))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean migratePreviousKeys(File prefix, byte[] replacement) throws IOException {
+        if (PREVIOUS_ARCHIVE_KEY_SHA256.equals(hash(replacement))) return false;
+        boolean changed = false;
+        for (String path : MANAGED_KEYRINGS) {
+            File keyring = new File(prefix, path);
+            if (Files.isSymbolicLink(keyring.toPath()) || !keyring.isFile()) continue;
+            byte[] previous = Files.readAllBytes(keyring.toPath());
+            if (!PREVIOUS_ARCHIVE_KEY_SHA256.equals(hash(previous))) continue;
+            // Keep the exact previous public key for diagnosis/rollback. Never
+            // overwrite a user-owned backup or an unknown/customized keyring.
+            File backup = new File(keyring.getParentFile(), "ocean.gpg.before-archive-key-rotation");
+            if (backup.exists()) {
+                if (Files.isSymbolicLink(backup.toPath())
+                        || !PREVIOUS_ARCHIVE_KEY_SHA256.equals(hash(Files.readAllBytes(backup.toPath()))))
+                    throw new IOException("Preserving an existing archive-key backup");
+            } else atomicWrite(backup, previous);
+            atomicWrite(keyring, replacement);
+            changed = true;
+        }
+        return changed;
     }
 
     private static boolean hasIndex(File lists, String name, String bundledHash) throws IOException {

@@ -1,0 +1,15 @@
+{
+  "baselineCommit": "0a07999cf8d5ce604a0182ab46755f52ec6680bf",
+  "tests": {
+    "baseline": {
+      "exitCode": 1,
+      "output": "JUnit version 4.13.2\n.E....E......E.E.E\nTime: 0.269\nThere were 5 failures:\n1) corruptReplacementKeyDoesNotModifyExistingTrust(studio.ocean.app.terminal.OceanPackageCatalogTest)\njava.lang.AssertionError: corrupt key accepted\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat studio.ocean.app.terminal.OceanPackageCatalogTest.corruptReplacementKeyDoesNotModifyExistingTrust(OceanPackageCatalogTest.java:175)\n2) unknownKeyIsNeverReplacedByBootstrapRepair(studio.ocean.app.terminal.OceanPackageCatalogTest)\njava.lang.AssertionError: unknown key replaced\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat studio.ocean.app.terminal.OceanPackageCatalogTest.unknownKeyIsNeverReplacedByBootstrapRepair(OceanPackageCatalogTest.java:152)\n3) compressedIndexDoesNotBlockKnownArchiveKeyMigration(studio.ocean.app.terminal.OceanPackageCatalogTest)\njava.lang.AssertionError\n\tat org.junit.Assert.fail(Assert.java:87)\n\tat org.junit.Assert.assertTrue(Assert.java:42)\n\tat org.junit.Assert.assertTrue(Assert.java:53)\n\tat studio.ocean.app.terminal.OceanPackageCatalogTest.compressedIndexDoesNotBlockKnownArchiveKeyMigration(OceanPackageCatalogTest.java:114)\n4) existingRawIndexAndInstalledStateSurviveKeyMigration(studio.ocean.app.terminal.OceanPackageCatalogTest)\njava.lang.AssertionError\n\tat org.junit.Assert.fail(Assert.java:87)\n\tat org.junit.Assert.assertTrue(Assert.java:42)\n\tat org.junit.Assert.assertTrue(Assert.java:53)\n\tat studio.ocean.app.terminal.OceanPackageCatalogTest.existingRawIndexAndInstalledStateSurviveKeyMigration(OceanPackageCatalogTest.java:130)\n5) keySymlinkIsPreserved(studio.ocean.app.terminal.OceanPackageCatalogTest)\njava.lang.AssertionError: key symlink replaced\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat studio.ocean.app.terminal.OceanPackageCatalogTest.keySymlinkIsPreserved(OceanPackageCatalogTest.java:164)\n\nFAILURES!!!\nTests run: 13,  Failures: 5\n\n"
+    },
+    "repaired": {
+      "exitCode": 0,
+      "output": "JUnit version 4.13.2\n.............\nTime: 0.312\n\nOK (13 tests)\n\n"
+    }
+  },
+  "scope": "JVM tests with real filesystem, APT locks, and shipped catalogue assets; not an Android device test",
+  "installedPackageStatePreserved": true
+}
