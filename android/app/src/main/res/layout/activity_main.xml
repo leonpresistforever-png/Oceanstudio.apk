@@ -60,4 +60,91 @@
             </HorizontalScrollView>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Ocean can make mistakes. Check important details." android:textColor="#A3A6AB" android:textSize="10sp"/>
         </LinearLayout>
+    </LinearLayout>
 
+    <View android:id="@+id/drawer_backdrop" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#2E1C1917" android:clickable="true" android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/sidebar" android:layout_width="300dp" android:layout_height="match_parent" android:background="@color/ocean_warm" android:elevation="12dp" android:orientation="vertical" android:paddingTop="12dp" android:translationX="-300dp" android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical" android:paddingHorizontal="18dp">
+            <ImageView android:layout_width="28dp" android:layout_height="28dp" android:contentDescription="@null" android:src="@drawable/ic_ocean_mark" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_weight="1" android:text="@string/app_name" android:textColor="@color/ocean_ink" android:textSize="17sp" android:textStyle="bold" />
+        </LinearLayout>
+        <TextView android:id="@+id/sidebar_new_chat" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_new_chat" android:text="@string/new_chat" />
+        <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="20dp">
+                <TextView style="@style/OceanNavLabel" android:text="@string/recent" />
+                <LinearLayout android:id="@+id/recent_skeleton" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="20dp">
+                    <View style="@style/OceanSkeletonRow" /><View style="@style/OceanSkeletonRow" android:layout_marginTop="8dp" /><View style="@style/OceanSkeletonRow" android:layout_marginTop="8dp" />
+                </LinearLayout>
+                <TextView android:id="@+id/no_recent_sessions" style="@style/OceanNavMuted" android:text="@string/no_recent_sessions" android:visibility="gone" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
+                <LinearLayout android:id="@+id/group_workspace" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/workspace_group"/><ImageView android:id="@+id/chevron_workspace" style="@style/OceanChevron"/></LinearLayout>
+                <LinearLayout android:id="@+id/workspace_children" style="@style/OceanNavChildren">
+                    <TextView android:id="@+id/nav_editor" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_editor" android:text="@string/editor" />
+                    <TextView android:id="@+id/nav_files" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_files" android:text="@string/files" />
+                    <TextView android:id="@+id/nav_terminal" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_terminal" android:text="@string/ocean_terminal" />
+                    <TextView android:id="@+id/nav_x11" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_preview" android:text="X11 Renderer" />
+                    <TextView android:id="@+id/nav_preview" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_preview" android:text="@string/preview" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
+                <LinearLayout android:id="@+id/group_agents" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/agents_group"/><ImageView android:id="@+id/chevron_agents" style="@style/OceanChevron"/></LinearLayout>
+                <LinearLayout android:id="@+id/agents_children" style="@style/OceanNavChildren">
+                    <TextView android:id="@+id/nav_agent" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_agent" android:text="@string/agent" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/agent_studio" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/workflows" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
+                <LinearLayout android:id="@+id/group_tools" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/tools_group"/><ImageView android:id="@+id/chevron_tools" style="@style/OceanChevron"/></LinearLayout>
+                <LinearLayout android:id="@+id/tools_children" style="@style/OceanNavChildren">
+                    <TextView android:id="@+id/nav_runtime_ports" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="@string/runtime_ports" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser" android:text="@string/browser_research" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/playground" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/automations" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
+                <LinearLayout android:id="@+id/group_connections" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/connections_group"/><ImageView android:id="@+id/chevron_connections" style="@style/OceanChevron"/></LinearLayout>
+                <LinearLayout android:id="@+id/connections_children" style="@style/OceanNavChildren">
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/models" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/providers" />
+                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/mcp" />
+                    <TextView android:id="@+id/nav_plugins" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Plugins" />
+                </LinearLayout>
+                <TextView style="@style/OceanNavLabel" android:text="@string/system_group" />
+                <TextView android:id="@+id/nav_agent_settings" style="@style/OceanNavMuted" android:text="Agent Settings" />
+                <TextView android:id="@+id/nav_crash_diagnostics" style="@style/OceanNavMuted" android:text="Crash Diagnostics" />
+            </LinearLayout>
+        </ScrollView>
+        <TextView android:id="@+id/sign_out" style="@style/OceanNavItem" android:text="@string/sign_out" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/agent_controls_drawer"
+        android:layout_width="300dp" android:layout_height="match_parent"
+        android:layout_gravity="end" android:background="@color/ocean_background"
+        android:elevation="14dp" android:orientation="vertical"
+        android:paddingTop="16dp" android:translationX="300dp" android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="54dp"
+            android:gravity="center_vertical" android:paddingHorizontal="20dp">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="Agent Controls" android:textColor="@color/ocean_ink" android:textSize="18sp" android:textStyle="bold"/>
+            <ImageButton android:id="@+id/agent_controls_close" style="@style/OceanIconButton"
+                android:contentDescription="Close agent controls" android:src="@drawable/ic_chevron"/>
+        </LinearLayout>
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/ocean_border"/>
+        <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:paddingHorizontal="20dp" android:paddingBottom="24dp">
+                <TextView style="@style/OceanNavLabel" android:text="SESSION"/>
+                <TextView android:id="@+id/agent_controls_model" style="@style/OceanNavMuted" android:text="Model"/>
+                <TextView android:id="@+id/agent_controls_generation" style="@style/OceanNavMuted" android:text="Temperature · Top P · Tokens"/>
+                <TextView android:id="@+id/agent_controls_timeout" style="@style/OceanNavMuted" android:text="Timeout"/>
+                <TextView android:id="@+id/agent_controls_context" style="@style/OceanNavMuted" android:text="Context"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border"/>
+                <TextView android:id="@+id/agent_controls_settings" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_models" android:text="Agent Settings"/>
+                <TextView android:id="@+id/agent_controls_plugins" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_tools" android:text="Plugins"/>
+                <TextView android:id="@+id/agent_controls_byok" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_connections" android:text="Models &amp; APIs"/>
+                <TextView android:id="@+id/agent_controls_device" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_agent" android:text="Device Access"/>
+                <TextView android:id="@+id/agent_controls_runtime" style="@style/OceanNavItem" android:drawableStart="@drawable/ic_ports" android:text="Runtime Ports"/>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+</FrameLayout>
