@@ -34,7 +34,9 @@ import java.util.zip.ZipEntry;
 public final class OceanStudio3DActivity extends Activity {
   static final int BLACK=0xff050505, PANEL=0xee101010, BORDER=0xff303030, WHITE=0xfff3f3f3, MUTED=0xff9a9a9a;
   FrameLayout root; StudioViewport viewport; StudioGpuViewport gpuViewport; boolean gpuActive;
-  LinearLayout bottom, inspector; TextView selection, inspectorTitle;
+  LinearLayout bottom, inspector, topBar; HorizontalScrollView bottomScroll; TextView hintText, toggleToolsBtn;
+  boolean toolsVisible = true;
+  TextView selection, inspectorTitle;
   TextView posXText, posYText, posZText, rotYText, scaleText, physicsToggleBtn;
   final ArrayList<String> history=new ArrayList<>(); final ArrayList<String> objects=new ArrayList<>();
   StudioScene scene; StudioExtensionRegistry extensionRegistry; StudioProjectStore projectStore;
@@ -132,6 +134,7 @@ public final class OceanStudio3DActivity extends Activity {
       b.setOnClickListener(v->handleTopAction(s));
     }
 
+    topBar=top;
     buildBottomBar();
     buildInspectorPanel();
 
@@ -146,6 +149,38 @@ public final class OceanStudio3DActivity extends Activity {
     FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
     hp.bottomMargin=dp(62);
     root.addView(hint,hp);
+    hintText=hint;
+
+    // Floating toggle arrow to collapse/expand all toolbars into immersive full-screen viewport
+    toggleToolsBtn=button("▲");
+    toggleToolsBtn.setTextSize(13);
+    toggleToolsBtn.setContentDescription("Toggle Fullscreen");
+    toggleToolsBtn.setOnClickListener(v->toggleToolsVisibility());
+    FrameLayout.LayoutParams tlp=new FrameLayout.LayoutParams(dp(40),dp(32),Gravity.BOTTOM|Gravity.END);
+    tlp.bottomMargin=dp(60);
+    tlp.rightMargin=dp(10);
+    root.addView(toggleToolsBtn,tlp);
+  }
+
+  void toggleToolsVisibility(){
+    toolsVisible=!toolsVisible;
+    int vis=toolsVisible?View.VISIBLE:View.GONE;
+    if(topBar!=null) topBar.setVisibility(vis);
+    if(bottomScroll!=null) bottomScroll.setVisibility(vis);
+    if(inspector!=null){
+      if(!toolsVisible) inspector.setVisibility(View.GONE);
+      else if(scene.selected()!=null) inspector.setVisibility(View.VISIBLE);
+    }
+    if(hintText!=null){
+      if(!toolsVisible) hintText.setVisibility(View.GONE);
+      else if(extensionRegistry.isEnabled("gesture-hints")) hintText.setVisibility(View.VISIBLE);
+    }
+    if(toggleToolsBtn!=null){
+      toggleToolsBtn.setText(toolsVisible?"▲":"▼");
+      FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)toggleToolsBtn.getLayoutParams();
+      lp.bottomMargin=dp(toolsVisible?60:12);
+      toggleToolsBtn.setLayoutParams(lp);
+    }
   }
 
   void buildBottomBar(){
@@ -168,6 +203,7 @@ public final class OceanStudio3DActivity extends Activity {
     hs.addView(bottom);
     FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM);
     root.addView(hs,bp);
+    bottomScroll=hs;
   }
 
   void buildInspectorPanel(){
@@ -599,7 +635,7 @@ public final class OceanStudio3DActivity extends Activity {
 
   void showAI(){
     final EditText input=new EditText(this);
-    input.setHint("Describe what to model, place, or script…");
+    input.setHint("e.g. 'blue sphere with physics', 'large red cylinder'…");
     input.setTextColor(WHITE);
     input.setHintTextColor(MUTED);
     new AlertDialog.Builder(this,AlertDialog.THEME_DEVICE_DEFAULT_DARK)
@@ -608,11 +644,48 @@ public final class OceanStudio3DActivity extends Activity {
       .setPositiveButton("Generate",(d,w)->{
         String prompt=input.getText().toString().trim();
         if(!prompt.isEmpty()){
-          StudioScene.Node n=scene.add(prompt,"cube");
-          n.x=(float)(Math.random()*4-2); n.y=0.5f; n.z=(float)(Math.random()*4-2);
+          String lower=prompt.toLowerCase(Locale.US);
+          String type="cube";
+          if(lower.contains("sphere")||lower.contains("ball")||lower.contains("orb")) type="sphere";
+          else if(lower.contains("cylinder")||lower.contains("pillar")||lower.contains("column")||lower.contains("pipe")) type="cylinder";
+          else if(lower.contains("cone")||lower.contains("pyramid")) type="cone";
+          else if(lower.contains("plane")||lower.contains("floor")||lower.contains("ground")||lower.contains("plate")) type="plane";
+          else if(lower.contains("light")||lower.contains("sun")||lower.contains("lamp")) type="light";
+          else if(lower.contains("camera")) type="camera";
+          else if(lower.contains("spawn")) type="spawn";
+
+          StudioScene.Node n=scene.add(prompt,type);
+          n.x=(float)(Math.random()*4-2); n.y=0.5f*n.sy; n.z=(float)(Math.random()*4-2);
+
+          // Color parsing
+          if(lower.contains("red")) n.tintColor=0xffe54d42;
+          else if(lower.contains("green")) n.tintColor=0xff39b54a;
+          else if(lower.contains("blue")) n.tintColor=0xff0081ff;
+          else if(lower.contains("yellow")) n.tintColor=0xfffbbd08;
+          else if(lower.contains("purple")) n.tintColor=0xff6739b6;
+          else if(lower.contains("orange")) n.tintColor=0xffff7800;
+          else if(lower.contains("cyan")||lower.contains("teal")) n.tintColor=0xff1cbbb4;
+          else if(lower.contains("white")) n.tintColor=0xffffffff;
+          else if(lower.contains("gray")||lower.contains("grey")) n.tintColor=0xff8799a3;
+          else if(lower.contains("black")||lower.contains("dark")) n.tintColor=0xff333333;
+
+          // Scale parsing
+          if(lower.contains("large")||lower.contains("big")||lower.contains("giant")||lower.contains("huge")){
+            n.sx=2.0f; n.sy=2.0f; n.sz=2.0f; n.y=1.0f;
+          }else if(lower.contains("small")||lower.contains("tiny")||lower.contains("mini")){
+            n.sx=0.5f; n.sy=0.5f; n.sz=0.5f; n.y=0.25f;
+          }
+
+          // Physics parsing
+          if(lower.contains("physics")||lower.contains("fall")||lower.contains("drop")||lower.contains("bounce")||lower.contains("dynamic")){
+            n.isDynamic=true;
+            n.y=Math.max(2.5f, n.y+2.0f);
+          }
+
+          objects.add(n.name);
           select(n.name);
           viewport.invalidate();
-          Toast.makeText(this,"Created "+n.name+" in scene",Toast.LENGTH_SHORT).show();
+          Toast.makeText(this,"Created "+n.name+" ("+type+") in scene",Toast.LENGTH_SHORT).show();
         }
       })
       .setNegativeButton("Cancel",null)
@@ -658,11 +731,63 @@ public final class OceanStudio3DActivity extends Activity {
     final LinkedHashMap<Long,RectF> hitRects=new LinkedHashMap<>();
     float yaw=StudioMath3D.radians(-35f),pitch=StudioMath3D.radians(27f),distance=13f;
     float targetX=0f,targetY=.8f,targetZ=0f;
+    float targetYaw=StudioMath3D.radians(-35f),targetPitch=StudioMath3D.radians(27f),targetDistance=13f;
+    float targetTx=0f,targetTy=.8f,targetTz=0f;
+    float velYaw=0f,velPitch=0f;
+    boolean cameraAnimating=false;
     String tool="Move";
     boolean skyVisible=true;
     Bitmap skyBitmap=null;
     float lastX,lastY,lastSpan; boolean moved;
     StudioMath3D.Camera camera;
+
+    final Runnable cameraStep=new Runnable(){
+      @Override public void run(){
+        boolean keepGoing=false;
+        float dyaw=(targetYaw-yaw);
+        float dpitch=(targetPitch-pitch);
+        float ddist=(targetDistance-distance);
+        float dtx=(targetTx-targetX);
+        float dty=(targetTy-targetY);
+        float dtz=(targetTz-targetZ);
+
+        if(Math.abs(velYaw)>0.0001f||Math.abs(velPitch)>0.0001f){
+          targetYaw+=velYaw;
+          targetPitch=StudioMath3D.clamp(targetPitch+velPitch,StudioMath3D.radians(-85f),StudioMath3D.radians(85f));
+          velYaw*=0.88f;
+          velPitch*=0.88f;
+          keepGoing=true;
+        }
+
+        float ease=0.22f;
+        yaw+=dyaw*ease;
+        pitch+=dpitch*ease;
+        distance+=ddist*ease;
+        targetX+=dtx*ease;
+        targetY+=dty*ease;
+        targetZ+=dtz*ease;
+
+        if(Math.abs(dyaw)>0.0005f||Math.abs(dpitch)>0.0005f||Math.abs(ddist)>0.005f||
+           Math.abs(dtx)>0.005f||Math.abs(dty)>0.005f||Math.abs(dtz)>0.005f){
+          keepGoing=true;
+        }
+
+        invalidate();
+        if(keepGoing){
+          cameraAnimating=true;
+          postOnAnimation(this);
+        }else{
+          cameraAnimating=false;
+        }
+      }
+    };
+
+    void triggerCameraStep(){
+      if(!cameraAnimating){
+        cameraAnimating=true;
+        postOnAnimation(cameraStep);
+      }
+    }
 
     static final int DRAG_NONE=0, DRAG_CAMERA=1, DRAG_OBJECT_XZ=2, DRAG_AXIS_X=3, DRAG_AXIS_Y=4, DRAG_AXIS_Z=5, DRAG_OBJECT_ROT=6, DRAG_OBJECT_SCALE=7;
     int dragMode=DRAG_NONE;
@@ -687,7 +812,10 @@ public final class OceanStudio3DActivity extends Activity {
     }
 
     void resetCamera(){
-      yaw=StudioMath3D.radians(-35f);pitch=StudioMath3D.radians(27f);distance=13f;targetX=0;targetY=.8f;targetZ=0;invalidate();
+      targetYaw=StudioMath3D.radians(-35f);targetPitch=StudioMath3D.radians(27f);targetDistance=13f;
+      targetTx=0;targetTy=.8f;targetTz=0;
+      velYaw=0;velPitch=0;
+      triggerCameraStep();
     }
 
     @Override protected void onDraw(Canvas canvas){
@@ -763,10 +891,10 @@ public final class OceanStudio3DActivity extends Activity {
 
     void drawBaseplate(Canvas c,int w,int h){
       StudioMath3D.Vec3[] q={
-        new StudioMath3D.Vec3(-100,-.025f,-100),
-        new StudioMath3D.Vec3(100,-.025f,-100),
-        new StudioMath3D.Vec3(100,-.025f,100),
-        new StudioMath3D.Vec3(-100,-.025f,100)
+        new StudioMath3D.Vec3(-250,-.025f,-250),
+        new StudioMath3D.Vec3(250,-.025f,-250),
+        new StudioMath3D.Vec3(250,-.025f,250),
+        new StudioMath3D.Vec3(-250,-.025f,250)
       };
       float[][] s=new float[4][3];for(int i=0;i<4;i++)if(!project(q[i],s[i],w,h))return;
       Path path=new Path();path.moveTo(s[0][0],s[0][1]);for(int i=1;i<4;i++)path.lineTo(s[i][0],s[i][1]);path.close();
@@ -776,7 +904,7 @@ public final class OceanStudio3DActivity extends Activity {
     void drawGrid(Canvas c,int w,int h){
       float[] a=new float[3],b=new float[3];
       // Minor grid every 1 unit
-      final int r=25;
+      final int r=50;
       line.setStrokeWidth(dp(.6f));line.setColor(0x28506070);
       for(int x=-r;x<=r;x++){
         if(x%5==0)continue;
@@ -787,7 +915,7 @@ public final class OceanStudio3DActivity extends Activity {
         if(project(new StudioMath3D.Vec3(-r,0,z),a,w,h)&&project(new StudioMath3D.Vec3(r,0,z),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
       }
       // Major grid every 5 units
-      final int mr=45;
+      final int mr=100;
       line.setStrokeWidth(dp(1.1f));line.setColor(0x66687e96);
       for(int x=-mr;x<=mr;x+=5){
         if(project(new StudioMath3D.Vec3(x,0,-mr),a,w,h)&&project(new StudioMath3D.Vec3(x,0,mr),b,w,h))c.drawLine(a[0],a[1],b[0],b[1],line);
@@ -798,9 +926,9 @@ public final class OceanStudio3DActivity extends Activity {
     }
 
     void drawAxes(Canvas c,int w,int h){
-      drawWorldLine(c,new StudioMath3D.Vec3(-20,.012f,0),new StudioMath3D.Vec3(20,.012f,0),0xffd04444,w,h,dp(1.8f));
-      drawWorldLine(c,new StudioMath3D.Vec3(0,.012f,-20),new StudioMath3D.Vec3(0,.012f,20),0xff4477d0,w,h,dp(1.8f));
-      drawWorldLine(c,new StudioMath3D.Vec3(0,0,0),new StudioMath3D.Vec3(0,8,0),0xff44b055,w,h,dp(1.8f));
+      drawWorldLine(c,new StudioMath3D.Vec3(-50,.012f,0),new StudioMath3D.Vec3(50,.012f,0),0xffd04444,w,h,dp(1.8f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,.012f,-50),new StudioMath3D.Vec3(0,.012f,50),0xff4477d0,w,h,dp(1.8f));
+      drawWorldLine(c,new StudioMath3D.Vec3(0,0,0),new StudioMath3D.Vec3(0,12,0),0xff44b055,w,h,dp(1.8f));
     }
 
     void drawWorldLine(Canvas c,StudioMath3D.Vec3 a,StudioMath3D.Vec3 b,int color,int w,int h,float stroke){
@@ -976,10 +1104,10 @@ public final class OceanStudio3DActivity extends Activity {
           float mdx=mx-lastX,mdy=my-lastY;
           StudioMath3D.Vec3 right=camera.right,up=camera.up;
           float scale=distance*.0018f;
-          targetX-=right.x*mdx*scale;targetY+=up.y*mdy*scale;targetZ-=right.z*mdx*scale;
+          targetTx-=right.x*mdx*scale;targetTy+=up.y*mdy*scale;targetTz-=right.z*mdx*scale;
           float now=span(e);
-          if(lastSpan>1&&now>1){distance=StudioMath3D.clamp(distance*(lastSpan/now),2f,150f);}
-          lastSpan=now;lastX=mx;lastY=my;moved=true;invalidate();return true;
+          if(lastSpan>1&&now>1){targetDistance=StudioMath3D.clamp(targetDistance*(lastSpan/now),2f,150f);}
+          lastSpan=now;lastX=mx;lastY=my;moved=true;triggerCameraStep();return true;
         }
 
         StudioScene.Node sel=scene.selected();
@@ -1019,16 +1147,25 @@ public final class OceanStudio3DActivity extends Activity {
           }
         }
 
-        // Camera Orbit
+        // Smooth Camera Orbit with Inertia
         if(dragMode==DRAG_CAMERA){
-          yaw-=dx*.007f;
-          pitch=StudioMath3D.clamp(pitch-dy*.0055f,StudioMath3D.radians(-85f),StudioMath3D.radians(85f));
-          lastX=curX;lastY=curY;invalidate();return true;
+          float dyaw=-dx*.0065f;
+          float dpitch=-dy*.005f;
+          targetYaw+=dyaw;
+          targetPitch=StudioMath3D.clamp(targetPitch+dpitch,StudioMath3D.radians(-85f),StudioMath3D.radians(85f));
+          velYaw=dyaw*0.65f;
+          velPitch=dpitch*0.65f;
+          lastX=curX;lastY=curY;
+          triggerCameraStep();
+          return true;
         }
         return true;
       }
 
       if(action==MotionEvent.ACTION_UP){
+        if(dragMode==DRAG_CAMERA){
+          triggerCameraStep();
+        }
         dragMode=DRAG_NONE;
         draggedNodeId=-1;
         return true;

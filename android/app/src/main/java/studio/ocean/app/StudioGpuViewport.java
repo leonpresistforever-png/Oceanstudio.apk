@@ -118,15 +118,15 @@ public final class StudioGpuViewport extends GLSurfaceView {
             -.5f,-.5f,-.5f, 0,-1,0,  .5f,-.5f,.5f, 0,-1,0, -.5f,-.5f,.5f, 0,-1,0
         };
 
-        // Enlarge baseplate to 100x100
+        // Enlarge baseplate to 250x250
         private static final float[] PLANE = {
-            -100,0,-100,0,1,0,  100,0,-100,0,1,0,  100,0,100,0,1,0,
-            -100,0,-100,0,1,0,  100,0,100,0,1,0, -100,0,100,0,1,0
+            -250,0,-250,0,1,0,  250,0,-250,0,1,0,  250,0,250,0,1,0,
+            -250,0,-250,0,1,0,  250,0,250,0,1,0, -250,0,250,0,1,0
         };
 
         @Override public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             // Bright sky-blue background clear color matching outdoor horizon
-            GLES30.glClearColor(.38f, .62f, .88f, 1f);
+            GLES30.glClearColor(.42f, .68f, .95f, 1f);
             GLES30.glEnable(GLES30.GL_DEPTH_TEST);
             GLES30.glDepthFunc(GLES30.GL_LEQUAL);
             GLES30.glEnable(GLES30.GL_CULL_FACE);
@@ -136,10 +136,10 @@ public final class StudioGpuViewport extends GLSurfaceView {
             lineProgram = program(LINE_VS, LINE_FS);
             cubeVbo = buffer(CUBE);
             planeVbo = buffer(PLANE);
-            float[] grid = buildGrid(40);
+            float[] grid = buildGrid(80);
             gridVertexCount = grid.length / 3;
             gridVbo = buffer(grid);
-            axisVbo = buffer(new float[]{-40,.012f,0, 40,.012f,0,  0,0,0, 0,8,0,  0,.012f,-40, 0,.012f,40});
+            axisVbo = buffer(new float[]{-50,.012f,0, 50,.012f,0,  0,0,0, 0,12,0,  0,.012f,-50, 0,.012f,50});
         }
 
         @Override public void onSurfaceChanged(GL10 gl, int width, int height) {
