@@ -10,6 +10,8 @@ mkdir -p "$PREFIX/var/run" "$BIN"
 cat > "$BIN/apt-get" <<SH
 #!$(command -v bash || echo /usr/bin/env bash)
 printf '%s start %s\n' "\$\$" "\$*" >> "\$OCEAN_TEST_LOG"
+mkdir -p "\$PREFIX/var/lib/apt/lists"
+printf 'Package: ocean-hello\n' > "\$PREFIX/var/lib/apt/lists/ocean_Packages"
 sleep "\${OCEAN_TEST_SLEEP:-0}"
 printf '%s end %s\n' "\$\$" "\$*" >> "\$OCEAN_TEST_LOG"
 SH

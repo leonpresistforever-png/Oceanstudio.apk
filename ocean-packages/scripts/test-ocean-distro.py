@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -34,9 +35,37 @@ class DistroTests(unittest.TestCase):
             'url': 'https://upstream.example/' + key + '.tar.gz', 'sha256': self.sha,
             'shell': '/bin/sh', 'pkg_manager': 'test', 'priority': 'test'} for key in ('debian', 'arch', 'ubuntu')}
         self.save_registry()
+        proot_script = f'''#!{sys.executable}
+import json, os, subprocess, sys
+if 'CALL_LOG' in os.environ:
+    try:
+        open(os.environ['CALL_LOG'], 'w').write(json.dumps({{'argv': sys.argv, 'path': os.environ.get('PATH', '')}}))
+    except Exception:
+        pass
+# If proot is invoked to execute a command like tar, run it
+cmd = []
+skip_next = False
+for i, arg in enumerate(sys.argv[1:]):
+    if skip_next:
+        skip_next = False
+        continue
+    if arg in ('-b', '-r', '-w', '--bind', '--rootfs', '--cwd'):
+        skip_next = True
+        continue
+    if arg.startswith('-'):
+        continue
+    cmd = sys.argv[1+i:]
+    break
+if cmd:
+    # If the command is tar, execute it
+    if cmd[0] == 'tar':
+        sys.exit(subprocess.run(cmd).returncode)
+    # For login or other commands, exit 0
+    sys.exit(0)
+'''
         for name, body in {
-            'proot': '#!/usr/bin/env python3\nimport json,os,sys\nopen(os.environ["CALL_LOG"],"w").write(json.dumps({"argv":sys.argv,"path":os.environ["PATH"]}))\n',
-            'curl': '''#!/usr/bin/env python3
+            'proot': proot_script,
+            'curl': f'''#!{sys.executable}
 import os,sys,shutil
 args=sys.argv[1:]; dest=args[args.index('--output')+1]
 open(os.environ['URL_LOG'],'a').write(args[-1]+'\\n')

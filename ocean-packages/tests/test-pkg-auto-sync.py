@@ -2,6 +2,7 @@
 """Catalogue behavior tests; fake APT never installs packages or uses the network."""
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import time
@@ -20,24 +21,26 @@ class CatalogueSync(unittest.TestCase):
         bins = self.root / 'fake-bin'
         bins.mkdir()
         self.log = self.root / 'calls'
+        bash_bin = shutil.which('bash') or '/bin/bash'
+        cat_bin = shutil.which('cat') or '/bin/cat'
         apt = bins / 'apt-get'
-        apt.write_text('''#!/bin/bash
+        apt.write_text(f'''#!{bash_bin}
 printf '%s\\n' "$*" >> "$CALL_LOG"
 if [[ "$1" == update ]]; then
-  [[ "${FAIL_UPDATE:-0}" == 0 ]] || exit 100
-  [[ "${EMPTY_UPDATE:-0}" == 0 ]] || exit 0
+  [[ "${{FAIL_UPDATE:-0}}" == 0 ]] || exit 100
+  [[ "${{EMPTY_UPDATE:-0}}" == 0 ]] || exit 0
   printf 'Package: example\\n' > "$PREFIX/var/lib/apt/lists/ocean_Packages"
   exit 0
 fi
-exit "${COMMAND_STATUS:-0}"
+exit "${{COMMAND_STATUS:-0}}"
 ''')
         apt.chmod(0o755)
         (bins / 'apt-cache').symlink_to('apt-get')
         # The cloud executor uses a PID namespace different from its /proc mount.
         # Only normalize stat reads in this fixture; these tests do not test locks.
         cat = bins / 'cat'
-        cat.write_text('''#!/bin/bash
-case "$1" in /proc/*/stat) exec /bin/cat /proc/self/stat;; *) exec /bin/cat "$@";; esac
+        cat.write_text(f'''#!{bash_bin}
+case "$1" in /proc/*/stat) exec {cat_bin} /proc/self/stat;; *) exec {cat_bin} "$@";; esac
 ''')
         cat.chmod(0o755)
         self.env = dict(os.environ, PREFIX=str(self.prefix),

@@ -13,6 +13,8 @@ with tempfile.TemporaryDirectory(prefix='ocean-dpkg-regression-') as directory:
     root = Path(directory)
     package = root / 'package'
     (package / 'DEBIAN').mkdir(parents=True)
+    package.chmod(0o755)
+    (package / 'DEBIAN').chmod(0o755)
     control = 'Package: ocean-fixture\nVersion: 1.0\nArchitecture: all\nMaintainer: Ocean <test@ocean.studio>\nDescription: file-list regression fixture\n'
     (package / 'DEBIAN/control').write_text(control)
     payload = package / 'data/data/studio.ocean.app/files/usr/bin'
