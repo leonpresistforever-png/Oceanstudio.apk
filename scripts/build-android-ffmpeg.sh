@@ -30,14 +30,21 @@ cd "$work/build"
     --pkg-config=false
 make -j2 ffmpeg ffprobe
 make install
+echo "Inspecting Android FFmpeg installation"
+ls -l "$work/install/bin/ffmpeg" "$work/install/bin/ffprobe"
 for executable in ffmpeg ffprobe; do
+    echo "Validating $executable"
     cp "$work/install/bin/$executable" "$destination/$executable"
     "$toolchain/llvm-strip" "$destination/$executable"
-    "$toolchain/llvm-readelf" -l "$destination/$executable" | grep -F '/system/bin/linker64' >/dev/null
-    "$toolchain/llvm-readelf" -h "$destination/$executable" | grep -F 'AArch64' >/dev/null
+    "$toolchain/llvm-readelf" -l "$destination/$executable" | tee "$work/$executable.program-headers"
+    grep -F '/system/bin/linker64' "$work/$executable.program-headers" >/dev/null
+    "$toolchain/llvm-readelf" -h "$destination/$executable" | tee "$work/$executable.elf-header"
+    grep -F 'AArch64' "$work/$executable.elf-header" >/dev/null
     sha256sum "$destination/$executable" | sed "s|$destination/||" > "$destination/$executable.sha256"
 done
 mkdir -p "$destination/lib"
+echo "Inspecting FFmpeg shared libraries"
+ls -l "$work/install/lib/"*.so*
 for soname in "$work"/install/lib/*.so.[0-9]*; do
     name="$(basename "$soname")"
     [[ "$name" =~ \.so\.[0-9]+$ ]] || continue
