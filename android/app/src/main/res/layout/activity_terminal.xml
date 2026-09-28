@@ -1,51 +1,299 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/terminal_root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@color/terminal_chrome" android:orientation="vertical">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="64dp" android:gravity="center_vertical" android:paddingHorizontal="8dp">
-        <ImageButton android:id="@+id/terminal_back" style="@style/OceanIconButton" android:contentDescription="@string/back" android:src="@drawable/ic_back" android:tint="@color/terminal_text" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ocean_terminal" android:fontFamily="sans-serif-medium" android:textColor="@color/terminal_text" android:textSize="17sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/terminal_local_session" android:letterSpacing="0.14" android:textColor="@color/terminal_muted" android:textSize="9sp" />
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/terminal_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/terminal_chrome">
+
+    <!-- Main Terminal Interface -->
+    <LinearLayout
+        android:id="@+id/terminal_main_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Header Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp">
+
+            <ImageButton
+                android:id="@+id/terminal_back"
+                style="@style/OceanIconButton"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_back"
+                android:tint="@color/terminal_text" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/ocean_terminal"
+                    android:textColor="@color/terminal_text"
+                    android:textSize="17sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:letterSpacing="0.14"
+                    android:text="@string/terminal_local_session"
+                    android:textColor="@color/terminal_muted"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/terminal_session_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/terminal_session_badge"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:paddingHorizontal="12dp"
+                android:text="@string/terminal_shell_badge"
+                android:textColor="@color/terminal_accent"
+                android:textSize="11sp" />
         </LinearLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="28dp" android:layout_marginEnd="8dp" android:background="@drawable/terminal_session_badge" android:gravity="center" android:paddingHorizontal="12dp" android:text="@string/terminal_shell_badge" android:textColor="@color/terminal_accent" android:textSize="11sp" android:fontFamily="monospace" />
-    </LinearLayout>
-    <TextView android:id="@+id/terminal_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="18dp" android:paddingVertical="10dp" android:text="@string/terminal_connecting" android:textColor="@color/terminal_muted" android:textSize="12sp" android:accessibilityLiveRegion="polite" />
-    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginHorizontal="8dp" android:layout_marginBottom="8dp" android:background="@drawable/terminal_surface" android:clipToOutline="true" android:padding="7dp">
-        <jackpal.androidterm.emulatorview.EmulatorView android:id="@+id/terminal_emulator" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/terminal_canvas" android:focusable="true" android:focusableInTouchMode="true" />
-    </FrameLayout>
-    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/terminal_border" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical" android:paddingHorizontal="10dp">
-        <Button android:id="@+id/terminal_tools" style="@style/OceanTerminalAction" android:text="@string/terminal_tools" android:drawableStart="@drawable/ic_terminal_tools" android:drawablePadding="8dp" />
-        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-        <Button android:id="@+id/terminal_ports" style="@style/OceanTerminalAction" android:text="@string/terminal_ports" android:drawableStart="@drawable/ic_ports" android:drawableTint="@color/terminal_accent" android:drawablePadding="6dp" />
-        <View android:layout_width="1dp" android:layout_height="20dp" android:layout_marginHorizontal="3dp" android:background="@color/terminal_border" />
-        <Button android:id="@+id/terminal_keyboard" style="@style/OceanTerminalAction" android:text="@string/terminal_keyboard" android:contentDescription="@string/terminal_show_keyboard" android:drawableStart="@drawable/ic_keyboard" android:drawablePadding="8dp" />
-    </LinearLayout>
-    <HorizontalScrollView android:id="@+id/terminal_shortcuts" android:layout_width="match_parent" android:layout_height="52dp" android:fillViewport="true" android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="8dp">
-        <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="8dp">
-            <Button android:id="@+id/terminal_ctrl" style="@style/OceanTerminalChip" android:text="CTRL" />
-            <Button android:id="@+id/terminal_alt" style="@style/OceanTerminalChip" android:text="ALT" />
-            <Button android:id="@+id/terminal_ctrl_c" style="@style/OceanTerminalChip" android:text="CTRL-C" />
-            <Button android:id="@+id/terminal_escape" style="@style/OceanTerminalChip" android:text="ESC" />
-            <Button android:id="@+id/terminal_tab" style="@style/OceanTerminalChip" android:text="TAB" />
-            <Button android:id="@+id/terminal_left" style="@style/OceanTerminalChip" android:text="←" android:contentDescription="@string/terminal_key_left" />
-            <Button android:id="@+id/terminal_down" style="@style/OceanTerminalChip" android:text="↓" android:contentDescription="@string/terminal_key_down" />
-            <Button android:id="@+id/terminal_up" style="@style/OceanTerminalChip" android:text="↑" android:contentDescription="@string/terminal_key_up" />
-            <Button android:id="@+id/terminal_right" style="@style/OceanTerminalChip" android:text="→" android:contentDescription="@string/terminal_key_right" />
-            <Button android:id="@+id/terminal_home" style="@style/OceanTerminalChip" android:text="HOME" />
-            <Button android:id="@+id/terminal_end" style="@style/OceanTerminalChip" android:text="END" />
-            <Button android:id="@+id/terminal_page_up" style="@style/OceanTerminalChip" android:text="PGUP" />
-            <Button android:id="@+id/terminal_page_down" style="@style/OceanTerminalChip" android:text="PGDN" />
-            <Button android:id="@+id/terminal_slash" style="@style/OceanTerminalChip" android:text="/" />
-            <Button android:id="@+id/terminal_dash" style="@style/OceanTerminalChip" android:text="-" />
-            <Button android:id="@+id/terminal_pipe" style="@style/OceanTerminalChip" android:text="|" />
-            <Button android:id="@+id/terminal_tilde" style="@style/OceanTerminalChip" android:text="~" />
+
+        <TextView
+            android:id="@+id/terminal_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="polite"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="10dp"
+            android:text="@string/terminal_connecting"
+            android:textColor="@color/terminal_muted"
+            android:textSize="12sp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/terminal_surface"
+            android:clipToOutline="true"
+            android:padding="7dp">
+
+            <jackpal.androidterm.emulatorview.EmulatorView
+                android:id="@+id/terminal_emulator"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/terminal_canvas"
+                android:focusable="true"
+                android:focusableInTouchMode="true" />
+        </FrameLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/terminal_border" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="10dp">
+
+            <Button
+                android:id="@+id/terminal_tools"
+                style="@style/OceanTerminalAction"
+                android:drawableStart="@drawable/ic_terminal_tools"
+                android:drawablePadding="8dp"
+                android:text="@string/terminal_tools" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/terminal_ports"
+                style="@style/OceanTerminalAction"
+                android:drawableStart="@drawable/ic_ports"
+                android:drawableTint="@color/terminal_accent"
+                android:drawablePadding="6dp"
+                android:text="@string/terminal_ports" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="20dp"
+                android:layout_marginHorizontal="3dp"
+                android:background="@color/terminal_border" />
+
+            <Button
+                android:id="@+id/terminal_keyboard"
+                style="@style/OceanTerminalAction"
+                android:contentDescription="@string/terminal_show_keyboard"
+                android:drawableStart="@drawable/ic_keyboard"
+                android:drawablePadding="8dp"
+                android:text="@string/terminal_keyboard" />
         </LinearLayout>
-    </HorizontalScrollView>
-    <LinearLayout android:id="@+id/terminal_failure_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal" android:padding="6dp" android:visibility="gone">
-        <Button android:id="@+id/terminal_retry" style="@style/OceanTerminalKey" android:text="Retry" />
-        <Button android:id="@+id/terminal_details" style="@style/OceanTerminalKey" android:text="Details" />
-        <Button android:id="@+id/terminal_recovery" style="@style/OceanTerminalKey" android:text="Recovery shell" />
+
+        <HorizontalScrollView
+            android:id="@+id/terminal_shortcuts"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingBottom="8dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
+
+                <Button android:id="@+id/terminal_ctrl" style="@style/OceanTerminalChip" android:text="CTRL" />
+                <Button android:id="@+id/terminal_alt" style="@style/OceanTerminalChip" android:text="ALT" />
+                <Button android:id="@+id/terminal_ctrl_c" style="@style/OceanTerminalChip" android:text="CTRL-C" />
+                <Button android:id="@+id/terminal_escape" style="@style/OceanTerminalChip" android:text="ESC" />
+                <Button android:id="@+id/terminal_tab" style="@style/OceanTerminalChip" android:text="TAB" />
+                <Button android:id="@+id/terminal_left" style="@style/OceanTerminalChip" android:contentDescription="@string/terminal_key_left" android:text="←" />
+                <Button android:id="@+id/terminal_down" style="@style/OceanTerminalChip" android:contentDescription="@string/terminal_key_down" android:text="↓" />
+                <Button android:id="@+id/terminal_up" style="@style/OceanTerminalChip" android:contentDescription="@string/terminal_key_up" android:text="↑" />
+                <Button android:id="@+id/terminal_right" style="@style/OceanTerminalChip" android:contentDescription="@string/terminal_key_right" android:text="→" />
+                <Button android:id="@+id/terminal_home" style="@style/OceanTerminalChip" android:text="HOME" />
+                <Button android:id="@+id/terminal_end" style="@style/OceanTerminalChip" android:text="END" />
+                <Button android:id="@+id/terminal_page_up" style="@style/OceanTerminalChip" android:text="PGUP" />
+                <Button android:id="@+id/terminal_page_down" style="@style/OceanTerminalChip" android:text="PGDN" />
+                <Button android:id="@+id/terminal_slash" style="@style/OceanTerminalChip" android:text="/" />
+                <Button android:id="@+id/terminal_dash" style="@style/OceanTerminalChip" android:text="-" />
+                <Button android:id="@+id/terminal_pipe" style="@style/OceanTerminalChip" android:text="|" />
+                <Button android:id="@+id/terminal_tilde" style="@style/OceanTerminalChip" android:text="~" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:id="@+id/terminal_failure_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="6dp"
+            android:visibility="gone">
+
+            <Button android:id="@+id/terminal_retry" style="@style/OceanTerminalKey" android:text="Retry" />
+            <Button android:id="@+id/terminal_details" style="@style/OceanTerminalKey" android:text="Details" />
+            <Button android:id="@+id/terminal_recovery" style="@style/OceanTerminalKey" android:text="Recovery shell" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+
+    <!-- Semi-transparent Dim Backdrop for Sidebar -->
+    <View
+        android:id="@+id/terminal_sidebar_backdrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <!-- Pure White Sliding Sidebar for Terminal Sessions -->
+    <LinearLayout
+        android:id="@+id/terminal_sidebar"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="#FFFFFF"
+        android:elevation="16dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <!-- Sidebar Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Terminal Sessions"
+                    android:textColor="#111827"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/terminal_session_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="1 active session"
+                    android:textColor="#6B7280"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/terminal_sidebar_close"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close sessions"
+                android:src="@drawable/ic_back"
+                android:tint="#374151" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E5E7EB" />
+
+        <!-- Sessions Scroll List -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingVertical="12dp">
+
+            <LinearLayout
+                android:id="@+id/terminal_session_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E5E7EB" />
+
+        <!-- Create New Session Button -->
+        <Button
+            android:id="@+id/terminal_new_session_btn"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp"
+            android:background="#1E293B"
+            android:fontFamily="sans-serif-medium"
+            android:text="+ Create New Session"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+</FrameLayout>

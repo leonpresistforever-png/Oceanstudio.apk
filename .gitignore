@@ -7,6 +7,7 @@ android/app/src/forgeNative/
 android/local.properties
 android/.idea/
 *.apk
+!releases/*.apk
 *.aab
 
 # IDE / OS

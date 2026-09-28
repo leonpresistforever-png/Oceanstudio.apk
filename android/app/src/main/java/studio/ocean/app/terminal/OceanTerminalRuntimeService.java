@@ -83,10 +83,42 @@ public final class OceanTerminalRuntimeService extends Service {
         }
     }
 
+    public java.util.List<TerminalSession> getInteractiveSessions() {
+        synchronized (stateLock) {
+            java.util.List<TerminalSession> list = new java.util.ArrayList<>();
+            for (TerminalSession session : sessions.values()) {
+                if (session.isRunning() && !commandSessions.contains(session.id)) {
+                    list.add(session);
+                }
+            }
+            return list;
+        }
+    }
+
+    public void requestNewTerminalSession(int rows, int columns, SessionCallback callback) {
+        bootstrapWorker.execute(() -> {
+            try {
+                OceanPaths paths = new OceanPaths(this);
+                if (!OceanRuntimeState.isInstalled(this)) {
+                    new OceanBootstrapInstaller(this).install();
+                }
+                paths.ensureDirectoryContract();
+                preparePackageCatalog(paths);
+                OceanRuntimeValidator.validate(paths).requireValid();
+                File shell = new File(paths.prefix(), "bin/bash");
+                TerminalSession session = startSession(shell.getAbsolutePath(), new String[]{shell.getAbsolutePath(), "-i"}, paths.home(), rows, columns, false);
+                enterTerminalForeground();
+                main.post(() -> callback.onReady(session));
+            } catch (Throwable error) {
+                main.post(() -> callback.onFailure(error));
+            }
+        });
+    }
+
     /** Returns immediately. All hashing, extraction, cleanup, and validation run on bootstrapWorker. */
     public void requestTerminalSession(int rows, int columns, SessionCallback callback) {
         TerminalSession existing = firstRunning();
-        if (existing != null) { main.post(() -> callback.onReady(existing)); return; }
+        if (existing != null) { enterTerminalForeground(); main.post(() -> callback.onReady(existing)); return; }
         synchronized (stateLock) {
             if (installScheduled) {
                 // The single worker serializes requests; the later request observes READY rather than extracting again.
@@ -288,6 +320,38 @@ public final class OceanTerminalRuntimeService extends Service {
             taskWakeLock=power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"OceanStudio:ForgeTask");
             taskWakeLock.setReferenceCounted(false);
             taskWakeLock.acquire();
+        }
+    }
+
+    public void enterTerminalForeground() {
+        try {
+            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (Build.VERSION.SDK_INT >= 26) {
+                NotificationChannel channel = new NotificationChannel(TASK_CHANNEL, "Ocean Terminal", NotificationManager.IMPORTANCE_LOW);
+                channel.setDescription("Visible status for background terminal sessions and agent tasks");
+                manager.createNotificationChannel(channel);
+            }
+            Intent open = new Intent(this, OceanTerminalActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+            PendingIntent pending = PendingIntent.getActivity(this, TASK_NOTIFICATION_ID, open, flags);
+            Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, TASK_CHANNEL) : new Notification.Builder(this);
+            Notification notification = builder
+                    .setSmallIcon(android.R.drawable.stat_notify_sync)
+                    .setContentTitle("Ocean Terminal active")
+                    .setContentText("Terminal session running in background.")
+                    .setContentIntent(pending)
+                    .setOngoing(true)
+                    .build();
+            startForeground(TASK_NOTIFICATION_ID, notification);
+            PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
+            if (power != null && taskWakeLock == null) {
+                taskWakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "OceanStudio:TerminalWakeLock");
+                taskWakeLock.setReferenceCounted(false);
+                taskWakeLock.acquire();
+            }
+        } catch (Throwable t) {
+            TerminalDiagnosticBundle.log("startup.log", "enterTerminalForeground error: " + t.getMessage());
         }
     }
 
