@@ -1,6 +1,12 @@
 name: Build and publish verified production APK
 on:
   workflow_dispatch:
+    inputs:
+      refresh_packages:
+        description: 'Refresh package assets from the verified package repository'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -19,9 +25,25 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      OCEAN_REFRESH_PACKAGES: ${{ github.event_name == 'workflow_run' || inputs.refresh_packages == true }}
     steps:
       - uses: actions/checkout@v5
+      - name: Verify the bundled signed package catalogue
+        run: |
+          python3 ocean-packages/tests/test-apk-package-catalog.py \
+            --assets android/app/src/main/assets/ocean/repository --min-packages 6482
+      - name: Install bootstrap verification tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+      - name: Verify the bundled native bootstrap
+        run: |
+          python3 ocean-packages/scripts/verify-bootstrap.py \
+            android/app/src/main/assets/ocean/bootstrap/aarch64/ocean-aarch64.manifest.json \
+            android/app/src/main/assets/ocean/bootstrap/aarch64/ocean-aarch64.tar.zst
       - name: Pin the package snapshot
+        if: env.OCEAN_REFRESH_PACKAGES == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -29,6 +51,7 @@ jobs:
           package_commit=$(gh api repos/leonpresistforever-png/Oceanstudio-packages/git/ref/heads/main --jq .object.sha)
           echo "OCEAN_PACKAGE_COMMIT=$package_commit" >> "$GITHUB_ENV"
       - name: Hydrate catalogue only from the authenticated snapshot
+        if: env.OCEAN_REFRESH_PACKAGES == 'true'
         run: |
           python3 ocean-packages/scripts/hydrate-signed-bootstrap.py \
             --catalog-only --output "$RUNNER_TEMP/catalog-check" \
@@ -36,20 +59,21 @@ jobs:
           python3 ocean-packages/tests/test-apk-package-catalog.py \
             --assets android/app/src/main/assets/ocean/repository --min-packages 6482
       - name: Checkout the exact package snapshot for payload verification
+        if: env.OCEAN_REFRESH_PACKAGES == 'true'
         uses: actions/checkout@v5
         with:
           repository: leonpresistforever-png/Oceanstudio-packages
           ref: ${{ env.OCEAN_PACKAGE_COMMIT }}
           path: public-packages
       - name: Verify every archive and all indexed payloads
+        if: env.OCEAN_REFRESH_PACKAGES == 'true'
         working-directory: public-packages
         run: |
           python3 scripts/audit_repository.py --json "$RUNNER_TEMP/ocean-index-audit.json"
           python3 scripts/audit_package_payloads.py --json "$RUNNER_TEMP/ocean-payload-audit.json"
       - name: Refresh the native bootstrap from the same verified snapshot
+        if: env.OCEAN_REFRESH_PACKAGES == 'true'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y zstd
           python3 ocean-packages/scripts/hydrate-signed-bootstrap.py \
             --output android/app/src/main/assets/ocean/bootstrap/aarch64 \
             --download-url "https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/$OCEAN_PACKAGE_COMMIT/apt"
@@ -111,10 +135,14 @@ jobs:
           fi
           python3 - <<'PY'
           import os,pathlib
+          refreshed = os.environ['OCEAN_REFRESH_PACKAGES'] == 'true'
+          provenance = ("Ocean package snapshot: " + os.environ['OCEAN_PACKAGE_COMMIT'] + ".\n\n"
+                        if refreshed else "Package assets: bundled signed catalogue and native bootstrap from this source commit.\n\n")
+          checks = ("authenticated package catalogue and full repository payload audit"
+                    if refreshed else "bundled signed package catalogue and bootstrap integrity")
           text = ("Production APK compiled from " + os.environ['GITHUB_SHA'] + ".\n\n"
-                  "Ocean package snapshot: " + os.environ['OCEAN_PACKAGE_COMMIT'] + ".\n\n"
-                  "Verification: release unit tests, native compilation, APK signing continuity, packaged runtime assets, "
-                  "authenticated package catalogue and full repository payload audit.\n\n"
+                  + provenance + "Verification: release unit tests, native compilation, APK signing continuity, "
+                  "packaged runtime assets, " + checks + ".\n\n"
                   "Physical-device installation and execution of every package remain untested by this workflow.\n")
           (pathlib.Path(os.environ['RUNNER_TEMP'])/'production-notes.md').write_text(text)
           PY
