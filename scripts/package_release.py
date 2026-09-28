@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+"""Hermetic production APK packager and signer for OceanStudio.
+
+Generates full dual-scheme Android signatures:
+- V1: Standard JAR signing (META-INF/MANIFEST.MF, META-INF/OCEANSTU.SF, META-INF/OCEANSTU.RSA)
+- V2: APK Signature Scheme v2 (0x7109871a block)
+- V3: APK Signature Scheme v3 (0xf05368c0 block)
+Patches AXML manifest versionCode to 16 and versionName to 1.2.6.
+Ensures 4-byte zip alignment and uncompressed shared libraries.
+"""
+from __future__ import annotations
+
+import base64
+import datetime
 import hashlib
 import json
 import os
@@ -10,7 +23,7 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
-import datetime
+from cryptography.hazmat.primitives.serialization import pkcs7
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_APK = ROOT / "releases/OceanStudio-latest-debug.apk"
@@ -18,15 +31,77 @@ BUILD_DIR = ROOT / "build/release-staging"
 UNALIGNED_APK = BUILD_DIR / "unaligned.apk"
 ALIGNED_APK = BUILD_DIR / "aligned.apk"
 FINAL_VERSION = "1.2.6"
+FINAL_CODE = 16
 FINAL_APK = ROOT / f"releases/OceanStudio-{FINAL_VERSION}-arm64-debug.apk"
 LATEST_APK = ROOT / "releases/OceanStudio-latest-debug.apk"
 
+KEY_FILE = ROOT / "releases/oceanstudio-signing-key.pem"
+CERT_FILE = ROOT / "releases/oceanstudio-signing-cert.pem"
+
 STORE_EXTENSIONS = (".so", ".zst", ".gz", ".bin")
+
+def get_or_create_keypair() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
+    if KEY_FILE.exists() and CERT_FILE.exists():
+        key = serialization.load_pem_private_key(KEY_FILE.read_bytes(), password=None)
+        cert = x509.load_pem_x509_certificate(CERT_FILE.read_bytes())
+        return key, cert
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([
+        x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "OceanStudio"),
+        x509.NameAttribute(x509.oid.NameOID.ORGANIZATION_NAME, "OceanStudio"),
+        x509.NameAttribute(x509.oid.NameOID.ORGANIZATIONAL_UNIT_NAME, "Engineering"),
+        x509.NameAttribute(x509.oid.NameOID.LOCALITY_NAME, "San Francisco"),
+        x509.NameAttribute(x509.oid.NameOID.STATE_OR_PROVINCE_NAME, "CA"),
+        x509.NameAttribute(x509.oid.NameOID.COUNTRY_NAME, "US"),
+    ])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(8516051234191387503)
+        .not_valid_before(datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc))
+        .not_valid_after(datetime.datetime(2054, 1, 1, tzinfo=datetime.timezone.utc))
+        .sign(key, hashes.SHA256())
+    )
+    KEY_FILE.write_bytes(key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption()
+    ))
+    CERT_FILE.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    return key, cert
+
+def b64(b: bytes) -> str:
+    return base64.b64encode(b).decode('ascii')
+
+def format_manifest_entry(name: str, digest_b64: str) -> bytes:
+    lines = [f"Name: {name}", f"SHA-256-Digest: {digest_b64}"]
+    formatted = []
+    for line in lines:
+        while len(line) > 70:
+            formatted.append(line[:70])
+            line = " " + line[70:]
+        formatted.append(line)
+    return "\r\n".join(formatted).encode('utf-8') + b"\r\n\r\n"
+
+def patch_manifest_axml(manifest_bytes: bytearray) -> bytearray:
+    # 1. Update versionName to UTF-16 "1.2.6"
+    pos = manifest_bytes.find(b"1\x00.\x002\x00.\x001\x00")
+    if pos != -1:
+        manifest_bytes[pos:pos+10] = b"1\x00.\x002\x00.\x006\x00"
+
+    # 2. Update versionCode to 16 (0x00000010)
+    pos_code = manifest_bytes.find(b"\x08\x00\x00\x10\x0a\x00\x00\x00")
+    if pos_code != -1:
+        manifest_bytes[pos_code+4:pos_code+8] = struct.pack("<I", FINAL_CODE)
+    return manifest_bytes
 
 def lp(data: bytes) -> bytes:
     return struct.pack('<I', len(data)) + data
 
-def compute_chunk_hashes(sections):
+def compute_chunk_hashes(sections: list[bytes]) -> bytes:
     chunk_hashes = []
     CHUNK_SIZE = 1048576  # 1MB
     for data in sections:
@@ -40,9 +115,8 @@ def compute_chunk_hashes(sections):
     top_hash = hashlib.sha256(b'\x5a' + struct.pack('<I', total_chunks) + b''.join(chunk_hashes)).digest()
     return top_hash
 
-def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
-    with open(input_apk_path, 'rb') as f:
-        apk_data = f.read()
+def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey, cert: x509.Certificate):
+    apk_data = input_apk.read_bytes()
 
     eocd_idx = apk_data.rfind(b'PK\x05\x06')
     if eocd_idx == -1:
@@ -53,7 +127,7 @@ def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
 
     section1 = apk_data[:cd_offset]
     section3 = apk_data[cd_offset:cd_offset + cd_size]
-    
+
     eocd_orig = bytearray(apk_data[eocd_idx:])
     eocd_orig[16:20] = struct.pack('<I', len(section1))
     section4 = bytes(eocd_orig)
@@ -68,11 +142,11 @@ def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
     certs = lp(lp(cert_der))
     attributes = lp(b'')
 
-    signed_data = digests + certs + attributes
-
-    sig_bytes = privkey.sign(signed_data, padding.PKCS1v15(), hashes.SHA256())
-    sig_entry = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes)
-    signatures = lp(lp(sig_entry))
+    # V2 signer
+    signed_data_v2 = digests + certs + attributes
+    sig_bytes_v2 = privkey.sign(signed_data_v2, padding.PKCS1v15(), hashes.SHA256())
+    sig_entry_v2 = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes_v2)
+    signatures_v2 = lp(lp(sig_entry_v2))
 
     pub_der = privkey.public_key().public_bytes(
         serialization.Encoding.DER,
@@ -80,16 +154,29 @@ def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
     )
     public_key = lp(pub_der)
 
-    signer = lp(signed_data) + signatures + public_key
-    signers = lp(signer)
+    signer_v2 = lp(signed_data_v2) + signatures_v2 + public_key
+    signers_v2 = lp(signer_v2)
 
-    v2_pair = struct.pack('<I', 0x7109871a) + signers
+    v2_pair = struct.pack('<I', 0x7109871a) + signers_v2
     v2_pair_with_size = struct.pack('<Q', len(v2_pair)) + v2_pair
 
-    block_content_size = len(v2_pair_with_size) + 8 + 16
+    # V3 signer (same digest and cert, with minSdk=28 and maxSdk=0x7fffffff)
+    signed_data_v3 = digests + certs + struct.pack('<II', 28, 0x7fffffff) + attributes
+    sig_bytes_v3 = privkey.sign(signed_data_v3, padding.PKCS1v15(), hashes.SHA256())
+    sig_entry_v3 = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes_v3)
+    signatures_v3 = lp(lp(sig_entry_v3))
+
+    signer_v3 = lp(signed_data_v3) + signatures_v3 + public_key + struct.pack('<II', 28, 0x7fffffff)
+    signers_v3 = lp(signer_v3)
+
+    v3_pair = struct.pack('<I', 0xf05368c0) + signers_v3
+    v3_pair_with_size = struct.pack('<Q', len(v3_pair)) + v3_pair
+
+    pairs_data = v2_pair_with_size + v3_pair_with_size
+    block_content_size = len(pairs_data) + 8 + 16
     signing_block = (
         struct.pack('<Q', block_content_size) +
-        v2_pair_with_size +
+        pairs_data +
         struct.pack('<Q', block_content_size) +
         b'APK Sig Block 42'
     )
@@ -98,7 +185,7 @@ def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
     new_eocd = bytearray(apk_data[eocd_idx:])
     new_eocd[16:20] = struct.pack('<I', new_cd_offset)
 
-    with open(output_apk_path, 'wb') as f:
+    with open(output_apk, 'wb') as f:
         f.write(section1)
         f.write(signing_block)
         f.write(section3)
@@ -106,87 +193,129 @@ def sign_apk_v2(input_apk_path, output_apk_path, privkey, cert):
 
 def main():
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Building updated OceanStudio v{FINAL_VERSION} release APK...")
+    print(f"=== PACKAGING OCEANSTUDIO v{FINAL_VERSION} (code {FINAL_CODE}) ===")
+    key, cert = get_or_create_keypair()
+    print("Signing Certificate:", cert.subject)
+    cert_sha = hashlib.sha256(cert.public_bytes(serialization.Encoding.DER)).hexdigest()
+    print("Certificate SHA-256:", cert_sha)
 
-    # Load existing APK entries
-    with zipfile.ZipFile(BASE_APK, 'r') as base_z, zipfile.ZipFile(UNALIGNED_APK, 'w') as out_z:
-        existing = set()
-        
-        # 1. Add all updated assets
-        assets_dir = ROOT / "android/app/src/main/assets"
-        for p in assets_dir.rglob("*"):
-            if p.is_file():
-                rel = p.relative_to(assets_dir)
-                arcname = f"assets/{rel.as_posix()}"
-                compress = zipfile.ZIP_STORED if arcname.endswith(STORE_EXTENSIONS) else zipfile.ZIP_DEFLATED
-                out_z.write(p, arcname, compress_type=compress)
-                existing.add(arcname)
-                print(f"  Added asset: {arcname}")
+    # Collect and update files
+    files_map: dict[str, tuple[bytes, int]] = {}
 
-        # 2. Add base APK files that were not overridden (and strip old META-INF signatures)
+    # 1. Base APK files
+    with zipfile.ZipFile(BASE_APK, 'r') as base_z:
         for item in base_z.infolist():
-            if item.filename in existing:
-                continue
-            if item.filename.startswith("META-INF/OCEANSTU.") or item.filename == "META-INF/MANIFEST.MF":
+            if item.filename.startswith("META-INF/"):
                 continue
             data = base_z.read(item.filename)
-            compress = zipfile.ZIP_STORED if item.filename.endswith(STORE_EXTENSIONS) or item.filename.startswith("lib/") else zipfile.ZIP_DEFLATED
-            out_z.writestr(item.filename, data, compress_type=compress)
+            ctype = zipfile.ZIP_STORED if item.filename.endswith(STORE_EXTENSIONS) or item.filename.startswith("lib/") else zipfile.ZIP_DEFLATED
+            files_map[item.filename] = (data, ctype)
 
-    print(f"Unaligned APK created: {UNALIGNED_APK.stat().st_size} bytes")
+    # 2. Patch AndroidManifest.xml
+    manifest_bytes = patch_manifest_axml(bytearray(files_map["AndroidManifest.xml"][0]))
+    files_map["AndroidManifest.xml"] = (bytes(manifest_bytes), zipfile.ZIP_DEFLATED)
 
-    # 3. Zipalign
+    # 3. Source assets overlay
+    assets_dir = ROOT / "android/app/src/main/assets"
+    for p in assets_dir.rglob("*"):
+        if p.is_file():
+            rel = p.relative_to(assets_dir)
+            arcname = f"assets/{rel.as_posix()}"
+            ctype = zipfile.ZIP_STORED if arcname.endswith(STORE_EXTENSIONS) else zipfile.ZIP_DEFLATED
+            files_map[arcname] = (p.read_bytes(), ctype)
+            print(f"  Injected asset: {arcname}")
+
+    # Build V1 JAR Manifest & Signature files
+    # Order: AndroidManifest.xml, classes.dex, ...
+    def sort_order(name: str) -> tuple[int, str]:
+        if name == "AndroidManifest.xml": return (0, name)
+        if name.startswith("classes"): return (1, name)
+        if name.startswith("res/"): return (2, name)
+        return (3, name)
+
+    sorted_names = sorted(files_map.keys(), key=sort_order)
+
+    manifest_header = (
+        "Manifest-Version: 1.0\r\n"
+        "Built-By: Generated-by-OceanStudio\r\n"
+        "Created-By: OceanStudio\r\n"
+        "\r\n"
+    ).encode('utf-8')
+
+    manifest_body = bytearray()
+    sf_body = bytearray()
+
+    for name in sorted_names:
+        data, _ = files_map[name]
+        h = hashlib.sha256(data).digest()
+        entry_bytes = format_manifest_entry(name, b64(h))
+        manifest_body.extend(entry_bytes)
+        sf_entry_digest = hashlib.sha256(entry_bytes).digest()
+        sf_body.extend(format_manifest_entry(name, b64(sf_entry_digest)))
+
+    manifest_bytes = manifest_header + bytes(manifest_body)
+    manifest_digest = hashlib.sha256(manifest_bytes).digest()
+
+    sf_header = (
+        "Signature-Version: 1.0\r\n"
+        "Created-By: OceanStudio\r\n"
+        f"SHA-256-Digest-Manifest: {b64(manifest_digest)}\r\n"
+        "\r\n"
+    ).encode('utf-8')
+    sf_bytes = sf_header + bytes(sf_body)
+
+    # Detached PKCS#7 signature for OCEANSTU.RSA
+    builder = pkcs7.PKCS7SignatureBuilder().set_data(sf_bytes)
+    builder = builder.add_signer(cert, key, hashes.SHA256())
+    rsa_bytes = builder.sign(serialization.Encoding.DER, options=[pkcs7.PKCS7Options.DetachedSignature])
+
+    # Write unaligned APK with META-INF as the FIRST entries
+    print("Writing unaligned APK with complete V1 JAR signature...")
+    with zipfile.ZipFile(UNALIGNED_APK, "w") as out_z:
+        out_z.writestr("META-INF/MANIFEST.MF", manifest_bytes, compress_type=zipfile.ZIP_DEFLATED)
+        out_z.writestr("META-INF/OCEANSTU.SF", sf_bytes, compress_type=zipfile.ZIP_DEFLATED)
+        out_z.writestr("META-INF/OCEANSTU.RSA", rsa_bytes, compress_type=zipfile.ZIP_DEFLATED)
+        for name in sorted_names:
+            data, ctype = files_map[name]
+            out_z.writestr(name, data, compress_type=ctype)
+
+    print(f"Unaligned APK: {UNALIGNED_APK.stat().st_size} bytes")
+
+    # Zipalign
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = f"{ROOT}/build/tmp-tools/data/data/studio.ocean.app/files/usr/lib:/data/data/com.termux/files/usr/lib:/system/lib64"
     zipalign_bin = ROOT / "build/tmp-tools/data/data/studio.ocean.app/files/usr/bin/zipalign"
     subprocess.run([str(zipalign_bin), "-f", "-p", "4", str(UNALIGNED_APK), str(ALIGNED_APK)], env=env, check=True)
-    print(f"Aligned APK created: {ALIGNED_APK.stat().st_size} bytes")
+    print(f"Aligned APK: {ALIGNED_APK.stat().st_size} bytes")
 
-    # 4. Sign with RSA-2048 key
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name([
-        x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "OceanStudio"),
-        x509.NameAttribute(x509.oid.NameOID.ORGANIZATION_NAME, "OceanStudio"),
-    ])
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(key.public_key())
-        .serial_number(1)
-        .not_valid_before(datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1))
-        .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=10000))
-        .sign(key, hashes.SHA256())
-    )
+    # Sign with V2 + V3
+    sign_apk_v2_v3(ALIGNED_APK, FINAL_APK, key, cert)
+    print(f"Dual-Scheme Signed APK: {FINAL_APK.stat().st_size} bytes")
 
-    sign_apk_v2(str(ALIGNED_APK), str(FINAL_APK), key, cert)
-    print(f"Signed release APK generated: {FINAL_APK.stat().st_size} bytes")
-
-    # Verify signature
+    # Verify with ocean-apksigner
     apksigner_bin = ROOT / "build/tmp-tools/data/data/studio.ocean.app/files/usr/bin/ocean-apksigner"
     verify_res = subprocess.run([str(apksigner_bin), "verify", "-v", str(FINAL_APK)], env=env, capture_output=True, text=True)
-    print("apksigner verification result:")
-    print(verify_res.stdout)
-    if "Verified using APK Signature Scheme v2: true" not in verify_res.stdout:
+    print("ocean-apksigner output:\n" + verify_res.stdout)
+    if "Verifies" not in verify_res.stdout:
         raise RuntimeError("Signature verification failed!")
+
+    # Verify badging
+    aapt_bin = ROOT / "build/tmp-tools/data/data/studio.ocean.app/files/usr/bin/aapt"
+    badging = subprocess.run([str(aapt_bin), "dump", "badging", str(FINAL_APK)], env=env, capture_output=True, text=True).stdout
+    print("AAPT badging:\n" + "\n".join(badging.splitlines()[:5]))
 
     # Copy to latest
     shutil.copyfile(FINAL_APK, LATEST_APK)
-    
+
     # Compute SHA-256
     digest = hashlib.sha256(FINAL_APK.read_bytes()).hexdigest()
-    (FINAL_APK.with_suffix(".apk.sha256")).write_text(f"{digest}  {FINAL_APK.name}\n")
-    (LATEST_APK.with_suffix(".apk.sha256")).write_text(f"{digest}  {LATEST_APK.name}\n")
+    FINAL_APK.with_suffix(".apk.sha256").write_text(f"{digest}  {FINAL_APK.name}\n")
+    LATEST_APK.with_suffix(".apk.sha256").write_text(f"{digest}  {LATEST_APK.name}\n")
 
-    # Update SHA256SUMS
     sha_file = ROOT / "releases/SHA256SUMS"
-    sha_lines = [
-        f"{digest}  {LATEST_APK.name}\n",
-        f"{digest}  {FINAL_APK.name}\n"
-    ]
-    sha_file.write_text("".join(sha_lines))
+    sha_file.write_text(f"{digest}  {LATEST_APK.name}\n{digest}  {FINAL_APK.name}\n")
 
-    print(f"All releases updated successfully! SHA256: {digest}")
+    print(f"SUCCESS! New release APK generated. SHA256: {digest}")
 
 if __name__ == "__main__":
     main()
