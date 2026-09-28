@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project(oceanpty LANGUAGES C CXX)
 
 add_library(oceanpty SHARED ocean_pty.c)
+set_target_properties(oceanpty PROPERTIES DEBUG_POSTFIX "")
 target_compile_options(oceanpty PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(oceanpty log)
 
@@ -76,7 +77,7 @@ add_library(xatlas STATIC ${xatlas_src_SOURCE_DIR}/source/xatlas/xatlas.cpp)
 target_include_directories(xatlas PUBLIC ${xatlas_src_SOURCE_DIR}/source/xatlas)
 
 add_library(oceanstudio_ext SHARED studio_external_tools.cpp)
-set_target_properties(oceanstudio_ext PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+set_target_properties(oceanstudio_ext PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON DEBUG_POSTFIX "")
 target_include_directories(oceanstudio_ext PRIVATE
   ${cgltf_SOURCE_DIR}
   ${stb_SOURCE_DIR}

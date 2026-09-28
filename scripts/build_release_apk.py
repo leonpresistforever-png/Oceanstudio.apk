@@ -26,14 +26,15 @@ def run(args, **kwargs):
 
 
 def tool(name):
-    found = shutil.which(name)
-    if not found:
-        sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT', '')
+    sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
+    if sdk:
         candidate = Path(sdk) / 'build-tools/35.0.0' / name
         if candidate.is_file():
             return str(candidate)
-        raise RuntimeError('Required Android build tool missing: ' + name)
-    return found
+    found = shutil.which(name)
+    if found:
+        return found
+    raise RuntimeError('Required Android build tool missing: ' + name)
 
 
 def certificate(apk):
@@ -112,14 +113,16 @@ def main():
     work = ROOT / 'build/production-apk'
     work.mkdir(parents=True, exist_ok=True)
     aligned, signed = work / 'aligned.apk', work / 'signed.apk'
-    run([tool('zipalign'), '-f', '-p', '4', unsigned, aligned])
+    run([tool('zipalign'), '-f', '-P', '16', '4', unsigned, aligned])
+    run([tool('zipalign'), '-c', '-P', '16', '4', aligned])
     run([tool('apksigner'), 'sign', '--ks', keystore, '--ks-pass', 'env:OCEAN_RELEASE_STORE_PASS',
          '--ks-key-alias', env['OCEAN_RELEASE_KEY_ALIAS'], '--key-pass', 'env:OCEAN_RELEASE_KEY_PASS',
          '--min-sdk-version', '28', '--out', signed, aligned], env=env)
     current_cert = certificate(signed)
     if current_cert != previous_cert:
         raise RuntimeError(f'Release certificate changed: previous={previous_cert}; new={current_cert}')
-    run([tool('zipalign'), '-c', '-p', '4', signed])
+    run([tool('apksigner'), 'verify', '--verbose', '--min-sdk-version', '28', signed])
+    run([tool('zipalign'), '-c', '-P', '16', '4', signed])
     verify_compiled(signed, version, code)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)

@@ -23,4 +23,5 @@ Thumbs.db
 *.log
 *.jks
 *.keystore
+releases/*signing*key*.pem
 build/
