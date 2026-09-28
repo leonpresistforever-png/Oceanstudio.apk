@@ -8,9 +8,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
+import android.webkit.ConsoleMessage;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,6 +47,15 @@ public class RoboticEyeView extends WebView {
         settings.setAllowUniversalAccessFromFileURLs(false);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
+        setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    android.util.Log.e("RoboticEye", message.message() + " at "
+                            + message.sourceId() + ":" + message.lineNumber());
+                }
+                return true;
+            }
+        });
 
         setWebViewClient(new WebViewClient() {
             @Override

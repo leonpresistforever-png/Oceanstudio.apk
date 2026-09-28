@@ -92,3 +92,10 @@ Ocean Studio's Java/JNI bridge and UI integration are separate Ocean code.
    by Aleksei Rozumnyi (https://sketchfab.com/Aleksei.Rozumnyi), licensed under
    CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/).
    Full model license and attribution: ocean/robotic-eye/MODEL-LICENSE.txt
+
+9. FFmpeg
+   Official source: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
+   Version: 8.1.2
+   Configured for Android arm64 with dynamic LGPL libraries and no GPL components.
+   Source SHA-256: 464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+   Full license is packaged at ocean/native/COPYING.LGPLv2.1.

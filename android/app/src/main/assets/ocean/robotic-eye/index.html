@@ -81,7 +81,7 @@
       camera.position.set(0, 0.04, distance);
       camera.lookAt(0, 0, 0);
       eyeReady = true;
-    }, undefined, () => { /* Keep the canvas clear if the packaged model cannot be read. */ });
+    }, undefined, error => { console.error('Robotic eye model could not load', error); });
 
     window.oceanEyeSetTyping = typing => {
       if (!eyeReady || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

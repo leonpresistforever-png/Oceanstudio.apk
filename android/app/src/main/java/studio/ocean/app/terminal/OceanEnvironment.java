@@ -18,16 +18,19 @@ public final class OceanEnvironment {
         if (shell == null || shell.isEmpty()) shell = "/system/bin/sh";
         OceanPaths paths = new OceanPaths(context);
         try { if (paths.temp() != null && !paths.temp().exists()) paths.temp().mkdirs(); } catch (Throwable ignored) {}
+        if (!isRecovery) OceanRuntimeCompatibility.ensure(context);
         List<String> values = new ArrayList<>();
         values.add("OCEAN_ROOT=" + paths.root()); values.add("OCEAN_HOME=" + paths.home());
         values.add("OCEAN_PREFIX=" + paths.prefix()); values.add("HOME=" + paths.home());
         values.add("PREFIX=" + paths.prefix()); values.add("TMPDIR=" + paths.temp());
         java.io.File forgeOverlay=new java.io.File(context.getFilesDir(),"forge-tools/bin");
         values.add("PATH=" + paths.home() + "/.local/bin:" + forgeOverlay.getAbsolutePath() + ":" + paths.prefix() + "/bin:/system/bin:/system/xbin");
+        values.add("npm_config_prefix=" + paths.prefix());
+        values.add("npm_config_script_shell=" + paths.prefix() + "/bin/bash");
         values.add("TERM=xterm-256color"); values.add("COLORTERM=truecolor");
         values.add("SHELL=" + shell); values.add("LANG=C.UTF-8");
         if (!isRecovery && !"/system/bin/sh".equals(shell)) {
-            values.add("LD_LIBRARY_PATH=" + paths.prefix() + "/lib");
+            values.add("LD_LIBRARY_PATH=" + paths.home() + "/.local/lib:" + paths.prefix() + "/lib");
             java.io.File execHook = new java.io.File(paths.prefix(), "lib/libocean-exec.so");
             if (execHook.exists()) {
                 values.add("LD_PRELOAD=" + execHook.getAbsolutePath());

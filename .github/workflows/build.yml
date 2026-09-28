@@ -17,7 +17,7 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -57,6 +57,9 @@ jobs:
           python3 ocean-packages/tests/test-apk-package-catalog.py \
             --assets android/app/src/main/assets/ocean/repository --min-packages 6482
 
+      - name: Build Android FFmpeg and FFprobe from verified upstream source
+        run: bash scripts/build-android-ffmpeg.sh
+
       - name: Build debug APK (Gradle)
         working-directory: android
         env:
@@ -88,6 +91,11 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --min-sdk-version 28 "$APK"
           test "$(unzip -p "$APK" assets/ocean/robotic-eye/robotic-eye.glb | sha256sum | cut -d' ' -f1)" = \
             "$(sha256sum android/app/src/main/assets/ocean/robotic-eye/robotic-eye.glb | cut -d' ' -f1)"
+          for binary in ffmpeg ffprobe; do
+            test -s "android/app/src/main/assets/ocean/native/$binary"
+            test "$(unzip -p "$APK" "assets/ocean/native/$binary" | sha256sum | cut -d' ' -f1)" = \
+              "$(sha256sum "android/app/src/main/assets/ocean/native/$binary" | cut -d' ' -f1)"
+          done
           CERT=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs --min-sdk-version 28 "$APK" \
             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr 'A-F' 'a-f' | tr -d ':')
           test -n "$CERT"
@@ -134,7 +142,7 @@ jobs:
           cat > "$RUNNER_TEMP/test-release-notes.md" <<EOF
           Test APK built and verified from source commit $GITHUB_SHA.
 
-          Includes the local robotic eye GLB, refined sign-in layout, bundled signed package catalogue, and native bootstrap.
+          Includes the local robotic eye GLB, a visible animated agent background, slash commands, moving agent status, npm launcher repair, Android FFmpeg and FFprobe built from the verified official 8.1.2 source, bundled signed package catalogue, and native bootstrap.
 
           This is a debug-signed test build with a testing-only sign-in path. Its signing certificate ($CERTIFICATE) differs from the existing published APK. Android cannot install it as an update: uninstall the older app first, which removes its app data. The production APK remains blocked until the existing release signing keystore and authentication secret are configured.
           EOF

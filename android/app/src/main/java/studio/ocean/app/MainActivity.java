@@ -52,6 +52,19 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout contentFrame;
     private ScrollView chatScrollView;
     private LinearLayout chatMessagesLayout;
+    private static final String[][] SLASH_COMMANDS = {
+            {"/run", "Run a terminal command"},
+            {"/terminal", "Open Ocean Terminal"},
+            {"/new", "Start a fresh conversation"},
+            {"/model", "Configure the active model"},
+            {"/mode", "Choose agent work or cost mode"},
+            {"/cost", "Use fewer tokens and tool calls"},
+            {"/work", "Use full agent capacity"},
+            {"/plugins", "Manage connected tools"},
+            {"/settings", "Agent generation and session settings"},
+            {"/screen", "Ask the agent to inspect this screen"},
+            {"/files", "Ask the agent to work with files"}
+    };
 
     private void safeClick(int id, View.OnClickListener l) {
         View v = findViewById(id);
@@ -209,6 +222,13 @@ public class MainActivity extends AppCompatActivity {
             });
             eyePrompt.setOnFocusChangeListener((view, focused) -> roboticEye.setTyping(focused && eyePrompt.length() > 0));
         }
+        if (eyePrompt != null) eyePrompt.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                showSlashOptions(text.toString());
+            }
+            @Override public void afterTextChanged(Editable text) {}
+        });
         sidebar=findViewById(R.id.sidebar);
         agentControlsDrawer=findViewById(R.id.agent_controls_drawer);
         backdrop=findViewById(R.id.drawer_backdrop);
@@ -306,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
             contentFrame = (FrameLayout) homeContent.getParent();
             chatScrollView = new ScrollView(this);
             chatScrollView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            chatScrollView.setBackgroundColor(0xFFFFFFFF);
+            chatScrollView.setBackgroundColor(0x00000000);
             chatScrollView.setVisibility(View.GONE);
 
             chatMessagesLayout = new LinearLayout(this);
@@ -491,6 +511,77 @@ public class MainActivity extends AppCompatActivity {
         prompt.requestFocus();
     }
 
+    private void showSlashOptions(String input) {
+        LinearLayout menu = findViewById(R.id.slash_menu);
+        LinearLayout options = findViewById(R.id.slash_options);
+        if (menu == null || options == null) return;
+        String query = input.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!query.startsWith("/") || query.contains(" ")) {
+            menu.setVisibility(View.GONE);
+            return;
+        }
+        options.removeAllViews();
+        for (String[] command : SLASH_COMMANDS) {
+            if (!command[0].startsWith(query)) continue;
+            TextView item = new TextView(this);
+            item.setText(command[0] + "    " + command[1]);
+            item.setTextSize(13f);
+            item.setTextColor(0xff34383f);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setMinHeight(dp(43));
+            item.setPadding(dp(16), dp(5), dp(12), dp(5));
+            item.setOnClickListener(view -> {
+                menu.setVisibility(View.GONE);
+                executeSlashCommand(command[0]);
+                if (!command[0].equals("/run")) {
+                    EditText prompt = findViewById(R.id.prompt);
+                    if (prompt != null && prompt.getText().toString().trim().startsWith("/")) prompt.setText("");
+                }
+            });
+            options.addView(item);
+        }
+        menu.setVisibility(options.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    private boolean executeSlashCommand(String input) {
+        String[] split = input.trim().split("\\s+", 2);
+        String command = split[0].toLowerCase(java.util.Locale.ROOT);
+        switch (command) {
+            case "/run":
+                if (split.length == 1 || split[1].trim().isEmpty()) {
+                    setStarterPrompt("$ ");
+                } else {
+                    setStarterPrompt("$ " + split[1].trim());
+                    submitAgentPrompt();
+                }
+                return true;
+            case "/terminal":
+                startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class));
+                return true;
+            case "/new": newChat(); return true;
+            case "/model": showByokPage(); return true;
+            case "/settings": startActivity(new Intent(this, AgentSettingsActivity.class)); return true;
+            case "/plugins": startActivity(new Intent(this, PluginCenterActivity.class)); return true;
+            case "/screen": setStarterPrompt("Inspect my current screen and "); return true;
+            case "/files": setStarterPrompt("Work with my files to "); return true;
+            case "/mode":
+                new AlertDialog.Builder(this).setTitle("Agent mode")
+                        .setItems(new String[]{"Cost efficient · shorter runs", "Work efficient · full capacity"},
+                                (dialog, which) -> changeAgentMode(which == 0 ? "cost" : "work"))
+                        .show();
+                return true;
+            case "/cost": changeAgentMode("cost"); return true;
+            case "/work": changeAgentMode("work"); return true;
+            default: return false;
+        }
+    }
+
+    private void changeAgentMode(String mode) {
+        new OceanAgentSettings(this).setAgentMode(mode);
+        Toast.makeText(this, "Agent mode: " + ("cost".equals(mode) ? "Cost efficient" : "Work efficient"),
+                Toast.LENGTH_SHORT).show();
+    }
+
     private void bindQuickDestination(String title) {
         Toast.makeText(this, title + " · choose what Ocean should use", Toast.LENGTH_SHORT).show();
         setStarterPrompt("Use my " + title.toLowerCase(java.util.Locale.ROOT) + " to ");
@@ -500,6 +591,10 @@ public class MainActivity extends AppCompatActivity {
         EditText promptInput = findViewById(R.id.prompt);
         String prompt = promptInput.getText().toString().trim();
         if (prompt.isEmpty()) return;
+        if (prompt.startsWith("/") && executeSlashCommand(prompt)) {
+            promptInput.setText("");
+            return;
+        }
         CrashSurvival.begin();
         promptInput.setText("");
 
@@ -513,7 +608,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout agentCard = createAgentResponseCard();
         chatMessagesLayout.addView(agentCard);
 
-        TextView thoughtView = agentCard.findViewWithTag("THOUGHT_VIEW");
+        OceanShimmerTextView thoughtView = agentCard.findViewWithTag("THOUGHT_VIEW");
         LinearLayout toolBox = agentCard.findViewWithTag("TOOL_BOX");
         OceanToolCard[] currentTool = {null};
         TextView responseView = agentCard.findViewWithTag("RESPONSE_VIEW");
@@ -527,11 +622,13 @@ public class MainActivity extends AppCompatActivity {
                 CrashSurvival.mark("RENDER_AGENT_STATUS");
                 thoughtView.setVisibility(View.VISIBLE);
                 thoughtView.setText(thought);
+                thoughtView.setShimmering(true);
             }
 
             @Override public void onToolStart(String toolName, String command) {
                 CrashSurvival.mark("RENDER_TOOL_CARD");
                 thoughtView.setText("Running " + toolName.toLowerCase(java.util.Locale.ROOT) + "…");
+                thoughtView.setShimmering(true);
                 toolBox.setVisibility(View.VISIBLE);
                 currentTool[0] = new OceanToolCard(MainActivity.this, toolName, command);
                 toolBox.addView(currentTool[0]);
@@ -553,6 +650,7 @@ public class MainActivity extends AppCompatActivity {
                     responseView.setText(safeResponse);
                 }
                 thoughtView.setVisibility(View.GONE);
+                thoughtView.setShimmering(false);
                 setAgentBusy(false);
                 CrashSurvival.finished();
                 chatScrollView.post(() -> chatScrollView.fullScroll(ScrollView.FOCUS_DOWN));
@@ -563,6 +661,7 @@ public class MainActivity extends AppCompatActivity {
                 responseView.setVisibility(View.VISIBLE);
                 responseView.setText(error);
                 thoughtView.setVisibility(View.GONE);
+                thoughtView.setShimmering(false);
                 setAgentBusy(false);
                 CrashSurvival.finished();
                 responseView.setTextColor(0xFFDC2626);
@@ -605,7 +704,7 @@ public class MainActivity extends AppCompatActivity {
         card.addView(head);
         addDivider(card, 12);
 
-        TextView thought = new TextView(this);
+        OceanShimmerTextView thought = new OceanShimmerTextView(this);
         thought.setTag("THOUGHT_VIEW");
         thought.setTextColor(0xFF6B7280);
         thought.setTextSize(14f);
