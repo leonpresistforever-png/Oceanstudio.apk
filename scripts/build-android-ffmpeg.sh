@@ -45,9 +45,11 @@ done
 mkdir -p "$destination/lib"
 echo "Inspecting FFmpeg shared libraries"
 ls -l "$work/install/lib/"*.so*
-for soname in "$work"/install/lib/*.so.[0-9]*; do
+rm -f "$destination/libraries.sha256"
+shopt -s nullglob
+for soname in "$work"/install/lib/*.so "$work"/install/lib/*.so.[0-9]*; do
     name="$(basename "$soname")"
-    [[ "$name" =~ \.so\.[0-9]+$ ]] || continue
+    [[ "$name" =~ \.so(\.[0-9]+)?$ ]] || continue
     cp -L "$soname" "$destination/lib/$name"
     "$toolchain/llvm-strip" "$destination/lib/$name"
     sha256sum "$destination/lib/$name" | sed "s|$destination/||" >> "$destination/libraries.sha256"
