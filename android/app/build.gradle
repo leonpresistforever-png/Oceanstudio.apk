@@ -12,18 +12,20 @@ configurations.configureEach {
 android {
     namespace "studio.ocean.app"
     compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion "35.0.0"
     if (System.getenv('OCEAN_FORGE_REUSE_NATIVE') == 'true') buildToolsVersion "34.0.4"
     ndkVersion "27.0.12077973"
     defaultConfig {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 16
-        versionName "1.2.6"
+        versionCode 17
+        versionName "1.2.7"
         if (project.hasProperty('oceanForgeVersionCode')) versionCode Integer.parseInt(project.property('oceanForgeVersionCode').toString())
         if (project.hasProperty('oceanForgeVersionName')) versionName project.property('oceanForgeVersionName').toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters 'arm64-v8a' }
+        externalNativeBuild { cmake { arguments '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON' } }
         buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${System.getenv('OCEAN_FIREBASE_API_KEY') ?: ''}\""
         buildConfigField "String", "OCEAN_BUILD_COMMIT", "\"${System.getenv('OCEAN_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
@@ -122,6 +124,8 @@ def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     from(rootProject.projectDir) {
         into "android"
         exclude ".gradle/**"
+        exclude "**/.cxx/**"
+        exclude "**/.externalNativeBuild/**"
         exclude "**/build/**"
         exclude "**/.idea/**"
         exclude "**/*.jks"

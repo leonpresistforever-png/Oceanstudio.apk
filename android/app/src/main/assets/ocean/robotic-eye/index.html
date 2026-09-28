@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';">
+  <style>
+    html, body, canvas { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    html, body { background: transparent; }
+    canvas { display: block; outline: 0; }
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"./three.module.min.js"}}
+  </script>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from './three.module.min.js';
+    import { GLTFLoader } from './GLTFLoader.js';
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 2000);
+    const fill = new THREE.HemisphereLight(0xffffff, 0x565b68, 2.25);
+    scene.add(fill);
+    const key = new THREE.DirectionalLight(0xffffff, 3.2);
+    key.position.set(3.5, 5, 7);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xb4c8ff, 1.15);
+    rim.position.set(-5, 1.5, -3);
+    scene.add(rim);
+
+    const spinRig = new THREE.Group();
+    const gazeRig = new THREE.Group();
+    spinRig.add(gazeRig);
+    scene.add(spinRig);
+    const mixer = new THREE.AnimationMixer(gazeRig);
+    let gazeDown;
+    let gazeUp;
+    let activeGaze;
+    let eyeReady = false;
+
+    function resize() {
+      const width = Math.max(1, window.innerWidth);
+      const height = Math.max(1, window.innerHeight);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize, { passive: true });
+    resize();
+
+    new GLTFLoader().load('./robotic-eye.glb', gltf => {
+      const model = gltf.scene;
+      const bounds = new THREE.Box3().setFromObject(model);
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      const largest = Math.max(size.x, size.y, size.z) || 1;
+      model.position.sub(center);
+      model.scale.setScalar(2.5 / largest);
+      gazeRig.add(model);
+
+      const spinTrack = new THREE.NumberKeyframeTrack('.rotation[y]', [0, 6, 12], [0, Math.PI, Math.PI * 2]);
+      const spin = mixer.clipAction(new THREE.AnimationClip('eye-turn', 12, [spinTrack]));
+      spin.setLoop(THREE.LoopRepeat, Infinity).play();
+
+      gazeDown = new THREE.AnimationClip('look-down', 0.52, [
+        new THREE.NumberKeyframeTrack('.rotation[x]', [0, 0.18, 0.52], [0, 0.11, 0.17])
+      ]);
+      gazeUp = new THREE.AnimationClip('look-up', 0.46, [
+        new THREE.NumberKeyframeTrack('.rotation[x]', [0, 0.14, 0.46], [0.17, 0.08, 0])
+      ]);
+
+      const distance = (1.25 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * 1.06;
+      camera.position.set(0, 0.04, distance);
+      camera.lookAt(0, 0, 0);
+      eyeReady = true;
+    }, undefined, () => { /* Keep the canvas clear if the packaged model cannot be read. */ });
+
+    window.oceanEyeSetTyping = typing => {
+      if (!eyeReady || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const clip = typing ? gazeDown : gazeUp;
+      if (activeGaze) activeGaze.stop();
+      activeGaze = mixer.clipAction(clip);
+      activeGaze.reset().setLoop(THREE.LoopOnce, 1);
+      activeGaze.clampWhenFinished = true;
+      activeGaze.play();
+    };
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      mixer.update(Math.min(clock.getDelta(), 0.05));
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>

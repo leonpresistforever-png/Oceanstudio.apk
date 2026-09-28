@@ -7,54 +7,25 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/**
- * Interactive edge-borderless 3D Robotic Eye component for the OceanStudio landing surface.
- * Embeds the official Sketchfab 3D WebGL model with transparent canvas, hardware acceleration,
- * touch disallow-interception for smooth orbiting, and strict navigation locking.
- */
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+
+/** Offline GLB eye viewer. Only bundled assets are served; no external page or controls are loaded. */
 public class RoboticEyeView extends WebView {
+    private static final String ASSET_HOST = "oceanstudio.local";
+    private static final String ASSET_ROOT = "ocean/robotic-eye/";
+    private boolean pageReady;
+    private boolean typing;
 
-    private static final String ROBOTIC_EYE_HTML = "<!DOCTYPE html>\n"
-            + "<html>\n"
-            + "<head>\n"
-            + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0\">\n"
-            + "<style>\n"
-            + "  * { margin: 0; padding: 0; box-sizing: border-box; }\n"
-            + "  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; }\n"
-            + "  .sketchfab-embed-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }\n"
-            + "  iframe { width: 100%; height: 100%; border: 0; outline: none; background: transparent; }\n"
-            + "  p, .credit, a { display: none !important; pointer-events: none !important; opacity: 0 !important; }\n"
-            + "</style>\n"
-            + "</head>\n"
-            + "<body>\n"
-            + "<div class=\"sketchfab-embed-wrapper\">\n"
-            + "  <iframe title=\"Robotic Eye\" frameborder=\"0\" allowfullscreen mozallowfullscreen=\"true\" webkitallowfullscreen=\"true\" allow=\"autoplay; fullscreen; xr-spatial-tracking\" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src=\"https://sketchfab.com/models/7b7ecc70526a4261a705f64655c13aa5/embed?autostart=1&preload=1&transparent=1&ui_infos=0&ui_watermark=0&ui_help=0&ui_settings=0&ui_inspector=0&ui_annotations=0&ui_stop=0&ui_vr=0&ui_fullscreen=0\">\n"
-            + "  </iframe>\n"
-            + "  <p style=\"font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;\">\n"
-            + "    <a href=\"https://sketchfab.com/3d-models/robotic-eye-7b7ecc70526a4261a705f64655c13aa5\" target=\"_blank\" rel=\"nofollow\" style=\"font-weight: bold; color: #1CAAD9;\"> Robotic Eye </a> by <a href=\"https://sketchfab.com/Oleksii.Rozumnyi\" target=\"_blank\" rel=\"nofollow\" style=\"font-weight: bold; color: #1CAAD9;\"> Oleksii Rozumnyi </a> on <a href=\"https://sketchfab.com\" target=\"_blank\" rel=\"nofollow\" style=\"font-weight: bold; color: #1CAAD9;\">Sketchfab</a>\n"
-            + "  </p>\n"
-            + "</div>\n"
-            + "</body>\n"
-            + "</html>";
-
-    public RoboticEyeView(Context context) {
-        super(context);
-        init();
-    }
-
-    public RoboticEyeView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
-    }
-
-    public RoboticEyeView(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        init();
-    }
+    public RoboticEyeView(Context context) { super(context); init(); }
+    public RoboticEyeView(Context context, AttributeSet attrs) { super(context, attrs); init(); }
+    public RoboticEyeView(Context context, AttributeSet attrs, int defStyleAttr) { super(context, attrs, defStyleAttr); init(); }
 
     @SuppressLint("SetJavaScriptEnabled")
     private void init() {
@@ -66,44 +37,78 @@ public class RoboticEyeView extends WebView {
 
         WebSettings settings = getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setDomStorageEnabled(false);
+        settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
+        settings.setAllowFileAccessFromFileURLs(false);
+        settings.setAllowUniversalAccessFromFileURLs(false);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
 
-        // Lock navigation so clicking anywhere on the 3D model does NOT redirect the user
         setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageFinished(WebView view, String url) {
+                pageReady = true;
+                applyTypingState();
+            }
+
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return serveAsset(request.getUrl().getHost(), request.getUrl().getPath());
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return true; // Disallow external redirects
+                return true;
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return true; // Disallow external redirects
+                return true;
             }
         });
-
-        loadDataWithBaseURL("https://sketchfab.com", ROBOTIC_EYE_HTML, "text/html", "UTF-8", null);
+        loadUrl("https://" + ASSET_HOST + "/" + ASSET_ROOT + "index.html");
     }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        // Prevent parent ScrollView from stealing touch/drag gestures while interacting with 3D eye
+    private WebResourceResponse serveAsset(String host, String path) {
+        if (!ASSET_HOST.equals(host) || path == null || path.contains("..")) return null;
+        String relative = path.startsWith("/ocean/robotic-eye/")
+                ? path.substring("/ocean/robotic-eye/".length()) : null;
+        if (relative == null || relative.isEmpty()) return null;
+        final String mime;
+        if (relative.endsWith(".html")) mime = "text/html";
+        else if (relative.endsWith(".js")) mime = "text/javascript";
+        else if (relative.endsWith(".glb")) mime = "model/gltf-binary";
+        else if (relative.endsWith(".txt")) mime = "text/plain";
+        else return null;
+        try {
+            InputStream body = getContext().getAssets().open(ASSET_ROOT + relative);
+            return new WebResourceResponse(mime, "UTF-8", 200, "OK", Collections.singletonMap("Access-Control-Allow-Origin", "https://" + ASSET_HOST), body);
+        } catch (IOException missing) {
+            return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", Collections.emptyMap(), null);
+        }
+    }
+
+    /** The native prompt forwards focus and non-empty input so the model can lower its gaze. */
+    public void setTyping(boolean typing) {
+        this.typing = typing;
+        if (pageReady) applyTypingState();
+    }
+
+    private void applyTypingState() {
+        evaluateJavascript("window.oceanEyeSetTyping && window.oceanEyeSetTyping(" + typing + ")", null);
+    }
+
+    @Override public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                }
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(false);
-                }
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 break;
         }
         return super.onTouchEvent(event);

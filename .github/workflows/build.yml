@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -72,14 +72,20 @@ jobs:
 
           VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' android/app/build.gradle | head -n1)
           VERSION_CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' android/app/build.gradle | head -n1)
-          CERT=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" \
+          APK_CONTENTS=$(unzip -Z -1 "$APK")
+          grep -Fxq 'lib/arm64-v8a/liboceanstudio_ext.so' <<< "$APK_CONTENTS"
+          grep -Fxq 'lib/arm64-v8a/liboceanpty.so' <<< "$APK_CONTENTS"
+          if grep -Eq '^lib/arm64-v8a/lib(oceanstudio_ext|oceanpty)d\.so$' <<< "$APK_CONTENTS"; then
+            echo 'Stale debug postfix native libraries found in APK' >&2
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 4 "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --min-sdk-version 28 "$APK"
+          CERT=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs --min-sdk-version 28 "$APK" \
             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr 'A-F' 'a-f' | tr -d ':')
-          EXPECTED_CERT="b12468091b50e6fb94f815d82a3f685d57b452b1f2275ce534def7c55bc7e387"
-          COMPATIBLE=false
-          if [ "$CERT" = "$EXPECTED_CERT" ]; then COMPATIBLE=true; fi
-
-          mkdir -p releases
-          FINAL="releases/OceanStudio-${VERSION}-arm64-debug.apk"
+          test -n "$CERT"
+          mkdir -p "$RUNNER_TEMP/ocean-debug"
+          FINAL="$RUNNER_TEMP/ocean-debug/OceanStudio-${VERSION}-arm64-debug.apk"
           cp "$APK" "$FINAL"
           sha256sum "$FINAL" > "$FINAL.sha256"
 
@@ -88,38 +94,17 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "certificate=$CERT" >> "$GITHUB_OUTPUT"
-          echo "update_compatible=$COMPATIBLE" >> "$GITHUB_OUTPUT"
 
           echo "Built: $FINAL"
           echo "Version: $VERSION ($VERSION_CODE)"
           echo "Certificate: $CERT"
-          echo "Matches OceanStudio 1.1.5 certificate: $COMPATIBLE"
+          echo "Debug APK is test-only and uses a different signing identity from the published release."
+          echo "The production workflow verifies release signing continuity."
           sha256sum "$FINAL"
-
-      - name: Publish verified APK to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          TAG="v${{ steps.apk.outputs.version }}"
-          APK="${{ steps.apk.outputs.path }}"
-          CHECKSUM="${{ steps.apk.outputs.checksum }}"
-
-          echo "Publishing $APK under tag $TAG..."
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$APK" "$CHECKSUM" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "OceanStudio ${{ steps.apk.outputs.version }} — Official Source Build" \
-              --notes "Fully compiled from current Android source with 6,502 verified Ocean packages. Architecture: arm64-v8a (minSdk 28). Checksum: $(cat $CHECKSUM)" \
-              --latest
-          else
-            gh release upload "$TAG" "$APK" "$CHECKSUM" --repo "$GITHUB_REPOSITORY" --clobber
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest
-          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: OceanStudio-${{ steps.apk.outputs.version }}-arm64-debug
+          name: OceanStudio-${{ steps.apk.outputs.version }}-arm64-debug-test-only
           path: |
             ${{ steps.apk.outputs.path }}
             ${{ steps.apk.outputs.checksum }}

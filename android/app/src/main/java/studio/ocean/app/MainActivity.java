@@ -10,6 +10,8 @@ import android.content.Intent;
 import android.util.Patterns;
 import android.text.SpannableString;
 import android.text.Spanned;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.style.UnderlineSpan;
 import android.text.InputType;
 import android.view.Gravity;
@@ -195,6 +197,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMain() {
         setContentView(R.layout.activity_main);
+        EditText eyePrompt = findViewById(R.id.prompt);
+        studio.ocean.app.render.RoboticEyeView roboticEye = findViewById(R.id.robotic_eye);
+        if (eyePrompt != null && roboticEye != null) {
+            eyePrompt.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                    roboticEye.setTyping(eyePrompt.hasFocus() && text.length() > 0);
+                }
+                @Override public void afterTextChanged(Editable text) {}
+            });
+            eyePrompt.setOnFocusChangeListener((view, focused) -> roboticEye.setTyping(focused && eyePrompt.length() > 0));
+        }
         sidebar=findViewById(R.id.sidebar);
         agentControlsDrawer=findViewById(R.id.agent_controls_drawer);
         backdrop=findViewById(R.id.drawer_backdrop);
