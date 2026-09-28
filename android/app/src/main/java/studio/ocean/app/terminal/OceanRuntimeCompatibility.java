@@ -58,7 +58,7 @@ final class OceanRuntimeCompatibility {
             String manifest = new String(readAll(input), StandardCharsets.US_ASCII);
             for (String line : manifest.split("\n")) {
                 String[] fields = line.trim().split("\\s+");
-                if (fields.length != 2 || !fields[1].matches("lib/lib[a-zA-Z0-9+_.-]+\\.so\\.[0-9]+")) continue;
+                if (fields.length != 2 || !fields[1].matches("lib/lib[a-zA-Z0-9+_.-]+\\.so(?:\\.[0-9]+)?")) continue;
                 installAsset(context, "ocean/native/" + fields[1],
                         new File(library, fields[1].substring(4)));
             }
