@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -52,6 +52,11 @@ jobs:
       - name: Verify Ocean architecture
         run: ./scripts/verify-native-only.sh
 
+      - name: Verify bundled signed package catalogue
+        run: |
+          python3 ocean-packages/tests/test-apk-package-catalog.py \
+            --assets android/app/src/main/assets/ocean/repository --min-packages 6482
+
       - name: Build debug APK (Gradle)
         working-directory: android
         env:
@@ -81,6 +86,8 @@ jobs:
           fi
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --min-sdk-version 28 "$APK"
+          test "$(unzip -p "$APK" assets/ocean/robotic-eye/robotic-eye.glb | sha256sum | cut -d' ' -f1)" = \
+            "$(sha256sum android/app/src/main/assets/ocean/robotic-eye/robotic-eye.glb | cut -d' ' -f1)"
           CERT=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs --min-sdk-version 28 "$APK" \
             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr 'A-F' 'a-f' | tr -d ':')
           test -n "$CERT"
@@ -108,3 +115,29 @@ jobs:
           path: |
             ${{ steps.apk.outputs.path }}
             ${{ steps.apk.outputs.checksum }}
+
+      - name: Publish installable test APK to GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK_PATH: ${{ steps.apk.outputs.path }}
+          APK_CHECKSUM: ${{ steps.apk.outputs.checksum }}
+          VERSION: ${{ steps.apk.outputs.version }}
+          CERTIFICATE: ${{ steps.apk.outputs.certificate }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}-test"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/test-release-notes.md" <<EOF
+          Test APK built and verified from source commit $GITHUB_SHA.
+
+          Includes the local robotic eye GLB, refined sign-in layout, bundled signed package catalogue, and native bootstrap.
+
+          This is a debug-signed test build with a testing-only sign-in path. Its signing certificate ($CERTIFICATE) differs from the existing published APK. Android cannot install it as an update: uninstall the older app first, which removes its app data. The production APK remains blocked until the existing release signing keystore and authentication secret are configured.
+          EOF
+          gh release create "$tag" "$APK_PATH" "$APK_CHECKSUM" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "OceanStudio ${VERSION} test APK" --notes-file "$RUNNER_TEMP/test-release-notes.md"
