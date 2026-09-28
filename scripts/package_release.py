@@ -163,8 +163,12 @@ def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey
     )
     public_key = lp(pub_der)
 
-    signer_v2 = lp(signed_data_v2) + signatures_v2 + public_key
-    signers_v2 = lp(signer_v2)
+    # AOSP APK Sig Scheme v2 format for 'signers':
+    #   signers = length-prefixed SEQUENCE of length-prefixed SIGNER entries
+    #   Each signer entry = lp(signed_data) + signatures + public_key
+    # So: signers = lp( lp(signer_body) ) -- outer lp = sequence, inner lp = entry
+    signer_v2_body = lp(signed_data_v2) + signatures_v2 + public_key
+    signers_v2 = lp(lp(signer_v2_body))
 
     v2_pair = struct.pack('<I', 0x7109871a) + signers_v2
     v2_pair_with_size = struct.pack('<Q', len(v2_pair)) + v2_pair
@@ -183,8 +187,9 @@ def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey
     sig_entry_v3 = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes_v3)
     signatures_v3 = lp(lp(sig_entry_v3))
 
-    signer_v3 = lp(signed_data_v3) + sdk_bounds + signatures_v3 + public_key
-    signers_v3 = lp(signer_v3)
+    # Same two-level lp() as V2: signers = lp( lp(signer_body) )
+    signer_v3_body = lp(signed_data_v3) + sdk_bounds + signatures_v3 + public_key
+    signers_v3 = lp(lp(signer_v3_body))
 
     v3_pair = struct.pack('<I', 0xf05368c0) + signers_v3
     v3_pair_with_size = struct.pack('<Q', len(v3_pair)) + v3_pair
