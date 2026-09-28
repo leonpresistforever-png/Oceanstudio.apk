@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives.serialization import pkcs7
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_APK = ROOT / "releases/OceanStudio-latest-debug.apk"
+BASE_APK = ROOT / "releases/OceanStudio-1.2.1-arm64-debug.apk"
 BUILD_DIR = ROOT / "build/release-staging"
 UNALIGNED_APK = BUILD_DIR / "unaligned.apk"
 ALIGNED_APK = BUILD_DIR / "aligned.apk"
@@ -80,10 +80,16 @@ def format_manifest_entry(name: str, digest_b64: str) -> bytes:
     lines = [f"Name: {name}", f"SHA-256-Digest: {digest_b64}"]
     formatted = []
     for line in lines:
-        while len(line) > 70:
+        if len(line) <= 70:
+            formatted.append(line)
+        else:
             formatted.append(line[:70])
-            line = " " + line[70:]
-        formatted.append(line)
+            rem = line[70:]
+            while len(rem) > 69:
+                formatted.append(" " + rem[:69])
+                rem = rem[69:]
+            if rem:
+                formatted.append(" " + rem)
     return "\r\n".join(formatted).encode('utf-8') + b"\r\n\r\n"
 
 def patch_manifest_axml(manifest_bytes: bytearray) -> bytearray:
@@ -140,10 +146,13 @@ def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey
 
     cert_der = cert.public_bytes(serialization.Encoding.DER)
     certs = lp(lp(cert_der))
-    attributes = lp(b'')
+
+    # V2 stripping protection attribute: 0xbeeff00d -> 3 (signals V3 present)
+    attr_stripping = struct.pack('<I', 0xbeeff00d) + struct.pack('<I', 3)
+    attrs_v2 = lp(lp(attr_stripping))
 
     # V2 signer
-    signed_data_v2 = digests + certs + attributes
+    signed_data_v2 = digests + certs + attrs_v2
     sig_bytes_v2 = privkey.sign(signed_data_v2, padding.PKCS1v15(), hashes.SHA256())
     sig_entry_v2 = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes_v2)
     signatures_v2 = lp(lp(sig_entry_v2))
@@ -160,19 +169,46 @@ def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey
     v2_pair = struct.pack('<I', 0x7109871a) + signers_v2
     v2_pair_with_size = struct.pack('<Q', len(v2_pair)) + v2_pair
 
-    # V3 signer (same digest and cert, with minSdk=28 and maxSdk=0x7fffffff)
-    signed_data_v3 = digests + certs + struct.pack('<II', 28, 0x7fffffff) + attributes
+    # V3 signer:
+    # In V3, minSdk and maxSdk appear:
+    # 1. Inside signed_data_v3: digests + certs + minSdk (uint32) + maxSdk (uint32) + attributes
+    # 2. Inside signer_v3: lp(signed_data_v3) + minSdk (uint32) + maxSdk (uint32) + signatures + public_key
+    min_sdk = 24
+    max_sdk = 0x7fffffff
+    sdk_bounds = struct.pack('<II', min_sdk, max_sdk)
+    attrs_v3 = lp(b'')
+
+    signed_data_v3 = digests + certs + sdk_bounds + attrs_v3
     sig_bytes_v3 = privkey.sign(signed_data_v3, padding.PKCS1v15(), hashes.SHA256())
     sig_entry_v3 = struct.pack('<I', ALG_RSA_PKCS1_SHA256) + lp(sig_bytes_v3)
     signatures_v3 = lp(lp(sig_entry_v3))
 
-    signer_v3 = lp(signed_data_v3) + signatures_v3 + public_key + struct.pack('<II', 28, 0x7fffffff)
+    signer_v3 = lp(signed_data_v3) + sdk_bounds + signatures_v3 + public_key
     signers_v3 = lp(signer_v3)
 
     v3_pair = struct.pack('<I', 0xf05368c0) + signers_v3
     v3_pair_with_size = struct.pack('<Q', len(v3_pair)) + v3_pair
 
-    pairs_data = v2_pair_with_size + v3_pair_with_size
+    base_pairs = v2_pair_with_size + v3_pair_with_size
+
+    # Android requires Central Directory offset (len(section1) + len(signing_block))
+    # to be 4096-byte page aligned for mmap loading.
+    # Total signing block size = 8 (header size) + len(pairs) + 8 (footer size) + 16 (magic)
+    #                          = len(pairs) + 32
+    # So cd_offset = len(section1) + len(pairs) + 32
+    current_offset = len(section1) + 32 + len(base_pairs)
+    rem = current_offset % 4096
+    if rem != 0:
+        needed_padding = 4096 - rem
+        if needed_padding < 12:
+            needed_padding += 4096
+        padding_payload = b'\x00' * (needed_padding - 12)
+        padding_pair = struct.pack('<I', 0x42726577) + padding_payload
+        padding_pair_with_size = struct.pack('<Q', len(padding_pair)) + padding_pair
+        pairs_data = base_pairs + padding_pair_with_size
+    else:
+        pairs_data = base_pairs
+
     block_content_size = len(pairs_data) + 8 + 16
     signing_block = (
         struct.pack('<Q', block_content_size) +
@@ -182,6 +218,8 @@ def sign_apk_v2_v3(input_apk: Path, output_apk: Path, privkey: rsa.RSAPrivateKey
     )
 
     new_cd_offset = len(section1) + len(signing_block)
+    assert new_cd_offset % 4096 == 0, f"Central directory offset {new_cd_offset} must be 4096-aligned"
+
     new_eocd = bytearray(apk_data[eocd_idx:])
     new_eocd[16:20] = struct.pack('<I', new_cd_offset)
 
@@ -258,8 +296,9 @@ def main():
 
     sf_header = (
         "Signature-Version: 1.0\r\n"
-        "Created-By: OceanStudio\r\n"
+        "Created-By: 1.0 (Android)\r\n"
         f"SHA-256-Digest-Manifest: {b64(manifest_digest)}\r\n"
+        "X-Android-APK-Signed: 2, 3\r\n"
         "\r\n"
     ).encode('utf-8')
     sf_bytes = sf_header + bytes(sf_body)
@@ -269,15 +308,15 @@ def main():
     builder = builder.add_signer(cert, key, hashes.SHA256())
     rsa_bytes = builder.sign(serialization.Encoding.DER, options=[pkcs7.PKCS7Options.DetachedSignature])
 
-    # Write unaligned APK with META-INF as the FIRST entries
+    # Write unaligned APK with META-INF placed after package resources
     print("Writing unaligned APK with complete V1 JAR signature...")
     with zipfile.ZipFile(UNALIGNED_APK, "w") as out_z:
-        out_z.writestr("META-INF/MANIFEST.MF", manifest_bytes, compress_type=zipfile.ZIP_DEFLATED)
-        out_z.writestr("META-INF/OCEANSTU.SF", sf_bytes, compress_type=zipfile.ZIP_DEFLATED)
-        out_z.writestr("META-INF/OCEANSTU.RSA", rsa_bytes, compress_type=zipfile.ZIP_DEFLATED)
         for name in sorted_names:
             data, ctype = files_map[name]
             out_z.writestr(name, data, compress_type=ctype)
+        out_z.writestr("META-INF/MANIFEST.MF", manifest_bytes, compress_type=zipfile.ZIP_DEFLATED)
+        out_z.writestr("META-INF/OCEANSTU.SF", sf_bytes, compress_type=zipfile.ZIP_DEFLATED)
+        out_z.writestr("META-INF/OCEANSTU.RSA", rsa_bytes, compress_type=zipfile.ZIP_DEFLATED)
 
     print(f"Unaligned APK: {UNALIGNED_APK.stat().st_size} bytes")
 
