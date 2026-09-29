@@ -46,6 +46,7 @@ public final class DeviceControlService extends AccessibilityService {
     private static JSONObject result(String key,Object value){try{return new JSONObject().put(key,value);}catch(Exception e){return new JSONObject();}}
     public static JSONObject execute(Context c,String tool,JSONObject a)throws Exception{
         if(tool.equals("device_status"))return new JSONObject().put("connected",connected()).put("live_control_enabled",enabled(c)).put("exit_code",0);
+        if(tool.equals("dispatch_android_app"))return AndroidAppDispatch.dispatch(c,a);
         DeviceControlService s=instance;if(s==null||!enabled(c))throw new IllegalStateException("Enable Accessibility and live control in Device Access first");
         if(Looper.myLooper()==Looper.getMainLooper())throw new IllegalStateException("Device tools must run on a worker");
         CountDownLatch done=new CountDownLatch(1);JSONObject[] answer={null};AtomicBoolean expired=new AtomicBoolean();

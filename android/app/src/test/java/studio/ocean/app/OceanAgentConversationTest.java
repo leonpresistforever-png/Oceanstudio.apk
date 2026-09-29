@@ -131,7 +131,7 @@ public final class OceanAgentConversationTest {
     @Test public void runtimeToolsAreDeclaredAndValidatedBeforeExecution() throws Exception {
         JSONObject request = new OceanAgentConversation("google", "gemini-2.5-flash").request(new JSONArray(), true);
         JSONArray tools = request.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations");
-        assertEquals(15, tools.length());
+        assertEquals(16, tools.length());
         assertEquals("list_runtime_ports", tools.getJSONObject(2).getString("name"));
         assertFalse(tools.getJSONObject(2).has("parameters"));
         assertEquals("open_runtime_port", tools.getJSONObject(3).getString("name"));
@@ -300,6 +300,8 @@ public final class OceanAgentConversationTest {
     }
 
     @Test public void deviceToolsRejectInvalidTargetsBeforeExecution() throws Exception {
+        OceanAgentConversation.validateTool("dispatch_android_app",json("{mode:'broadcast',action:'android.intent.action.MAIN',package_name:'com.android.settings'}"));
+        try{OceanAgentConversation.validateTool("dispatch_android_app",json("{mode:'broadcast'}"));fail("broadcast without action accepted");}catch(IllegalArgumentException expected){}
         OceanAgentConversation.validateTool("open_android_app",json("{package_name:'com.android.settings'}"));
         OceanAgentConversation.validateTool("interact_android_screen",json("{action:'swipe',x:10,y:20,to_x:30,to_y:40}"));
         OceanAgentConversation.validateTool("interact_android_screen",json("{action:'long_press',x:10,y:20}"));

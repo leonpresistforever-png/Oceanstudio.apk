@@ -97,6 +97,9 @@ public final class OceanAgentRunner {
                         result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
                             CrashSurvival.mark("EXECUTE_AGENT_TOOL");
                             if (name.equals("open_terminal")) { if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected."); return openTerminal(callback); }
+                            if (name.equals("dispatch_android_app")) {
+                                return runRuntimeTool("App messaging", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context, name, args));
+                            }
                             if (name.equals("device_status") || name.equals("list_android_apps") || name.equals("open_android_app") || name.equals("inspect_android_screen") || name.equals("capture_android_screen") || name.equals("interact_android_screen")) {
                                 if(!pluginConnected("device")) throw new IOException("Device Access plugin is disconnected.");
                                 return runRuntimeTool("Device control", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context,name,args));

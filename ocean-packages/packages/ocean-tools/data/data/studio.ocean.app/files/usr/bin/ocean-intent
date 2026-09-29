@@ -10,6 +10,8 @@ usage() {
     echo "  start-service  -a <action> [-n <component>]"
     echo "  view-url       <url>"
     echo "  view-file      <file_path>"
+    echo "  json           <json_payload>   # POST to Ocean /api/intent (default activity) or /api/app-task"
+    echo "  app-task       <json_payload>   # POST to /api/app-task (default broadcast)"
     exit 1
 }
 
@@ -34,6 +36,14 @@ case "$cmd" in
     view-file)
         fpath="$1"
         curl -s -X POST -H "Content-Type: application/json" -d "{\"path\":\"$fpath\"}" http://127.0.0.1:8088/api/open 2>/dev/null || /system/bin/am start -a android.intent.action.VIEW -d "file://$fpath"
+        ;;
+    json)
+        payload="$1"
+        curl -s -X POST -H "Content-Type: application/json" -d "$payload" http://127.0.0.1:8088/api/intent
+        echo ""
+        ;;
+    app-task)
+        exec "$(dirname "$0")/ocean-app-task" "$1"
         ;;
     *)
         /system/bin/am "$cmd" "$@"

@@ -251,7 +251,12 @@ public final class OceanIpcServer {
                 result = studio.ocean.app.device.DeviceControlService.execute(context, tool, args);
             } else if ("/api/intent".equals(path)) {
                 JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
-                result = handleIntent(json);
+                if (!json.has("mode") && !json.has("delivery")) json.put("mode", "activity");
+                result = studio.ocean.app.device.AndroidAppDispatch.dispatch(context, json);
+            } else if ("/api/app-task".equals(path)) {
+                JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
+                if (!json.has("mode") && !json.has("delivery")) json.put("mode", "broadcast");
+                result = studio.ocean.app.device.AndroidAppDispatch.dispatch(context, json);
             } else if ("/api/capture".equals(path)) {
                 JSONObject json = body == null || body.isEmpty() ? new JSONObject() : new JSONObject(body);
                 result = handleCapture(json);
@@ -291,38 +296,6 @@ public final class OceanIpcServer {
             } catch (Throwable ignored) {}
         }
         return result;
-    }
-
-    private JSONObject handleIntent(JSONObject json) throws Exception {
-        String action = json.optString("action", Intent.ACTION_VIEW);
-        String uri = json.optString("uri", "");
-        String pkg = json.optString("package", "");
-        String type = json.optString("type", "");
-        Intent i = uri.isEmpty() ? new Intent(action) : new Intent(action, Uri.parse(uri));
-        if (!pkg.isEmpty()) i.setPackage(pkg);
-        if (!type.isEmpty()) i.setType(type);
-        if (json.optBoolean("chooser", false)) {
-            Intent chooser = Intent.createChooser(i, json.optString("title", "Open with"));
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(chooser);
-        } else {
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            JSONObject extras = json.optJSONObject("extras");
-            if (extras != null) {
-                java.util.Iterator<String> keys = extras.keys();
-                while (keys.hasNext()) {
-                    String key = keys.next();
-                    Object value = extras.opt(key);
-                    if (value instanceof Boolean) i.putExtra(key, (Boolean)value);
-                    else if (value instanceof Integer) i.putExtra(key, (Integer)value);
-                    else if (value instanceof Long) i.putExtra(key, (Long)value);
-                    else if (value instanceof Double) i.putExtra(key, (Double)value);
-                    else if (value != null) i.putExtra(key, String.valueOf(value));
-                }
-            }
-            context.startActivity(i);
-        }
-        return new JSONObject().put("success", true).put("action", action).put("uri", uri).put("package", pkg);
     }
 
     private JSONObject handleCapture(JSONObject json) throws Exception {
