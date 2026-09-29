@@ -1,0 +1,5 @@
+{
+  "name": "Ocean Studio Android",
+  "install": "bash .cursor/install.sh",
+  "terminals": []
+}
