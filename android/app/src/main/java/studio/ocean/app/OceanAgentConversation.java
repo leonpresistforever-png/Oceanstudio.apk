@@ -18,8 +18,11 @@ final class OceanAgentConversation {
             + "You have real local tools: run_terminal_command executes Bash headlessly in Ocean's native runtime, "
             + "open_terminal opens its visible terminal, list_runtime_ports finds this app's listening local services, "
             + "open_runtime_port opens one in Ocean Runtime Ports, and interact_runtime_page can inspect and control that real page or noVNC canvas. "
-            + "The shell exports PREFIX and HOME for Ocean's private directories. "
+            + "The shell exports PREFIX, HOME, and TMPDIR for Ocean's private directories; never write to /tmp because it is not writable on Android. "
             + "When the user asks you to run or check a command, use the terminal tool and report its actual output. "
+            + "If a command is missing, install it with pkg when appropriate, then retry. "
+            + "For Android notifications use ocean-notify, not notify-send. "
+            + "For speaker playback install alsa-utils with pkg when needed, then use aplay or paplay on files under PREFIX. "
             + "Do not tell the user to open another app to execute it. Never claim an action succeeded without a tool result. "
             + "For a bare request to run pip, run pip --version. Use node for the Node.js executable. "
             + "Commands are separate non-interactive shells; pass cwd when needed, and use non-interactive flags for requested installs. "
@@ -401,8 +404,19 @@ final class OceanAgentConversation {
                 else if (block.optString("type").equals("text")) reply.text += block.optString("text", "");
             }
         } else {
-            reply.message = response.getJSONArray("choices").getJSONObject(0).getJSONObject("message");
-            reply.text = reply.message.isNull("content") ? "" : reply.message.optString("content", "");
+            if (response.has("error")) {
+                JSONObject error = response.optJSONObject("error");
+                String message = error != null ? error.optString("message", error.toString()) : response.toString();
+                throw new IOException("Provider returned an error payload: " + message);
+            }
+            JSONArray choices = response.optJSONArray("choices");
+            if (choices == null || choices.length() == 0)
+                throw new IOException("Provider returned no choices; the model may be overloaded, misconfigured, or returned a non-chat payload");
+            JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+            if (message == null)
+                throw new IOException("Provider choice is missing a message object");
+            reply.message = message;
+            reply.text = message.isNull("content") ? "" : message.optString("content", "");
             JSONArray calls = reply.message.optJSONArray("tool_calls");
             if (calls != null) for (int i = 0; i < calls.length(); i++) {
                 JSONObject call = calls.getJSONObject(i), function = call.getJSONObject("function");

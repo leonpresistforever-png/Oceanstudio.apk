@@ -253,6 +253,16 @@ public final class OceanAgentConversationTest {
         }
     }
 
+    @Test public void openAiMissingChoicesIsReadableError() throws Exception {
+        try {
+            new OceanAgentConversation("openai", "test").run("Hi",
+                    request -> json("{\"id\":\"chatcmpl-empty\"}"), (n, a) -> null, s -> {});
+            fail("Expected missing choices error");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("no choices"));
+        }
+    }
+
     @Test public void followupContainsPreviousTurnAndEmptyCandidatesAreErrors() throws Exception {
         OceanAgentConversation conversation = new OceanAgentConversation("google", "test");
         conversation.run("Hello", request -> gemini("[{text:'Hello back'}]"), (n, a) -> null, s -> {});

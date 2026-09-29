@@ -22,7 +22,7 @@ public final class OceanEnvironment {
         List<String> values = new ArrayList<>();
         values.add("OCEAN_ROOT=" + paths.root()); values.add("OCEAN_HOME=" + paths.home());
         values.add("OCEAN_PREFIX=" + paths.prefix()); values.add("HOME=" + paths.home());
-        values.add("PREFIX=" + paths.prefix()); values.add("TMPDIR=" + paths.temp());
+        values.add("PREFIX=" + paths.prefix()); values.add("TMPDIR=" + paths.temp()); values.add("TMP=" + paths.temp());
         java.io.File forgeOverlay=new java.io.File(context.getFilesDir(),"forge-tools/bin");
         values.add("PATH=" + paths.home() + "/.local/bin:" + forgeOverlay.getAbsolutePath() + ":" + paths.prefix() + "/bin:/system/bin:/system/xbin");
         values.add("npm_config_prefix=" + paths.prefix());
