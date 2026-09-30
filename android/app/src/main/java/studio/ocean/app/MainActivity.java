@@ -351,14 +351,19 @@ public class MainActivity extends AppCompatActivity {
             chatScrollView = new ScrollView(this);
             chatScrollView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             chatScrollView.setBackgroundColor(0x00000000);
+            chatScrollView.setClipToPadding(false);
             chatScrollView.setVisibility(View.GONE);
 
             chatMessagesLayout = new LinearLayout(this);
             chatMessagesLayout.setOrientation(LinearLayout.VERTICAL);
             int pad = (int)(16 * getResources().getDisplayMetrics().density);
-            chatMessagesLayout.setPadding(pad, pad, pad, pad);
+            int eyeClearance = (int)(236 * getResources().getDisplayMetrics().density);
+            chatMessagesLayout.setPadding(pad, eyeClearance, pad, pad);
             chatScrollView.addView(chatMessagesLayout, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            contentFrame.addView(chatScrollView);
+            View roboticEye = findViewById(R.id.robotic_eye);
+            int insertIndex = roboticEye != null ? contentFrame.indexOfChild(roboticEye) : contentFrame.getChildCount();
+            if (insertIndex < 0) insertIndex = contentFrame.getChildCount();
+            contentFrame.addView(chatScrollView, insertIndex);
         }
     }
 

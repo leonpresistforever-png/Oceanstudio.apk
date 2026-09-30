@@ -32,7 +32,7 @@ public class RoboticEyeView extends WebView {
     @SuppressLint("SetJavaScriptEnabled")
     private void init() {
         setBackgroundColor(Color.TRANSPARENT);
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        if (getBackground() != null) getBackground().setAlpha(0);
         setOverScrollMode(OVER_SCROLL_NEVER);
         setVerticalScrollBarEnabled(false);
         setHorizontalScrollBarEnabled(false);
@@ -60,6 +60,7 @@ public class RoboticEyeView extends WebView {
         setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
+                view.setBackgroundColor(Color.TRANSPARENT);
                 pageReady = true;
                 applyTypingState();
             }
@@ -67,6 +68,12 @@ public class RoboticEyeView extends WebView {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return serveAsset(request.getUrl().getHost(), request.getUrl().getPath());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                return serveAssetFromUrl(url);
             }
 
             @Override
@@ -80,6 +87,12 @@ public class RoboticEyeView extends WebView {
             }
         });
         loadUrl("https://" + ASSET_HOST + "/" + ASSET_ROOT + "index.html");
+    }
+
+    private WebResourceResponse serveAssetFromUrl(String url) {
+        if (url == null || !url.startsWith("https://" + ASSET_HOST + "/")) return null;
+        String path = url.substring(("https://" + ASSET_HOST).length());
+        return serveAsset(ASSET_HOST, path);
     }
 
     private WebResourceResponse serveAsset(String host, String path) {
@@ -120,16 +133,7 @@ public class RoboticEyeView extends WebView {
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_MOVE:
-                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                break;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
-                break;
-        }
-        return super.onTouchEvent(event);
+        // Non-clickable overlay: let taps reach composer / scroll content beneath the eye band.
+        return false;
     }
 }
