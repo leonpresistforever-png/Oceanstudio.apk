@@ -23,6 +23,13 @@ jobs:
           path: public-packages
           token: ${{ secrets.OCEAN_PACKAGES_PUBLISH_TOKEN }}
           fetch-depth: 1
+      - name: Sync canonical indexer and quality gate into public publisher
+        run: |
+          set -euo pipefail
+          cp ocean-packages/scripts/index_all_staged.py public-packages/scripts/
+          cp ocean-packages/scripts/package_quality.py public-packages/scripts/
+          python3 ocean-packages/tests/test-package-quality.py
+          python3 ocean-packages/tests/test-index-quality-gate.py
       - name: Validate publisher behavior
         run: python3 public-packages/tests/test-index-publication.py
       - name: Record complete coverage before mutation
