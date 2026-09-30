@@ -264,7 +264,6 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.menu_button, v -> openDrawer());
         safeClick(R.id.agent_controls_button, v -> openAgentSearch());
         if (backdrop != null) backdrop.setOnClickListener(v -> { if (agentControlsOpen) closeAgentControls(); else closeDrawer(); });
-        safeClick(R.id.new_chat_button, v -> openAgentControls());
         safeClick(R.id.sidebar_new_chat, v -> newChat());
         
         TextView modelBtn = findViewById(R.id.model_button);
@@ -273,12 +272,12 @@ public class MainActivity extends AppCompatActivity {
             modelBtn.setOnClickListener(v -> showByokPage());
         }
         View headerBlock = findViewById(R.id.header_title_block);
-        if (headerBlock != null) headerBlock.setOnClickListener(v -> showByokPage());
-        safeClick(R.id.history_button, v -> openDrawer());
+        if (headerBlock != null) headerBlock.setOnClickListener(v -> showHeaderModelPicker());
+        safeClick(R.id.history_button, v -> refreshAgentSession());
+        safeClick(R.id.new_chat_button, v -> newChat());
         safeClick(R.id.suggest_card_plan, v -> setStarterPrompt("Plan and execute this task: "));
         safeClick(R.id.suggest_card_terminal, v -> setStarterPrompt("Use my terminal to "));
         safeClick(R.id.suggest_card_build, v -> setStarterPrompt("Build or improve "));
-        setupModelChips();
         updateTopModelChip();
         safeClick(R.id.send_button, v -> { if (agentRunner != null && agentRunner.isRunning()) agentRunner.cancel(); else submitAgentPrompt(); });
         safeClick(R.id.starter_plan, v -> setStarterPrompt("Plan and execute this task: "));
@@ -368,13 +367,10 @@ public class MainActivity extends AppCompatActivity {
             chatMessagesLayout = new LinearLayout(this);
             chatMessagesLayout.setOrientation(LinearLayout.VERTICAL);
             int pad = (int)(16 * getResources().getDisplayMetrics().density);
-            int eyeClearance = (int)(236 * getResources().getDisplayMetrics().density);
+            int eyeClearance = (int)(168 * getResources().getDisplayMetrics().density);
             chatMessagesLayout.setPadding(pad, eyeClearance, pad, pad);
             chatScrollView.addView(chatMessagesLayout, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            View roboticEye = findViewById(R.id.robotic_eye);
-            int insertIndex = roboticEye != null ? contentFrame.indexOfChild(roboticEye) : contentFrame.getChildCount();
-            if (insertIndex < 0) insertIndex = contentFrame.getChildCount();
-            contentFrame.addView(chatScrollView, insertIndex);
+            contentFrame.addView(chatScrollView);
         }
     }
 
@@ -769,8 +765,12 @@ public class MainActivity extends AppCompatActivity {
         bubble.setTextColor(getColor(R.color.ocean_user_bubble_text));
         bubble.setTextSize(15f);
         bubble.setBackgroundResource(R.drawable.chat_bubble_user);
-        bubble.setPadding(pad, pad, pad, pad);
-        row.addView(bubble);
+        int bubblePadH = (int)(14 * getResources().getDisplayMetrics().density);
+        int bubblePadV = (int)(10 * getResources().getDisplayMetrics().density);
+        bubble.setPadding(bubblePadH, bubblePadV, bubblePadH, bubblePadV);
+        LinearLayout.LayoutParams bubbleLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bubbleLp.setMarginStart((int)(48 * getResources().getDisplayMetrics().density));
+        row.addView(bubble, bubbleLp);
 
         chatMessagesLayout.addView(row);
     }
@@ -843,10 +843,45 @@ public class MainActivity extends AppCompatActivity {
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
-    private void setupModelChips() {
-        LinearLayout container = findViewById(R.id.model_chip_container);
-        if (container == null) return;
-        container.removeAllViews();
+    private void selectModelPreset(String presetKey, String label) {
+        selectedModelPreset = presetKey;
+        updateTopModelChip();
+        if (!"auto".equals(presetKey)) {
+            Toast.makeText(this, label + " preset · configure API in Models", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showHeaderModelPicker() {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26), dp(12), dp(26), dp(28));
+        sheet.setBackground(OceanUi.topSheetBackground(this));
+
+        View handle = new View(this);
+        handle.setBackground(OceanUi.roundRect(this, 0xff737373, 999, 0));
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(dp(52), dp(4));
+        hp.gravity = Gravity.CENTER_HORIZONTAL;
+        hp.bottomMargin = dp(20);
+        sheet.addView(handle, hp);
+
+        TextView title = new TextView(this);
+        title.setText("OceanStudio");
+        title.setTextColor(getColor(R.color.ocean_text_primary));
+        title.setTextSize(20);
+        title.setTypeface(null, Typeface.BOLD);
+        sheet.addView(title);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText("Model & workspace");
+        subtitle.setTextColor(getColor(R.color.ocean_text_tertiary));
+        subtitle.setTextSize(13);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.bottomMargin = dp(16);
+        subLp.topMargin = dp(4);
+        sheet.addView(subtitle, subLp);
+
         String[][] presets = {
                 {"auto", "Auto"},
                 {"gemini", "Gemini Flash"},
@@ -855,19 +890,52 @@ public class MainActivity extends AppCompatActivity {
         };
         for (String[] preset : presets) {
             boolean on = preset[0].equals(selectedModelPreset);
-            TextView chip = OceanUi.modelChip(this, preset[1], on);
-            chip.setOnClickListener(v -> {
-                selectedModelPreset = preset[0];
-                setupModelChips();
-                updateTopModelChip();
-                if (!"auto".equals(preset[0])) {
-                    Toast.makeText(this, preset[1] + " preset · configure API in Models", Toast.LENGTH_SHORT).show();
-                }
+            TextView row = new TextView(this);
+            row.setText(preset[1] + (on ? "  ✓" : ""));
+            row.setTextColor(getColor(R.color.ocean_text_primary));
+            row.setTextSize(16);
+            row.setPadding(0, dp(16), 0, dp(16));
+            row.setOnClickListener(v -> {
+                selectModelPreset(preset[0], preset[1]);
+                dialog.dismiss();
             });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.rightMargin = dp(8);
-            container.addView(chip, lp);
+            sheet.addView(row);
         }
+        TextView byok = new TextView(this);
+        byok.setText("Configure BYOK / API keys");
+        byok.setTextColor(getColor(R.color.ocean_text_primary));
+        byok.setTextSize(16);
+        byok.setTypeface(null, Typeface.BOLD);
+        byok.setPadding(0, dp(16), 0, dp(16));
+        byok.setOnClickListener(v -> { dialog.dismiss(); showByokPage(); });
+        sheet.addView(byok);
+
+        TextView drawer = new TextView(this);
+        drawer.setText("Agent controls drawer");
+        drawer.setTextColor(getColor(R.color.ocean_text_secondary));
+        drawer.setTextSize(15);
+        drawer.setPadding(0, dp(12), 0, dp(8));
+        drawer.setOnClickListener(v -> { dialog.dismiss(); openAgentControls("model"); });
+        sheet.addView(drawer);
+
+        dialog.setContentView(sheet);
+        dialog.show();
+        android.view.Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+        }
+    }
+
+    private void refreshAgentSession() {
+        if (agentRunner != null && agentRunner.isRunning()) {
+            Toast.makeText(this, "Stop the current request before refreshing", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (agentRunner != null) agentRunner.resetConversation();
+        refreshAgentControlsSummary();
+        Toast.makeText(this, "Agent session refreshed", Toast.LENGTH_SHORT).show();
     }
 
     private void updateTopModelChip() {

@@ -25,8 +25,8 @@
     <color name="ocean_track_off">#FFE5E7EB</color>
     <color name="ocean_track_on">#FF9CA3AF</color>
     <color name="ocean_switch_thumb">#FF111111</color>
-    <color name="ocean_user_bubble">#FF1F1F1F</color>
-    <color name="ocean_user_bubble_text">#FFFFFFFF</color>
+    <color name="ocean_user_bubble">#FFFFFFFF</color>
+    <color name="ocean_user_bubble_text">#FF1F1F1F</color>
     <color name="ocean_claude_warm">#FFE7D8C9</color>
     <color name="ocean_drawer_backdrop">#2E1C1917</color>
 </resources>

@@ -164,6 +164,14 @@ public final class AgentArchitectureTest {
         assertFalse(runner.contains("OceanForgeSigningStore"));
     }
 
+    @Test public void pluginRegistrarPersistsManifestsOnDisk() throws Exception {
+        String registrar = source("OceanPluginRegistrar.java");
+        String plugins = source("PluginCenterActivity.java");
+        assertTrue(registrar.contains("home/.ocean/plugins"));
+        assertTrue(registrar.contains("importFromGithubRepo"));
+        assertTrue(plugins.contains("showPluginAddSheet"));
+    }
+
     @Test public void dynamicPluginsStayInsideOceanToolRoots() throws Exception {
         String runtime=source("OceanPluginRuntime.java");
         String environment=projectFile("src/main/java/studio/ocean/app/terminal/OceanEnvironment.java");

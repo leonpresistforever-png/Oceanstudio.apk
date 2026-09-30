@@ -133,14 +133,43 @@ public final class OceanAgentHubStore {
     }
 
     public void writeSkillMarkdown(String id, String name, String description, String status, String source, String bodyMarkdown) {
+        long now = System.currentTimeMillis();
         String fm = "---\n"
                 + "id: " + id + "\n"
                 + "name: " + name + "\n"
                 + "description: " + description + "\n"
                 + "status: " + status + "\n"
                 + "source: " + source + "\n"
+                + "updated_at: " + now + "\n"
                 + "---\n\n";
         writeRawSkillFile(id, fm + bodyMarkdown);
+    }
+
+    public void updateSkillMarkdown(String id, String title, String description, String bodyMarkdown, boolean draft) throws Exception {
+        String md = readSkillMarkdown(id);
+        Map<String, String> fm = parseFrontMatter(md);
+        if (fm.isEmpty() && !skillFile(id).exists()) throw new IllegalArgumentException("Skill not found");
+        String status = draft ? "draft" : fm.getOrDefault("status", "disconnected");
+        if (!draft && "draft".equals(status)) status = "disconnected";
+        writeSkillMarkdown(id,
+                title == null || title.isEmpty() ? fm.getOrDefault("name", id) : title,
+                description == null ? fm.getOrDefault("description", "") : description,
+                status,
+                fm.getOrDefault("source", "manual"),
+                bodyMarkdown == null ? skillBodyWithoutFrontMatter(md) : bodyMarkdown);
+    }
+
+    public JSONObject addSkillDraft(String title, String bodyMarkdown, String source) throws Exception {
+        String id = safeId(title);
+        while (skillFile(id).exists()) id = id + "-" + Integer.toHexString((int) (Math.random() * 0xffff));
+        String description = firstLine(bodyMarkdown);
+        writeSkillMarkdown(id, title, description, "draft", source, bodyMarkdown);
+        return new JSONObject()
+                .put("id", id)
+                .put("title", title)
+                .put("description", description)
+                .put("status", "draft")
+                .put("source", source);
     }
 
     public String readSkillMarkdown(String id) {
@@ -175,28 +204,52 @@ public final class OceanAgentHubStore {
     }
 
     public JSONArray skills() {
+        return skillsSorted("name");
+    }
+
+    public JSONArray skillsSorted(String sortMode) {
         JSONArray out = new JSONArray();
         File root = skillsRoot();
         File[] dirs = root.listFiles(File::isDirectory);
         if (dirs == null) return out;
-        List<File> sorted = new ArrayList<>();
-        for (File d : dirs) sorted.add(d);
-        sorted.sort((a, b) -> a.getName().compareTo(b.getName()));
-        for (File dir : sorted) {
+        List<JSONObject> items = new ArrayList<>();
+        for (File dir : dirs) {
             String id = dir.getName();
             String md = readSkillMarkdown(id);
             if (md.isEmpty()) continue;
             Map<String, String> fm = parseFrontMatter(md);
             try {
+                File skillMd = skillFile(id);
+                long updated = skillMd.lastModified();
+                String updatedMeta = fm.getOrDefault("updated_at", "");
+                if (!updatedMeta.isEmpty()) {
+                    try { updated = Long.parseLong(updatedMeta); } catch (NumberFormatException ignored) {}
+                }
                 JSONObject item = new JSONObject()
                         .put("id", fm.getOrDefault("id", id))
                         .put("title", fm.getOrDefault("name", id))
                         .put("description", fm.getOrDefault("description", ""))
                         .put("status", fm.getOrDefault("status", "disconnected"))
-                        .put("source", fm.getOrDefault("source", "manual"));
-                out.put(item);
+                        .put("source", fm.getOrDefault("source", "manual"))
+                        .put("updated_at", updated)
+                        .put("draft", "draft".equals(fm.getOrDefault("status", "")));
+                items.add(item);
             } catch (Exception ignored) {}
         }
+        String mode = sortMode == null ? "name" : sortMode.toLowerCase(Locale.ROOT);
+        if ("recent".equals(mode)) {
+            items.sort((a, b) -> Long.compare(b.optLong("updated_at"), a.optLong("updated_at")));
+        } else if ("connected".equals(mode)) {
+            items.sort((a, b) -> {
+                boolean ac = "connected".equals(a.optString("status"));
+                boolean bc = "connected".equals(b.optString("status"));
+                if (ac != bc) return ac ? -1 : 1;
+                return a.optString("title").compareToIgnoreCase(b.optString("title"));
+            });
+        } else {
+            items.sort((a, b) -> a.optString("title").compareToIgnoreCase(b.optString("title")));
+        }
+        for (JSONObject item : items) out.put(item);
         return out;
     }
 

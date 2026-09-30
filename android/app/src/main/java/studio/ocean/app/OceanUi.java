@@ -153,4 +153,20 @@ final class OceanUi {
     static int dp(Context context, int v) {
         return Math.round(v * context.getResources().getDisplayMetrics().density);
     }
+
+    static GradientDrawable roundRect(Context context, int fill, int radiusDp, int strokeArgb) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(fill);
+        d.setCornerRadius(dp(context, radiusDp));
+        if ((strokeArgb >>> 24) != 0) d.setStroke(dp(context, 1), strokeArgb);
+        return d;
+    }
+
+    static GradientDrawable topSheetBackground(Context context) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color(context, R.color.ocean_background));
+        float r = dp(context, 28);
+        d.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
+        return d;
+    }
 }

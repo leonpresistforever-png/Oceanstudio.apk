@@ -8,7 +8,7 @@
     <dimen name="ocean_spacing_screen_horizontal">16dp</dimen>
     <dimen name="ocean_spacing_section_top">18dp</dimen>
     <dimen name="ocean_spacing_section_bottom">8dp</dimen>
-    <dimen name="ocean_header_height">56dp</dimen>
+    <dimen name="ocean_header_height">52dp</dimen>
     <dimen name="ocean_composer_min_height">56dp</dimen>
     <dimen name="ocean_suggestion_card_width">220dp</dimen>
     <dimen name="ocean_suggestion_card_height">148dp</dimen>

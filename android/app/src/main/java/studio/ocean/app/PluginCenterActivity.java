@@ -23,6 +23,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ScrollView;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,7 +68,10 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private LinearLayout hubSegments;
     private String hubSection = "plugins";
     private String skillsFilter = "";
+    private String skillsSortMode = "name";
     private String mcpsFilter = "";
+    private ActivityResultLauncher<String> pluginImportPicker;
+    private ActivityResultLauncher<String> skillImportPicker;
     private LinearLayout installedStrip;
     private TextView installedEmpty;
     private TextView searchEmpty;
@@ -83,6 +88,31 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
         prefs=getSharedPreferences("ocean_plugin_state",MODE_PRIVATE);
         hub=new OceanAgentHubStore(this);
+        pluginImportPicker=registerForActivityResult(new ActivityResultContracts.GetContent(),uri->{
+            if(uri==null)return;
+            try( java.io.InputStream in=getContentResolver().openInputStream(uri)){
+                if(in==null)throw new IllegalStateException("Could not read file");
+                String name=uri.getLastPathSegment()==null?"":uri.getLastPathSegment().toLowerCase(java.util.Locale.ROOT);
+                if(name.endsWith(".zip"))OceanPluginRegistrar.importFromZip(this,in);
+                else{
+                    String body=readAll(in);
+                    if(name.endsWith(".plugin"))registerUploadedPluginManifest(body);
+                    else OceanPluginRegistrar.importManifestJson(this,new JSONObject(body));
+                }
+                loadItems();render(search==null?"":search.getText().toString());
+                Toast.makeText(this,"Plugin imported",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        skillImportPicker=registerForActivityResult(new ActivityResultContracts.GetContent(),uri->{
+            if(uri==null)return;
+            try( java.io.InputStream in=getContentResolver().openInputStream(uri)){
+                if(in==null)throw new IllegalStateException("Could not read file");
+                String body=readAll(in);
+                hub.addSkill("Imported skill",body,"upload");
+                renderHubSections();
+                Toast.makeText(this,"Skill imported",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
         list=findViewById(R.id.plugin_list);
         skillsList=findViewById(R.id.plugin_skills_list);
         mcpsList=findViewById(R.id.plugin_mcps_list);
@@ -526,20 +556,27 @@ public final class PluginCenterActivity extends AppCompatActivity {
         intro.setText("Premium skills stored on-device. Connected skills inject sharp context into the agent. Agent-authored skills appear here automatically.");
         intro.setTextColor(MUTED);intro.setTextSize(13);intro.setPadding(0,0,0,dp(14));
         skillsList.addView(intro);
-        LinearLayout createRow=new LinearLayout(this);
-        createRow.setOrientation(LinearLayout.HORIZONTAL);
-        TextView createSkill=OceanUi.outlinedPill(this,"+ Create skill");
-        TextView uploadSkill=OceanUi.outlinedPill(this,"Upload skill");
-        LinearLayout.LayoutParams crLp=new LinearLayout.LayoutParams(-2,-2);
-        crLp.rightMargin=dp(10);
-        crLp.bottomMargin=dp(14);
-        createRow.addView(createSkill,crLp);
-        createRow.addView(uploadSkill,new LinearLayout.LayoutParams(-2,-2));
-        createSkill.setOnClickListener(v->showCreateSkillSheet());
-        uploadSkill.setOnClickListener(v->showCreateSkillSheet());
-        skillsList.addView(createRow);
+        LinearLayout sortRow=new LinearLayout(this);
+        sortRow.setOrientation(LinearLayout.HORIZONTAL);
+        sortRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView sortLabel=new TextView(this);
+        sortLabel.setText("Sort by");
+        sortLabel.setTextColor(MUTED);sortLabel.setTextSize(12);
+        sortRow.addView(sortLabel);
+        for(String[] mode:new String[][]{{"name","Name"},{"recent","Recent"},{"connected","Connected"}}){
+            TextView chip=OceanUi.outlinedPill(this,mode[1]);
+            boolean on=skillsSortMode.equals(mode[0]);
+            if(on)chip.setAlpha(1f);else chip.setAlpha(0.72f);
+            LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-2,-2);
+            clp.leftMargin=dp(8);
+            chip.setOnClickListener(v->{skillsSortMode=mode[0];renderHubSections();});
+            sortRow.addView(chip,clp);
+        }
+        LinearLayout.LayoutParams sortLp=new LinearLayout.LayoutParams(-1,-2);
+        sortLp.bottomMargin=dp(12);
+        skillsList.addView(sortRow,sortLp);
         String q=skillsFilter==null?"":skillsFilter.trim().toLowerCase(java.util.Locale.ROOT);
-        JSONArray skills=hub.skills();
+        JSONArray skills=hub.skillsSorted(skillsSortMode);
         int shown=0;
         for(int i=0;i<skills.length();i++){
             JSONObject s=skills.optJSONObject(i);if(s==null)continue;
@@ -550,7 +587,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
                     &&!desc.toLowerCase(java.util.Locale.ROOT).contains(q)
                     &&!id.toLowerCase(java.util.Locale.ROOT).contains(q))continue;
             boolean connected="connected".equals(s.optString("status"));
-            LinearLayout card=skillRow(s,connected);
+            boolean draft="draft".equals(s.optString("status"));
+            LinearLayout card=skillRow(s,connected,draft);
             card.setOnClickListener(v->openSkillDetailSheet(id));
             skillsList.addView(card);
             shown++;
@@ -601,7 +639,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         mcpsList.addView(addMcp);
     }
 
-    private LinearLayout skillRow(JSONObject s,boolean connected){
+    private LinearLayout skillRow(JSONObject s,boolean connected,boolean draft){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -621,11 +659,13 @@ public final class PluginCenterActivity extends AppCompatActivity {
         LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1f);
         cp.leftMargin=dp(12);
         row.addView(copy,cp);
-        TextView t=new TextView(this);t.setText(s.optString("title"));t.setTextColor(INK);t.setTextSize(15);t.setTypeface(null,Typeface.BOLD);
+        TextView t=new TextView(this);
+        t.setText(s.optString("title")+(draft?" · Draft":""));
+        t.setTextColor(INK);t.setTextSize(15);t.setTypeface(null,Typeface.BOLD);
         TextView d=new TextView(this);d.setText(s.optString("description"));d.setTextColor(MUTED);d.setTextSize(12);d.setMaxLines(2);
         copy.addView(t);copy.addView(d);
         TextView pill=new TextView(this);
-        pill.setText(connected?"✓":"Connect");
+        pill.setText(connected?"✓":draft?"Edit":"Connect");
         pill.setTextColor(connected?INK:0xFF52525B);
         pill.setTextSize(12);pill.setTypeface(null,Typeface.BOLD);
         pill.setPadding(dp(12),dp(8),dp(12),dp(8));
@@ -650,7 +690,14 @@ public final class PluginCenterActivity extends AppCompatActivity {
         if(skill==null)return;
         final boolean connected="connected".equals(skill.optString("status"));
         final String skillId=id;
-        String fullBody=hub.skillBodyWithoutFrontMatter(hub.readSkillMarkdown(id));
+        showSkillEditorSheet(id,skill,connected);
+    }
+
+    private void showSkillEditorSheet(String skillId,JSONObject skill,boolean connected){
+        String id=skillId;
+        String fullMarkdown=hub.readSkillMarkdown(id);
+        String fullBody=hub.skillBodyWithoutFrontMatter(fullMarkdown);
+        boolean draft="draft".equals(skill.optString("status"));
 
         Dialog dialog=new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -663,30 +710,63 @@ public final class PluginCenterActivity extends AppCompatActivity {
         LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(dp(52),dp(4));
         hp.gravity=Gravity.CENTER_HORIZONTAL;hp.bottomMargin=dp(20);
         sheet.addView(handle,hp);
-        TextView title=new TextView(this);
-        title.setText(skill.optString("title"));
-        title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
-        sheet.addView(title);
         TextView desc=new TextView(this);
         desc.setText(skill.optString("description"));
         desc.setTextColor(MUTED);desc.setTextSize(13);
         LinearLayout.LayoutParams dpv=new LinearLayout.LayoutParams(-1,-2);dpv.topMargin=dp(6);dpv.bottomMargin=dp(12);
         sheet.addView(desc,dpv);
-        TextView contentsLabel=new TextView(this);
-        contentsLabel.setText("Contents");
-        contentsLabel.setTextColor(INK);contentsLabel.setTextSize(14);contentsLabel.setTypeface(null,Typeface.BOLD);
-        sheet.addView(contentsLabel);
-        ScrollView scroll=new ScrollView(this);
-        TextView body=new TextView(this);
+        EditText titleEdit=new EditText(this);
+        titleEdit.setText(skill.optString("title"));
+        titleEdit.setHint("Skill title");
+        titleEdit.setBackgroundResource(R.drawable.auth_field_background);
+        titleEdit.setPadding(dp(12),dp(10),dp(12),dp(10));
+        LinearLayout.LayoutParams titleLp=new LinearLayout.LayoutParams(-1,-2);
+        titleLp.topMargin=dp(10);
+        sheet.addView(titleEdit,titleLp);
+        EditText body=new EditText(this);
         body.setText(fullBody);
-        body.setTextColor(0xFF3F3F46);
-        body.setTextSize(12);
+        body.setHint("SKILL.md body (markdown)");
+        body.setMinLines(12);
+        body.setGravity(Gravity.TOP|Gravity.START);
+        body.setBackgroundResource(R.drawable.auth_field_background);
+        body.setPadding(dp(12),dp(10),dp(12),dp(10));
         body.setTypeface(Typeface.MONOSPACE);
-        body.setLineSpacing(0,1.05f);
-        scroll.addView(body);
-        LinearLayout.LayoutParams scrollLp=new LinearLayout.LayoutParams(-1,dp(320));
-        scrollLp.topMargin=dp(8);scrollLp.bottomMargin=dp(16);
-        sheet.addView(scroll,scrollLp);
+        body.setTextSize(12);
+        LinearLayout.LayoutParams scrollLp=new LinearLayout.LayoutParams(-1,dp(280));
+        scrollLp.topMargin=dp(10);scrollLp.bottomMargin=dp(12);
+        sheet.addView(body,scrollLp);
+        TextView saveDraft=new TextView(this);
+        saveDraft.setGravity(Gravity.CENTER);
+        saveDraft.setText("Save draft");
+        saveDraft.setTextColor(INK);
+        saveDraft.setTypeface(null,Typeface.BOLD);
+        saveDraft.setPadding(0,dp(14),0,dp(14));
+        saveDraft.setBackground(roundRect(SURFACE_MUTED,999,BORDER));
+        saveDraft.setOnClickListener(v->{
+            try{
+                hub.updateSkillMarkdown(id,titleEdit.getText().toString().trim(),skill.optString("description"),body.getText().toString(),true);
+                dialog.dismiss();renderHubSections();
+                Toast.makeText(this,"Draft saved",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        sheet.addView(saveDraft,new LinearLayout.LayoutParams(-1,-2));
+        TextView publish=new TextView(this);
+        publish.setGravity(Gravity.CENTER);
+        publish.setText("Save & publish SKILL.md");
+        publish.setTextColor(Color.WHITE);
+        publish.setTypeface(null,Typeface.BOLD);
+        publish.setBackground(roundRect(0xff111111,999,0x00000000));
+        publish.setPadding(0,dp(16),0,dp(16));
+        LinearLayout.LayoutParams pubLp=new LinearLayout.LayoutParams(-1,-2);
+        pubLp.topMargin=dp(8);
+        publish.setOnClickListener(v->{
+            try{
+                hub.updateSkillMarkdown(id,titleEdit.getText().toString().trim(),skill.optString("description"),body.getText().toString(),false);
+                dialog.dismiss();renderHubSections();
+                Toast.makeText(this,"Skill saved",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        sheet.addView(publish,pubLp);
         TextView toggle=new TextView(this);
         toggle.setGravity(Gravity.CENTER);
         toggle.setTextSize(15);
@@ -695,12 +775,14 @@ public final class PluginCenterActivity extends AppCompatActivity {
         toggle.setText(connected?"Disconnect skill":"Connect skill");
         toggle.setBackground(roundRect(0xff111111,999,0x00000000));
         toggle.setPadding(0,dp(16),0,dp(16));
+        LinearLayout.LayoutParams toggleLp=new LinearLayout.LayoutParams(-1,-2);
+        toggleLp.topMargin=dp(10);
         toggle.setOnClickListener(v->{
             hub.setSkillConnected(skillId,!connected);
             dialog.dismiss();
             renderHubSections();
         });
-        sheet.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
+        sheet.addView(toggle,toggleLp);
         dialog.setContentView(sheet);
         dialog.show();
         Window w=dialog.getWindow();
@@ -712,8 +794,38 @@ public final class PluginCenterActivity extends AppCompatActivity {
     }
 
     private void showHubAddSheet(){
+        if("skills".equals(hubSection)){showSkillsAddSheet();return;}
+        if("mcps".equals(hubSection)){showMcpAddSheet();return;}
+        showPluginAddSheet();
+    }
+
+    private void showSkillsAddSheet(){
         Dialog dialog=new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Add skill");
+        addSheetAction(sheet,"Upload skill",R.drawable.ic_files,()->{dialog.dismiss();skillImportPicker.launch("*/*");});
+        addSheetAction(sheet,"Create skill",R.drawable.ic_add,()->{dialog.dismiss();showCreateSkillSheet();});
+        addSheetAction(sheet,"Search skill marketplace",R.drawable.ic_search,()->{
+            dialog.dismiss();
+            Toast.makeText(this,"Marketplace search opens when catalog is configured",Toast.LENGTH_SHORT).show();
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void showPluginAddSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Add plugin");
+        addSheetAction(sheet,"Create plugin manually",R.drawable.ic_add,()->{dialog.dismiss();showCreatePluginSheet();});
+        addSheetAction(sheet,"Upload plugin file",R.drawable.ic_files,()->{dialog.dismiss();pluginImportPicker.launch("*/*");});
+        addSheetAction(sheet,"Add from GitHub repo",R.drawable.ic_github,()->{dialog.dismiss();showGithubPluginSheet();});
+        addSheetAction(sheet,"Import marketplace / local path",R.drawable.ic_tools,()->{dialog.dismiss();showCatalogPluginSheet();});
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private LinearLayout hubBottomSheet(String heading){
         LinearLayout sheet=new LinearLayout(this);
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
@@ -724,18 +836,36 @@ public final class PluginCenterActivity extends AppCompatActivity {
         hp.gravity=Gravity.CENTER_HORIZONTAL;hp.bottomMargin=dp(20);
         sheet.addView(handle,hp);
         TextView title=new TextView(this);
-        title.setText("Add to hub");
+        title.setText(heading);
         title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
-        sheet.addView(title);
-        addSheetAction(sheet,"Create skill",()->{dialog.dismiss();showCreateSkillSheet();});
-        addSheetAction(sheet,"Upload skill",()->{dialog.dismiss();showCreateSkillSheet();});
-        addSheetAction(sheet,"Register MCP",()->{dialog.dismiss();showMcpAddSheet();});
-        addSheetAction(sheet,"Connect capabilities",()->{
-            dialog.dismiss();
-            showHubSection("plugins");
-            Toast.makeText(this,"Connect local capabilities under Plugins",Toast.LENGTH_SHORT).show();
-        });
-        dialog.setContentView(sheet);
+        LinearLayout.LayoutParams titleLp=new LinearLayout.LayoutParams(-1,-2);
+        titleLp.bottomMargin=dp(8);
+        sheet.addView(title,titleLp);
+        return sheet;
+    }
+
+    private void addSheetAction(LinearLayout sheet,String label,int iconRes,Runnable action){
+        LinearLayout row=new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0,dp(18),0,dp(18));
+        ImageView icon=new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(INK);
+        row.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
+        TextView text=new TextView(this);
+        text.setText(label);
+        text.setTextColor(INK);
+        text.setTextSize(16);
+        text.setTypeface(null,Typeface.BOLD);
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-2,-2);
+        tp.leftMargin=dp(16);
+        row.addView(text,tp);
+        row.setOnClickListener(v->action.run());
+        sheet.addView(row,new LinearLayout.LayoutParams(-1,-2));
+    }
+
+    private void presentBottomSheet(Dialog dialog){
         dialog.show();
         Window w=dialog.getWindow();
         if(w!=null){
@@ -743,20 +873,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
             w.setGravity(Gravity.BOTTOM);
         }
-    }
-
-    private void addSheetAction(LinearLayout sheet,String label,Runnable action){
-        TextView row=new TextView(this);
-        row.setText(label);
-        row.setTextColor(INK);
-        row.setTextSize(16);
-        row.setTypeface(null,Typeface.BOLD);
-        row.setPadding(0,dp(18),0,dp(18));
-        row.setOnClickListener(v->action.run());
-        sheet.addView(row,new LinearLayout.LayoutParams(-1,-2));
-        View line=new View(this);
-        line.setBackgroundColor(BORDER);
-        sheet.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
 
     private void showCreateSkillSheet(){
@@ -800,14 +916,142 @@ public final class PluginCenterActivity extends AppCompatActivity {
                 Toast.makeText(this,"Skill saved",Toast.LENGTH_SHORT).show();
             }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
         });
+        TextView draft=new TextView(this);
+        draft.setGravity(Gravity.CENTER);
+        draft.setText("Save as draft");
+        draft.setTextColor(INK);
+        draft.setTypeface(null,Typeface.BOLD);
+        draft.setPadding(0,dp(14),0,dp(14));
+        draft.setBackground(roundRect(SURFACE_MUTED,999,BORDER));
+        LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,dp(48));
+        dlp.topMargin=dp(10);
+        draft.setOnClickListener(v->{
+            try{
+                hub.addSkillDraft(name.getText().toString().trim(),body.getText().toString().trim(),"manual");
+                dialog.dismiss();
+                showHubSection("skills");
+                Toast.makeText(this,"Draft saved",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        sheet.addView(draft,dlp);
         dialog.setContentView(sheet);
-        dialog.show();
-        Window w=dialog.getWindow();
-        if(w!=null){
-            w.setBackgroundDrawableResource(android.R.color.transparent);
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
-            w.setGravity(Gravity.BOTTOM);
+        presentBottomSheet(dialog);
+    }
+
+    private void showCreatePluginSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Create plugin");
+        EditText id=new EditText(this);id.setHint("Plugin id");
+        EditText name=new EditText(this);name.setHint("Display name");
+        EditText command=new EditText(this);command.setHint("Command (existing binary) or leave empty to scaffold");
+        EditText description=new EditText(this);description.setHint("Description");
+        for(EditText field:new EditText[]{id,name,command,description}){
+            field.setBackgroundResource(R.drawable.auth_field_background);
+            field.setPadding(dp(12),dp(10),dp(12),dp(10));
+            LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2);
+            flp.topMargin=dp(10);
+            sheet.addView(field,flp);
         }
+        TextView save=new TextView(this);
+        save.setGravity(Gravity.CENTER);
+        save.setText("Save plugin");
+        save.setTextColor(Color.WHITE);
+        save.setTypeface(null,Typeface.BOLD);
+        save.setBackground(roundRect(0xff111111,999,0x00000000));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        slp.topMargin=dp(20);
+        sheet.addView(save,slp);
+        save.setOnClickListener(v->{
+            try{
+                String cmd=command.getText().toString().trim();
+                if(cmd.isEmpty())OceanPluginRegistrar.scaffoldAndRegister(this,id.getText().toString().trim(),name.getText().toString().trim(),"bash",description.getText().toString().trim());
+                else OceanPluginRegistrar.registerManifest(this,id.getText().toString().trim(),name.getText().toString().trim(),cmd,description.getText().toString().trim());
+                dialog.dismiss();
+                loadItems();render(search==null?"":search.getText().toString());
+                Toast.makeText(this,"Plugin saved",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void showGithubPluginSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("GitHub plugin");
+        EditText url=new EditText(this);
+        url.setHint("https://github.com/owner/repo");
+        url.setBackgroundResource(R.drawable.auth_field_background);
+        url.setPadding(dp(12),dp(10),dp(12),dp(10));
+        sheet.addView(url,new LinearLayout.LayoutParams(-1,-2));
+        TextView save=new TextView(this);
+        save.setGravity(Gravity.CENTER);
+        save.setText("Import manifest");
+        save.setTextColor(Color.WHITE);
+        save.setTypeface(null,Typeface.BOLD);
+        save.setBackground(roundRect(0xff111111,999,0x00000000));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        slp.topMargin=dp(20);
+        sheet.addView(save,slp);
+        save.setOnClickListener(v->{
+            try{
+                OceanPluginRegistrar.importFromGithubRepo(this,url.getText().toString().trim());
+                dialog.dismiss();
+                loadItems();render(search==null?"":search.getText().toString());
+                Toast.makeText(this,"Plugins imported from GitHub",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void showCatalogPluginSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Marketplace / path");
+        EditText url=new EditText(this);
+        url.setHint("https://catalog.example/plugins.json or /sdcard/path.json");
+        url.setBackgroundResource(R.drawable.auth_field_background);
+        url.setPadding(dp(12),dp(10),dp(12),dp(10));
+        sheet.addView(url,new LinearLayout.LayoutParams(-1,-2));
+        TextView save=new TextView(this);
+        save.setGravity(Gravity.CENTER);
+        save.setText("Import");
+        save.setTextColor(Color.WHITE);
+        save.setTypeface(null,Typeface.BOLD);
+        save.setBackground(roundRect(0xff111111,999,0x00000000));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        slp.topMargin=dp(20);
+        sheet.addView(save,slp);
+        save.setOnClickListener(v->{
+            try{
+                OceanPluginRegistrar.importFromCatalogUrl(this,url.getText().toString().trim());
+                dialog.dismiss();
+                loadItems();render(search==null?"":search.getText().toString());
+                Toast.makeText(this,"Catalog imported",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void registerUploadedPluginManifest(String body)throws Exception{
+        java.util.Properties p=new java.util.Properties();
+        p.load(new java.io.StringReader(body));
+        OceanPluginRegistrar.registerManifest(this,
+                p.getProperty("id","plugin"),
+                p.getProperty("name","Plugin"),
+                p.getProperty("command",""),
+                p.getProperty("description","Uploaded plugin."));
+    }
+
+    private static String readAll(java.io.InputStream in)throws Exception{
+        StringBuilder sb=new StringBuilder();
+        byte[] buf=new byte[8192];
+        int n;
+        while((n=in.read(buf))>0)sb.append(new String(buf,0,n,java.nio.charset.StandardCharsets.UTF_8));
+        return sb.toString();
     }
 
     private void showMcpAddSheet(){
@@ -849,13 +1093,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
             }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
         });
         dialog.setContentView(sheet);
-        dialog.show();
-        Window w=dialog.getWindow();
-        if(w!=null){
-            w.setBackgroundDrawableResource(android.R.color.transparent);
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
-            w.setGravity(Gravity.BOTTOM);
-        }
+        presentBottomSheet(dialog);
     }
 
     private LinearLayout hubCard(String title,String body,String action,boolean active){
