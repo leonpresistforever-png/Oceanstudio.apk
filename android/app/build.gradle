@@ -1,6 +1,25 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
 
+def resolveOceanFirebaseApiKey() {
+    def fromEnv = System.getenv('OCEAN_FIREBASE_API_KEY')
+    if (fromEnv != null && !fromEnv.trim().isEmpty()) return fromEnv.trim()
+    def services = file('google-services.json')
+    if (!services.exists()) return ''
+    def parsed = new groovy.json.JsonSlurper().parse(services)
+    def clients = parsed.client instanceof List ? parsed.client : [parsed.client]
+    for (def client : clients) {
+        def packageName = client?.client_info?.android_client_info?.package_name
+        if (packageName != 'studio.ocean.app') continue
+        def keys = client?.api_key
+        if (keys instanceof List && !keys.isEmpty()) {
+            def key = keys[0]?.current_key
+            if (key != null && !key.toString().isEmpty()) return key.toString()
+        }
+    }
+    return ''
+}
+
 // AppCompat/Core transitively request different Kotlin stdlib generations.
 // Keep every compatibility artifact on one generation to prevent duplicate classes.
 configurations.configureEach {
@@ -27,7 +46,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild { cmake { arguments '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON' } }
-        buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${System.getenv('OCEAN_FIREBASE_API_KEY') ?: ''}\""
+        buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${resolveOceanFirebaseApiKey()}\""
         buildConfigField "String", "OCEAN_BUILD_COMMIT", "\"${System.getenv('OCEAN_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_VERSION", "\"${System.getenv('OCEAN_BOOTSTRAP_VERSION') ?: 'not-bundled'}\""
@@ -85,9 +104,14 @@ android {
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
     implementation project(':terminal-emulator')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.browser:browser:1.8.0"
+    implementation "androidx.webkit:webkit:1.12.1"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation 'androidx.browser:browser:1.8.0'
     implementation "org.apache.commons:commons-compress:1.27.1"
     // The default Maven artifact is a desktop JAR whose native payload lives
     // under /linux/aarch64 and is not packaged as an Android JNI library.
@@ -149,4 +173,47 @@ tasks.named("preBuild").configure {
     dependsOn(prepareForgeRuntimeCommand)
     dependsOn(prepareForgeToolOverlay)
     dependsOn(prepareForgeSourceBundle)
+}
+
+tasks.register("verifyBundledScriptShebangs") {
+    doLast {
+        def prefix = "/data/data/studio.ocean.app/files/usr"
+        def packageRoot = rootProject.projectDir.parentFile.toPath().resolve("ocean-packages/packages")
+        def roots = [
+                packageRoot.resolve("ocean-tools/data/data/studio.ocean.app/files/usr/bin").toFile(),
+                packageRoot.resolve("ocean-pkg").toFile(),
+                packageRoot.resolve("ocean-hello").toFile(),
+                packageRoot.resolve("ocean-distro/ocean-distro").toFile(),
+                packageRoot.resolve("proot-distro/proot-distro").toFile(),
+                file("src/main/assets/ocean/pkg")
+        ]
+        def offenders = []
+        roots.each { root ->
+            if (!root.exists()) return
+            def files = root.isFile() ? [root] : []
+            if (root.isDirectory()) root.eachFileRecurse { candidate -> if (candidate.isFile()) files << candidate }
+            files.each { file ->
+                if (file.length() > 4 * 1024 * 1024) return
+                def head = file.withInputStream { stream ->
+                    byte[] buffer = new byte[256]
+                    int count = stream.read(buffer)
+                    count > 0 ? new String(buffer, 0, count, java.nio.charset.StandardCharsets.UTF_8) : ""
+                }
+                if (!head.startsWith("#!")) return
+                def line = head.split("\\R", 2)[0]
+                if (line.contains("/usr/bin/env")) offenders << "${file}: ${line}"
+                else if ((line.contains("/bin/bash") || line.contains("/bin/sh")) && !line.startsWith("#!${prefix}/")) {
+                    offenders << "${file}: ${line}"
+                }
+            }
+        }
+        if (!offenders.isEmpty()) {
+            throw new GradleException("Bundled scripts must not use /usr/bin/env or host /bin/* shebangs:\n" + offenders.join("\n"))
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.findByName("testDebugUnitTest")?.dependsOn("verifyBundledScriptShebangs")
+    tasks.findByName("assembleDebug")?.dependsOn("verifyBundledScriptShebangs")
 }

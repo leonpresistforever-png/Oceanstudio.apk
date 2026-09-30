@@ -22,6 +22,7 @@ final class OceanRuntimeCompatibility {
         File overlay = new File(paths.home(), ".local/bin");
         if (!overlay.isDirectory() && !overlay.mkdirs()) return;
         installBundledMediaTools(context, overlay, paths.home());
+        OceanShebangRepair.ensurePrefixScripts(paths.prefix());
         if (!new File(paths.prefix(), "bin/node").isFile()) return;
         for (String[] entry : new String[][]{{"npm", "npm-cli.js"}, {"npx", "npx-cli.js"}}) {
             if (!new File(modules, entry[1]).isFile()) continue;

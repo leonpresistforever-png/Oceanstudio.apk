@@ -233,6 +233,8 @@ public final class OceanTerminalRuntimeService extends Service {
         @Override public void onOutput(byte[] bytes, int length) {
             if (finished.get()) return;
             byte[] output = java.util.Arrays.copyOf(bytes, length);
+            studio.ocean.app.runtime.RuntimePortHints.observeTerminalOutput(
+                    OceanTerminalRuntimeService.this, new String(output, java.nio.charset.StandardCharsets.UTF_8));
             main.post(() -> callback.onOutput(output, output.length));
         }
         @Override public void onExit(int code) { main.post(() -> finishExit(cancelled ? (timedOut ? 124 : 130) : code)); }

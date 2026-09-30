@@ -9,7 +9,11 @@ The first native shell includes:
 - a native Android activity and XML layout;
 - Agent, Editor, Terminal, Files, and Tools navigation;
 - a model picker, agent empty state, and prompt field matching the mobile product direction;
-- a clean Gradle-only APK build targeting Android API 35.
+- a clean Gradle-only APK build targeting Android API 35;
+- an in-app **Browser** (URL bar, navigation, multi-tab, progress, cookies, JavaScript) built on System WebView plus **AndroidX WebKit**;
+- **Providers** connection flow with native Google/GitHub OAuth via Firebase when configured.
+
+Open-source dependencies added for the browser and auth stack are listed in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 The product specifications shared in Google Docs require access permission before their detailed requirements can be implemented. This milestone establishes the native-only foundation without attempting to preserve the old web implementation.
 

@@ -132,15 +132,15 @@
                 <LinearLayout android:id="@+id/group_tools" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/tools_group"/><ImageView android:id="@+id/chevron_tools" style="@style/OceanChevron"/></LinearLayout>
                 <LinearLayout android:id="@+id/tools_children" style="@style/OceanNavChildren">
                     <TextView android:id="@+id/nav_runtime_ports" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="@string/runtime_ports" />
-                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser" android:text="@string/browser_research" />
+                    <TextView android:id="@+id/nav_browser" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser_nav" android:text="@string/browser" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/playground" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/automations" />
                 </LinearLayout>
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="20dp" android:layout_marginVertical="8dp" android:background="@color/ocean_border" />
                 <LinearLayout android:id="@+id/group_connections" style="@style/OceanNavParent"><TextView style="@style/OceanNavParentText" android:text="@string/connections_group"/><ImageView android:id="@+id/chevron_connections" style="@style/OceanChevron"/></LinearLayout>
                 <LinearLayout android:id="@+id/connections_children" style="@style/OceanNavChildren">
-                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/models" />
-                    <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/providers" />
+                    <TextView android:id="@+id/nav_models" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/models" />
+                    <TextView android:id="@+id/nav_providers" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/providers" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/mcp" />
                     <TextView android:id="@+id/nav_plugins" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Plugins" />
                 </LinearLayout>

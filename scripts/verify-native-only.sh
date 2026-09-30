@@ -17,6 +17,7 @@ sed -n '/BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS/p' android/app/s
 sed -n '/release {/,/}/p' android/app/build.gradle | sed -n '/OCEAN_DEV_AUTH_BYPASS.*false/p' | read -r release_guard \
   || fail "release builds must hard-disable development authentication"
 if find android/app/src/main -type f \( -name '*.java' -o -name '*.kt' -o -name '*.c' -o -name '*.cpp' \) \
+    ! -path '*/browser/*' \
     ! -path '*/runtime/RuntimePortsActivity.java' \
     ! -path '*/render/RoboticEyeView.java' \
     -exec sed -n '/com\.getcapacitor\|android\.webkit\.WebView\|com\.termux\|\/data\/data\/com\.termux/p' {} + \
