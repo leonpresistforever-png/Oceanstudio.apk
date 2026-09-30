@@ -1,6 +1,7 @@
 package studio.ocean.app.render;
 
 import android.content.*;
+import android.graphics.Typeface;
 import android.opengl.*;
 import android.os.Bundle;
 import android.view.*;
@@ -25,7 +26,7 @@ public final class Ocean3DActivity extends AppCompatActivity {
 
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xfff8f8f6);
         LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(8),dp(12),dp(8));
-        TextView title=new TextView(this);title.setText("Ocean 3D");title.setTextSize(18);title.setTextColor(0xff181818);title.setTypeface(null,1);
+        TextView title=new TextView(this);title.setText("Ocean 3D");title.setTextSize(18);title.setTextColor(0xff181818);title.setTypeface(null, Typeface.BOLD);
         bar.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
         Button reset=button("Reset");reset.setOnClickListener(v->view.reset());
         Button wire=button("Wire");wire.setOnClickListener(v->view.toggleWire());

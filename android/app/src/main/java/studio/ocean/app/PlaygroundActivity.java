@@ -157,7 +157,7 @@ public final class PlaygroundActivity extends Activity {
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-1); lp.leftMargin=dp(5); lp.rightMargin=dp(5);
             prompts.addView(p,lp);
             p.setOnClickListener(v -> {
-                EditText input=findViewById(0x4f434e01);
+                EditText input=findViewById(R.id.playground_input);
                 if(input!=null){ input.setText(((TextView)v).getText()+" "); input.requestFocus(); }
             });
         }
@@ -173,7 +173,7 @@ public final class PlaygroundActivity extends Activity {
         attachmentScroll.setHorizontalScrollBarEnabled(false);
         attachmentScroll.addView(attachmentStrip,new HorizontalScrollView.LayoutParams(-2,dp(36)));
         attachmentScroll.setVisibility(View.GONE);
-        attachmentScroll.setId(0x4f434e02);
+        attachmentScroll.setId(R.id.playground_attachment_scroll);
         composerWrap.addView(attachmentScroll,new LinearLayout.LayoutParams(-1,dp(36)));
 
         LinearLayout composer=new LinearLayout(this);
@@ -183,7 +183,7 @@ public final class PlaygroundActivity extends Activity {
         composerWrap.addView(composer,new LinearLayout.LayoutParams(-1,-2));
 
         EditText input=new EditText(this);
-        input.setId(0x4f434e01);
+        input.setId(R.id.playground_input);
         input.setHint("Ask Playground to build something…");
         input.setHintTextColor(0xFF6E6E6E);
         input.setTextColor(WHITE);
@@ -330,7 +330,7 @@ public final class PlaygroundActivity extends Activity {
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(32)); lp.rightMargin=dp(6);
             attachmentStrip.addView(chip,lp);
         }
-        View scroll=findViewById(0x4f434e02);
+        View scroll=findViewById(R.id.playground_attachment_scroll);
         if(scroll!=null) scroll.setVisibility(attachments.isEmpty()?View.GONE:View.VISIBLE);
     }
 
