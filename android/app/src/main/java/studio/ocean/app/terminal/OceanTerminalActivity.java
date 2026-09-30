@@ -654,6 +654,7 @@ public final class OceanTerminalActivity extends AppCompatActivity implements Te
                 }
             }
         }
+        studio.ocean.app.runtime.RuntimePortHints.observeTerminalOutput(this, value);
         runOnUiThread(() -> {
             if (isFinishing() || isDestroyed()) return;
             if (emulatorSession != null) emulatorSession.feed(copy, copy.length);

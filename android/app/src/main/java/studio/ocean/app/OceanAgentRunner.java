@@ -182,8 +182,10 @@ public final class OceanAgentRunner {
         conn.setInstanceFollowRedirects(false);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
-        if (config.provider.equals("google")) conn.setRequestProperty("x-goog-api-key", config.apiKey);
-        else if (config.provider.equals("anthropic")) {
+        if (config.provider.equals("google")) {
+            if (config.apiKey.startsWith("AIza")) conn.setRequestProperty("x-goog-api-key", config.apiKey);
+            else conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
+        } else if (config.provider.equals("anthropic")) {
             conn.setRequestProperty("x-api-key", config.apiKey);
             conn.setRequestProperty("anthropic-version", "2023-06-01");
         } else conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);

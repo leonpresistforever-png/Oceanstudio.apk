@@ -46,7 +46,7 @@ public final class OceanByokManager {
     public void markVerified(String testedDigest){if(testedDigest.equals(configurationDigest()))prefs.edit().putString(VERIFIED,testedDigest).apply();}
     public boolean isVerified(){String current=prefs.getString(VERIFIED,"");return !current.isEmpty()&&current.equals(configurationDigest());}
 
-    String configurationDigest(){
+    public String configurationDigest(){
         try{byte[] digest=MessageDigest.getInstance("SHA-256").digest((getProvider()+"\n"+getModel()+"\n"+getBaseUrl()+"\n"+getApiKey()).getBytes(StandardCharsets.UTF_8));return Base64.encodeToString(digest,Base64.NO_WRAP);}
         catch(Exception error){return "";}
     }

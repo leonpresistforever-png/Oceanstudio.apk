@@ -38,7 +38,7 @@ public final class OceanBootstrapInstaller {
     static final String STAGING_PREFIX = ".ocean-bootstrap-staging-";
     private static final String ROLLBACK_PREFIX = ".ocean-prefix-rollback-";
     private static final String TRANSACTION_FILE = ".ocean-bootstrap-transaction.json";
-    private static final String BUILD_PREFIX = "/data/data/studio.ocean.app/files/usr";
+    static final String BUILD_PREFIX = "/data/data/studio.ocean.app/files/usr";
 
     private final Context context;
     private final OceanPaths paths;
@@ -328,18 +328,7 @@ public final class OceanBootstrapInstaller {
                     continue;
                 }
                 if (!entry.isFile()) throw new IOException("Unsupported archive entry");
-                try (FileOutputStream out = new FileOutputStream(target)) {
-                    byte[] buffer = new byte[65536];
-                    long remaining = entry.getSize();
-                    while (remaining > 0) {
-                        int count = tar.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-                        if (count < 0) throw new IOException("Truncated archive");
-                        out.write(buffer, 0, count);
-                        remaining -= count;
-                        bytes += count;
-                    }
-                    out.getFD().sync();
-                }
+                bytes += writeRegularFile(tar, entry.getSize(), target);
                 try {
                     int mode = entry.getMode() & 0777;
                     String lstr = logical.toString();
@@ -378,6 +367,42 @@ public final class OceanBootstrapInstaller {
                 throw filesystemError("chmod archive directory", mode.directory, error);
             }
         }
+    }
+
+    private static long writeRegularFile(TarArchiveInputStream tar, long size, File target) throws IOException {
+        final long maxShebangRewrite = 4L * 1024L * 1024L;
+        byte[] payload;
+        if (size < 0 || size > maxShebangRewrite) {
+            payload = null;
+        } else {
+            payload = new byte[(int) size];
+            int offset = 0;
+            while (offset < payload.length) {
+                int count = tar.read(payload, offset, payload.length - offset);
+                if (count < 0) throw new IOException("Truncated archive");
+                offset += count;
+            }
+            payload = OceanShebangPolicy.rewriteIfNeeded(payload);
+        }
+        long written = 0;
+        try (FileOutputStream out = new FileOutputStream(target)) {
+            if (payload != null) {
+                out.write(payload);
+                written = payload.length;
+            } else {
+                byte[] buffer = new byte[65536];
+                long remaining = size;
+                while (remaining > 0) {
+                    int count = tar.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                    if (count < 0) throw new IOException("Truncated archive");
+                    out.write(buffer, 0, count);
+                    remaining -= count;
+                    written += count;
+                }
+            }
+            out.getFD().sync();
+        }
+        return written;
     }
 
     private static final class DirectoryMode {

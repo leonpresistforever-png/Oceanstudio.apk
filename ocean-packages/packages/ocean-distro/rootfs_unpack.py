@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/data/data/studio.ocean.app/files/usr/bin/python3
 """Unpack official distribution rootfs artifacts into a flat guest tree.
 
 Handles flat tarballs, Docker save bundles (layer.tar), and OCI image layouts.

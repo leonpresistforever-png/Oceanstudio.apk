@@ -44,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS="ocean_auth", TOKEN="id_token", EMAIL="email";
     private static final String RECENT_PREFS = "ocean_recent_chats";
     private static final String RECENT_KEY = "titles";
-    private final AuthClient authClient = new AuthClient();
+    private AuthClient authClient;
+    private AuthOAuth authOAuth;
     private AuthMode authMode = AuthMode.SIGN_IN;
     private AuthState authState = AuthState.LOADING;
     private boolean developmentSession;
@@ -93,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable t) {
             android.util.Log.w("MainActivity", "Back dispatcher callback failed", t);
         }
+        authClient = new AuthClient(this);
+        authOAuth = new AuthOAuth(this, authClient);
         showLoading(() -> {
             try {
                 byokManager = new OceanByokManager(this);
@@ -146,8 +149,9 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.auth_primary, v -> submitAuth());
         safeClick(R.id.forgot_password, v -> setAuthMode(AuthMode.FORGOT));
         safeClick(R.id.auth_switch, v -> setAuthMode(authMode == AuthMode.SIGN_IN ? AuthMode.SIGN_UP : AuthMode.SIGN_IN));
-        safeClick(R.id.google_auth, v -> Toast.makeText(this,getString(R.string.oauth_not_configured,"Google"),Toast.LENGTH_SHORT).show());
-        safeClick(R.id.github_auth, v -> Toast.makeText(this,getString(R.string.oauth_not_configured,"GitHub"),Toast.LENGTH_SHORT).show());
+        safeClick(R.id.google_auth, v -> authOAuth.signInWithGoogle(oauthListener()));
+        safeClick(R.id.github_auth, v -> authOAuth.signInWithGithub(oauthListener()));
+        authOAuth.resumePending(oauthListener());
         View devIndicator = findViewById(R.id.dev_auth_indicator);
         if (devIndicator != null) devIndicator.setVisibility(devBypassAvailable()?View.VISIBLE:View.GONE);
         View devContinue = findViewById(R.id.dev_auth_continue);
@@ -202,11 +206,21 @@ public class MainActivity extends AppCompatActivity {
         if (authMode==AuthMode.FORGOT) authClient.reset(email,callback); else authClient.signIn(email,password,authMode==AuthMode.SIGN_UP,callback);
     }
 
-    private void setAuthBusy(boolean busy) {
-        View p = findViewById(R.id.auth_primary); if (p != null) p.setEnabled(!busy);
-        View g = findViewById(R.id.google_auth); if (g != null) g.setEnabled(!busy);
-        View gh = findViewById(R.id.github_auth); if (gh != null) gh.setEnabled(!busy);
+    private AuthOAuth.Listener oauthListener() {
+        return new AuthOAuth.Listener() {
+            @Override public void onSuccess(String token, String email) {
+                authState = AuthState.CONFIGURED_LOGGED_IN;
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(TOKEN, token).putString(EMAIL, email).apply();
+                showLoading(MainActivity.this::showMain);
+            }
+            @Override public void onFailure(String message) {
+                authState = AuthState.ERROR;
+                showAuthStatus(message, false);
+            }
+        };
     }
+
+    private void setAuthBusy(boolean busy) { AuthOAuth.ViewHelper.setAuthBusy(this, busy); }
     private void showAuthStatus(String message, boolean success) {
         TextView status=findViewById(R.id.auth_status);
         if (status != null) {
@@ -302,6 +316,7 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_terminal, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         safeClick(R.id.nav_x11, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.render.OceanX11Activity.class)); });
         safeClick(R.id.nav_runtime_ports, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
+        safeClick(R.id.nav_browser, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.browser.BrowserActivity.class)); });
         safeClick(R.id.nav_agent_settings, v -> { closeDrawer(); openAgentControls(); });
         safeClick(R.id.nav_hub_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         safeClick(R.id.nav_hub_device, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); });
@@ -335,17 +350,9 @@ public class MainActivity extends AppCompatActivity {
             toolsChildren.addView(byokNav, 0);
         }
 
-        // Also bind Models and Providers under Connections to showByokPage
-        LinearLayout connectionsChildren = findViewById(R.id.connections_children);
-        if (connectionsChildren != null) {
-            for (int i = 0; i < connectionsChildren.getChildCount(); i++) {
-                View child = connectionsChildren.getChildAt(i);
-                if (child instanceof TextView) {
-                    if (child.getId() == R.id.nav_plugins) child.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
-                    else child.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
-                }
-            }
-        }
+        safeClick(R.id.nav_models, v -> { closeDrawer(); showByokPage(); });
+        safeClick(R.id.nav_providers, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)); });
+        safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
 
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
@@ -386,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
         View oldByok = contentFrame.findViewWithTag("BYOK_VIEW");
         if (oldByok != null) contentFrame.removeView(oldByok);
 
-        ((TextView)findViewById(R.id.screen_title)).setText("BYOK Services");
+        ((TextView)findViewById(R.id.screen_title)).setText("Providers");
 
         ScrollView scroll = new ScrollView(this);
         scroll.setTag("BYOK_VIEW");
@@ -528,6 +535,16 @@ public class MainActivity extends AppCompatActivity {
             String mod = modelInput.getText().toString().trim();
             String key = keyInput.getText().toString().trim();
             String burl = urlInput.getText().toString().trim();
+            if (mod.isEmpty()) {
+                connectionStatus.setText(getString(R.string.provider_model_required));
+                connectionStatus.setTextColor(0xFFB3261E);
+                return;
+            }
+            if (key.isEmpty()) {
+                connectionStatus.setText(getString(R.string.provider_key_required));
+                connectionStatus.setTextColor(0xFFB3261E);
+                return;
+            }
 
             try { byokManager.saveConfig(prov,mod,key,burl); }
             catch(Exception error){ connectionStatus.setText(error.getMessage());connectionStatus.setTextColor(0xFFB3261E);return; }

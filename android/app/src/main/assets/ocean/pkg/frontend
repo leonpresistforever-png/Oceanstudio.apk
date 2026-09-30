@@ -129,10 +129,10 @@ ensure_catalog() {
 command=${1:-help}; shift || true
 case "$command" in
  update) refresh_catalog "$@";;
- upgrade) refresh_catalog && apt-get full-upgrade "$@";;
- install) ensure_catalog && apt-get install "$@";;
+ upgrade) refresh_catalog && apt-get full-upgrade "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
+ install) ensure_catalog && apt-get install "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
  remove) apt-get remove "$@";;
- reinstall) ensure_catalog && apt-get install --reinstall "$@";;
+ reinstall) ensure_catalog && apt-get install --reinstall "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
  search) ensure_catalog && apt-cache search "$@";;
  show) ensure_catalog && apt-cache show "$@";;
  list-installed) dpkg-query -W "$@";;

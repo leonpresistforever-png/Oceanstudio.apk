@@ -141,6 +141,14 @@ public final class AgentArchitectureTest {
         assertTrue(runner.contains("ocean-forge"));
     }
 
+    @Test public void packageInstallRewritesEnvShebangsAfterApt() throws Exception {
+        String pkg = repositoryFile("ocean-packages/packages/ocean-pkg/pkg");
+        assertTrue(pkg.contains("ocean-fix-shebangs"));
+        String fixer = repositoryFile(
+                "ocean-packages/packages/ocean-tools/data/data/studio.ocean.app/files/usr/bin/ocean-fix-shebangs");
+        assertTrue(fixer.contains("fix-runtime-shebangs.py"));
+    }
+
     @Test public void forgeShellSupportsSelfSeedSdkAndNativeCore() throws Exception {
         String forge=repositoryFile("ocean-packages/packages/ocean-tools/data/data/studio.ocean.app/files/usr/bin/ocean-forge");
         assertTrue(forge.contains("bootstrap-sdk)"));

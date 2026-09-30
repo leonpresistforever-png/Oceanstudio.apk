@@ -26,6 +26,8 @@
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/device_accessibility" />
         </service>
         <activity android:name=".runtime.RuntimePortsActivity" android:label="Runtime Ports" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".providers.ProvidersConnectActivity" android:label="@string/providers_connect_title" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".browser.BrowserActivity" android:label="@string/browser" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".AgentSettingsActivity" android:label="Agent Settings" android:exported="false" />
         <activity android:name=".PluginCenterActivity" android:label="Plugins" android:exported="false" />
         <activity android:name=".CrashDiagnosticsActivity" android:label="Crash Diagnostics" android:exported="false" />

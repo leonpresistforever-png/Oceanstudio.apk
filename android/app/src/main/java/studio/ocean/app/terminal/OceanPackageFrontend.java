@@ -11,6 +11,8 @@ public final class OceanPackageFrontend {
             "6e9b34f5b87d78e0cf393b4cea91f2ad90be752f5e26e9e069d89fd0a2daa33f";
     private static final String AUTO_SYNC_SHA256 =
             "62a376a77d995f93a69a0eb7e0a815b330851262fea3831a9dad70f09e96b1a2";
+    private static final String CURRENT_SHA256 =
+            "55c40f009b1165b9d3560ed365b5262932c1732df145a3bede9f536c10145d7f";
     private OceanPackageFrontend() {}
 
     public static boolean prepare(File prefix, InputStream bundled) throws IOException {
@@ -50,9 +52,11 @@ public final class OceanPackageFrontend {
         byte[] original = Files.readAllBytes(target);
         String digest = sha256(original);
         if (java.util.Arrays.equals(original, replacement)
-                || !(LEGACY_SHA256.equals(digest) || AUTO_SYNC_SHA256.equals(digest))) return false;
+                || !(LEGACY_SHA256.equals(digest) || AUTO_SYNC_SHA256.equals(digest)
+                    || CURRENT_SHA256.equals(digest))) return false;
         Path backup = dpkg.resolve(LEGACY_SHA256.equals(digest)
-                ? "ocean-pkg-1.1.0.backup" : "ocean-pkg-auto-sync.backup");
+                ? "ocean-pkg-1.1.0.backup"
+                : AUTO_SYNC_SHA256.equals(digest) ? "ocean-pkg-auto-sync.backup" : "ocean-pkg-current.backup");
         if (!Files.exists(backup)) Files.copy(target, backup);
         File temporary = File.createTempFile(".ocean-pkg-", ".tmp", target.getParent().toFile());
         try {

@@ -1,7 +1,9 @@
 package studio.ocean.app.runtime;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.net.Uri;
@@ -54,6 +56,19 @@ public final class RuntimePortsActivity extends AppCompatActivity {
     private volatile int currentPort;
     private volatile boolean pageFailed;
     private float captureScaleX = 1f, captureScaleY = 1f;
+    private final Runnable periodicScan = new Runnable() {
+        @Override public void run() {
+            if (webView != null && webView.getVisibility() == View.VISIBLE) return;
+            refreshPorts();
+            handler.postDelayed(this, 4000);
+        }
+    };
+    private final BroadcastReceiver portReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (webView == null || webView.getVisibility() == View.VISIBLE) return;
+            refreshPorts();
+        }
+    };
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -78,13 +93,21 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         if (port > 0) openPort(port, getIntent().getStringExtra(EXTRA_PATH)); else refreshPorts();
     }
 
-    @Override protected void onResume() { super.onResume(); active = new WeakReference<>(this); }
+    @Override protected void onResume() {
+        super.onResume();
+        active = new WeakReference<>(this);
+        registerReceiver(portReceiver, new IntentFilter(RuntimePortHints.ACTION_PORTS_CHANGED));
+        handler.post(periodicScan);
+    }
     @Override protected void onPause() {
+        handler.removeCallbacks(periodicScan);
+        try { unregisterReceiver(portReceiver); } catch (IllegalArgumentException ignored) { }
         RuntimePortsActivity value = active.get();
         if (value == this) active = new WeakReference<>(null);
         super.onPause();
     }
     @Override protected void onDestroy() {
+        handler.removeCallbacks(periodicScan);
         if (webView != null) {
             webView.stopLoading();
             webView.loadUrl("about:blank");
@@ -130,7 +153,8 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         scanStatus.setText("Scanning local listeners…");
         portsList.removeAllViews();
         new Thread(() -> {
-            List<Integer> ports = RuntimePortScanner.scan();
+            java.io.File home = new studio.ocean.app.OceanPaths(this).home();
+            List<Integer> ports = RuntimePortScanner.scan(home);
             runOnUiThread(() -> renderPorts(ports));
         }, "ocean-port-scan").start();
     }
@@ -139,7 +163,7 @@ public final class RuntimePortsActivity extends AppCompatActivity {
         portsList.removeAllViews();
         scanStatus.setText(ports.isEmpty() ? "No local listeners found" : ports.size() + (ports.size() == 1 ? " listener ready" : " listeners ready"));
         if (ports.isEmpty()) {
-            TextView empty = text("Start a server in Ocean Terminal, then refresh. Android may hide the full port table; common ports are probed and any other port can be opened manually.", 14, 0xFF7B7873);
+            TextView empty = text("Start a server in Ocean Terminal — listeners are detected automatically from /proc/net and terminal output. Use Open on a port below, or enter a port manually if needed.", 14, 0xFF7B7873);
             empty.setPadding(0, dp(8), 0, dp(12));
             portsList.addView(empty);
             return;
@@ -212,7 +236,10 @@ public final class RuntimePortsActivity extends AppCompatActivity {
 
     public static JSONObject listForAgent() throws Exception {
         JSONArray values = new JSONArray();
-        for (int port : RuntimePortScanner.scan()) values.put(new JSONObject().put("port", port).put("url", "http://localhost:" + port + "/").put("kind", RuntimePortScanner.kind(port)));
+        for (int port : RuntimePortScanner.scan()) {
+            values.put(new JSONObject().put("port", port).put("url", "http://localhost:" + port + "/")
+                    .put("kind", RuntimePortScanner.kind(port)));
+        }
         return new JSONObject().put("ports", values).put("count", values.length()).put("exit_code", 0);
     }
 

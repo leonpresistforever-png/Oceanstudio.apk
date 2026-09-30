@@ -35,7 +35,7 @@ If the console only lists **`Ocean.studio`**, SHA fingerprints you add there app
 
 ## Auth API key
 
-Email/password auth via REST uses `OCEAN_FIREBASE_API_KEY` at build time (`AuthClient`). Set it to the Firebase **Web API key** (Project settings → General) when building locally, for example:
+Email/password auth via REST uses `OCEAN_FIREBASE_API_KEY` at build time (`AuthClient`), or the `google_api_key` entry from the committed `google-services.json` when the build flag is empty. Google and GitHub buttons use Firebase Auth (Play services + Identity Toolkit `signInWithIdp` for Google, Firebase OAuth provider for GitHub). Enable GitHub in Firebase Authentication before testing GitHub sign-in.
 
 ```bash
 export OCEAN_FIREBASE_API_KEY='…'   # same project as google-services.json
