@@ -107,7 +107,11 @@ def main() -> int:
         lines.append(f"  - {item}")
 
     # Priority gaps
-    targets_path = ROOT / "sources/expansion-1000/target-packages.json"
+    targets_path = repo / "sources/expansion-1000/target-packages.json"
+    if not targets_path.is_file():
+        targets_path = ROOT / "sources/expansion-1000/target-packages.json"
+    if not targets_path.is_file():
+        parser.error(f"Missing expansion targets: {targets_path}")
     targets = json.loads(targets_path.read_text())
     missing = targets.get("priorityMissing", [])
     lines.extend(["", f"Priority name gaps (not in index): {len(missing)}"])
