@@ -9,31 +9,42 @@ import android.os.Build;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
+import androidx.appcompat.widget.SwitchCompat;
 
 /** Greyscale control styling for agent hub surfaces. */
 final class OceanUi {
     private OceanUi() {}
 
     static void styleSeekBar(SeekBar bar) {
+        int trackOff = 0xFFE5E7EB;
+        int trackOn = 0xFF9CA3AF;
+        int thumb = 0xFF111111;
         if (bar.getProgressDrawable() != null) {
-            bar.getProgressDrawable().setColorFilter(0xFF111111, PorterDuff.Mode.SRC_IN);
+            bar.getProgressDrawable().setColorFilter(trackOn, PorterDuff.Mode.SRC_IN);
         }
         if (bar.getThumb() != null) {
-            bar.getThumb().setColorFilter(0xFF111111, PorterDuff.Mode.SRC_IN);
+            bar.getThumb().setColorFilter(thumb, PorterDuff.Mode.SRC_IN);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             bar.setSplitTrack(false);
+            bar.setProgressBackgroundTintList(ColorStateList.valueOf(trackOff));
+            bar.setProgressTintList(ColorStateList.valueOf(trackOn));
+            bar.setThumbTintList(ColorStateList.valueOf(thumb));
         }
     }
 
-    static void styleSwitch(Switch switchView) {
+    static void styleSwitch(SwitchCompat switchView) {
         switchView.setTextColor(0xFF111111);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            switchView.setThumbTintList(ColorStateList.valueOf(0xFF111111));
-            switchView.setTrackTintList(ColorStateList.valueOf(0xFFE5E3E0));
-        }
+        switchView.setShowText(false);
+        int[][] states = new int[][]{
+                new int[]{android.R.attr.state_checked},
+                new int[]{-android.R.attr.state_checked}
+        };
+        switchView.setThumbTintList(new ColorStateList(states,
+                new int[]{0xFF111111, 0xFFFFFFFF}));
+        switchView.setTrackTintList(new ColorStateList(states,
+                new int[]{0xFF111111, 0xFFE5E7EB}));
     }
 
     static TextView outlinedPill(Context context, String label) {

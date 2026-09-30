@@ -6,6 +6,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+import androidx.appcompat.widget.SwitchCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -106,8 +107,8 @@ final class AgentControlsPanel {
         EditText toolCalls = field(col, "Max tool calls", String.valueOf(settings.maxToolCalls()));
         EditText cmdTimeout = field(col, "Command timeout (s)", String.valueOf(settings.commandTimeoutSeconds()));
 
-        Switch keep = switchRow(col, "Keep session context", settings.keepSessionAlive());
-        Switch anti = switchRow(col, "Extended response timeout", settings.antiTimeout());
+        SwitchCompat keep = switchRow(col, "Keep session context", settings.keepSessionAlive());
+        SwitchCompat anti = switchRow(col, "Extended response timeout", settings.antiTimeout());
 
         label(col, "INSTRUCTIONS");
         EditText instructions = new EditText(activity);
@@ -162,8 +163,6 @@ final class AgentControlsPanel {
             TextView save = outlinedAction(actions, "Save");
             LinearLayout.LayoutParams lp = matchWidth();
             lp.topMargin = dp(12);
-            actions.addView(cancel);
-            actions.addView(save);
             col.addView(actions, lp);
             cancel.setOnClickListener(v -> {
                 inlineFunctionEditor = false;
@@ -206,8 +205,6 @@ final class AgentControlsPanel {
             TextView save = outlinedAction(actions, "Save");
             LinearLayout.LayoutParams lp = matchWidth();
             lp.topMargin = dp(12);
-            actions.addView(cancel);
-            actions.addView(save);
             col.addView(actions, lp);
             cancel.setOnClickListener(v -> {
                 inlineToolEditor = false;
@@ -265,9 +262,9 @@ final class AgentControlsPanel {
             actions.setOrientation(LinearLayout.HORIZONTAL);
             TextView cancel = outlinedAction(actions, "Cancel");
             TextView save = outlinedAction(actions, "Save SKILL.md");
-            actions.addView(cancel);
-            actions.addView(save);
-            col.addView(actions, matchWidth());
+            LinearLayout.LayoutParams actionLp = matchWidth();
+            actionLp.topMargin = dp(12);
+            col.addView(actions, actionLp);
             cancel.setOnClickListener(v -> {
                 inlineSkillEditor = false;
                 showTab("skills");
@@ -281,8 +278,7 @@ final class AgentControlsPanel {
                     Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
-        }
-
+        } else {
         JSONArray skills = hub.skills();
         for (int i = 0; i < skills.length(); i++) {
             JSONObject s = skills.optJSONObject(i);
@@ -290,7 +286,8 @@ final class AgentControlsPanel {
             String id = s.optString("id");
             LinearLayout card = column();
             card.setBackgroundResource(R.drawable.composer_background);
-            card.setPadding(dp(14), dp(12), dp(14), dp(12));
+            card.setPadding(dp(16), dp(16), dp(16), dp(16));
+            card.setMinimumHeight(dp(88));
 
             TextView t = new TextView(activity);
             t.setText(s.optString("title"));
@@ -303,7 +300,11 @@ final class AgentControlsPanel {
             d.setText(s.optString("description"));
             d.setTextColor(0xFF6B7280);
             d.setTextSize(12f);
-            card.addView(d);
+            d.setMaxLines(2);
+            d.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dlp.topMargin = dp(4);
+            card.addView(d, dlp);
 
             boolean connected = "connected".equals(s.optString("status"));
             TextView toggle = new TextView(activity);
@@ -331,6 +332,7 @@ final class AgentControlsPanel {
             LinearLayout.LayoutParams lp = matchWidth();
             lp.topMargin = dp(10);
             col.addView(card, lp);
+        }
         }
     }
 
@@ -394,38 +396,71 @@ final class AgentControlsPanel {
         e.setText(value);
         e.setBackgroundResource(R.drawable.auth_field_background);
         e.setPadding(dp(12), dp(10), dp(12), dp(10));
-        parent.addView(e, matchWidth());
+        LinearLayout.LayoutParams lp = matchWidth();
+        lp.bottomMargin = dp(10);
+        parent.addView(e, lp);
         return e;
     }
 
     private SeekBar slider(LinearLayout parent, String title, int progress, int min, int max) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         TextView label = new TextView(activity);
         label.setText(title);
         label.setTextColor(0xFF111111);
-        label.setPadding(0, dp(8), 0, dp(4));
-        parent.addView(label);
+        label.setTextSize(14f);
+        TextView value = new TextView(activity);
+        value.setTextColor(0xFF6B7280);
+        value.setTextSize(13f);
+        value.setGravity(Gravity.END);
+        row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(value, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams rowLp = matchWidth();
+        rowLp.topMargin = dp(10);
+        rowLp.bottomMargin = dp(4);
+        parent.addView(row, rowLp);
         SeekBar bar = new SeekBar(activity);
         bar.setMax(max);
         bar.setProgress(Math.max(min, Math.min(max, progress)));
         OceanUi.styleSeekBar(bar);
-        label.setText(title + " · " + bar.getProgress());
+        value.setText(formatSliderValue(title, bar.getProgress()));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
-                label.setText(title + " · " + (title.contains("token") ? value * 128 : value / (title.contains("Top") ? 100f : 100f)));
+            @Override public void onProgressChanged(SeekBar seekBar, int prog, boolean fromUser) {
+                value.setText(formatSliderValue(title, prog));
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-        parent.addView(bar, matchWidth());
+        LinearLayout.LayoutParams barLp = matchWidth();
+        barLp.bottomMargin = dp(12);
+        parent.addView(bar, barLp);
         return bar;
     }
 
-    private Switch switchRow(LinearLayout parent, String text, boolean on) {
-        Switch s = new Switch(activity);
-        s.setText(text);
+    private static String formatSliderValue(String title, int progress) {
+        if (title.contains("token")) return String.valueOf(progress * 128);
+        if (title.contains("Top")) return String.format(java.util.Locale.US, "%.2f", progress / 100f);
+        return String.format(java.util.Locale.US, "%.2f", progress / 100f);
+    }
+
+    private SwitchCompat switchRow(LinearLayout parent, String text, boolean on) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label = new TextView(activity);
+        label.setText(text);
+        label.setTextColor(0xFF111111);
+        label.setTextSize(14f);
+        SwitchCompat s = new SwitchCompat(activity);
         s.setChecked(on);
         OceanUi.styleSwitch(s);
-        parent.addView(s);
+        row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(s, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams lp = matchWidth();
+        lp.topMargin = dp(8);
+        lp.bottomMargin = dp(4);
+        parent.addView(row, lp);
         return s;
     }
 

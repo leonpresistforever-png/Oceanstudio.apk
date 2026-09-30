@@ -100,6 +100,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
         ImageButton back=findViewById(R.id.plugin_back);
         if(back!=null)back.setOnClickListener(v->finish());
+        ImageButton add=findViewById(R.id.plugin_add);
+        if(add!=null)add.setOnClickListener(v->showHubAddSheet());
 
         try{OceanForgeInstaller.ensure(this);}catch(Exception ignored){}
         loadItems();
@@ -524,6 +526,18 @@ public final class PluginCenterActivity extends AppCompatActivity {
         intro.setText("Premium skills stored on-device. Connected skills inject sharp context into the agent. Agent-authored skills appear here automatically.");
         intro.setTextColor(MUTED);intro.setTextSize(13);intro.setPadding(0,0,0,dp(14));
         skillsList.addView(intro);
+        LinearLayout createRow=new LinearLayout(this);
+        createRow.setOrientation(LinearLayout.HORIZONTAL);
+        TextView createSkill=OceanUi.outlinedPill(this,"+ Create skill");
+        TextView uploadSkill=OceanUi.outlinedPill(this,"Upload skill");
+        LinearLayout.LayoutParams crLp=new LinearLayout.LayoutParams(-2,-2);
+        crLp.rightMargin=dp(10);
+        crLp.bottomMargin=dp(14);
+        createRow.addView(createSkill,crLp);
+        createRow.addView(uploadSkill,new LinearLayout.LayoutParams(-2,-2));
+        createSkill.setOnClickListener(v->showCreateSkillSheet());
+        uploadSkill.setOnClickListener(v->showCreateSkillSheet());
+        skillsList.addView(createRow);
         String q=skillsFilter==null?"":skillsFilter.trim().toLowerCase(java.util.Locale.ROOT);
         JSONArray skills=hub.skills();
         int shown=0;
@@ -636,8 +650,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         if(skill==null)return;
         final boolean connected="connected".equals(skill.optString("status"));
         final String skillId=id;
-        String preview=hub.skillBodyWithoutFrontMatter(hub.readSkillMarkdown(id));
-        if(preview.length()>1200)preview=preview.substring(0,1200)+"\n…";
+        String fullBody=hub.skillBodyWithoutFrontMatter(hub.readSkillMarkdown(id));
 
         Dialog dialog=new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -663,15 +676,17 @@ public final class PluginCenterActivity extends AppCompatActivity {
         contentsLabel.setText("Contents");
         contentsLabel.setTextColor(INK);contentsLabel.setTextSize(14);contentsLabel.setTypeface(null,Typeface.BOLD);
         sheet.addView(contentsLabel);
+        ScrollView scroll=new ScrollView(this);
         TextView body=new TextView(this);
-        body.setText(preview);
+        body.setText(fullBody);
         body.setTextColor(0xFF3F3F46);
         body.setTextSize(12);
         body.setTypeface(Typeface.MONOSPACE);
         body.setLineSpacing(0,1.05f);
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
-        bp.topMargin=dp(8);bp.bottomMargin=dp(16);
-        sheet.addView(body,bp);
+        scroll.addView(body);
+        LinearLayout.LayoutParams scrollLp=new LinearLayout.LayoutParams(-1,dp(320));
+        scrollLp.topMargin=dp(8);scrollLp.bottomMargin=dp(16);
+        sheet.addView(scroll,scrollLp);
         TextView toggle=new TextView(this);
         toggle.setGravity(Gravity.CENTER);
         toggle.setTextSize(15);
@@ -686,6 +701,105 @@ public final class PluginCenterActivity extends AppCompatActivity {
             renderHubSections();
         });
         sheet.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
+        dialog.setContentView(sheet);
+        dialog.show();
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+        }
+    }
+
+    private void showHubAddSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
+        sheet.setBackground(topSheet());
+        View handle=new View(this);
+        handle.setBackground(roundRect(0xff737373,999,0x00000000));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(dp(52),dp(4));
+        hp.gravity=Gravity.CENTER_HORIZONTAL;hp.bottomMargin=dp(20);
+        sheet.addView(handle,hp);
+        TextView title=new TextView(this);
+        title.setText("Add to hub");
+        title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
+        sheet.addView(title);
+        addSheetAction(sheet,"Create skill",()->{dialog.dismiss();showCreateSkillSheet();});
+        addSheetAction(sheet,"Upload skill",()->{dialog.dismiss();showCreateSkillSheet();});
+        addSheetAction(sheet,"Register MCP",()->{dialog.dismiss();showMcpAddSheet();});
+        addSheetAction(sheet,"Connect capabilities",()->{
+            dialog.dismiss();
+            showHubSection("plugins");
+            Toast.makeText(this,"Connect local capabilities under Plugins",Toast.LENGTH_SHORT).show();
+        });
+        dialog.setContentView(sheet);
+        dialog.show();
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+        }
+    }
+
+    private void addSheetAction(LinearLayout sheet,String label,Runnable action){
+        TextView row=new TextView(this);
+        row.setText(label);
+        row.setTextColor(INK);
+        row.setTextSize(16);
+        row.setTypeface(null,Typeface.BOLD);
+        row.setPadding(0,dp(18),0,dp(18));
+        row.setOnClickListener(v->action.run());
+        sheet.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        View line=new View(this);
+        line.setBackgroundColor(BORDER);
+        sheet.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+    }
+
+    private void showCreateSkillSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
+        sheet.setBackground(topSheet());
+        TextView title=new TextView(this);
+        title.setText("Create skill");
+        title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
+        sheet.addView(title);
+        EditText name=new EditText(this);name.setHint("Skill title");
+        name.setBackgroundResource(R.drawable.auth_field_background);
+        name.setPadding(dp(12),dp(10),dp(12),dp(10));
+        EditText body=new EditText(this);body.setHint("SKILL.md body (markdown)");
+        body.setMinLines(10);
+        body.setGravity(Gravity.TOP|Gravity.START);
+        body.setBackgroundResource(R.drawable.auth_field_background);
+        body.setPadding(dp(12),dp(10),dp(12),dp(10));
+        LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2);
+        flp.topMargin=dp(14);
+        sheet.addView(name,flp);
+        flp.topMargin=dp(10);
+        sheet.addView(body,flp);
+        TextView save=new TextView(this);
+        save.setGravity(Gravity.CENTER);
+        save.setText("Save SKILL.md");
+        save.setTextColor(Color.WHITE);
+        save.setTypeface(null,Typeface.BOLD);
+        save.setBackground(roundRect(0xff111111,999,0x00000000));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        slp.topMargin=dp(20);
+        sheet.addView(save,slp);
+        save.setOnClickListener(v->{
+            try{
+                hub.addSkill(name.getText().toString().trim(),body.getText().toString().trim(),"manual");
+                dialog.dismiss();
+                showHubSection("skills");
+                Toast.makeText(this,"Skill saved",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
         dialog.setContentView(sheet);
         dialog.show();
         Window w=dialog.getWindow();

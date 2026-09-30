@@ -185,6 +185,12 @@ public final class AgentArchitectureTest {
         assertFalse(runner.contains("printf '%s' \"+shellQuote(input)"));
     }
 
+    @Test public void agentControlsPanelDoesNotDoubleAddOutlinedActions() throws Exception {
+        String panel = source("AgentControlsPanel.java");
+        assertFalse(panel.contains("actions.addView(cancel)"));
+        assertFalse(panel.contains("actions.addView(save)"));
+    }
+
     @Test public void agentHubStoresSkillsOnDiskWithSkillMarkdown() throws Exception {
         String store = source("OceanAgentHubStore.java");
         String bundled = source("OceanBundledSkills.java");
@@ -193,6 +199,7 @@ public final class AgentArchitectureTest {
         assertTrue(store.contains("SKILL.md"));
         assertTrue(store.contains("activeSkillPromptBlock"));
         assertTrue(bundled.contains("deep-coding"));
+        assertTrue(bundled.contains("IDS"));
         assertTrue(panel.contains("renderSkills"));
         assertTrue(panel.contains("setSkillConnected"));
     }

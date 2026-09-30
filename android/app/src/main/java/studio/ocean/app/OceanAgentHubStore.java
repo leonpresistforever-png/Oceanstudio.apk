@@ -26,7 +26,8 @@ public final class OceanAgentHubStore {
     private static final String KEY_FUNCTIONS = "functions_json";
     private static final String KEY_TOOLS = "tools_json";
     private static final String KEY_SKILLS_DISK = "skills_disk_version";
-    private static final int SKILLS_DISK_VERSION = 2;
+    private static final int SKILLS_DISK_VERSION = 3;
+    private static final String BUNDLED_SKILLS_ASSET_PREFIX = "ocean/bundled-skills/";
     private static final int PROMPT_CHAR_BUDGET_PER_SKILL = 2800;
     private static final int PROMPT_CHAR_BUDGET_TOTAL = 12000;
 
@@ -95,12 +96,28 @@ public final class OceanAgentHubStore {
 
     private void seedBundledSkills() {
         skillsRoot().mkdirs();
-        for (String[] pack : OceanBundledSkills.PACKS) {
-            String id = pack[0];
-            String markdown = pack[1];
+        for (String id : OceanBundledSkills.IDS) {
+            String markdown = readBundledSkillAsset(id);
+            if (markdown == null || markdown.isEmpty()) continue;
             File file = skillFile(id);
-            if (file.exists() && file.length() >= 400) continue;
-            writeRawSkillFile(id, markdown);
+            if (!file.exists() || file.length() < markdown.length() * 0.85) {
+                writeRawSkillFile(id, markdown);
+            }
+        }
+    }
+
+    private String readBundledSkillAsset(String id) {
+        String path = BUNDLED_SKILLS_ASSET_PREFIX + id + "/SKILL.md";
+        try (java.io.InputStream in = context.getAssets().open(path)) {
+            byte[] buf = new byte[8192];
+            StringBuilder sb = new StringBuilder();
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
         }
     }
 
