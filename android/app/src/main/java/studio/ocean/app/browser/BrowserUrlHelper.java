@@ -2,8 +2,8 @@ package studio.ocean.app.browser;
 
 import android.net.Uri;
 import androidx.annotation.Nullable;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /** Normalizes user-entered locations for the Ocean Browser URL bar. */
@@ -22,7 +22,11 @@ public final class BrowserUrlHelper {
             if (!trimmed.contains("://")) trimmed = "https://" + trimmed;
             return trimmed;
         }
-        return "https://duckduckgo.com/?q=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8);
+        try {
+            return "https://duckduckgo.com/?q=" + URLEncoder.encode(trimmed, "UTF-8");
+        } catch (UnsupportedEncodingException error) {
+            return "https://duckduckgo.com/?q=" + Uri.encode(trimmed);
+        }
     }
 
     public static boolean isSecureUrl(@Nullable String url) {
