@@ -177,26 +177,22 @@ tasks.named("preBuild").configure {
 
 tasks.register("verifyBundledScriptShebangs") {
     doLast {
-        def envShebang = ~/^#!\/usr\/bin\/env\s+\S+/
         def prefix = "/data/data/studio.ocean.app/files/usr"
         def packageRoot = rootProject.projectDir.parentFile.toPath().resolve("ocean-packages/packages")
         def roots = [
                 packageRoot.resolve("ocean-tools/data/data/studio.ocean.app/files/usr/bin").toFile(),
                 packageRoot.resolve("ocean-pkg").toFile(),
                 packageRoot.resolve("ocean-hello").toFile(),
-                packageRoot.resolve("ocean-distro").toFile(),
-                packageRoot.resolve("proot-distro").toFile(),
+                packageRoot.resolve("ocean-distro/ocean-distro").toFile(),
+                packageRoot.resolve("proot-distro/proot-distro").toFile(),
                 file("src/main/assets/ocean/pkg")
         ]
         def offenders = []
         roots.each { root ->
-            if (!root.exists() || !root.isDirectory()) return
-            def files = []
-            root.eachFileRecurse { candidate ->
-                if (candidate.isFile()) files << candidate
-            }
+            if (!root.exists()) return
+            def files = root.isFile() ? [root] : []
+            if (root.isDirectory()) root.eachFileRecurse { candidate -> if (candidate.isFile()) files << candidate }
             files.each { file ->
-                if (!file.isFile()) return
                 if (file.length() > 4 * 1024 * 1024) return
                 def head = file.withInputStream { stream ->
                     byte[] buffer = new byte[256]
@@ -205,13 +201,14 @@ tasks.register("verifyBundledScriptShebangs") {
                 }
                 if (!head.startsWith("#!")) return
                 def line = head.split("\\R", 2)[0]
-                if (envShebang.matcher(line).find()) return
-                if (line.startsWith("#!${prefix}/")) return
-                offenders << "${file}: ${line}"
+                if (line.contains("/usr/bin/env")) offenders << "${file}: ${line}"
+                else if ((line.contains("/bin/bash") || line.contains("/bin/sh")) && !line.startsWith("#!${prefix}/")) {
+                    offenders << "${file}: ${line}"
+                }
             }
         }
         if (!offenders.isEmpty()) {
-            throw new GradleException("Bundled Ocean CLIs must use #!/usr/bin/env <interpreter>:\n" + offenders.join("\n"))
+            throw new GradleException("Bundled scripts must not use /usr/bin/env or host /bin/* shebangs:\n" + offenders.join("\n"))
         }
     }
 }
