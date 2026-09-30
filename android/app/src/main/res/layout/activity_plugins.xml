@@ -60,23 +60,45 @@
         android:orientation="horizontal"
         android:padding="3dp"/>
 
-    <EditText
-        android:id="@+id/plugin_search"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginHorizontal="24dp"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="20dp"
         android:layout_marginTop="2dp"
         android:layout_marginBottom="6dp"
-        android:background="@drawable/plugin_search_background"
-        android:drawableStart="@drawable/ic_search"
-        android:drawablePadding="10dp"
-        android:hint="Search plugins"
-        android:inputType="text"
-        android:maxLines="1"
-        android:paddingHorizontal="16dp"
-        android:textColor="@color/ocean_text_primary"
-        android:textColorHint="@color/ocean_text_tertiary"
-        android:textSize="15sp"/>
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/plugin_search"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/plugin_search_background"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="10dp"
+            android:hint="Search capabilities"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingHorizontal="14dp"
+            android:textColor="@color/ocean_text_primary"
+            android:textColorHint="@color/ocean_text_tertiary"
+            android:textSize="14sp"/>
+
+        <ImageButton
+            android:id="@+id/plugin_filter_btn"
+            style="@style/OceanIconButton"
+            android:layout_marginStart="6dp"
+            android:contentDescription="Filter capabilities"
+            android:src="@drawable/ic_filter"/>
+
+        <ImageButton
+            android:id="@+id/plugin_sort_btn"
+            style="@style/OceanIconButton"
+            android:layout_marginStart="4dp"
+            android:contentDescription="Sort capabilities"
+            android:src="@drawable/ic_sort"/>
+    </LinearLayout>
 
     <FrameLayout
         android:id="@+id/plugin_hub_body"

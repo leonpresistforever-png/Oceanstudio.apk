@@ -69,6 +69,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private String hubSection = "plugins";
     private String skillsFilter = "";
     private String skillsSortMode = "name";
+    private String statusFilter = "all";
     private String mcpsFilter = "";
     private ActivityResultLauncher<String> pluginImportPicker;
     private ActivityResultLauncher<String> skillImportPicker;
@@ -132,6 +133,10 @@ public final class PluginCenterActivity extends AppCompatActivity {
         if(back!=null)back.setOnClickListener(v->finish());
         ImageButton add=findViewById(R.id.plugin_add);
         if(add!=null)add.setOnClickListener(v->showHubAddSheet());
+        ImageButton filterBtn = findViewById(R.id.plugin_filter_btn);
+        if (filterBtn != null) filterBtn.setOnClickListener(v -> showFilterBottomSheet());
+        ImageButton sortBtn = findViewById(R.id.plugin_sort_btn);
+        if (sortBtn != null) sortBtn.setOnClickListener(v -> showSortBottomSheet());
 
         try{OceanForgeInstaller.ensure(this);}catch(Exception ignored){}
         loadItems();
@@ -556,25 +561,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
         intro.setText("Premium skills stored on-device. Connected skills inject sharp context into the agent. Agent-authored skills appear here automatically.");
         intro.setTextColor(MUTED);intro.setTextSize(13);intro.setPadding(0,0,0,dp(14));
         skillsList.addView(intro);
-        LinearLayout sortRow=new LinearLayout(this);
-        sortRow.setOrientation(LinearLayout.HORIZONTAL);
-        sortRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView sortLabel=new TextView(this);
-        sortLabel.setText("Sort by");
-        sortLabel.setTextColor(MUTED);sortLabel.setTextSize(12);
-        sortRow.addView(sortLabel);
-        for(String[] mode:new String[][]{{"name","Name"},{"recent","Recent"},{"connected","Connected"}}){
-            TextView chip=OceanUi.outlinedPill(this,mode[1]);
-            boolean on=skillsSortMode.equals(mode[0]);
-            if(on)chip.setAlpha(1f);else chip.setAlpha(0.72f);
-            LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-2,-2);
-            clp.leftMargin=dp(8);
-            chip.setOnClickListener(v->{skillsSortMode=mode[0];renderHubSections();});
-            sortRow.addView(chip,clp);
-        }
-        LinearLayout.LayoutParams sortLp=new LinearLayout.LayoutParams(-1,-2);
-        sortLp.bottomMargin=dp(12);
-        skillsList.addView(sortRow,sortLp);
         String q=skillsFilter==null?"":skillsFilter.trim().toLowerCase(java.util.Locale.ROOT);
         JSONArray skills=hub.skillsSorted(skillsSortMode);
         int shown=0;
@@ -588,6 +574,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
                     &&!id.toLowerCase(java.util.Locale.ROOT).contains(q))continue;
             boolean connected="connected".equals(s.optString("status"));
             boolean draft="draft".equals(s.optString("status"));
+            if("connected".equals(statusFilter)&&!connected)continue;
+            if("draft".equals(statusFilter)&&!draft)continue;
             LinearLayout card=skillRow(s,connected,draft);
             card.setOnClickListener(v->openSkillDetailSheet(id));
             skillsList.addView(card);
@@ -652,7 +640,9 @@ public final class PluginCenterActivity extends AppCompatActivity {
         iconBox.setBackground(roundRect(SURFACE_MUTED,14,BORDER));
         row.addView(iconBox,new LinearLayout.LayoutParams(dp(44),dp(44)));
         ImageView icon=new ImageView(this);
-        icon.setImageResource(R.drawable.ic_spark);icon.setColorFilter(INK);
+        int iconRes = OceanIconRegistry.getSkillIcon(s.optString("id"), s.optString("title"), s.optString("description"));
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(INK);
         iconBox.addView(icon,new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));
         LinearLayout copy=new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
@@ -676,8 +666,9 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
     private LinearLayout mcpRow(JSONObject m,boolean connected){
         String transport=m.optString("transport","stdio");
+        int iconRes = OceanIconRegistry.getSkillIcon(m.optString("id"), m.optString("name"), m.optString("command"));
         return hubCard(m.optString("name"),transport+" · "+m.optString("command",""),
-                connected?"Connected":"Connect",connected);
+                connected?"Connected":"Connect",connected,iconRes);
     }
 
     private void openSkillDetailSheet(String id){
@@ -873,6 +864,52 @@ public final class PluginCenterActivity extends AppCompatActivity {
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
             w.setGravity(Gravity.BOTTOM);
         }
+    }
+
+    private void showSortBottomSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Sort capabilities");
+        addSheetAction(sheet,"Name (A to Z)"+("name".equals(skillsSortMode)?"  ✓":""),R.drawable.ic_sort,()->{
+            skillsSortMode="name";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        addSheetAction(sheet,"Recently updated"+("recent".equals(skillsSortMode)?"  ✓":""),R.drawable.ic_sort,()->{
+            skillsSortMode="recent";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        addSheetAction(sheet,"Connected first"+("connected".equals(skillsSortMode)?"  ✓":""),R.drawable.ic_sort,()->{
+            skillsSortMode="connected";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void showFilterBottomSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=hubBottomSheet("Filter capabilities");
+        addSheetAction(sheet,"All capabilities"+("all".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+            statusFilter="all";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        addSheetAction(sheet,"Connected only"+("connected".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+            statusFilter="connected";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        addSheetAction(sheet,"Drafts only"+("draft".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+            statusFilter="draft";
+            renderHubSections();
+            dialog.dismiss();
+        });
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
     }
 
     private void showCreateSkillSheet(){
@@ -1096,18 +1133,42 @@ public final class PluginCenterActivity extends AppCompatActivity {
         presentBottomSheet(dialog);
     }
 
-    private LinearLayout hubCard(String title,String body,String action,boolean active){
+    private LinearLayout hubCard(String title,String body,String action,boolean active,int iconRes){
         LinearLayout card=new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(16),dp(14),dp(16),dp(14));
         card.setBackground(roundRect(active?0xfff4f4f5:SURFACE,16,BORDER));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
         lp.bottomMargin=dp(10);
         card.setLayoutParams(lp);
+
+        FrameLayout iconBox=new FrameLayout(this);
+        iconBox.setBackground(roundRect(SURFACE_MUTED,14,BORDER));
+        card.addView(iconBox,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        ImageView icon=new ImageView(this);
+        icon.setImageResource(iconRes > 0 ? iconRes : R.drawable.ic_connections);
+        icon.setColorFilter(INK);
+        iconBox.addView(icon,new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));
+
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1f);
+        cp.leftMargin=dp(12);
+        card.addView(copy,cp);
+
         TextView t=new TextView(this);t.setText(title);t.setTextColor(INK);t.setTextSize(15);t.setTypeface(null,Typeface.BOLD);
-        TextView d=new TextView(this);d.setText(body);d.setTextColor(MUTED);d.setTextSize(12);d.setLineSpacing(0,1.05f);
-        TextView a=new TextView(this);a.setText(action);a.setTextColor(active?INK:0xFF52525B);a.setTextSize(12);a.setTypeface(null,Typeface.BOLD);
-        card.addView(t);card.addView(d);card.addView(a);
+        TextView d=new TextView(this);d.setText(body);d.setTextColor(MUTED);d.setTextSize(12);d.setLineSpacing(0,1.05f);d.setMaxLines(2);
+        copy.addView(t);copy.addView(d);
+
+        TextView a=new TextView(this);
+        a.setText(action);
+        a.setTextColor(active?INK:0xFF52525B);
+        a.setTextSize(12);
+        a.setTypeface(null,Typeface.BOLD);
+        a.setPadding(dp(12),dp(8),dp(12),dp(8));
+        a.setBackground(roundRect(SURFACE_MUTED,999,BORDER));
+        card.addView(a);
         return card;
     }
 

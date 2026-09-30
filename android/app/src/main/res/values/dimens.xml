@@ -1,20 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Inspired by Gemini / ChatGPT / Claude community references -->
-    <dimen name="ocean_radius_composer_pill">30dp</dimen>
-    <dimen name="ocean_radius_suggestion_card">20dp</dimen>
-    <dimen name="ocean_radius_model_chip">18dp</dimen>
+    <!-- Ocean Master Monochrome Dimensions (30 Sep 2026 Directive) -->
+    <dimen name="ocean_radius_composer_pill">26dp</dimen>
+    <dimen name="ocean_radius_suggestion_card">16dp</dimen>
+    <dimen name="ocean_radius_model_chip">16dp</dimen>
     <dimen name="ocean_radius_settings_row">14dp</dimen>
+    <dimen name="ocean_radius_bottom_sheet_top">28dp</dimen>
+    <dimen name="ocean_radius_field">14dp</dimen>
+
+    <!-- Spacing -->
     <dimen name="ocean_spacing_screen_horizontal">16dp</dimen>
     <dimen name="ocean_spacing_section_top">18dp</dimen>
     <dimen name="ocean_spacing_section_bottom">8dp</dimen>
     <dimen name="ocean_header_height">52dp</dimen>
-    <dimen name="ocean_composer_min_height">56dp</dimen>
-    <dimen name="ocean_suggestion_card_width">220dp</dimen>
-    <dimen name="ocean_suggestion_card_height">148dp</dimen>
-    <dimen name="ocean_text_hero">32sp</dimen>
-    <dimen name="ocean_text_title">22sp</dimen>
+    <dimen name="ocean_composer_min_height">52dp</dimen>
+    <dimen name="ocean_touch_target_min">48dp</dimen>
+
+    <!-- Card layout -->
+    <dimen name="ocean_suggestion_card_width">160dp</dimen>
+    <dimen name="ocean_suggestion_card_height">96dp</dimen>
+
+    <!-- Type scale -->
+    <dimen name="ocean_text_hero">34sp</dimen>
+    <dimen name="ocean_text_title">24sp</dimen>
+    <dimen name="ocean_text_section">18sp</dimen>
+    <dimen name="ocean_text_card_title">16sp</dimen>
     <dimen name="ocean_text_body">15sp</dimen>
-    <dimen name="ocean_text_caption">12sp</dimen>
-    <dimen name="ocean_text_section_label">11sp</dimen>
+    <dimen name="ocean_text_caption">12.5sp</dimen>
+    <dimen name="ocean_text_section_label">11.5sp</dimen>
 </resources>

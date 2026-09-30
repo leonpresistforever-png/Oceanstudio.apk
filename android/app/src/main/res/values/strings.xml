@@ -14,4 +14,17 @@
     <string name="terminal_recovery_mode">Recovery shell · Ocean bootstrap not installed</string><string name="terminal_runtime_ready">Ocean runtime verified</string>
     <string name="terminal_start_failed">PTY start failed: %1$s</string><string name="terminal_write_failed">PTY write failed</string>    <string name="terminal_exited">Process exited %1$d</string>
     <string name="default_web_client_id">2746278315-vhu0ctt0e2b9kehrt6pq4lh8nsmsdvsd.apps.googleusercontent.com</string>
+    <string name="auth_cancelled_title">Sign-in cancelled</string>
+    <string name="auth_cancelled_msg">No changes were made. Try again when ready.</string>
+    <string name="auth_network_title">Connection problem</string>
+    <string name="auth_network_msg">Check your internet connection and try again.</string>
+    <string name="auth_dev_error_title">Google sign-in configuration error</string>
+    <string name="auth_dev_error_msg">Google sign-in is not configured for this application signature or client ID. Tap Details for diagnostic code.</string>
+    <string name="auth_failed_title">Could not complete sign-in</string>
+    <string name="auth_failed_msg">Your account was selected, but authentication could not be completed. Please try again.</string>
+    <string name="auth_no_account_title">No Google account available</string>
+    <string name="auth_no_account_msg">Choose another sign-in method or add a Google account to this device.</string>
+    <string name="auth_error_title">Authentication error</string>
+    <string name="auth_generic_msg">Could not sign in. Please verify your credentials and network connection.</string>
+    <string name="auth_details_label">Details</string>
 </resources>

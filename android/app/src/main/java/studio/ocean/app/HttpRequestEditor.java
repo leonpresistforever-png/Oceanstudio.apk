@@ -46,10 +46,13 @@ final class HttpRequestEditor {
         url.setPadding(dp(12), dp(10), dp(12), dp(10));
 
         LinearLayout top = new LinearLayout(context);
-        top.setOrientation(LinearLayout.VERTICAL);
-        top.addView(method, matchWidth());
-        LinearLayout.LayoutParams urlLp = matchWidth();
-        urlLp.topMargin = dp(8);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams methodLp = new LinearLayout.LayoutParams(dp(86), ViewGroup.LayoutParams.WRAP_CONTENT);
+        methodLp.rightMargin = dp(8);
+        method.setGravity(android.view.Gravity.CENTER);
+        top.addView(method, methodLp);
+        LinearLayout.LayoutParams urlLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         top.addView(url, urlLp);
         root.addView(top);
 
@@ -192,24 +195,30 @@ final class HttpRequestEditor {
         row.setOrientation(LinearLayout.HORIZONTAL);
         EditText k = field("key");
         EditText v = field("value");
-        row.addView(k, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams klp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        klp.rightMargin = dp(6);
+        row.addView(k, klp);
         row.addView(v, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        pane.addView(row);
+        LinearLayout.LayoutParams rowLp = matchWidth();
+        rowLp.topMargin = dp(4);
+        pane.addView(row, rowLp);
     }
 
     private LinearLayout headerRow(String a, String b) {
         LinearLayout row = new LinearLayout(context);
         TextView ka = new TextView(context);
         ka.setText(a);
-        ka.setTextColor(0xFF6B7280);
+        ka.setTextColor(0xFF737373);
         ka.setTextSize(11f);
         ka.setTypeface(null, Typeface.BOLD);
         TextView kb = new TextView(context);
         kb.setText(b);
-        kb.setTextColor(0xFF6B7280);
+        kb.setTextColor(0xFF737373);
         kb.setTextSize(11f);
         kb.setTypeface(null, Typeface.BOLD);
-        row.addView(ka, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams kalp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        kalp.rightMargin = dp(6);
+        row.addView(ka, kalp);
         row.addView(kb, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return row;
     }
@@ -217,7 +226,7 @@ final class HttpRequestEditor {
     private void addTab(String id, String label) {
         TextView tab = new TextView(context);
         tab.setText(label);
-        tab.setPadding(dp(10), dp(6), dp(10), dp(6));
+        tab.setPadding(dp(12), dp(6), dp(12), dp(6));
         tab.setTag(id);
         tab.setOnClickListener(v -> selectTab(id));
         tabRow.addView(tab);
@@ -227,7 +236,7 @@ final class HttpRequestEditor {
         for (int i = 0; i < tabRow.getChildCount(); i++) {
             TextView t = (TextView) tabRow.getChildAt(i);
             boolean on = id.equals(t.getTag());
-            t.setTextColor(on ? 0xFF111111 : 0xFF9CA3AF);
+            t.setTextColor(on ? 0xFF111111 : 0xFF737373);
             t.setTypeface(null, on ? Typeface.BOLD : Typeface.NORMAL);
             t.setBackgroundResource(on ? R.drawable.tab_background : android.R.color.transparent);
         }

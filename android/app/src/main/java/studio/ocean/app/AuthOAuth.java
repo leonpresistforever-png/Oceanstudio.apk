@@ -17,7 +17,11 @@ import com.google.firebase.auth.OAuthProvider;
 
 /** Google and GitHub sign-in through Firebase when the project API key is available. */
 final class AuthOAuth {
-    interface Listener { void onSuccess(String idToken, String email); void onFailure(String message); }
+    interface Listener {
+        void onSuccess(String idToken, String email);
+        default void onFailure(String message) { onFailure(null, message, null); }
+        void onFailure(String title, String message, String details);
+    }
 
     private final AppCompatActivity activity;
     private final AuthClient authClient;
@@ -101,16 +105,41 @@ final class AuthOAuth {
             }
             authClient.signInWithIdp("google.com", idToken, false, wrap(target));
         } catch (ApiException error) {
-            if (error.getStatusCode() == 12501) fail(target, activity.getString(R.string.oauth_cancelled));
-            else fail(target, AuthClient.formatError(error));
+            int code = error.getStatusCode();
+            String title;
+            String message;
+            if (code == 12501 || code == 16) {
+                title = activity.getString(R.string.auth_cancelled_title);
+                message = activity.getString(R.string.auth_cancelled_msg);
+            } else if (code == 7) {
+                title = activity.getString(R.string.auth_network_title);
+                message = activity.getString(R.string.auth_network_msg);
+            } else if (code == 10) {
+                title = activity.getString(R.string.auth_dev_error_title);
+                message = activity.getString(R.string.auth_dev_error_msg);
+            } else if (code == 12500) {
+                title = activity.getString(R.string.auth_failed_title);
+                message = activity.getString(R.string.auth_failed_msg);
+            } else if (code == 4) {
+                title = activity.getString(R.string.auth_no_account_title);
+                message = activity.getString(R.string.auth_no_account_msg);
+            } else {
+                title = activity.getString(R.string.auth_error_title);
+                message = activity.getString(R.string.auth_generic_msg);
+            }
+            try {
+                CrashReportStore.record("AuthOAuth.Google", error);
+            } catch (Exception ignored) {}
+            fail(target, title, message, "ApiException: status=" + code + " " + error.getMessage());
         }
     }
 
     private AuthClient.Callback wrap(Listener listener) {
         return authResult -> activity.runOnUiThread(() -> {
             setAuthBusy(false);
-            if (!authResult.success) fail(listener, authResult.message == null
-                    ? activity.getString(R.string.request_failed) : authResult.message);
+            if (!authResult.success) fail(listener, activity.getString(R.string.auth_error_title),
+                    authResult.message == null ? activity.getString(R.string.request_failed) : authResult.message,
+                    null);
             else listener.onSuccess(authResult.token, authResult.email);
         });
     }
@@ -124,13 +153,28 @@ final class AuthOAuth {
             setAuthBusy(false);
             String email = result.getUser().getEmail();
             listener.onSuccess(tokenResult.getToken(), email == null ? "" : email);
-        })).addOnFailureListener(error -> fail(listener, AuthClient.formatError(error)));
+        })).addOnFailureListener(error -> {
+            try {
+                CrashReportStore.record("AuthOAuth.Firebase", error);
+            } catch (Exception ignored) {}
+            fail(listener, activity.getString(R.string.auth_error_title), AuthClient.formatError(error),
+                    error != null ? error.getClass().getSimpleName() + ": " + error.getMessage() : null);
+        });
     }
 
     private void fail(Listener listener, String message) {
+        fail(listener, activity.getString(R.string.auth_error_title), message, null);
+    }
+
+    private void fail(Listener listener, String title, String message, String details) {
         activity.runOnUiThread(() -> {
             setAuthBusy(false);
-            if (listener != null) listener.onFailure(message == null ? activity.getString(R.string.request_failed) : message);
+            if (listener != null) {
+                listener.onFailure(
+                        title == null ? activity.getString(R.string.auth_error_title) : title,
+                        message == null ? activity.getString(R.string.request_failed) : message,
+                        details);
+            }
         });
     }
 

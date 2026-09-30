@@ -2,7 +2,7 @@
     <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">@color/ocean_ink</item><item name="android:navigationBarColor">@color/ocean_background</item><item name="android:statusBarColor">@color/ocean_background</item><item name="android:windowLightStatusBar">true</item><item name="android:windowActionModeOverlay">true</item></style>
     <style name="AppTheme.NoActionBarLaunch" parent="AppTheme" />
     <style name="OceanLoadingDot"><item name="android:layout_width">6dp</item><item name="android:layout_height">6dp</item><item name="android:alpha">0.3</item><item name="android:background">@drawable/loading_dot</item></style>
-    <style name="OceanIconButton" parent="Widget.AppCompat.ImageButton"><item name="android:layout_width">44dp</item><item name="android:layout_height">44dp</item><item name="android:background">?attr/selectableItemBackgroundBorderless</item><item name="android:padding">10dp</item><item name="android:tint">@color/ocean_ink</item></style>
+    <style name="OceanIconButton" parent="Widget.AppCompat.ImageButton"><item name="android:layout_width">48dp</item><item name="android:layout_height">48dp</item><item name="android:minWidth">@dimen/ocean_touch_target_min</item><item name="android:minHeight">@dimen/ocean_touch_target_min</item><item name="android:background">?attr/selectableItemBackgroundBorderless</item><item name="android:padding">12dp</item><item name="android:tint">@color/ocean_ink</item></style>
     <style name="OceanSmallIconButton" parent="OceanIconButton"><item name="android:layout_width">48dp</item><item name="android:layout_height">48dp</item><item name="android:padding">8dp</item></style>
     <style name="OceanSendButton" parent="OceanSmallIconButton"><item name="android:background">@drawable/send_background</item><item name="android:tint">@color/ocean_background</item></style>
     <style name="OceanNavItem"><item name="android:layout_width">match_parent</item><item name="android:layout_height">48dp</item><item name="android:drawablePadding">14dp</item><item name="android:gravity">center_vertical</item><item name="android:paddingHorizontal">20dp</item><item name="android:textColor">@color/ocean_ink</item><item name="android:textSize">15sp</item></style>
@@ -61,9 +61,9 @@
         <item name="android:background">@drawable/suggestion_card_background</item>
         <item name="android:gravity">top|start</item>
         <item name="android:lineSpacingExtra">2dp</item>
-        <item name="android:padding">16dp</item>
+        <item name="android:padding">14dp</item>
         <item name="android:textColor">@color/ocean_text_secondary</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">13.5sp</item>
     </style>
     <style name="OceanSectionHeader">
         <item name="android:layout_width">match_parent</item>

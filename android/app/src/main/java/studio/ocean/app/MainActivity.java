@@ -178,6 +178,8 @@ public class MainActivity extends AppCompatActivity {
         if (divider != null) divider.setVisibility(reset?View.GONE:View.VISIBLE);
         View authStatus = findViewById(R.id.auth_status);
         if (authStatus != null) authStatus.setVisibility(View.GONE);
+        View authErrorPanel = findViewById(R.id.auth_error_panel);
+        if (authErrorPanel != null) authErrorPanel.setVisibility(View.GONE);
         String footer=getString(reset?R.string.back_to_signin:signup?R.string.have_account_signin:R.string.no_account_signup); String action=reset?footer:(signup?"Sign in":"Sign up"); SpannableString footerText=new SpannableString(footer); int actionStart=footer.lastIndexOf(action);
         if (actionStart >= 0 && toggle != null) {
             footerText.setSpan(new UnderlineSpan(),actionStart,footer.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -215,18 +217,50 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override public void onFailure(String message) {
                 authState = AuthState.ERROR;
-                showAuthStatus(message, false);
+                showAuthStatus(getString(R.string.auth_error_title), message, null, false);
+            }
+            @Override public void onFailure(String title, String message, String details) {
+                authState = AuthState.ERROR;
+                showAuthStatus(title, message, details, false);
             }
         };
     }
 
     private void setAuthBusy(boolean busy) { AuthOAuth.ViewHelper.setAuthBusy(this, busy); }
     private void showAuthStatus(String message, boolean success) {
-        TextView status=findViewById(R.id.auth_status);
-        if (status != null) {
-            status.setText(message);
-            status.setTextColor(getColor(success?R.color.ocean_ink:R.color.ocean_error));
-            status.setVisibility(View.VISIBLE);
+        showAuthStatus(success ? null : getString(R.string.auth_error_title), message, null, success);
+    }
+
+    private void showAuthStatus(String title, String message, String details, boolean success) {
+        View panel = findViewById(R.id.auth_error_panel);
+        TextView titleView = findViewById(R.id.auth_error_title);
+        TextView msgView = findViewById(R.id.auth_error_message);
+        TextView toggleView = findViewById(R.id.auth_error_toggle_details);
+        TextView detailsView = findViewById(R.id.auth_error_details);
+
+        if (panel != null && titleView != null && msgView != null) {
+            titleView.setText(title == null ? "" : title);
+            titleView.setVisibility(title != null && !title.isEmpty() ? View.VISIBLE : View.GONE);
+            msgView.setText(message == null ? "" : message);
+            if (details != null && !details.isEmpty() && BuildConfig.DEBUG) {
+                detailsView.setText(details);
+                toggleView.setVisibility(View.VISIBLE);
+                toggleView.setOnClickListener(v -> {
+                    boolean visible = detailsView.getVisibility() == View.VISIBLE;
+                    detailsView.setVisibility(visible ? View.GONE : View.VISIBLE);
+                });
+            } else {
+                if (toggleView != null) toggleView.setVisibility(View.GONE);
+                if (detailsView != null) detailsView.setVisibility(View.GONE);
+            }
+            panel.setVisibility(View.VISIBLE);
+        } else {
+            TextView status = findViewById(R.id.auth_status);
+            if (status != null) {
+                status.setText(message);
+                status.setTextColor(getColor(success ? R.color.ocean_ink_100 : R.color.ocean_ink_75));
+                status.setVisibility(View.VISIBLE);
+            }
         }
     }
     private boolean devBypassAvailable() { return BuildConfig.DEBUG && BuildConfig.OCEAN_DEV_AUTH_BYPASS; }
@@ -276,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public OceanByokManager byok() { return byokManager; }
         });
         safeClick(R.id.menu_button, v -> openDrawer());
-        safeClick(R.id.agent_controls_button, v -> openAgentSearch());
+        safeClick(R.id.agent_controls_button, v -> openAgentControls());
         if (backdrop != null) backdrop.setOnClickListener(v -> { if (agentControlsOpen) closeAgentControls(); else closeDrawer(); });
         safeClick(R.id.sidebar_new_chat, v -> newChat());
         
@@ -1068,8 +1102,11 @@ public class MainActivity extends AppCompatActivity {
         agentControlsDrawer.setVisibility(View.VISIBLE);
         backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(160).start();
         agentControlsDrawer.post(() -> {
-            int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.82f),dp(340));
-            ViewGroup.LayoutParams p=agentControlsDrawer.getLayoutParams(); p.width=width; agentControlsDrawer.setLayoutParams(p);
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int width = Math.min((int)(screenWidth * 0.86f), dp(400));
+            ViewGroup.LayoutParams p = agentControlsDrawer.getLayoutParams();
+            p.width = width;
+            agentControlsDrawer.setLayoutParams(p);
             agentControlsDrawer.setTranslationX(width);
             agentControlsDrawer.animate().translationX(0f).setDuration(240).setInterpolator(new DecelerateInterpolator()).start();
         });

@@ -14,9 +14,9 @@
                 </LinearLayout>
                 <TextView android:id="@+id/top_model_chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Auto · tap to configure" android:textColor="@color/ocean_text_tertiary" android:textSize="11sp" />
             </LinearLayout>
-            <ImageButton android:id="@+id/agent_controls_button" style="@style/OceanIconButton" android:contentDescription="Search tools and conversations" android:src="@drawable/ic_search" />
             <ImageButton android:id="@+id/new_chat_button" style="@style/OceanIconButton" android:contentDescription="Start a new chat" android:src="@drawable/ic_add" />
             <ImageButton android:id="@+id/history_button" style="@style/OceanIconButton" android:contentDescription="Refresh agent session" android:src="@drawable/ic_refresh" android:alpha="0.85" />
+            <ImageButton android:id="@+id/agent_controls_button" style="@style/OceanIconButton" android:contentDescription="Agent configuration drawer" android:src="@drawable/ic_side_panel" />
         </LinearLayout>
 
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/ocean_border" />
@@ -24,7 +24,7 @@
         <studio.ocean.app.render.RoboticEyeView
             android:id="@+id/robotic_eye"
             android:layout_width="match_parent"
-            android:layout_height="210dp"
+            android:layout_height="120dp"
             android:layout_gravity="top|center_horizontal"
             android:layout_marginTop="0dp"
             android:elevation="0dp"
@@ -32,34 +32,44 @@
             android:contentDescription="Animated robotic eye"
             android:focusable="false"
             android:importantForAccessibility="no"
-            android:alpha="0.95" />
+            android:alpha="0.85" />
         <LinearLayout android:id="@+id/home_skeleton" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/transparent" android:gravity="center" android:orientation="vertical" android:padding="32dp">
             <View android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/skeleton_background" />
             <View android:layout_width="210dp" android:layout_height="22dp" android:layout_marginTop="24dp" android:background="@drawable/skeleton_background" />
             <View android:layout_width="260dp" android:layout_height="14dp" android:layout_marginTop="12dp" android:background="@drawable/skeleton_background" />
         </LinearLayout>
         <ScrollView android:id="@+id/home_content" android:layout_width="match_parent" android:layout_height="match_parent" android:alpha="0" android:background="@android:color/transparent" android:fillViewport="true" android:clipToPadding="false" android:scrollbars="none">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal" android:paddingTop="132dp" android:paddingBottom="24dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal" android:paddingTop="24dp" android:paddingBottom="24dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="start" android:letterSpacing="0.06" android:text="YOUR AGENT, READY" android:textColor="@color/ocean_text_tertiary" android:textSize="@dimen/ocean_text_section_label" android:textStyle="bold"/>
-                <TextView android:id="@+id/empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:fontFamily="serif" android:gravity="start" android:lineSpacingExtra="-2dp" android:text="How can Ocean help you today?" android:textColor="@color/ocean_text_primary" android:textSize="@dimen/ocean_text_hero" android:textStyle="bold"/>
-                <TextView android:id="@+id/empty_message" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="start" android:text="@string/build_subtitle" android:textColor="@color/ocean_text_secondary" android:textSize="14sp"/>
-                <HorizontalScrollView android:id="@+id/suggestion_carousel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:clipToPadding="false" android:paddingEnd="8dp" android:scrollbars="none">
+                <TextView android:id="@+id/empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="serif" android:gravity="start" android:lineSpacingExtra="-2dp" android:text="How can Ocean help you today?" android:textColor="@color/ocean_text_primary" android:textSize="@dimen/ocean_text_hero" android:textStyle="bold"/>
+                <TextView android:id="@+id/empty_message" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="start" android:text="@string/build_subtitle" android:textColor="@color/ocean_text_secondary" android:textSize="14sp"/>
+                <HorizontalScrollView android:id="@+id/suggestion_carousel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:clipToPadding="false" android:paddingEnd="8dp" android:scrollbars="none">
                     <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
                         <TextView android:id="@+id/suggest_card_plan" style="@style/OceanSuggestionCard" android:text="Plan and execute a task with tools and terminal access" />
                         <TextView android:id="@+id/suggest_card_terminal" style="@style/OceanSuggestionCard" android:text="Work inside my terminal — packages, git, and scripts" />
                         <TextView android:id="@+id/suggest_card_build" style="@style/OceanSuggestionCard" android:text="Build or improve something in my workspace" />
                     </LinearLayout>
                 </HorizontalScrollView>
-                <FrameLayout android:layout_width="match_parent" android:layout_height="200dp" android:layout_marginTop="12dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:orientation="vertical">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="10dp" android:text="A good place to begin" android:textColor="#3F4247" android:textSize="14sp" android:textStyle="bold"/>
-                        <TextView android:id="@+id/starter_plan" android:layout_width="match_parent" android:layout_height="46dp" android:gravity="center_vertical" android:drawableStart="@drawable/ic_agent" android:drawablePadding="14dp" android:text="Plan and execute a task                                      ›" android:textColor="#51555B" android:textSize="14sp"/>
-                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#22A0A4AA"/>
-                        <TextView android:id="@+id/starter_terminal" android:layout_width="match_parent" android:layout_height="46dp" android:gravity="center_vertical" android:drawableStart="@drawable/ic_terminal" android:drawablePadding="14dp" android:text="Work inside my terminal                                      ›" android:textColor="#51555B" android:textSize="14sp"/>
-                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#22A0A4AA"/>
-                        <TextView android:id="@+id/starter_build" android:layout_width="match_parent" android:layout_height="46dp" android:gravity="center_vertical" android:drawableStart="@drawable/ic_tools" android:drawablePadding="14dp" android:text="Build or improve something                              ›" android:textColor="#51555B" android:textSize="14sp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="10dp" android:text="A good place to begin" android:textColor="@color/ocean_text_secondary" android:textSize="14sp" android:textStyle="bold"/>
+                    <LinearLayout android:id="@+id/starter_plan" android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center_vertical" android:orientation="horizontal" android:background="?attr/selectableItemBackground" android:paddingHorizontal="4dp">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_agent" app:tint="@color/ocean_ink_100" android:contentDescription="@null" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:text="Plan and execute a task" android:textColor="@color/ocean_text_primary" android:textSize="14sp"/>
+                        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_chevron" app:tint="@color/ocean_text_tertiary" android:contentDescription="@null"/>
                     </LinearLayout>
-                </FrameLayout>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/ocean_line"/>
+                    <LinearLayout android:id="@+id/starter_terminal" android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center_vertical" android:orientation="horizontal" android:background="?attr/selectableItemBackground" android:paddingHorizontal="4dp">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_terminal" app:tint="@color/ocean_ink_100" android:contentDescription="@null" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:text="Work inside my terminal" android:textColor="@color/ocean_text_primary" android:textSize="14sp"/>
+                        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_chevron" app:tint="@color/ocean_text_tertiary" android:contentDescription="@null"/>
+                    </LinearLayout>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/ocean_line"/>
+                    <LinearLayout android:id="@+id/starter_build" android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center_vertical" android:orientation="horizontal" android:background="?attr/selectableItemBackground" android:paddingHorizontal="4dp">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_tools" app:tint="@color/ocean_ink_100" android:contentDescription="@null" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:text="Build or improve something" android:textColor="@color/ocean_text_primary" android:textSize="14sp"/>
+                        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_chevron" app:tint="@color/ocean_text_tertiary" android:contentDescription="@null"/>
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
         </FrameLayout>
@@ -145,7 +155,6 @@
                     <TextView android:id="@+id/nav_plugins" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Plugins" />
                 </LinearLayout>
                 <TextView style="@style/OceanNavLabel" android:text="@string/system_group" />
-                <TextView android:id="@+id/nav_agent_settings" style="@style/OceanNavMuted" android:text="Agent configuration (right drawer)" />
                 <TextView android:id="@+id/nav_hub_plugins" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Plugins &amp; MCP hub" />
                 <TextView android:id="@+id/nav_hub_device" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_agent" android:text="Device Access" />
                 <TextView android:id="@+id/nav_hub_runtime" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="Runtime Ports" />
