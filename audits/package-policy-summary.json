@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "source": "audits/packages-index-issues-plain.txt (last full Oceanstudio-packages scan)",
+  "existingUniqueIndexed": 6506,
+  "existingIndexedEntries": 6506,
+  "oceanPrefixedInIndex": 1345,
+  "newShardMultiplierPackagesAdded": 5,
+  "stagingWouldBePromotedBeforeGate": 64,
+  "stagingRejectedByQualityGateSample": {
+    "ocean-term-media numbered fillers": 50,
+    "ocean-term-media-core": 1,
+    "other staged userland bridge packages": 13
+  },
+  "notes": [
+    "Quality gate blocks junk staging names before index_all_staged promotion.",
+    "Rebuild shard packages with build-ocean-shard-packages.py; copy debs into Oceanstudio-packages/staging for signed publish."
+  ]
+}

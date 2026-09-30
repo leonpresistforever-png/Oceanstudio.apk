@@ -1,0 +1,45 @@
+name: Package index audit
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'ocean-packages/scripts/**'
+      - 'ocean-packages/sources/expansion-1000/**'
+      - 'audits/**'
+      - 'scripts/sync-packages-index-audit.sh'
+      - '.github/workflows/package-index-audit.yml'
+  pull_request:
+    paths:
+      - 'ocean-packages/scripts/**'
+      - 'ocean-packages/sources/expansion-1000/**'
+      - 'audits/**'
+      - 'scripts/sync-packages-index-audit.sh'
+      - '.github/workflows/package-index-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dpkg tooling
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev gpg
+
+      - name: Run package quality and index gate tests
+        run: |
+          python3 ocean-packages/tests/test-package-quality.py
+          python3 ocean-packages/tests/test-index-quality-gate.py
+
+      - name: Sync live index audit from public repository
+        run: bash scripts/sync-packages-index-audit.sh
+
+      - name: Verify bundled catalogue still meets release floor
+        run: |
+          python3 ocean-packages/tests/test-apk-package-catalog.py \
+            --assets android/app/src/main/assets/ocean/repository --min-packages 6482
