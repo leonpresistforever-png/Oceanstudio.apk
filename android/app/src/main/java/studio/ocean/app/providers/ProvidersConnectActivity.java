@@ -1,137 +1,1000 @@
 package studio.ocean.app.providers;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 import studio.ocean.app.OceanAgentRunner;
 import studio.ocean.app.OceanByokManager;
 import studio.ocean.app.R;
+import studio.ocean.app.providers.auth.AuthErrorNormalizer;
+import studio.ocean.app.providers.auth.AuthPreflight;
+import studio.ocean.app.providers.cli.AntigravityCliAdapter;
+import studio.ocean.app.providers.cli.ClaudeCodeCliAdapter;
+import studio.ocean.app.providers.cli.CodexCliAdapter;
+import studio.ocean.app.providers.cli.KimiCliAdapter;
+import studio.ocean.app.providers.cli.OfficialCliAdapter;
+import studio.ocean.app.providers.model.AuthStrategy;
+import studio.ocean.app.providers.model.ConnectionStatus;
+import studio.ocean.app.providers.model.ModelDescriptor;
+import studio.ocean.app.providers.model.ProviderConnection;
+import studio.ocean.app.providers.model.ProviderDescriptor;
+import studio.ocean.app.providers.model.QuotaSnapshot;
+import studio.ocean.app.providers.state.CredentialVault;
+import studio.ocean.app.providers.state.ModelCatalogService;
+import studio.ocean.app.providers.state.ProviderConnectionStore;
+import studio.ocean.app.providers.state.QuotaService;
 
-/** Sidebar Providers page: connect real LLM backends with API keys or native OAuth. */
+/**
+ * OceanStudio Provider Hub:
+ * Unified multi-strategy management for subscription accounts, official CLI bridges,
+ * direct API keys, and local runtimes.
+ *
+ * Implements compact monochrome UI/UX, non-deceptive quota inspection, and strict preflight validation.
+ */
 public final class ProvidersConnectActivity extends AppCompatActivity {
+
+    public enum FilterCategory {
+        ALL("All"),
+        CONNECTED("Connected"),
+        CLI_SUBSCRIPTION("CLI Bridge"),
+        API_KEY("API Key"),
+        LOCAL("Local");
+
+        public final String label;
+        FilterCategory(String label) { this.label = label; }
+    }
+
+    public enum SortMode {
+        RECOMMENDED("Recommended"),
+        NAME("Name (A-Z)"),
+        STATUS("Connection Status");
+
+        public final String label;
+        SortMode(String label) { this.label = label; }
+    }
+
     private OceanByokManager byokManager;
     private OceanAgentRunner agentRunner;
-    private ProviderOAuthSession oauthSession;
+    private ProviderConnectionStore connectionStore;
+    private CredentialVault credentialVault;
+    private QuotaService quotaService;
+    private ModelCatalogService modelCatalogService;
 
-    @Override protected void onCreate(Bundle state) {
+    // CLI Adapters
+    private AntigravityCliAdapter antigravityCli;
+    private KimiCliAdapter kimiCli;
+    private ClaudeCodeCliAdapter claudeCli;
+    private CodexCliAdapter codexCli;
+
+    // UI state
+    private FilterCategory activeFilter = FilterCategory.ALL;
+    private SortMode currentSort = SortMode.RECOMMENDED;
+    private String searchQuery = "";
+
+    @Override
+    protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_providers_connect);
+
         byokManager = new OceanByokManager(this);
         agentRunner = new OceanAgentRunner(this);
-        findViewById(R.id.providers_back).setOnClickListener(v -> finish());
+        connectionStore = new ProviderConnectionStore(this);
+        credentialVault = new CredentialVault(this);
+        quotaService = new QuotaService();
+        modelCatalogService = new ModelCatalogService();
+
+        // Target application dedicated tools prefix (/data/data/studio.ocean.app/files/usr/bin)
+        File toolsDir = new File(getFilesDir(), "usr/bin");
+        antigravityCli = new AntigravityCliAdapter(toolsDir);
+        kimiCli = new KimiCliAdapter(toolsDir);
+        claudeCli = new ClaudeCodeCliAdapter(toolsDir);
+        codexCli = new CodexCliAdapter(toolsDir);
+
+        seedFromLegacyByokIfNeeded();
+
+        initHeaderActions();
+        renderFilterPills();
         renderProviders();
     }
 
-    @Override protected void onDestroy() {
-        if (oauthSession != null) oauthSession.cancel();
-        super.onDestroy();
+    private void seedFromLegacyByokIfNeeded() {
+        if (!connectionStore.listAll().isEmpty()) return;
+        if (byokManager == null || !byokManager.hasApiKey()) return;
+
+        String raw = byokManager.getProvider();
+        String providerId;
+        if (OceanByokManager.PROVIDER_GOOGLE.equals(raw)) providerId = ProviderRegistry.ID_GOOGLE;
+        else if (OceanByokManager.PROVIDER_ANTHROPIC.equals(raw)) providerId = ProviderRegistry.ID_ANTHROPIC;
+        else if (OceanByokManager.PROVIDER_OPENAI.equals(raw)) providerId = ProviderRegistry.ID_OPENAI;
+        else providerId = ProviderRegistry.ID_CUSTOM;
+
+        String apiKey = byokManager.getApiKey();
+        String model = byokManager.getModel();
+        String baseUrl = byokManager.getBaseUrl();
+        String ref = credentialVault.store(apiKey);
+
+        ProviderConnection seed = new ProviderConnection(
+                UUID.randomUUID().toString(),
+                providerId,
+                maskKey(apiKey),
+                AuthStrategy.API_KEY,
+                ConnectionStatus.CONNECTED,
+                baseUrl,
+                model,
+                ref,
+                null,
+                null,
+                null,
+                QuotaSnapshot.unknown("Pay-as-you-go API", "byok-migration"),
+                null,
+                System.currentTimeMillis()
+        );
+        connectionStore.save(seed);
+    }
+
+    private void initHeaderActions() {
+        findViewById(R.id.providers_back).setOnClickListener(v -> finish());
+
+        LinearLayout searchContainer = findViewById(R.id.providers_search_container);
+        EditText searchInput = findViewById(R.id.providers_search_input);
+        ImageButton searchClear = findViewById(R.id.providers_search_clear);
+        ImageButton searchBtn = findViewById(R.id.providers_search_btn);
+        ImageButton sortBtn = findViewById(R.id.providers_sort_btn);
+        Button resetFilterBtn = findViewById(R.id.providers_reset_filter_btn);
+
+        searchBtn.setOnClickListener(v -> {
+            if (searchContainer.getVisibility() == View.VISIBLE) {
+                searchContainer.setVisibility(View.GONE);
+                searchQuery = "";
+                searchInput.setText("");
+                renderProviders();
+            } else {
+                searchContainer.setVisibility(View.VISIBLE);
+                searchInput.requestFocus();
+            }
+        });
+
+        searchClear.setOnClickListener(v -> {
+            searchInput.setText("");
+            searchQuery = "";
+            renderProviders();
+        });
+
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchQuery = s != null ? s.toString().trim() : "";
+                renderProviders();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        sortBtn.setOnClickListener(v -> showSortDialog());
+
+        resetFilterBtn.setOnClickListener(v -> {
+            activeFilter = FilterCategory.ALL;
+            searchQuery = "";
+            searchInput.setText("");
+            searchContainer.setVisibility(View.GONE);
+            renderFilterPills();
+            renderProviders();
+        });
+    }
+
+    private void showSortDialog() {
+        SortMode[] modes = SortMode.values();
+        String[] labels = new String[modes.length];
+        int selectedIndex = 0;
+        for (int i = 0; i < modes.length; i++) {
+            labels[i] = modes[i].label;
+            if (modes[i] == currentSort) selectedIndex = i;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Sort Providers")
+                .setSingleChoiceItems(labels, selectedIndex, (dialog, which) -> {
+                    currentSort = modes[which];
+                    dialog.dismiss();
+                    renderProviders();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void renderFilterPills() {
+        LinearLayout container = findViewById(R.id.providers_filters_container);
+        container.removeAllViews();
+        float density = getResources().getDisplayMetrics().density;
+
+        for (FilterCategory category : FilterCategory.values()) {
+            TextView pill = new TextView(this);
+            pill.setText(category.label);
+            pill.setTextSize(13f);
+            pill.setGravity(Gravity.CENTER);
+            int padH = (int) (14 * density);
+            int padV = (int) (6 * density);
+            pill.setPadding(padH, padV, padH, padV);
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, (int) (32 * density));
+            lp.setMarginEnd((int) (8 * density));
+            pill.setLayoutParams(lp);
+
+            boolean isActive = category == activeFilter;
+            GradientDrawable gd = new GradientDrawable();
+            gd.setShape(GradientDrawable.RECTANGLE);
+            gd.setCornerRadius(16 * density);
+            if (isActive) {
+                gd.setColor(getColor(R.color.ocean_ink));
+                pill.setTextColor(getColor(R.color.ocean_background));
+            } else {
+                gd.setColor(getColor(R.color.ocean_surface_2));
+                gd.setStroke((int) (1 * density), getColor(R.color.ocean_border));
+                pill.setTextColor(getColor(R.color.ocean_ink));
+            }
+            pill.setBackground(gd);
+
+            pill.setOnClickListener(v -> {
+                activeFilter = category;
+                renderFilterPills();
+                renderProviders();
+            });
+
+            container.addView(pill);
+        }
     }
 
     private void renderProviders() {
         LinearLayout list = findViewById(R.id.providers_list);
+        LinearLayout emptyState = findViewById(R.id.providers_empty_state);
         list.removeAllViews();
         float density = getResources().getDisplayMetrics().density;
-        for (ProviderCatalog.Entry entry : ProviderCatalog.all()) {
-            list.addView(buildCard(entry, density));
-            View divider = new View(this);
-            divider.setBackgroundColor(getColor(R.color.ocean_border));
-            LinearLayout.LayoutParams d = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (1 * density));
-            d.topMargin = (int) (10 * density);
-            d.bottomMargin = (int) (10 * density);
-            list.addView(divider, d);
+
+        List<ProviderDescriptor> filtered = new ArrayList<>();
+        String queryLower = searchQuery.toLowerCase();
+
+        for (ProviderDescriptor desc : ProviderRegistry.all()) {
+            List<ProviderConnection> conns = connectionStore.listByProvider(desc.id);
+            boolean isConnected = !conns.isEmpty() && conns.get(0).status == ConnectionStatus.CONNECTED;
+
+            // Apply filter category
+            if (activeFilter == FilterCategory.CONNECTED && !isConnected) continue;
+            if (activeFilter == FilterCategory.CLI_SUBSCRIPTION && !desc.supports(AuthStrategy.OFFICIAL_CLI)) continue;
+            if (activeFilter == FilterCategory.API_KEY && !desc.supports(AuthStrategy.API_KEY)) continue;
+            if (activeFilter == FilterCategory.LOCAL && !desc.supports(AuthStrategy.LOCAL)) continue;
+
+            // Apply search query
+            if (!queryLower.isEmpty()) {
+                boolean matchesTitle = desc.title.toLowerCase().contains(queryLower);
+                boolean matchesSubtitle = desc.subtitle.toLowerCase().contains(queryLower);
+                boolean matchesModel = desc.defaultModel != null && desc.defaultModel.toLowerCase().contains(queryLower);
+                if (!matchesTitle && !matchesSubtitle && !matchesModel) continue;
+            }
+
+            filtered.add(desc);
+        }
+
+        // Apply sorting
+        if (currentSort == SortMode.NAME) {
+            Collections.sort(filtered, (a, b) -> a.title.compareToIgnoreCase(b.title));
+        } else if (currentSort == SortMode.STATUS) {
+            Collections.sort(filtered, (a, b) -> {
+                boolean aConn = !connectionStore.listByProvider(a.id).isEmpty();
+                boolean bConn = !connectionStore.listByProvider(b.id).isEmpty();
+                if (aConn == bConn) return a.title.compareToIgnoreCase(b.title);
+                return aConn ? -1 : 1;
+            });
+        }
+
+        if (filtered.isEmpty()) {
+            emptyState.setVisibility(View.VISIBLE);
+            list.setVisibility(View.GONE);
+            return;
+        }
+
+        emptyState.setVisibility(View.GONE);
+        list.setVisibility(View.VISIBLE);
+
+        for (int i = 0; i < filtered.size(); i++) {
+            ProviderDescriptor desc = filtered.get(i);
+            list.addView(buildProviderRow(desc, density));
+
+            if (i < filtered.size() - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(getColor(R.color.ocean_border));
+                LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, (int) (1 * density));
+                dLp.setMarginStart((int) (52 * density));
+                list.addView(divider, dLp);
+            }
         }
     }
 
-    private View buildCard(ProviderCatalog.Entry entry, float density) {
-        int pad = (int) (16 * density);
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundResource(R.drawable.auth_field_background);
+    private View buildProviderRow(ProviderDescriptor desc, float density) {
+        List<ProviderConnection> connections = connectionStore.listByProvider(desc.id);
+        ProviderConnection activeConn = connections.isEmpty() ? null : connections.get(0);
+        boolean isConnected = activeConn != null && activeConn.status == ConnectionStatus.CONNECTED;
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        int padH = (int) (8 * density);
+        int padV = (int) (12 * density);
+        row.setPadding(padH, padV, padH, padV);
+        row.setBackgroundResource(android.R.drawable.list_selector_background);
+        row.setMinimumHeight((int) (56 * density));
+
+        // Monochrome icon container
+        FrameLayout iconFrame = new FrameLayout(this);
+        GradientDrawable iconBg = new GradientDrawable();
+        iconBg.setShape(GradientDrawable.RECTANGLE);
+        iconBg.setCornerRadius(8 * density);
+        iconBg.setColor(getColor(R.color.ocean_surface_2));
+        iconFrame.setBackground(iconBg);
+        int frameSize = (int) (40 * density);
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(frameSize, frameSize);
+        fLp.setMarginEnd((int) (12 * density));
+        iconFrame.setLayoutParams(fLp);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(desc.iconRes);
+        icon.setColorFilter(getColor(R.color.ocean_ink));
+        FrameLayout.LayoutParams iLp = new FrameLayout.LayoutParams((int) (22 * density), (int) (22 * density));
+        iLp.gravity = Gravity.CENTER;
+        iconFrame.addView(icon, iLp);
+        row.addView(iconFrame);
+
+        // Center content
+        LinearLayout details = new LinearLayout(this);
+        details.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        details.setLayoutParams(dLp);
+
+        // Top line: Name + Status badge
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
-        title.setText(entry.title);
+        title.setText(desc.title);
         title.setTextColor(getColor(R.color.ocean_ink));
-        title.setTextSize(16f);
+        title.setTextSize(15f);
         title.setTypeface(null, Typeface.BOLD);
-        card.addView(title);
+        titleRow.addView(title);
 
+        View badge = createStatusBadge(activeConn, density);
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bLp.setMarginStart((int) (8 * density));
+        titleRow.addView(badge, bLp);
+        details.addView(titleRow);
+
+        // Middle line: Strategy + Subtitle
         TextView subtitle = new TextView(this);
-        subtitle.setText(entry.subtitle);
+        String strategyTag = activeConn != null ? activeConn.strategy.displayName : defaultStrategyLabel(desc);
+        subtitle.setText(strategyTag + " · " + desc.subtitle);
         subtitle.setTextColor(getColor(R.color.ocean_muted));
-        subtitle.setTextSize(13f);
-        subtitle.setPadding(0, (int) (4 * density), 0, (int) (12 * density));
-        card.addView(subtitle);
+        subtitle.setTextSize(12f);
+        subtitle.setSingleLine(true);
+        subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        subtitle.setPadding(0, (int) (2 * density), 0, 0);
+        details.addView(subtitle);
 
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.setGravity(Gravity.END);
-
-        if (entry.authMode == ProviderCatalog.AuthMode.OAUTH_PKCE) {
-            Button oauth = new Button(this);
-            oauth.setText("Connect with Google");
-            oauth.setAllCaps(false);
-            oauth.setTextColor(getColor(R.color.ocean_background));
-            oauth.setBackgroundColor(getColor(R.color.ocean_ink));
-            oauth.setOnClickListener(v -> startOAuth(entry));
-            actions.addView(oauth, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (int) (44 * density)));
+        // Bottom line: Quota indicator
+        TextView quotaView = new TextView(this);
+        if (isConnected) {
+            QuotaSnapshot qs = activeConn.quota != null ? activeConn.quota : quotaService.inspect(activeConn);
+            quotaView.setText(qs.formatSummary());
+        } else {
+            quotaView.setText("Not connected · Tap to setup");
         }
+        quotaView.setTextColor(getColor(R.color.ocean_ink_55));
+        quotaView.setTextSize(11f);
+        quotaView.setPadding(0, (int) (2 * density), 0, 0);
+        details.addView(quotaView);
 
-        Button connect = new Button(this);
-        connect.setText("API key");
-        connect.setAllCaps(false);
-        connect.setTextColor(getColor(R.color.ocean_ink));
-        connect.setBackgroundResource(android.R.drawable.list_selector_background);
-        LinearLayout.LayoutParams connectLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (int) (44 * density));
-        connectLp.setMarginStart((int) (8 * density));
-        connect.setOnClickListener(v -> showApiKeyDialog(entry));
-        actions.addView(connect, connectLp);
+        row.addView(details);
 
-        card.addView(actions);
-        return card;
+        // Chevron
+        ImageView chevron = new ImageView(this);
+        chevron.setImageResource(R.drawable.ic_chevron);
+        chevron.setColorFilter(getColor(R.color.ocean_muted));
+        int cSize = (int) (20 * density);
+        LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(cSize, cSize);
+        cLp.setMarginStart((int) (8 * density));
+        row.addView(chevron, cLp);
+
+        row.setOnClickListener(v -> showProviderBottomSheet(desc));
+        return row;
     }
 
-    private void showApiKeyDialog(ProviderCatalog.Entry entry) {
+    private View createStatusBadge(ProviderConnection conn, float density) {
+        TextView badge = new TextView(this);
+        badge.setTextSize(9f);
+        badge.setTypeface(null, Typeface.BOLD);
+        badge.setGravity(Gravity.CENTER);
+        int padH = (int) (6 * density);
+        int padV = (int) (2 * density);
+        badge.setPadding(padH, padV, padH, padV);
+
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.RECTANGLE);
+        gd.setCornerRadius(4 * density);
+
+        if (conn != null && conn.status == ConnectionStatus.CONNECTED) {
+            badge.setText("CONNECTED");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(getColor(R.color.ocean_ink));
+        } else if (conn != null && conn.status == ConnectionStatus.REAUTH_REQUIRED) {
+            badge.setText("RE-AUTH");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(getColor(R.color.ocean_error));
+        } else {
+            badge.setText("OFFLINE");
+            badge.setTextColor(getColor(R.color.ocean_muted));
+            gd.setColor(getColor(R.color.ocean_surface_2));
+            gd.setStroke((int) (1 * density), getColor(R.color.ocean_border));
+        }
+        badge.setBackground(gd);
+        return badge;
+    }
+
+    private String defaultStrategyLabel(ProviderDescriptor desc) {
+        if (desc.supports(AuthStrategy.OFFICIAL_CLI)) return "CLI Bridge";
+        if (desc.supports(AuthStrategy.LOCAL)) return "Local Runtime";
+        return "API Key";
+    }
+
+    // ==========================================
+    // Bottom Sheet: Provider Detail & Actions
+    // ==========================================
+
+    private void showProviderBottomSheet(ProviderDescriptor desc) {
+        float density = getResources().getDisplayMetrics().density;
+        List<ProviderConnection> connections = connectionStore.listByProvider(desc.id);
+        ProviderConnection activeConn = connections.isEmpty() ? null : connections.get(0);
+        boolean isConnected = activeConn != null && activeConn.status == ConnectionStatus.CONNECTED;
+
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setBackgroundResource(R.drawable.bottom_sheet_background);
+        int pad = (int) (20 * density);
+        sheet.setPadding(pad, (int) (10 * density), pad, (int) (28 * density));
+
+        // Drag handle
+        View handle = new View(this);
+        handle.setBackgroundResource(R.drawable.bottom_sheet_handle);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams((int) (36 * density), (int) (4 * density));
+        hLp.gravity = Gravity.CENTER_HORIZONTAL;
+        hLp.bottomMargin = (int) (16 * density);
+        sheet.addView(handle, hLp);
+
+        // Header
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(desc.iconRes);
+        icon.setColorFilter(getColor(R.color.ocean_ink));
+        header.addView(icon, new LinearLayout.LayoutParams((int) (28 * density), (int) (28 * density)));
+
+        TextView title = new TextView(this);
+        title.setText(desc.title);
+        title.setTextColor(getColor(R.color.ocean_ink));
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setPadding((int) (10 * density), 0, (int) (8 * density), 0);
+        header.addView(title);
+
+        header.addView(createStatusBadge(activeConn, density));
+        sheet.addView(header);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText(desc.subtitle);
+        subtitle.setTextColor(getColor(R.color.ocean_muted));
+        subtitle.setTextSize(13f);
+        subtitle.setPadding(0, (int) (4 * density), 0, (int) (16 * density));
+        sheet.addView(subtitle);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(sheet)
+                .create();
+
+        if (isConnected) {
+            // Active connection details
+            sheet.addView(buildConnectionInfoBlock(desc, activeConn, density));
+            sheet.addView(buildQuotaBlock(activeConn, density));
+            sheet.addView(buildModelsBlock(desc, activeConn, density));
+
+            // Actions
+            Button testBtn = createPrimaryButton("Test & Verify Connection", density);
+            testBtn.setOnClickListener(v -> testConnection(desc, activeConn));
+            sheet.addView(testBtn);
+
+            Button editBtn = createSecondaryButton("Configure Settings", density);
+            editBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (activeConn.strategy == AuthStrategy.API_KEY) {
+                    showApiKeyDialog(desc, activeConn);
+                } else if (activeConn.strategy == AuthStrategy.LOCAL) {
+                    showLocalConfigDialog(desc, activeConn);
+                } else {
+                    Toast.makeText(this, "Managed by official CLI bridge", Toast.LENGTH_SHORT).show();
+                }
+            });
+            sheet.addView(editBtn);
+
+            Button disconnectBtn = createSecondaryButton("Disconnect & Erase Credentials", density);
+            disconnectBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                confirmDisconnect(desc, activeConn);
+            });
+            sheet.addView(disconnectBtn);
+
+        } else {
+            // Connect choices
+            TextView chooseLabel = new TextView(this);
+            chooseLabel.setText("CHOOSE CONNECTION STRATEGY");
+            chooseLabel.setTextColor(getColor(R.color.ocean_muted));
+            chooseLabel.setTextSize(11f);
+            chooseLabel.setTypeface(null, Typeface.BOLD);
+            chooseLabel.setPadding(0, 0, 0, (int) (10 * density));
+            sheet.addView(chooseLabel);
+
+            if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
+                Button cliBtn = createPrimaryButton("Connect via " + desc.officialCliName + " CLI Bridge", density);
+                cliBtn.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    connectViaOfficialCli(desc);
+                });
+                sheet.addView(cliBtn);
+            }
+
+            if (desc.supports(AuthStrategy.API_KEY)) {
+                String btnText = desc.supports(AuthStrategy.OFFICIAL_CLI) ? "Connect with API Key" : "Configure API Key";
+                Button apiBtn = desc.supports(AuthStrategy.OFFICIAL_CLI)
+                        ? createSecondaryButton(btnText, density)
+                        : createPrimaryButton(btnText, density);
+                apiBtn.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    showApiKeyDialog(desc, null);
+                });
+                sheet.addView(apiBtn);
+            }
+
+            if (desc.supports(AuthStrategy.LOCAL)) {
+                Button localBtn = createPrimaryButton("Configure Local Runtime", density);
+                localBtn.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    showLocalConfigDialog(desc, null);
+                });
+                sheet.addView(localBtn);
+            }
+        }
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+            window.setGravity(Gravity.BOTTOM);
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            WindowManager.LayoutParams wlp = window.getAttributes();
+            wlp.windowAnimations = android.R.style.Animation_InputMethod;
+            window.setAttributes(wlp);
+        }
+        dialog.show();
+    }
+
+    private View buildConnectionInfoBlock(ProviderDescriptor desc, ProviderConnection conn, float density) {
+        LinearLayout block = new LinearLayout(this);
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.setBackgroundResource(R.drawable.auth_field_background);
+        int pad = (int) (12 * density);
+        block.setPadding(pad, pad, pad, pad);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = (int) (12 * density);
+        block.setLayoutParams(lp);
+
+        block.addView(createMetaRow("Account / Session", conn.displayAccount, density));
+        block.addView(createMetaRow("Auth Strategy", conn.strategy.displayName, density));
+        block.addView(createMetaRow("Active Model", conn.selectedModel, density));
+        if (conn.baseUrl != null && !conn.baseUrl.isEmpty()) {
+            block.addView(createMetaRow("Endpoint URL", conn.baseUrl, density));
+        }
+        return block;
+    }
+
+    private View buildQuotaBlock(ProviderConnection conn, float density) {
+        QuotaSnapshot qs = conn.quota != null ? conn.quota : quotaService.inspect(conn);
+
+        LinearLayout block = new LinearLayout(this);
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.setBackgroundResource(R.drawable.auth_field_background);
+        int pad = (int) (12 * density);
+        block.setPadding(pad, pad, pad, pad);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = (int) (12 * density);
+        block.setLayoutParams(lp);
+
+        TextView label = new TextView(this);
+        label.setText("QUOTA & ENTITLEMENT");
+        label.setTextColor(getColor(R.color.ocean_muted));
+        label.setTextSize(11f);
+        label.setTypeface(null, Typeface.BOLD);
+        label.setPadding(0, 0, 0, (int) (4 * density));
+        block.addView(label);
+
+        block.addView(createMetaRow("Plan Tier", qs.planTier, density));
+        block.addView(createMetaRow("Confidence Level", qs.confidence.name(), density));
+        block.addView(createMetaRow("Usage Details", qs.formatSummary(), density));
+        block.addView(createMetaRow("Source", qs.source, density));
+        return block;
+    }
+
+    private View buildModelsBlock(ProviderDescriptor desc, ProviderConnection conn, float density) {
+        List<ModelDescriptor> models = modelCatalogService.discoverModels(conn);
+        if (models.isEmpty()) return new View(this);
+
+        LinearLayout block = new LinearLayout(this);
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.setBackgroundResource(R.drawable.auth_field_background);
+        int pad = (int) (12 * density);
+        block.setPadding(pad, pad, pad, pad);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = (int) (16 * density);
+        block.setLayoutParams(lp);
+
+        TextView label = new TextView(this);
+        label.setText("DISCOVERED MODELS (" + models.size() + ")");
+        label.setTextColor(getColor(R.color.ocean_muted));
+        label.setTextSize(11f);
+        label.setTypeface(null, Typeface.BOLD);
+        label.setPadding(0, 0, 0, (int) (6 * density));
+        block.addView(label);
+
+        for (ModelDescriptor m : models) {
+            LinearLayout mRow = new LinearLayout(this);
+            mRow.setOrientation(LinearLayout.HORIZONTAL);
+            mRow.setGravity(Gravity.CENTER_VERTICAL);
+            mRow.setPadding(0, (int) (4 * density), 0, (int) (4 * density));
+
+            TextView mTitle = new TextView(this);
+            mTitle.setText(m.displayName);
+            mTitle.setTextColor(getColor(R.color.ocean_ink));
+            mTitle.setTextSize(13f);
+            mTitle.setTypeface(null, m.modelId.equals(conn.selectedModel) ? Typeface.BOLD : Typeface.NORMAL);
+            LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            mRow.addView(mTitle, tLp);
+
+            if (m.modelId.equals(conn.selectedModel)) {
+                TextView activeTag = new TextView(this);
+                activeTag.setText("ACTIVE");
+                activeTag.setTextColor(getColor(R.color.ocean_ink));
+                activeTag.setTextSize(10f);
+                activeTag.setTypeface(null, Typeface.BOLD);
+                mRow.addView(activeTag);
+            }
+            block.addView(mRow);
+        }
+        return block;
+    }
+
+    private View createMetaRow(String caption, String value, float density) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, (int) (2 * density), 0, (int) (2 * density));
+
+        TextView cap = new TextView(this);
+        cap.setText(caption + ":");
+        cap.setTextColor(getColor(R.color.ocean_muted));
+        cap.setTextSize(12f);
+        cap.setWidth((int) (130 * density));
+        row.addView(cap);
+
+        TextView val = new TextView(this);
+        val.setText(value != null && !value.isEmpty() ? value : "—");
+        val.setTextColor(getColor(R.color.ocean_ink));
+        val.setTextSize(12f);
+        val.setTypeface(null, Typeface.BOLD);
+        row.addView(val);
+
+        return row;
+    }
+
+    private Button createPrimaryButton(String text, float density) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextColor(getColor(R.color.ocean_background));
+        b.setBackgroundResource(R.drawable.primary_button_background);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * density));
+        lp.bottomMargin = (int) (8 * density);
+        b.setLayoutParams(lp);
+        return b;
+    }
+
+    private Button createSecondaryButton(String text, float density) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextColor(getColor(R.color.ocean_ink));
+        b.setBackgroundResource(R.drawable.button_secondary);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * density));
+        lp.bottomMargin = (int) (8 * density);
+        b.setLayoutParams(lp);
+        return b;
+    }
+
+    // ==========================================
+    // Strategy Execution: CLI Bridge
+    // ==========================================
+
+    private void connectViaOfficialCli(ProviderDescriptor desc) {
+        OfficialCliAdapter adapter = resolveCliAdapter(desc.id);
+        if (adapter == null) {
+            Toast.makeText(this, "No CLI adapter available for " + desc.title, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!adapter.isInstalled()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("CLI Not Found")
+                    .setMessage("The official CLI ('" + desc.officialCliName + "') was not detected in PATH or the app tools prefix.\n\n"
+                            + "Install it via Ocean Packages (`ocean-pkg install " + desc.officialCliName + "`) or connect using a direct API key.")
+                    .setPositiveButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+
+        boolean authenticated = false;
+        if (adapter instanceof AntigravityCliAdapter) authenticated = ((AntigravityCliAdapter) adapter).isSessionAuthenticated();
+        else if (adapter instanceof KimiCliAdapter) authenticated = ((KimiCliAdapter) adapter).isSessionAuthenticated();
+        else if (adapter instanceof ClaudeCodeCliAdapter) authenticated = ((ClaudeCodeCliAdapter) adapter).isSessionAuthenticated();
+        else if (adapter instanceof CodexCliAdapter) authenticated = ((CodexCliAdapter) adapter).isSessionAuthenticated();
+
+        if (!authenticated) {
+            String loginCmd = desc.officialCliName + " auth login";
+            if ("kimi".equals(desc.id)) loginCmd = "kimi login";
+            else if ("claude".equals(desc.id)) loginCmd = "claude login";
+            else if ("codex".equals(desc.id)) loginCmd = "codex login";
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Authentication Required")
+                    .setMessage("The official '" + desc.officialCliName + "' CLI is installed, but no active account session was detected.\n\n"
+                            + "Open Ocean Terminal and run:\n\n  " + loginCmd + "\n\nThen tap Verify once login succeeds.")
+                    .setPositiveButton("Verify & Connect", (d, w) -> connectViaOfficialCli(desc))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+
+        // Successfully authenticated!
+        ProviderConnection conn = new ProviderConnection(
+                UUID.randomUUID().toString(),
+                desc.id,
+                desc.officialCliName + " CLI session",
+                AuthStrategy.OFFICIAL_CLI,
+                ConnectionStatus.CONNECTED,
+                desc.defaultBaseUrl,
+                desc.defaultModel,
+                null,
+                desc.officialCliName + "_active",
+                null,
+                null,
+                quotaService.inspect(null),
+                null,
+                System.currentTimeMillis()
+        );
+        connectionStore.save(conn);
+        Toast.makeText(this, desc.title + " connected via official CLI bridge", Toast.LENGTH_SHORT).show();
+        renderProviders();
+    }
+
+    private OfficialCliAdapter resolveCliAdapter(String providerId) {
+        if (ProviderRegistry.ID_ANTIGRAVITY.equals(providerId)) return antigravityCli;
+        if (ProviderRegistry.ID_KIMI.equals(providerId)) return kimiCli;
+        if (ProviderRegistry.ID_ANTHROPIC.equals(providerId)) return claudeCli;
+        if (ProviderRegistry.ID_OPENAI.equals(providerId)) return codexCli;
+        return null;
+    }
+
+    // ==========================================
+    // Strategy Execution: API Key & Local
+    // ==========================================
+
+    private void showApiKeyDialog(ProviderDescriptor desc, ProviderConnection existing) {
         float density = getResources().getDisplayMetrics().density;
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (20 * density);
         layout.setPadding(pad, pad, pad, pad);
 
-        Field model = field("Model ID", entry.defaultModel);
-        layout.addView(model.container);
-        Field key = field("API key", "");
-        key.input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        layout.addView(key.container);
-        Field base = field("API base URL", entry.defaultBaseUrl);
-        layout.addView(base.container);
+        String currentModel = existing != null ? existing.selectedModel : desc.defaultModel;
+        String currentBase = existing != null ? existing.baseUrl : desc.defaultBaseUrl;
 
-        TextView hint = new TextView(this);
-        hint.setText(entry.credentialHint);
-        hint.setTextColor(getColor(R.color.ocean_muted));
-        hint.setTextSize(12f);
-        hint.setPadding(0, (int) (8 * density), 0, 0);
-        layout.addView(hint);
+        Field modelField = field("Model ID", currentModel);
+        layout.addView(modelField.container);
+
+        Field keyField = field("API Key", "");
+        keyField.input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        keyField.input.setHint(desc.credentialHint);
+        layout.addView(keyField.container);
+
+        Field baseField = field("API Base URL", currentBase);
+        layout.addView(baseField.container);
 
         new AlertDialog.Builder(this)
-                .setTitle(entry.title)
+                .setTitle(desc.title + " Configuration")
                 .setView(layout)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Save & test", (dialog, which) -> saveAndTest(entry, model.input.getText().toString().trim(),
-                        key.input.getText().toString().trim(), base.input.getText().toString().trim()))
+                .setPositiveButton("Save & Connect", (dialog, which) -> {
+                    String model = modelField.input.getText().toString().trim();
+                    String key = keyField.input.getText().toString().trim();
+                    String base = baseField.input.getText().toString().trim();
+
+                    // Preflight validation
+                    AuthPreflight.PreflightResult preflight = AuthPreflight.validateApiKeyConfig(desc.id, model, key, base);
+                    if (!preflight.passed) {
+                        Toast.makeText(this, preflight.errorMessage, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    // Save secret into CredentialVault
+                    String credentialRef = credentialVault.store(key);
+                    String connId = existing != null ? existing.id : UUID.randomUUID().toString();
+
+                    ProviderConnection conn = new ProviderConnection(
+                            connId,
+                            desc.id,
+                            maskKey(key),
+                            AuthStrategy.API_KEY,
+                            ConnectionStatus.CONNECTED,
+                            base,
+                            model,
+                            credentialRef,
+                            null,
+                            null,
+                            null,
+                            QuotaSnapshot.unknown("Pay-as-you-go API", "api-header"),
+                            null,
+                            System.currentTimeMillis()
+                    );
+                    connectionStore.save(conn);
+
+                    // Sync to BYOK manager for backward compatibility
+                    try {
+                        String byokId = desc.id;
+                        if (!OceanByokManager.PROVIDER_GOOGLE.equals(byokId)
+                                && !OceanByokManager.PROVIDER_ANTHROPIC.equals(byokId)
+                                && !OceanByokManager.PROVIDER_OPENAI.equals(byokId)) {
+                            byokId = OceanByokManager.PROVIDER_CUSTOM;
+                        }
+                        byokManager.saveConfig(byokId, model, key, base);
+                    } catch (Exception ignored) {}
+
+                    Toast.makeText(this, desc.title + " configured", Toast.LENGTH_SHORT).show();
+                    renderProviders();
+
+                    // Background test
+                    testConnection(desc, conn);
+                })
                 .show();
     }
+
+    private void showLocalConfigDialog(ProviderDescriptor desc, ProviderConnection existing) {
+        float density = getResources().getDisplayMetrics().density;
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * density);
+        layout.setPadding(pad, pad, pad, pad);
+
+        String currentModel = existing != null ? existing.selectedModel : desc.defaultModel;
+        String currentBase = existing != null ? existing.baseUrl : desc.defaultBaseUrl;
+
+        Field baseField = field("Endpoint Base URL", currentBase);
+        layout.addView(baseField.container);
+
+        Field modelField = field("Model Identifier", currentModel);
+        layout.addView(modelField.container);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Local Runtime Setup")
+                .setView(layout)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String base = baseField.input.getText().toString().trim();
+                    String model = modelField.input.getText().toString().trim();
+
+                    String connId = existing != null ? existing.id : UUID.randomUUID().toString();
+                    ProviderConnection conn = new ProviderConnection(
+                            connId,
+                            desc.id,
+                            "Local Runtime",
+                            AuthStrategy.LOCAL,
+                            ConnectionStatus.CONNECTED,
+                            base,
+                            model,
+                            null,
+                            null,
+                            null,
+                            null,
+                            QuotaSnapshot.exact(0, Double.MAX_VALUE, QuotaSnapshot.Unit.TOKENS, null, "Unlimited Local", "on-device"),
+                            null,
+                            System.currentTimeMillis()
+                    );
+                    connectionStore.save(conn);
+                    Toast.makeText(this, "Local model connected", Toast.LENGTH_SHORT).show();
+                    renderProviders();
+                })
+                .show();
+    }
+
+    private void confirmDisconnect(ProviderDescriptor desc, ProviderConnection conn) {
+        new AlertDialog.Builder(this)
+                .setTitle("Disconnect " + desc.title)
+                .setMessage("Are you sure you want to disconnect? All local credentials and tokens will be permanently erased.")
+                .setPositiveButton("Disconnect", (d, w) -> {
+                    connectionStore.delete(conn.id);
+                    if (conn.credentialRef != null) {
+                        credentialVault.delete(conn.credentialRef);
+                    }
+                    Toast.makeText(this, desc.title + " disconnected", Toast.LENGTH_SHORT).show();
+                    renderProviders();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void testConnection(ProviderDescriptor desc, ProviderConnection conn) {
+        Toast.makeText(this, "Testing connection to " + desc.title + "…", Toast.LENGTH_SHORT).show();
+        agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback() {
+            @Override public void onSuccess() {
+                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                        desc.title + " connection verified", Toast.LENGTH_SHORT).show());
+            }
+            @Override public void onFailure(String error) {
+                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                        "Connection failed: " + error, Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    // ==========================================
+    // UI Helpers
+    // ==========================================
 
     private static final class Field {
         final LinearLayout container;
@@ -146,7 +1009,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         caption.setTextColor(getColor(R.color.ocean_ink));
         caption.setTypeface(null, Typeface.BOLD);
         caption.setTextSize(12f);
-        caption.setPadding(0, (int) (12 * density), 0, (int) (6 * density));
+        caption.setPadding(0, (int) (10 * density), 0, (int) (4 * density));
 
         LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
@@ -161,93 +1024,8 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         return new Field(wrap, input);
     }
 
-    private void saveAndTest(ProviderCatalog.Entry entry, String model, String key, String baseUrl) {
-        try {
-            byokManager.saveConfig(entry.byokProviderId(), model, key, baseUrl);
-        } catch (Exception error) {
-            Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show();
-            return;
-        }
-        Toast.makeText(this, "Testing connection…", Toast.LENGTH_SHORT).show();
-        agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback() {
-            @Override public void onSuccess() {
-                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                        entry.title + " connected", Toast.LENGTH_LONG).show());
-            }
-            @Override public void onFailure(String error) {
-                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                        "Not connected · " + error, Toast.LENGTH_LONG).show());
-            }
-        });
-    }
-
-    private void startOAuth(ProviderCatalog.Entry entry) {
-        if (!OceanByokManager.PROVIDER_GOOGLE.equals(entry.id)) {
-            Toast.makeText(this, "OAuth is not available for this provider yet", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        oauthSession = new ProviderOAuthSession(this);
-        AlertDialog waiting = new AlertDialog.Builder(this)
-                .setTitle("Google sign-in")
-                .setMessage("Opening a secure browser tab…")
-                .setCancelable(true)
-                .setNegativeButton("Paste redirect URL", (d, w) -> showManualOAuthFallback(entry))
-                .create();
-        waiting.show();
-        oauthSession.startGoogle(new ProviderOAuthSession.Callback() {
-            @Override public void onWaiting(String detail) {
-                runOnUiThread(() -> waiting.setMessage(detail));
-            }
-            @Override public void onSuccess(String accessToken, String refreshToken) {
-                runOnUiThread(() -> {
-                    waiting.dismiss();
-                    try {
-                        byokManager.saveConfig(OceanByokManager.PROVIDER_GOOGLE,
-                                entry.defaultModel, accessToken, entry.defaultBaseUrl);
-                        byokManager.markVerified(byokManager.configurationDigest());
-                        Toast.makeText(ProvidersConnectActivity.this, "Google connected", Toast.LENGTH_LONG).show();
-                    } catch (Exception error) {
-                        Toast.makeText(ProvidersConnectActivity.this, error.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-            @Override public void onFailure(String message) {
-                runOnUiThread(() -> {
-                    waiting.dismiss();
-                    Toast.makeText(ProvidersConnectActivity.this, message, Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-
-    private void showManualOAuthFallback(ProviderCatalog.Entry entry) {
-        EditText url = new EditText(this);
-        url.setHint("https://127.0.0.1:…/oauth/callback?code=…");
-        url.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        new AlertDialog.Builder(this)
-                .setTitle("Paste redirect URL")
-                .setMessage("If the browser tab cannot return automatically, paste the full redirect URL from the address bar.")
-                .setView(url)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Complete", (d, w) -> {
-                    if (oauthSession == null) oauthSession = new ProviderOAuthSession(this);
-                    oauthSession.completeWithRedirectUrl(url.getText().toString(), new ProviderOAuthSession.Callback() {
-                        @Override public void onWaiting(String detail) { }
-                        @Override public void onSuccess(String accessToken, String refreshToken) {
-                            runOnUiThread(() -> {
-                                try {
-                                    byokManager.saveConfig(entry.byokProviderId(), entry.defaultModel, accessToken, entry.defaultBaseUrl);
-                                    Toast.makeText(ProvidersConnectActivity.this, "Connected", Toast.LENGTH_LONG).show();
-                                } catch (Exception error) {
-                                    Toast.makeText(ProvidersConnectActivity.this, error.getMessage(), Toast.LENGTH_LONG).show();
-                                }
-                            });
-                        }
-                        @Override public void onFailure(String message) {
-                            runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this, message, Toast.LENGTH_LONG).show());
-                        }
-                    });
-                })
-                .show();
+    private static String maskKey(String key) {
+        if (key == null || key.length() <= 8) return "••••••••";
+        return key.substring(0, 4) + "••••" + key.substring(key.length() - 4);
     }
 }

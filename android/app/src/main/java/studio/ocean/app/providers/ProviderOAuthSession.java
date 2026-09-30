@@ -47,6 +47,18 @@ public final class ProviderOAuthSession {
     public void startGoogle(Callback callback) {
         worker.execute(() -> {
             try {
+                // Mandatory preflight gate: prevent launching broken loopback OAuth
+                studio.ocean.app.providers.auth.AuthPreflight preflight = new studio.ocean.app.providers.auth.AuthPreflight(context);
+                studio.ocean.app.providers.model.ProviderDescriptor desc = studio.ocean.app.providers.ProviderRegistry.find("google");
+                studio.ocean.app.providers.auth.AuthPreflight.PreflightResult preflightResult =
+                        preflight.validate(desc, studio.ocean.app.providers.model.AuthStrategy.OFFICIAL_OAUTH, null, null);
+                if (!preflightResult.isReady) {
+                    if (finished.compareAndSet(false, true)) {
+                        callback.onFailure(preflightResult.failureTitle + ": " + preflightResult.failureMessage);
+                    }
+                    return;
+                }
+
                 preparePkce();
                 redirectPort = bindLoopback();
                 String redirect = "http://127.0.0.1:" + redirectPort + "/oauth/callback";

@@ -4,8 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import studio.ocean.app.OceanByokManager;
+import studio.ocean.app.providers.model.AuthStrategy;
+import studio.ocean.app.providers.model.ProviderDescriptor;
 
-/** Built-in LLM providers the connect screen can configure with API keys or OAuth. */
+/**
+ * Backward compatibility adapter delegating to ProviderRegistry.
+ * Single source of truth is ProviderRegistry.
+ */
 public final class ProviderCatalog {
     public enum AuthMode { API_KEY, OAUTH_PKCE }
 
@@ -18,7 +23,7 @@ public final class ProviderCatalog {
         public final AuthMode authMode;
         public final String credentialHint;
 
-        Entry(String id, String title, String subtitle, String defaultBaseUrl, String defaultModel,
+        public Entry(String id, String title, String subtitle, String defaultBaseUrl, String defaultModel,
                 AuthMode authMode, String credentialHint) {
             this.id = id;
             this.title = title;
@@ -36,64 +41,24 @@ public final class ProviderCatalog {
         }
     }
 
-    private static final List<Entry> ENTRIES = build();
-
     private ProviderCatalog() {}
 
     public static List<Entry> all() {
-        return Collections.unmodifiableList(ENTRIES);
+        List<Entry> list = new ArrayList<>();
+        for (ProviderDescriptor desc : ProviderRegistry.all()) {
+            AuthMode mode = desc.supports(AuthStrategy.DIRECT_OAUTH) ? AuthMode.OAUTH_PKCE : AuthMode.API_KEY;
+            list.add(new Entry(desc.id, desc.title, desc.subtitle, desc.defaultBaseUrl, desc.defaultModel,
+                    mode, desc.credentialHint));
+        }
+        return Collections.unmodifiableList(list);
     }
 
     public static Entry find(String id) {
-        for (Entry entry : ENTRIES) if (entry.id.equals(id)) return entry;
-        return null;
-    }
-
-    private static List<Entry> build() {
-        List<Entry> list = new ArrayList<>();
-        list.add(new Entry(OceanByokManager.PROVIDER_GOOGLE, "Google Gemini",
-                "Generative Language API · API key or Google OAuth",
-                "https://generativelanguage.googleapis.com", "gemini-2.5-flash",
-                AuthMode.OAUTH_PKCE, "AIza… API key or Connect with Google"));
-        list.add(new Entry(OceanByokManager.PROVIDER_ANTHROPIC, "Anthropic",
-                "Claude Messages API", "https://api.anthropic.com/v1", "claude-sonnet-4-20250514",
-                AuthMode.API_KEY, "sk-ant-… from console.anthropic.com"));
-        list.add(new Entry(OceanByokManager.PROVIDER_OPENAI, "OpenAI",
-                "Chat Completions API", "https://api.openai.com/v1", "gpt-4o-mini",
-                AuthMode.API_KEY, "sk-… from platform.openai.com"));
-        list.add(new Entry("groq", "Groq", "OpenAI-compatible inference",
-                "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile",
-                AuthMode.API_KEY, "gsk_… from console.groq.com"));
-        list.add(new Entry("mistral", "Mistral", "La Plateforme chat API",
-                "https://api.mistral.ai/v1", "mistral-small-latest",
-                AuthMode.API_KEY, "API key from console.mistral.ai"));
-        list.add(new Entry("deepseek", "DeepSeek", "OpenAI-compatible API",
-                "https://api.deepseek.com/v1", "deepseek-chat",
-                AuthMode.API_KEY, "API key from platform.deepseek.com"));
-        list.add(new Entry("cohere", "Cohere", "OpenAI-compatible v2",
-                "https://api.cohere.com/v2", "command-r-plus-08-2024",
-                AuthMode.API_KEY, "API key from dashboard.cohere.com"));
-        list.add(new Entry("together", "Together AI", "Hosted open models",
-                "https://api.together.xyz/v1", "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-                AuthMode.API_KEY, "API key from api.together.xyz"));
-        list.add(new Entry("fireworks", "Fireworks AI", "Fast open-weight inference",
-                "https://api.fireworks.ai/inference/v1", "accounts/fireworks/models/llama-v3p1-8b-instruct",
-                AuthMode.API_KEY, "API key from fireworks.ai"));
-        list.add(new Entry("openrouter", "OpenRouter", "Routed multi-provider gateway",
-                "https://openrouter.ai/api/v1", "openrouter/auto",
-                AuthMode.API_KEY, "sk-or-… from openrouter.ai/keys"));
-        list.add(new Entry("xai", "xAI", "Grok chat API",
-                "https://api.x.ai/v1", "grok-2-latest",
-                AuthMode.API_KEY, "API key from console.x.ai"));
-        list.add(new Entry("perplexity", "Perplexity", "Sonar models",
-                "https://api.perplexity.ai", "sonar",
-                AuthMode.API_KEY, "pplx-… from perplexity.ai/settings/api"));
-        list.add(new Entry("azure-openai", "Azure OpenAI",
-                "Your Azure resource endpoint", "https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT",
-                "gpt-4o", AuthMode.API_KEY, "Azure API key + deployment URL"));
-        list.add(new Entry("custom", "Custom endpoint", "Any HTTPS OpenAI-compatible API",
-                "https://api.example.com/v1", "model-id",
-                AuthMode.API_KEY, "Bearer token or API key"));
-        return list;
+        if (id == null) return null;
+        ProviderDescriptor desc = ProviderRegistry.find(id);
+        if (desc == null) return null;
+        AuthMode mode = desc.supports(AuthStrategy.DIRECT_OAUTH) ? AuthMode.OAUTH_PKCE : AuthMode.API_KEY;
+        return new Entry(desc.id, desc.title, desc.subtitle, desc.defaultBaseUrl, desc.defaultModel,
+                mode, desc.credentialHint);
     }
 }
