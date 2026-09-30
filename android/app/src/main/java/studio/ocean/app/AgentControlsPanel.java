@@ -371,13 +371,7 @@ final class AgentControlsPanel {
     }
 
     private void label(LinearLayout parent, String text) {
-        TextView t = new TextView(activity);
-        t.setText(text);
-        t.setTextColor(0xFF9CA3AF);
-        t.setTextSize(11f);
-        t.setTypeface(null, Typeface.BOLD);
-        t.setPadding(0, dp(14), 0, dp(6));
-        parent.addView(t);
+        parent.addView(OceanUi.sectionHeader(activity, text));
     }
 
     private TextView muted(LinearLayout parent, String text) {
@@ -423,7 +417,7 @@ final class AgentControlsPanel {
         SeekBar bar = new SeekBar(activity);
         bar.setMax(max);
         bar.setProgress(Math.max(min, Math.min(max, progress)));
-        OceanUi.styleSeekBar(bar);
+        OceanUi.styleSeekBar(activity, bar);
         value.setText(formatSliderValue(title, bar.getProgress()));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int prog, boolean fromUser) {
@@ -454,7 +448,7 @@ final class AgentControlsPanel {
         label.setTextSize(14f);
         SwitchCompat s = new SwitchCompat(activity);
         s.setChecked(on);
-        OceanUi.styleSwitch(s);
+        OceanUi.styleSwitch(activity, s);
         row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(s, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout.LayoutParams lp = matchWidth();

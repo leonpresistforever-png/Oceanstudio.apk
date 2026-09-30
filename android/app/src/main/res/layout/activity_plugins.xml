@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FAFAFA">
+    android:background="@color/ocean_sidebar_surface">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,8 +29,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Plugins"
-                android:textColor="#18181B"
-                android:textSize="23sp"
+                android:textColor="@color/ocean_text_primary"
+                android:textSize="@dimen/ocean_text_title"
                 android:textStyle="bold"/>
             <TextView
                 android:id="@+id/plugin_hub_picker"
@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:visibility="gone"
                 android:text="MCPs · Skills · Plugins"
-                android:textColor="#71717A"
+                android:textColor="@color/ocean_text_secondary"
                 android:textSize="12sp"/>
         </LinearLayout>
 
@@ -74,8 +74,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:paddingHorizontal="16dp"
-        android:textColor="#18181B"
-        android:textColorHint="#8B8B91"
+        android:textColor="@color/ocean_text_primary"
+        android:textColorHint="@color/ocean_text_tertiary"
         android:textSize="15sp"/>
 
     <FrameLayout
@@ -128,7 +128,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="No agent capabilities are connected yet."
-                android:textColor="#71717A"
+                android:textColor="@color/ocean_text_secondary"
                 android:textSize="13sp"
                 android:visibility="gone"/>
 
@@ -146,7 +146,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="Connect only the local capabilities you want Ocean Agent to use."
-                android:textColor="#71717A"
+                android:textColor="@color/ocean_text_secondary"
                 android:textSize="13sp"/>
 
             <LinearLayout
@@ -164,7 +164,7 @@
                 android:gravity="center"
                 android:padding="24dp"
                 android:text="No matching capability found."
-                android:textColor="#71717A"
+                android:textColor="@color/ocean_text_secondary"
                 android:textSize="14sp"
                 android:visibility="gone"/>
         </LinearLayout>

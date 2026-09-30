@@ -42,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private enum AuthMode { SIGN_IN, SIGN_UP, FORGOT }
     private enum AuthState { LOADING, CONFIGURED_LOGGED_OUT, CONFIGURED_LOGGED_IN, DEV_BYPASS_LOGGED_IN, CONFIGURATION_MISSING, ERROR }
     private static final String PREFS="ocean_auth", TOKEN="id_token", EMAIL="email";
+    private static final String RECENT_PREFS = "ocean_recent_chats";
+    private static final String RECENT_KEY = "titles";
     private final AuthClient authClient = new AuthClient();
     private AuthMode authMode = AuthMode.SIGN_IN;
     private AuthState authState = AuthState.LOADING;
@@ -55,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout contentFrame;
     private ScrollView chatScrollView;
     private LinearLayout chatMessagesLayout;
+    private String selectedModelPreset = "auto";
     private static final String[][] SLASH_COMMANDS = {
             {"/run", "Run a terminal command"},
             {"/terminal", "Open Ocean Terminal"},
@@ -269,6 +272,14 @@ public class MainActivity extends AppCompatActivity {
             if (byokManager != null) modelBtn.setText(byokManager.isVerified()?byokManager.getModel():"Configure model");
             modelBtn.setOnClickListener(v -> showByokPage());
         }
+        View headerBlock = findViewById(R.id.header_title_block);
+        if (headerBlock != null) headerBlock.setOnClickListener(v -> showByokPage());
+        safeClick(R.id.history_button, v -> openDrawer());
+        safeClick(R.id.suggest_card_plan, v -> setStarterPrompt("Plan and execute this task: "));
+        safeClick(R.id.suggest_card_terminal, v -> setStarterPrompt("Use my terminal to "));
+        safeClick(R.id.suggest_card_build, v -> setStarterPrompt("Build or improve "));
+        setupModelChips();
+        updateTopModelChip();
         safeClick(R.id.send_button, v -> { if (agentRunner != null && agentRunner.isRunning()) agentRunner.cancel(); else submitAgentPrompt(); });
         safeClick(R.id.starter_plan, v -> setStarterPrompt("Plan and execute this task: "));
         safeClick(R.id.starter_terminal, v -> setStarterPrompt("Use my terminal to "));
@@ -339,7 +350,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
         View skeleton=findViewById(R.id.home_skeleton), content=findViewById(R.id.home_content); content.post(() -> { skeleton.animate().alpha(0f).setDuration(220).withEndAction(() -> skeleton.setVisibility(View.GONE)).start(); content.animate().alpha(1f).translationY(0f).setDuration(260).start(); });
-        View recentSkeleton=findViewById(R.id.recent_skeleton), recentEmpty=findViewById(R.id.no_recent_sessions); recentSkeleton.post(() -> { recentSkeleton.animate().alpha(0f).setDuration(180).withEndAction(() -> { recentSkeleton.setVisibility(View.GONE); recentEmpty.setAlpha(0f); recentEmpty.setVisibility(View.VISIBLE); recentEmpty.animate().alpha(1f).setDuration(180).start(); }).start(); });
+        View recentSkeleton=findViewById(R.id.recent_skeleton); recentSkeleton.post(() -> { recentSkeleton.animate().alpha(0f).setDuration(180).withEndAction(() -> { recentSkeleton.setVisibility(View.GONE); refreshRecentSessions(); }).start(); });
 
         initChatContainer();
     }
@@ -523,7 +534,7 @@ public class MainActivity extends AppCompatActivity {
             saveBtn.setEnabled(false); providerSpinner.setEnabled(false); modelInput.setEnabled(false); keyInput.setEnabled(false); urlInput.setEnabled(false);
             connectionStatus.setText("Testing connection…");
             agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback(){
-                @Override public void onSuccess(){runOnUiThread(()->{saveBtn.setEnabled(true);providerSpinner.setEnabled(true);modelInput.setEnabled(true);keyInput.setEnabled(true);urlInput.setEnabled(true);modelInput.setText(byokManager.getModel());connectionStatus.setText("Connected · authenticated request succeeded");connectionStatus.setTextColor(0xFF18794E);((TextView)findViewById(R.id.model_button)).setText(byokManager.getModel());});}
+                @Override public void onSuccess(){runOnUiThread(()->{saveBtn.setEnabled(true);providerSpinner.setEnabled(true);modelInput.setEnabled(true);keyInput.setEnabled(true);urlInput.setEnabled(true);modelInput.setText(byokManager.getModel());connectionStatus.setText("Connected · authenticated request succeeded");connectionStatus.setTextColor(0xFF18794E);((TextView)findViewById(R.id.model_button)).setText(byokManager.getModel());updateTopModelChip();});}
                 @Override public void onFailure(String error){runOnUiThread(()->{saveBtn.setEnabled(true);providerSpinner.setEnabled(true);modelInput.setEnabled(true);keyInput.setEnabled(true);urlInput.setEnabled(true);connectionStatus.setText("Not connected · "+error);connectionStatus.setTextColor(0xFFB3261E);});}
             });
         });
@@ -672,6 +683,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         CrashSurvival.begin();
+        recordRecentChat(prompt);
         promptInput.setText("");
 
         findViewById(R.id.home_content).setVisibility(View.GONE);
@@ -754,9 +766,9 @@ public class MainActivity extends AppCompatActivity {
 
         TextView bubble = new TextView(this);
         bubble.setText(text);
-        bubble.setTextColor(0xFF191817);
+        bubble.setTextColor(getColor(R.color.ocean_user_bubble_text));
         bubble.setTextSize(15f);
-        bubble.setBackgroundResource(R.drawable.composer_background);
+        bubble.setBackgroundResource(R.drawable.chat_bubble_user);
         bubble.setPadding(pad, pad, pad, pad);
         row.addView(bubble);
 
@@ -830,6 +842,90 @@ public class MainActivity extends AppCompatActivity {
         ((TextView)findViewById(R.id.empty_message)).setText(R.string.build_subtitle);
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+
+    private void setupModelChips() {
+        LinearLayout container = findViewById(R.id.model_chip_container);
+        if (container == null) return;
+        container.removeAllViews();
+        String[][] presets = {
+                {"auto", "Auto"},
+                {"gemini", "Gemini Flash"},
+                {"claude", "Claude Sonnet"},
+                {"gpt", "GPT-4o"}
+        };
+        for (String[] preset : presets) {
+            boolean on = preset[0].equals(selectedModelPreset);
+            TextView chip = OceanUi.modelChip(this, preset[1], on);
+            chip.setOnClickListener(v -> {
+                selectedModelPreset = preset[0];
+                setupModelChips();
+                updateTopModelChip();
+                if (!"auto".equals(preset[0])) {
+                    Toast.makeText(this, preset[1] + " preset · configure API in Models", Toast.LENGTH_SHORT).show();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(8);
+            container.addView(chip, lp);
+        }
+    }
+
+    private void updateTopModelChip() {
+        TextView sub = findViewById(R.id.top_model_chip);
+        if (sub == null) return;
+        String model = byokManager != null && byokManager.isVerified() ? byokManager.getModel() : "Not configured";
+        String presetLabel = "auto".equals(selectedModelPreset) ? "Auto" :
+                "gemini".equals(selectedModelPreset) ? "Gemini Flash" :
+                "claude".equals(selectedModelPreset) ? "Claude Sonnet" : "GPT-4o";
+        sub.setText(presetLabel + " · " + model);
+    }
+
+    private void recordRecentChat(String prompt) {
+        if (prompt == null || prompt.isEmpty()) return;
+        String title = prompt.length() > 48 ? prompt.substring(0, 45) + "…" : prompt;
+        try {
+            JSONArray arr = new JSONArray(getSharedPreferences(RECENT_PREFS, MODE_PRIVATE).getString(RECENT_KEY, "[]"));
+            JSONArray next = new JSONArray();
+            next.put(title);
+            for (int i = 0; i < arr.length() && next.length() < 6; i++) {
+                String existing = arr.optString(i, "");
+                if (!title.equals(existing)) next.put(existing);
+            }
+            getSharedPreferences(RECENT_PREFS, MODE_PRIVATE).edit().putString(RECENT_KEY, next.toString()).apply();
+            refreshRecentSessions();
+        } catch (Exception ignored) {}
+    }
+
+    private void refreshRecentSessions() {
+        LinearLayout list = findViewById(R.id.recent_sessions_list);
+        TextView empty = findViewById(R.id.no_recent_sessions);
+        if (list == null || empty == null) return;
+        list.removeAllViews();
+        JSONArray arr;
+        try {
+            arr = new JSONArray(getSharedPreferences(RECENT_PREFS, MODE_PRIVATE).getString(RECENT_KEY, "[]"));
+        } catch (Exception e) {
+            arr = new JSONArray();
+        }
+        if (arr.length() == 0) {
+            list.setVisibility(View.GONE);
+            empty.setVisibility(View.VISIBLE);
+            empty.setAlpha(1f);
+            return;
+        }
+        empty.setVisibility(View.GONE);
+        list.setVisibility(View.VISIBLE);
+        for (int i = 0; i < arr.length(); i++) {
+            String title = arr.optString(i, "");
+            if (title.isEmpty()) continue;
+            View row = OceanUi.conversationRowView(this, title, "Tap to reuse in composer");
+            row.setOnClickListener(v -> {
+                closeDrawer();
+                setStarterPrompt(title);
+            });
+            list.addView(row);
+        }
+    }
     private void addDivider(LinearLayout parent, int margin) {
         View divider = new View(this); divider.setBackgroundColor(0xFFE5E7EB);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
