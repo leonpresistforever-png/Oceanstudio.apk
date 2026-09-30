@@ -67,12 +67,12 @@ public final class AgentArchitectureTest {
         String settings=source("OceanAgentSettings.java");
         String root=projectFile("src/main/java/studio/ocean/app/device/DeviceControlService.java");
         String policy=projectFile("src/main/java/studio/ocean/app/device/AppAccessPolicy.java");
-        assertTrue(runner.contains("agentSettings.signature()"));
+        assertTrue(runner.contains("agentSettings.signature(context)"));
         assertTrue(runner.contains("pluginConnected"));
         assertTrue(settings.contains("reasoningEffort()"));
         assertTrue(main.contains("openAgentControls()"));
         assertTrue(main.contains("PluginCenterActivity.class"));
-        assertFalse(main.contains("OceanForgeActivity.class"));
+        assertTrue(main.contains("OceanForgeActivity.class"));
         assertTrue(runner.contains("ocean-forge"));
         assertFalse(runner.contains("pluginConnected(\"forge\")"));
         assertTrue(root.contains("AppAccessPolicy"));

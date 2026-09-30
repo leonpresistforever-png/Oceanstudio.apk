@@ -88,9 +88,9 @@ public final class OceanAgentRunner {
                     } else {
                         if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
                         OceanModelConfig config = configuredModel();
-                        String digest = byokManager.configurationDigest()+"|"+agentSettings.signature();
+                        String digest = byokManager.configurationDigest()+"|"+agentSettings.signature(context);
                         if (conversation == null || !digest.equals(conversationDigest)) {
-                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.userInstructions());
+                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.effectiveUserInstructions(context));
                             conversationDigest = digest;
                         }
                         status(callback, "Working with " + config.model + "…");

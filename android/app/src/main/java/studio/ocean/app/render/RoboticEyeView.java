@@ -111,6 +111,14 @@ public class RoboticEyeView extends WebView {
         evaluateJavascript("window.oceanEyeSetTyping && window.oceanEyeSetTyping(" + typing + ")", null);
     }
 
+    /** Normalized viewport coordinates 0..1 for gaze tracking. */
+    public void setGaze(float normalizedX, float normalizedY) {
+        if (!pageReady) return;
+        float x = Math.max(0f, Math.min(1f, normalizedX));
+        float y = Math.max(0f, Math.min(1f, normalizedY));
+        evaluateJavascript("window.oceanEyeSetGaze && window.oceanEyeSetGaze(" + x + "," + y + ")", null);
+    }
+
     @Override public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:

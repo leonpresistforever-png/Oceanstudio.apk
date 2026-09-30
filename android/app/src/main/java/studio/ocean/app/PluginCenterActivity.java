@@ -22,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ScrollView;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,7 +55,15 @@ public final class PluginCenterActivity extends AppCompatActivity {
     }
 
     private SharedPreferences prefs;
+    private OceanAgentHubStore hub;
     private LinearLayout list;
+    private LinearLayout skillsList;
+    private LinearLayout mcpsList;
+    private ScrollView pluginsScroll;
+    private ScrollView skillsScroll;
+    private ScrollView mcpsScroll;
+    private TextView hubTitle;
+    private String hubSection = "plugins";
     private LinearLayout installedStrip;
     private TextView installedEmpty;
     private TextView searchEmpty;
@@ -70,7 +79,17 @@ public final class PluginCenterActivity extends AppCompatActivity {
         getWindow().setNavigationBarColor(SURFACE);
 
         prefs=getSharedPreferences("ocean_plugin_state",MODE_PRIVATE);
+        hub=new OceanAgentHubStore(this);
         list=findViewById(R.id.plugin_list);
+        skillsList=findViewById(R.id.plugin_skills_list);
+        mcpsList=findViewById(R.id.plugin_mcps_list);
+        pluginsScroll=findViewById(R.id.plugin_plugins_scroll);
+        skillsScroll=findViewById(R.id.plugin_skills_scroll);
+        mcpsScroll=findViewById(R.id.plugin_mcps_scroll);
+        hubTitle=findViewById(R.id.plugin_hub_title);
+        TextView picker=findViewById(R.id.plugin_hub_picker);
+        if(getIntent()!=null&&getIntent().hasExtra("hub_section"))hubSection=getIntent().getStringExtra("hub_section");
+        if(picker!=null)picker.setOnClickListener(v->showHubMenu(picker));
         installedStrip=findViewById(R.id.plugin_installed_strip);
         installedEmpty=findViewById(R.id.plugin_installed_empty);
         searchEmpty=findViewById(R.id.plugin_search_empty);
@@ -82,6 +101,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
         try{OceanForgeInstaller.ensure(this);}catch(Exception ignored){}
         loadItems();
         render("");
+        renderHubSections();
+        showHubSection(hubSection);
 
         if(search!=null)search.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
@@ -428,6 +449,101 @@ public final class PluginCenterActivity extends AppCompatActivity {
         float r=dp(28);
         d.setCornerRadii(new float[]{r,r,r,r,0,0,0,0});
         return d;
+    }
+
+    private void showHubMenu(View anchor){
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Capability library")
+                .setItems(new String[]{"Plugins","Skills","MCPs"},(d,which)->{
+                    showHubSection(which==0?"plugins":which==1?"skills":"mcps");
+                }).show();
+    }
+
+    private void showHubSection(String section){
+        hubSection=section;
+        if(hubTitle!=null)hubTitle.setText(section.equals("skills")?"Skills":section.equals("mcps")?"MCPs":"Plugins");
+        if(pluginsScroll!=null)pluginsScroll.setVisibility("plugins".equals(section)?View.VISIBLE:View.GONE);
+        if(skillsScroll!=null)skillsScroll.setVisibility("skills".equals(section)?View.VISIBLE:View.GONE);
+        if(mcpsScroll!=null)mcpsScroll.setVisibility("mcps".equals(section)?View.VISIBLE:View.GONE);
+    }
+
+    private void renderHubSections(){
+        if(skillsList==null||mcpsList==null)return;
+        skillsList.removeAllViews();
+        TextView intro=new TextView(this);
+        intro.setText("Premium skills stored on-device. Connected skills inject sharp context into the agent. Agent-authored skills appear here automatically.");
+        intro.setTextColor(MUTED);intro.setTextSize(13);intro.setPadding(0,0,0,dp(14));
+        skillsList.addView(intro);
+        JSONArray skills=hub.skills();
+        for(int i=0;i<skills.length();i++){
+            JSONObject s=skills.optJSONObject(i);if(s==null)continue;
+            skillsList.addView(hubCard(s.optString("title"),s.optString("description"),
+                    "connected".equals(s.optString("status"))?"Connected · "+s.optString("source","manual"):"Disconnected",
+                    "connected".equals(s.optString("status"))));
+        }
+        mcpsList.removeAllViews();
+        TextView mIntro=new TextView(this);
+        mIntro.setText("MCP servers created or saved by you or the agent. Connect to enable tools in a session.");
+        mIntro.setTextColor(MUTED);mIntro.setTextSize(13);mIntro.setPadding(0,0,0,dp(14));
+        mcpsList.addView(mIntro);
+        JSONArray mcps=hub.mcps();
+        if(mcps.length()==0){
+            TextView empty=new TextView(this);
+            empty.setText("No MCP servers yet. Ask the agent to scaffold one, or add manually from Agent drawer.");
+            empty.setTextColor(MUTED);empty.setTextSize(13);
+            mcpsList.addView(empty);
+        }
+        for(int i=0;i<mcps.length();i++){
+            JSONObject m=mcps.optJSONObject(i);if(m==null)continue;
+            boolean connected=m.optBoolean("connected",false);
+            LinearLayout card=hubCard(m.optString("name"),m.optString("command","stdio transport"),
+                    connected?"Connected":"Connect",connected);
+            card.setOnClickListener(v->toggleMcp(m.optString("id"),!connected));
+            mcpsList.addView(card);
+        }
+        TextView addMcp=new TextView(this);
+        addMcp.setText("+ Register MCP server");
+        addMcp.setTextColor(INK);addMcp.setTypeface(null,Typeface.BOLD);addMcp.setPadding(0,dp(18),0,dp(8));
+        addMcp.setOnClickListener(v->promptAddMcp());
+        mcpsList.addView(addMcp);
+    }
+
+    private LinearLayout hubCard(String title,String body,String action,boolean active){
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16),dp(14),dp(16),dp(14));
+        card.setBackground(roundRect(active?0xfff4f4f5:SURFACE,16,BORDER));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.bottomMargin=dp(10);
+        card.setLayoutParams(lp);
+        TextView t=new TextView(this);t.setText(title);t.setTextColor(INK);t.setTextSize(15);t.setTypeface(null,Typeface.BOLD);
+        TextView d=new TextView(this);d.setText(body);d.setTextColor(MUTED);d.setTextSize(12);d.setLineSpacing(0,1.05f);
+        TextView a=new TextView(this);a.setText(action);a.setTextColor(active?INK:0xFF52525B);a.setTextSize(12);a.setTypeface(null,Typeface.BOLD);
+        card.addView(t);card.addView(d);card.addView(a);
+        return card;
+    }
+
+    private void toggleMcp(String id,boolean connect){
+        try{
+            JSONArray arr=hub.mcps();
+            for(int i=0;i<arr.length();i++){
+                JSONObject m=arr.getJSONObject(i);
+                if(id.equals(m.optString("id"))){m.put("connected",connect);m.put("status",connect?"connected":"saved");}
+            }
+            hub.saveMcps(arr);
+            renderHubSections();
+        }catch(Exception ignored){}
+    }
+
+    private void promptAddMcp(){
+        EditText name=new EditText(this);name.setHint("Server name");
+        EditText cmd=new EditText(this);cmd.setHint("Command e.g. npx -y @scope/mcp");
+        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.addView(name);box.addView(cmd);
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Register MCP").setView(box)
+                .setPositiveButton("Save",(d,w)->{
+                    try{hub.addMcp(name.getText().toString().trim(), "stdio", cmd.getText().toString().trim());renderHubSections();}
+                    catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+                }).setNegativeButton("Cancel",null).show();
     }
 
     private boolean exists(String relative){

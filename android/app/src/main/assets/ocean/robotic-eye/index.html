@@ -83,6 +83,11 @@
       eyeReady = true;
     }, undefined, error => { console.error('Robotic eye model could not load', error); });
 
+    let targetYaw = 0;
+    let targetPitch = 0;
+    let smoothYaw = 0;
+    let smoothPitch = 0;
+
     window.oceanEyeSetTyping = typing => {
       if (!eyeReady || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const clip = typing ? gazeDown : gazeUp;
@@ -93,9 +98,23 @@
       activeGaze.play();
     };
 
+    window.oceanEyeSetGaze = (nx, ny) => {
+      if (!eyeReady) return;
+      const x = Math.max(0, Math.min(1, nx));
+      const y = Math.max(0, Math.min(1, ny));
+      targetYaw = (x - 0.5) * 0.55;
+      targetPitch = (0.42 - y) * 0.35;
+    };
+
     const clock = new THREE.Clock();
     renderer.setAnimationLoop(() => {
-      mixer.update(Math.min(clock.getDelta(), 0.05));
+      const dt = Math.min(clock.getDelta(), 0.05);
+      mixer.update(dt);
+      const ease = 1 - Math.pow(0.001, dt);
+      smoothYaw += (targetYaw - smoothYaw) * ease;
+      smoothPitch += (targetPitch - smoothPitch) * ease;
+      gazeRig.rotation.y = smoothYaw;
+      gazeRig.rotation.x = Math.max(-0.2, Math.min(0.22, smoothPitch));
       renderer.render(scene, camera);
     });
   </script>

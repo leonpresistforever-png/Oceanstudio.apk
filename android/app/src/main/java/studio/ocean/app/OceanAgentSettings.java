@@ -42,7 +42,13 @@ public final class OceanAgentSettings {
                 .apply();
     }
 
-    public String signature(){ return agentMode()+"|"+temperature()+"|"+topP()+"|"+maxTokens()+"|"+connectTimeoutMs()+"|"+readTimeoutMs()+"|"+commandTimeoutSeconds()+"|"+maxRounds()+"|"+maxToolCalls()+"|"+keepSessionAlive()+"|"+antiTimeout()+"|"+reasoningEffort()+"|"+userInstructions().hashCode(); }
+    public String effectiveUserInstructions(Context context){
+        return new OceanAgentHubStore(context).augmentedInstructions(userInstructions());
+    }
+
+    public String signature(Context context){
+        return agentMode()+"|"+temperature()+"|"+topP()+"|"+maxTokens()+"|"+connectTimeoutMs()+"|"+readTimeoutMs()+"|"+commandTimeoutSeconds()+"|"+maxRounds()+"|"+maxToolCalls()+"|"+keepSessionAlive()+"|"+antiTimeout()+"|"+reasoningEffort()+"|"+effectiveUserInstructions(context).hashCode();
+    }
 
     public void reset(){ prefs.edit().clear().apply(); }
     private static int clamp(int v,int min,int max){return Math.max(min,Math.min(max,v));}

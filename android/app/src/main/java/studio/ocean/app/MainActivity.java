@@ -44,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private AuthMode authMode = AuthMode.SIGN_IN;
     private AuthState authState = AuthState.LOADING;
     private boolean developmentSession;
-    private LinearLayout sidebar, agentControlsDrawer; private View backdrop; private boolean drawerOpen, agentControlsOpen;
+    private LinearLayout sidebar; private View agentControlsDrawer, backdrop; private boolean drawerOpen, agentControlsOpen;
+    private AgentControlsPanel agentControlsPanel;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private int loadingGeneration;
     private OceanByokManager byokManager;
@@ -61,7 +62,11 @@ public class MainActivity extends AppCompatActivity {
             {"/cost", "Use fewer tokens and tool calls"},
             {"/work", "Use full agent capacity"},
             {"/plugins", "Manage connected tools"},
-            {"/settings", "Agent generation and session settings"},
+            {"/settings", "Open raw agent configuration drawer"},
+            {"/skills", "Open skills in agent drawer"},
+            {"/mcp", "Open MCP hub"},
+            {"/function", "Create an HTTP function"},
+            {"/forge", "Open Ocean Forge workspace"},
             {"/screen", "Ask the agent to inspect this screen"},
             {"/files", "Ask the agent to work with files"}
     };
@@ -221,6 +226,17 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void afterTextChanged(Editable text) {}
             });
             eyePrompt.setOnFocusChangeListener((view, focused) -> roboticEye.setTyping(focused && eyePrompt.length() > 0));
+            View mainRoot = findViewById(R.id.main_root);
+            if (mainRoot != null) {
+                mainRoot.setOnTouchListener((v, event) -> {
+                    if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                        float nx = event.getX() / Math.max(1f, v.getWidth());
+                        float ny = event.getY() / Math.max(1f, v.getHeight());
+                        roboticEye.setGaze(nx, ny);
+                    }
+                    return false;
+                });
+            }
         }
         if (eyePrompt != null) eyePrompt.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
@@ -232,9 +248,16 @@ public class MainActivity extends AppCompatActivity {
         sidebar=findViewById(R.id.sidebar);
         agentControlsDrawer=findViewById(R.id.agent_controls_drawer);
         backdrop=findViewById(R.id.drawer_backdrop);
+        agentControlsPanel = new AgentControlsPanel(this, agentControlsDrawer, new AgentControlsPanel.Host() {
+            @Override public void close() { closeAgentControls(); }
+            @Override public void openPlugins() { startActivity(new Intent(MainActivity.this, PluginCenterActivity.class)); }
+            @Override public void openByok() { closeAgentControls(); showByokPage(); }
+            @Override public void openDevice() { startActivity(new Intent(MainActivity.this, studio.ocean.app.device.DeviceAccessActivity.class)); }
+            @Override public void openRuntime() { startActivity(new Intent(MainActivity.this, studio.ocean.app.runtime.RuntimePortsActivity.class)); }
+            @Override public OceanByokManager byok() { return byokManager; }
+        });
         safeClick(R.id.menu_button, v -> openDrawer());
         safeClick(R.id.agent_controls_button, v -> openAgentSearch());
-        safeClick(R.id.agent_controls_close, v -> closeAgentControls());
         if (backdrop != null) backdrop.setOnClickListener(v -> { if (agentControlsOpen) closeAgentControls(); else closeDrawer(); });
         safeClick(R.id.new_chat_button, v -> openAgentControls());
         safeClick(R.id.sidebar_new_chat, v -> newChat());
@@ -266,14 +289,13 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_terminal, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class)); });
         safeClick(R.id.nav_x11, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.render.OceanX11Activity.class)); });
         safeClick(R.id.nav_runtime_ports, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
-        safeClick(R.id.nav_agent_settings, v -> { closeDrawer(); startActivity(new Intent(this, AgentSettingsActivity.class)); });
+        safeClick(R.id.nav_agent_settings, v -> { closeDrawer(); openAgentControls(); });
+        safeClick(R.id.nav_hub_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
+        safeClick(R.id.nav_hub_device, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); });
+        safeClick(R.id.nav_hub_runtime, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
+        safeClick(R.id.nav_hub_models, v -> { closeDrawer(); showByokPage(); });
         safeClick(R.id.nav_crash_diagnostics, v -> { closeDrawer(); startActivity(new Intent(this, CrashDiagnosticsActivity.class)); });
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
-        safeClick(R.id.agent_controls_settings, v -> startActivity(new Intent(this, AgentSettingsActivity.class)));
-        safeClick(R.id.agent_controls_plugins, v -> startActivity(new Intent(this, PluginCenterActivity.class)));
-        safeClick(R.id.agent_controls_byok, v -> { closeAgentControls(); showByokPage(); });
-        safeClick(R.id.agent_controls_device, v -> startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)));
-        safeClick(R.id.agent_controls_runtime, v -> startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)));
         
         // Add Playground + BYOK Models into sidebar Tools children. Playground launches a fully isolated product surface.
         LinearLayout toolsChildren = findViewById(R.id.tools_children);
@@ -521,15 +543,36 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         options.removeAllViews();
+        String lastSection = "";
         for (String[] command : SLASH_COMMANDS) {
             if (!command[0].startsWith(query)) continue;
-            TextView item = new TextView(this);
-            item.setText(command[0] + "    " + command[1]);
-            item.setTextSize(13f);
-            item.setTextColor(0xff34383f);
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setMinHeight(dp(43));
-            item.setPadding(dp(16), dp(5), dp(12), dp(5));
+            String section = command[0].equals("/run") || command[0].equals("/terminal") ? "Actions" : "Commands";
+            if (!section.equals(lastSection)) {
+                lastSection = section;
+                TextView header = new TextView(this);
+                header.setText(section);
+                header.setTextSize(11f);
+                header.setTypeface(null, Typeface.BOLD);
+                header.setTextColor(0xFF9CA3AF);
+                header.setPadding(dp(16), dp(10), dp(12), dp(4));
+                options.addView(header);
+            }
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setMinimumHeight(dp(48));
+            item.setPadding(dp(16), dp(8), dp(12), dp(8));
+            item.setBackgroundResource(R.drawable.nav_item_background);
+            TextView title = new TextView(this);
+            title.setText(command[0]);
+            title.setTextSize(14f);
+            title.setTypeface(null, Typeface.BOLD);
+            title.setTextColor(0xFF111111);
+            TextView desc = new TextView(this);
+            desc.setText(command[1]);
+            desc.setTextSize(12f);
+            desc.setTextColor(0xFF6B7280);
+            item.addView(title);
+            item.addView(desc);
             item.setOnClickListener(view -> {
                 menu.setVisibility(View.GONE);
                 executeSlashCommand(command[0]);
@@ -541,6 +584,7 @@ public class MainActivity extends AppCompatActivity {
             options.addView(item);
         }
         menu.setVisibility(options.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+        if (menu.getVisibility() == View.VISIBLE) menu.animate().alpha(1f).translationY(0f).setDuration(160).start();
     }
 
     private boolean executeSlashCommand(String input) {
@@ -560,7 +604,11 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case "/new": newChat(); return true;
             case "/model": showByokPage(); return true;
-            case "/settings": startActivity(new Intent(this, AgentSettingsActivity.class)); return true;
+            case "/settings": openAgentControls(); return true;
+            case "/skills": openAgentControls(); return true;
+            case "/mcp": startActivity(new Intent(this, PluginCenterActivity.class).putExtra("hub_section", "mcps")); return true;
+            case "/function": openAgentControls(); return true;
+            case "/forge": startActivity(new Intent(this, OceanForgeActivity.class)); return true;
             case "/plugins": startActivity(new Intent(this, PluginCenterActivity.class)); return true;
             case "/screen": setStarterPrompt("Inspect my current screen and "); return true;
             case "/files": setStarterPrompt("Work with my files to "); return true;
@@ -819,16 +867,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshAgentControlsSummary() {
-        if (agentControlsDrawer==null) return;
-        OceanAgentSettings s=new OceanAgentSettings(this);
-        TextView model=findViewById(R.id.agent_controls_model);
-        TextView generation=findViewById(R.id.agent_controls_generation);
-        TextView timeout=findViewById(R.id.agent_controls_timeout);
-        TextView context=findViewById(R.id.agent_controls_context);
-        if(model!=null)model.setText("Model · "+(byokManager!=null&&byokManager.isVerified()?byokManager.getModel():"Not configured"));
-        if(generation!=null)generation.setText("Temperature "+s.temperature()+" · Top P "+s.topP()+" · "+s.maxTokens()+" tokens");
-        if(timeout!=null)timeout.setText("Response timeout · "+(s.readTimeoutMs()/1000)+"s");
-        if(context!=null)context.setText(s.keepSessionAlive()?"Session context · persistent":"Session context · one turn");
+        if (agentControlsPanel != null) agentControlsPanel.refreshSummary();
     }
 
     private void showModels(View anchor) {
