@@ -185,6 +185,18 @@ public final class AgentArchitectureTest {
         assertFalse(runner.contains("printf '%s' \"+shellQuote(input)"));
     }
 
+    @Test public void agentHubStoresSkillsOnDiskWithSkillMarkdown() throws Exception {
+        String store = source("OceanAgentHubStore.java");
+        String bundled = source("OceanBundledSkills.java");
+        String panel = source("AgentControlsPanel.java");
+        assertTrue(store.contains("home/.ocean/skills"));
+        assertTrue(store.contains("SKILL.md"));
+        assertTrue(store.contains("activeSkillPromptBlock"));
+        assertTrue(bundled.contains("deep-coding"));
+        assertTrue(panel.contains("renderSkills"));
+        assertTrue(panel.contains("setSkillConnected"));
+    }
+
     @Test public void debugOnlyAuthBypassIsExplicitlyBuildScoped() throws Exception {
         String gradle=projectFile("build.gradle");
         assertTrue(gradle.contains("// Debug APKs always expose"));

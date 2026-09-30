@@ -25,23 +25,31 @@ final class HttpRequestEditor {
     private final EditText basicUser;
     private final EditText basicPass;
     private final LinearLayout headersPane;
-    private String active = "params";
+    private final LinearLayout bodyWrap;
+    private final LinearLayout authWrap;
 
     HttpRequestEditor(Context context) {
         this.context = context;
         root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
 
-        LinearLayout top = new LinearLayout(context);
-        top.setOrientation(LinearLayout.HORIZONTAL);
         method = new EditText(context);
         method.setHint("GET");
         method.setText("GET");
-        method.setWidth(dp(72));
+        method.setBackgroundResource(R.drawable.auth_field_background);
+        method.setPadding(dp(12), dp(10), dp(12), dp(10));
+        method.setTypeface(Typeface.MONOSPACE);
+
         url = new EditText(context);
         url.setHint("https://api.example.com/v1/resource");
-        LinearLayout.LayoutParams urlLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        top.addView(method);
+        url.setBackgroundResource(R.drawable.auth_field_background);
+        url.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        LinearLayout top = new LinearLayout(context);
+        top.setOrientation(LinearLayout.VERTICAL);
+        top.addView(method, matchWidth());
+        LinearLayout.LayoutParams urlLp = matchWidth();
+        urlLp.topMargin = dp(8);
         top.addView(url, urlLp);
         root.addView(top);
 
@@ -60,16 +68,19 @@ final class HttpRequestEditor {
         bodyPane.setMinLines(6);
         bodyPane.setHint("{\"key\":\"value\"}");
         bodyPane.setTypeface(Typeface.MONOSPACE);
+        bodyPane.setBackgroundResource(R.drawable.auth_field_background);
+        bodyPane.setPadding(dp(10), dp(10), dp(10), dp(10));
         bodyType = new Spinner(context);
         bodyType.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item,
                 new String[]{"None", "JSON", "Form (url-encoded)", "XML", "Custom"}));
         bodyType.setSelection(1);
-        LinearLayout bodyWrap = new LinearLayout(context);
+        bodyWrap = new LinearLayout(context);
         bodyWrap.setOrientation(LinearLayout.VERTICAL);
+        label(bodyWrap, "Body type");
         bodyWrap.addView(bodyType);
-        bodyWrap.addView(bodyPane);
+        bodyWrap.addView(bodyPane, matchWidth());
 
-        LinearLayout authWrap = new LinearLayout(context);
+        authWrap = new LinearLayout(context);
         authWrap.setOrientation(LinearLayout.VERTICAL);
         authGroup = new RadioGroup(context);
         authGroup.setOrientation(LinearLayout.VERTICAL);
@@ -78,12 +89,9 @@ final class HttpRequestEditor {
         addRadio(authGroup, "Basic Auth");
         addRadio(authGroup, "Custom");
         authWrap.addView(authGroup);
-        bearerToken = new EditText(context);
-        bearerToken.setHint("Bearer token");
-        basicUser = new EditText(context);
-        basicUser.setHint("Username");
-        basicPass = new EditText(context);
-        basicPass.setHint("Password");
+        bearerToken = field("Bearer token");
+        basicUser = field("Username");
+        basicPass = field("Password");
         authWrap.addView(bearerToken);
         authWrap.addView(basicUser);
         authWrap.addView(basicPass);
@@ -99,6 +107,7 @@ final class HttpRequestEditor {
         authWrap.setVisibility(View.GONE);
         headersPane.setVisibility(View.GONE);
         root.addView(pane, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
+        selectTab("params");
     }
 
     View view() { return root; }
@@ -127,12 +136,31 @@ final class HttpRequestEditor {
         return json;
     }
 
+    private EditText field(String hint) {
+        EditText e = new EditText(context);
+        e.setHint(hint);
+        e.setBackgroundResource(R.drawable.auth_field_background);
+        e.setPadding(dp(12), dp(10), dp(12), dp(10));
+        return e;
+    }
+
+    private void label(LinearLayout parent, String text) {
+        TextView t = new TextView(context);
+        t.setText(text);
+        t.setTextColor(0xFF9CA3AF);
+        t.setTextSize(11f);
+        t.setTypeface(null, Typeface.BOLD);
+        t.setPadding(0, dp(6), 0, dp(4));
+        parent.addView(t);
+    }
+
     private JSONArray readPairs(LinearLayout pane) throws Exception {
         JSONArray arr = new JSONArray();
         for (int i = 1; i < pane.getChildCount(); i++) {
             View row = pane.getChildAt(i);
             if (!(row instanceof LinearLayout)) continue;
             LinearLayout lr = (LinearLayout) row;
+            if (lr.getChildCount() < 2) continue;
             EditText k = (EditText) lr.getChildAt(0);
             EditText v = (EditText) lr.getChildAt(1);
             String key = k.getText().toString().trim();
@@ -148,9 +176,12 @@ final class HttpRequestEditor {
         pane.addView(headerRow("Key", "Value"));
         addKvRow(pane);
         addKvRow(pane);
-        Button more = new Button(context);
+        TextView more = new TextView(context);
         more.setText("+ Row");
-        more.setAllCaps(false);
+        more.setTextColor(0xFF111111);
+        more.setTypeface(null, Typeface.BOLD);
+        more.setTextSize(13f);
+        more.setPadding(0, dp(8), 0, dp(4));
         more.setOnClickListener(v -> addKvRow(pane));
         pane.addView(more);
         return pane;
@@ -159,10 +190,8 @@ final class HttpRequestEditor {
     private void addKvRow(LinearLayout pane) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        EditText k = new EditText(context);
-        k.setHint("key");
-        EditText v = new EditText(context);
-        v.setHint("value");
+        EditText k = field("key");
+        EditText v = field("value");
         row.addView(k, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(v, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         pane.addView(row);
@@ -172,9 +201,13 @@ final class HttpRequestEditor {
         LinearLayout row = new LinearLayout(context);
         TextView ka = new TextView(context);
         ka.setText(a);
+        ka.setTextColor(0xFF6B7280);
+        ka.setTextSize(11f);
         ka.setTypeface(null, Typeface.BOLD);
         TextView kb = new TextView(context);
         kb.setText(b);
+        kb.setTextColor(0xFF6B7280);
+        kb.setTextSize(11f);
         kb.setTypeface(null, Typeface.BOLD);
         row.addView(ka, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(kb, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -191,18 +224,16 @@ final class HttpRequestEditor {
     }
 
     private void selectTab(String id) {
-        active = id;
         for (int i = 0; i < tabRow.getChildCount(); i++) {
             TextView t = (TextView) tabRow.getChildAt(i);
             boolean on = id.equals(t.getTag());
             t.setTextColor(on ? 0xFF111111 : 0xFF9CA3AF);
             t.setTypeface(null, on ? Typeface.BOLD : Typeface.NORMAL);
+            t.setBackgroundResource(on ? R.drawable.tab_background : android.R.color.transparent);
         }
         paramsPane.setVisibility("params".equals(id) ? View.VISIBLE : View.GONE);
-        View body = (View) bodyPane.getParent();
-        body.setVisibility("body".equals(id) ? View.VISIBLE : View.GONE);
-        View auth = (View) bearerToken.getParent();
-        auth.setVisibility("auth".equals(id) ? View.VISIBLE : View.GONE);
+        bodyWrap.setVisibility("body".equals(id) ? View.VISIBLE : View.GONE);
+        authWrap.setVisibility("auth".equals(id) ? View.VISIBLE : View.GONE);
         headersPane.setVisibility("headers".equals(id) ? View.VISIBLE : View.GONE);
     }
 
@@ -210,7 +241,14 @@ final class HttpRequestEditor {
         RadioButton rb = new RadioButton(context);
         rb.setText(text);
         rb.setTextColor(0xFF111111);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            rb.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFF111111));
+        }
         group.addView(rb);
+    }
+
+    private LinearLayout.LayoutParams matchWidth() {
+        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
     private int dp(int v) {

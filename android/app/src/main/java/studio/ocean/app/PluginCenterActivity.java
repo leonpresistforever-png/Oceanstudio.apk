@@ -63,7 +63,10 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private ScrollView skillsScroll;
     private ScrollView mcpsScroll;
     private TextView hubTitle;
+    private LinearLayout hubSegments;
     private String hubSection = "plugins";
+    private String skillsFilter = "";
+    private String mcpsFilter = "";
     private LinearLayout installedStrip;
     private TextView installedEmpty;
     private TextView searchEmpty;
@@ -87,9 +90,9 @@ public final class PluginCenterActivity extends AppCompatActivity {
         skillsScroll=findViewById(R.id.plugin_skills_scroll);
         mcpsScroll=findViewById(R.id.plugin_mcps_scroll);
         hubTitle=findViewById(R.id.plugin_hub_title);
-        TextView picker=findViewById(R.id.plugin_hub_picker);
+        hubSegments=findViewById(R.id.plugin_hub_segments);
         if(getIntent()!=null&&getIntent().hasExtra("hub_section"))hubSection=getIntent().getStringExtra("hub_section");
-        if(picker!=null)picker.setOnClickListener(v->showHubMenu(picker));
+        buildHubSegments();
         installedStrip=findViewById(R.id.plugin_installed_strip);
         installedEmpty=findViewById(R.id.plugin_installed_empty);
         searchEmpty=findViewById(R.id.plugin_search_empty);
@@ -106,10 +109,28 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
         if(search!=null)search.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
-            @Override public void onTextChanged(CharSequence s,int start,int before,int count){render(s==null?"":s.toString());}
+            @Override public void onTextChanged(CharSequence s,int start,int before,int count){
+                String q=s==null?"":s.toString();
+                if("plugins".equals(hubSection))render(q);
+                else if("skills".equals(hubSection)){skillsFilter=q;renderHubSections();}
+                else{mcpsFilter=q;renderHubSections();}
+            }
             @Override public void afterTextChanged(Editable s){}
         });
+        if(getIntent()!=null&&getIntent().hasExtra("skill_id")){
+            String skillId=getIntent().getStringExtra("skill_id");
+            getIntent().removeExtra("skill_id");
+            showHubSection("skills");
+            uiHandlerOpenSkill(skillId);
+        }
     }
+
+    private void uiHandlerOpenSkill(String skillId){
+        if(skillId==null||skillId.isEmpty())return;
+        skillsList.post(()->openSkillDetailSheet(skillId));
+    }
+
+    private final android.os.Handler uiHandler=new android.os.Handler(android.os.Looper.getMainLooper());
 
     private void loadItems(){
         items.clear();
@@ -451,20 +472,49 @@ public final class PluginCenterActivity extends AppCompatActivity {
         return d;
     }
 
-    private void showHubMenu(View anchor){
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Capability library")
-                .setItems(new String[]{"Plugins","Skills","MCPs"},(d,which)->{
-                    showHubSection(which==0?"plugins":which==1?"skills":"mcps");
-                }).show();
+    private void buildHubSegments(){
+        if(hubSegments==null)return;
+        hubSegments.removeAllViews();
+        addSegment("plugins","Plugins");
+        addSegment("skills","Skills");
+        addSegment("mcps","MCPs");
+    }
+
+    private void addSegment(String id,String label){
+        TextView tab=new TextView(this);
+        tab.setText(label);
+        tab.setGravity(Gravity.CENTER);
+        tab.setTextSize(13);
+        tab.setTag(id);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1f);
+        tab.setLayoutParams(lp);
+        tab.setOnClickListener(v->showHubSection(id));
+        hubSegments.addView(tab);
+        styleSegment(tab,id.equals(hubSection));
+    }
+
+    private void styleSegment(TextView tab,boolean on){
+        tab.setTextColor(on?INK:MUTED);
+        tab.setTypeface(null,on?Typeface.BOLD:Typeface.NORMAL);
+        tab.setBackground(on?roundRect(SURFACE,10,BORDER):null);
     }
 
     private void showHubSection(String section){
         hubSection=section;
         if(hubTitle!=null)hubTitle.setText(section.equals("skills")?"Skills":section.equals("mcps")?"MCPs":"Plugins");
+        if(search!=null){
+            String hint="plugins".equals(section)?"Search plugins":"skills".equals(section)?"Search skills":"Search MCPs";
+            search.setHint(hint);
+            if(!"plugins".equals(section))search.setText("");
+        }
+        if(hubSegments!=null)for(int i=0;i<hubSegments.getChildCount();i++){
+            TextView t=(TextView)hubSegments.getChildAt(i);
+            styleSegment(t,section.equals(t.getTag()));
+        }
         if(pluginsScroll!=null)pluginsScroll.setVisibility("plugins".equals(section)?View.VISIBLE:View.GONE);
         if(skillsScroll!=null)skillsScroll.setVisibility("skills".equals(section)?View.VISIBLE:View.GONE);
         if(mcpsScroll!=null)mcpsScroll.setVisibility("mcps".equals(section)?View.VISIBLE:View.GONE);
+        if("skills".equals(section)||"mcps".equals(section))renderHubSections();
     }
 
     private void renderHubSections(){
@@ -474,12 +524,28 @@ public final class PluginCenterActivity extends AppCompatActivity {
         intro.setText("Premium skills stored on-device. Connected skills inject sharp context into the agent. Agent-authored skills appear here automatically.");
         intro.setTextColor(MUTED);intro.setTextSize(13);intro.setPadding(0,0,0,dp(14));
         skillsList.addView(intro);
+        String q=skillsFilter==null?"":skillsFilter.trim().toLowerCase(java.util.Locale.ROOT);
         JSONArray skills=hub.skills();
+        int shown=0;
         for(int i=0;i<skills.length();i++){
             JSONObject s=skills.optJSONObject(i);if(s==null)continue;
-            skillsList.addView(hubCard(s.optString("title"),s.optString("description"),
-                    "connected".equals(s.optString("status"))?"Connected · "+s.optString("source","manual"):"Disconnected",
-                    "connected".equals(s.optString("status"))));
+            String title=s.optString("title");
+            String desc=s.optString("description");
+            String id=s.optString("id");
+            if(!q.isEmpty()&&!title.toLowerCase(java.util.Locale.ROOT).contains(q)
+                    &&!desc.toLowerCase(java.util.Locale.ROOT).contains(q)
+                    &&!id.toLowerCase(java.util.Locale.ROOT).contains(q))continue;
+            boolean connected="connected".equals(s.optString("status"));
+            LinearLayout card=skillRow(s,connected);
+            card.setOnClickListener(v->openSkillDetailSheet(id));
+            skillsList.addView(card);
+            shown++;
+        }
+        if(shown==0){
+            TextView empty=new TextView(this);
+            empty.setText(q.isEmpty()?"No skills on device yet.":"No matching skills.");
+            empty.setTextColor(MUTED);empty.setTextSize(13);
+            skillsList.addView(empty);
         }
         mcpsList.removeAllViews();
         TextView mIntro=new TextView(this);
@@ -493,19 +559,189 @@ public final class PluginCenterActivity extends AppCompatActivity {
             empty.setTextColor(MUTED);empty.setTextSize(13);
             mcpsList.addView(empty);
         }
+        String mq=mcpsFilter==null?"":mcpsFilter.trim().toLowerCase(java.util.Locale.ROOT);
+        int mShown=0;
         for(int i=0;i<mcps.length();i++){
             JSONObject m=mcps.optJSONObject(i);if(m==null)continue;
+            String name=m.optString("name");
+            String cmd=m.optString("command","stdio transport");
+            if(!mq.isEmpty()&&!name.toLowerCase(java.util.Locale.ROOT).contains(mq)
+                    &&!cmd.toLowerCase(java.util.Locale.ROOT).contains(mq))continue;
             boolean connected=m.optBoolean("connected",false);
-            LinearLayout card=hubCard(m.optString("name"),m.optString("command","stdio transport"),
-                    connected?"Connected":"Connect",connected);
+            LinearLayout card=mcpRow(m,connected);
             card.setOnClickListener(v->toggleMcp(m.optString("id"),!connected));
             mcpsList.addView(card);
+            mShown++;
         }
-        TextView addMcp=new TextView(this);
-        addMcp.setText("+ Register MCP server");
-        addMcp.setTextColor(INK);addMcp.setTypeface(null,Typeface.BOLD);addMcp.setPadding(0,dp(18),0,dp(8));
-        addMcp.setOnClickListener(v->promptAddMcp());
+        if(mShown==0&&mcps.length()>0){
+            TextView empty=new TextView(this);
+            empty.setText("No matching MCP servers.");
+            empty.setTextColor(MUTED);empty.setTextSize(13);
+            mcpsList.addView(empty);
+        }
+        TextView addMcp=OceanUi.outlinedPill(this,"+ Add MCP");
+        LinearLayout.LayoutParams addLp=new LinearLayout.LayoutParams(-2,-2);
+        addLp.topMargin=dp(18);
+        addMcp.setLayoutParams(addLp);
+        addMcp.setOnClickListener(v->showMcpAddSheet());
         mcpsList.addView(addMcp);
+    }
+
+    private LinearLayout skillRow(JSONObject s,boolean connected){
+        LinearLayout row=new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16),dp(14),dp(16),dp(14));
+        row.setBackground(roundRect(connected?0xfff4f4f5:SURFACE,16,BORDER));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.bottomMargin=dp(10);
+        row.setLayoutParams(lp);
+        FrameLayout iconBox=new FrameLayout(this);
+        iconBox.setBackground(roundRect(SURFACE_MUTED,14,BORDER));
+        row.addView(iconBox,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        ImageView icon=new ImageView(this);
+        icon.setImageResource(R.drawable.ic_spark);icon.setColorFilter(INK);
+        iconBox.addView(icon,new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1f);
+        cp.leftMargin=dp(12);
+        row.addView(copy,cp);
+        TextView t=new TextView(this);t.setText(s.optString("title"));t.setTextColor(INK);t.setTextSize(15);t.setTypeface(null,Typeface.BOLD);
+        TextView d=new TextView(this);d.setText(s.optString("description"));d.setTextColor(MUTED);d.setTextSize(12);d.setMaxLines(2);
+        copy.addView(t);copy.addView(d);
+        TextView pill=new TextView(this);
+        pill.setText(connected?"✓":"Connect");
+        pill.setTextColor(connected?INK:0xFF52525B);
+        pill.setTextSize(12);pill.setTypeface(null,Typeface.BOLD);
+        pill.setPadding(dp(12),dp(8),dp(12),dp(8));
+        pill.setBackground(roundRect(SURFACE_MUTED,999,BORDER));
+        row.addView(pill);
+        return row;
+    }
+
+    private LinearLayout mcpRow(JSONObject m,boolean connected){
+        String transport=m.optString("transport","stdio");
+        return hubCard(m.optString("name"),transport+" · "+m.optString("command",""),
+                connected?"Connected":"Connect",connected);
+    }
+
+    private void openSkillDetailSheet(String id){
+        JSONArray skills=hub.skills();
+        JSONObject skill=null;
+        for(int i=0;i<skills.length();i++){
+            JSONObject s=skills.optJSONObject(i);
+            if(s!=null&&id.equals(s.optString("id"))){skill=s;break;}
+        }
+        if(skill==null)return;
+        final boolean connected="connected".equals(skill.optString("status"));
+        final String skillId=id;
+        String preview=hub.skillBodyWithoutFrontMatter(hub.readSkillMarkdown(id));
+        if(preview.length()>1200)preview=preview.substring(0,1200)+"\n…";
+
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
+        sheet.setBackground(topSheet());
+        View handle=new View(this);
+        handle.setBackground(roundRect(0xff737373,999,0x00000000));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(dp(52),dp(4));
+        hp.gravity=Gravity.CENTER_HORIZONTAL;hp.bottomMargin=dp(20);
+        sheet.addView(handle,hp);
+        TextView title=new TextView(this);
+        title.setText(skill.optString("title"));
+        title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
+        sheet.addView(title);
+        TextView desc=new TextView(this);
+        desc.setText(skill.optString("description"));
+        desc.setTextColor(MUTED);desc.setTextSize(13);
+        LinearLayout.LayoutParams dpv=new LinearLayout.LayoutParams(-1,-2);dpv.topMargin=dp(6);dpv.bottomMargin=dp(12);
+        sheet.addView(desc,dpv);
+        TextView contentsLabel=new TextView(this);
+        contentsLabel.setText("Contents");
+        contentsLabel.setTextColor(INK);contentsLabel.setTextSize(14);contentsLabel.setTypeface(null,Typeface.BOLD);
+        sheet.addView(contentsLabel);
+        TextView body=new TextView(this);
+        body.setText(preview);
+        body.setTextColor(0xFF3F3F46);
+        body.setTextSize(12);
+        body.setTypeface(Typeface.MONOSPACE);
+        body.setLineSpacing(0,1.05f);
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
+        bp.topMargin=dp(8);bp.bottomMargin=dp(16);
+        sheet.addView(body,bp);
+        TextView toggle=new TextView(this);
+        toggle.setGravity(Gravity.CENTER);
+        toggle.setTextSize(15);
+        toggle.setTypeface(null,Typeface.BOLD);
+        toggle.setTextColor(Color.WHITE);
+        toggle.setText(connected?"Disconnect skill":"Connect skill");
+        toggle.setBackground(roundRect(0xff111111,999,0x00000000));
+        toggle.setPadding(0,dp(16),0,dp(16));
+        toggle.setOnClickListener(v->{
+            hub.setSkillConnected(skillId,!connected);
+            dialog.dismiss();
+            renderHubSections();
+        });
+        sheet.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
+        dialog.setContentView(sheet);
+        dialog.show();
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+        }
+    }
+
+    private void showMcpAddSheet(){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
+        sheet.setBackground(topSheet());
+        TextView title=new TextView(this);
+        title.setText("Add MCP server");
+        title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
+        sheet.addView(title);
+        EditText name=new EditText(this);name.setHint("Server name");
+        name.setBackgroundResource(R.drawable.auth_field_background);
+        name.setPadding(dp(12),dp(10),dp(12),dp(10));
+        EditText cmd=new EditText(this);cmd.setHint("Command e.g. npx -y @scope/mcp");
+        cmd.setBackgroundResource(R.drawable.auth_field_background);
+        cmd.setPadding(dp(12),dp(10),dp(12),dp(10));
+        LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2);
+        flp.topMargin=dp(14);
+        sheet.addView(name,flp);
+        flp.topMargin=dp(10);
+        sheet.addView(cmd,flp);
+        TextView save=new TextView(this);
+        save.setGravity(Gravity.CENTER);
+        save.setText("Save MCP");
+        save.setTextColor(Color.WHITE);
+        save.setTypeface(null,Typeface.BOLD);
+        save.setBackground(roundRect(0xff111111,999,0x00000000));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        slp.topMargin=dp(20);
+        sheet.addView(save,slp);
+        save.setOnClickListener(v->{
+            try{
+                hub.addMcp(name.getText().toString().trim(),"stdio",cmd.getText().toString().trim());
+                dialog.dismiss();
+                renderHubSections();
+            }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
+        });
+        dialog.setContentView(sheet);
+        dialog.show();
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+        }
     }
 
     private LinearLayout hubCard(String title,String body,String action,boolean active){
@@ -533,17 +769,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
             hub.saveMcps(arr);
             renderHubSections();
         }catch(Exception ignored){}
-    }
-
-    private void promptAddMcp(){
-        EditText name=new EditText(this);name.setHint("Server name");
-        EditText cmd=new EditText(this);cmd.setHint("Command e.g. npx -y @scope/mcp");
-        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.addView(name);box.addView(cmd);
-        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Register MCP").setView(box)
-                .setPositiveButton("Save",(d,w)->{
-                    try{hub.addMcp(name.getText().toString().trim(), "stdio", cmd.getText().toString().trim());renderHubSections();}
-                    catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
-                }).setNegativeButton("Cancel",null).show();
     }
 
     private boolean exists(String relative){

@@ -34,6 +34,8 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /** Native auth and chat-first workspace. No WebView or browser bridge is involved. */
 public class MainActivity extends AppCompatActivity {
@@ -543,10 +545,23 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         options.removeAllViews();
+        java.util.ArrayList<String[]> commands = new java.util.ArrayList<>();
+        for (String[] command : SLASH_COMMANDS) commands.add(command);
+        try {
+            JSONArray skills = new OceanAgentHubStore(this).skills();
+            for (int i = 0; i < skills.length(); i++) {
+                JSONObject s = skills.optJSONObject(i);
+                if (s == null) continue;
+                String id = s.optString("id");
+                commands.add(new String[]{"/" + id, s.optString("description", s.optString("title"))});
+            }
+        } catch (Exception ignored) {}
         String lastSection = "";
-        for (String[] command : SLASH_COMMANDS) {
+        for (String[] command : commands) {
             if (!command[0].startsWith(query)) continue;
-            String section = command[0].equals("/run") || command[0].equals("/terminal") ? "Actions" : "Commands";
+            boolean skillEntry = new OceanAgentHubStore(this).findSkillBySlash(command[0]) != null;
+            String section = command[0].equals("/run") || command[0].equals("/terminal") ? "Actions"
+                    : skillEntry ? "Skills" : "Commands";
             if (!section.equals(lastSection)) {
                 lastSection = section;
                 TextView header = new TextView(this);
@@ -604,10 +619,10 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case "/new": newChat(); return true;
             case "/model": showByokPage(); return true;
-            case "/settings": openAgentControls(); return true;
-            case "/skills": openAgentControls(); return true;
+            case "/settings": openAgentControls("model"); return true;
+            case "/skills": openAgentControls("skills"); return true;
             case "/mcp": startActivity(new Intent(this, PluginCenterActivity.class).putExtra("hub_section", "mcps")); return true;
-            case "/function": openAgentControls(); return true;
+            case "/function": openAgentControls("functions"); return true;
             case "/forge": startActivity(new Intent(this, OceanForgeActivity.class)); return true;
             case "/plugins": startActivity(new Intent(this, PluginCenterActivity.class)); return true;
             case "/screen": setStarterPrompt("Inspect my current screen and "); return true;
@@ -620,7 +635,15 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case "/cost": changeAgentMode("cost"); return true;
             case "/work": changeAgentMode("work"); return true;
-            default: return false;
+            default:
+                JSONObject skill = new OceanAgentHubStore(this).findSkillBySlash(command);
+                if (skill != null) {
+                    new OceanAgentHubStore(this).setSkillConnected(skill.optString("id"), true);
+                    setStarterPrompt("Apply the " + skill.optString("title") + " skill to ");
+                    openAgentControls("skills");
+                    return true;
+                }
+                return false;
         }
     }
 
@@ -844,10 +867,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openAgentControls() {
-        if (agentControlsOpen) return;
+        openAgentControls("model");
+    }
+
+    private void openAgentControls(String tab) {
+        if (agentControlsOpen) {
+            if (agentControlsPanel != null && tab != null) agentControlsPanel.showTab(tab);
+            return;
+        }
         if (drawerOpen) closeDrawer();
         agentControlsOpen=true;
         refreshAgentControlsSummary();
+        if (agentControlsPanel != null && tab != null) agentControlsPanel.showTab(tab);
         agentControlsDrawer.setVisibility(View.VISIBLE);
         backdrop.setAlpha(0f); backdrop.setVisibility(View.VISIBLE); backdrop.animate().alpha(1f).setDuration(160).start();
         agentControlsDrawer.post(() -> {

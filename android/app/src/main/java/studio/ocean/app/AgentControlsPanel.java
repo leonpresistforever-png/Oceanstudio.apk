@@ -1,15 +1,13 @@
 package studio.ocean.app;
 
-import android.content.Context;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
-import androidx.appcompat.app.AlertDialog;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.util.Locale;
 
 /** Right drawer: live agent sliders, HTTP function builder, tools, and hub shortcuts. */
 final class AgentControlsPanel {
@@ -29,6 +27,9 @@ final class AgentControlsPanel {
     private final LinearLayout tabs;
     private final FrameLayout body;
     private String activeTab = "model";
+    private boolean inlineFunctionEditor;
+    private boolean inlineToolEditor;
+    private boolean inlineSkillEditor;
 
     AgentControlsPanel(MainActivity activity, View root, Host host) {
         this.activity = activity;
@@ -45,6 +46,23 @@ final class AgentControlsPanel {
 
     void refreshSummary() {
         if ("model".equals(activeTab)) showTab("model");
+    }
+
+    void showTab(String id) {
+        activeTab = id;
+        for (int i = 0; i < tabs.getChildCount(); i++) {
+            TextView t = (TextView) tabs.getChildAt(i);
+            boolean on = id.equals(t.getTag());
+            t.setTextColor(on ? 0xFF111111 : 0xFF8A8F96);
+            t.setBackgroundResource(on ? R.drawable.tab_background : android.R.color.transparent);
+        }
+        body.removeAllViews();
+        switch (id) {
+            case "functions": renderFunctions(); break;
+            case "tools": renderTools(); break;
+            case "skills": renderSkills(); break;
+            default: renderModel(); break;
+        }
     }
 
     private void buildTabs() {
@@ -64,23 +82,6 @@ final class AgentControlsPanel {
         tab.setOnClickListener(v -> showTab(id));
         tab.setTag(id);
         tabs.addView(tab);
-    }
-
-    private void showTab(String id) {
-        activeTab = id;
-        for (int i = 0; i < tabs.getChildCount(); i++) {
-            TextView t = (TextView) tabs.getChildAt(i);
-            boolean on = id.equals(t.getTag());
-            t.setTextColor(on ? 0xFF111111 : 0xFF8A8F96);
-            t.setBackgroundResource(on ? R.drawable.tab_background : android.R.color.transparent);
-        }
-        body.removeAllViews();
-        switch (id) {
-            case "functions": renderFunctions(); break;
-            case "tools": renderTools(); break;
-            case "skills": renderSkills(); break;
-            default: renderModel(); break;
-        }
     }
 
     private void renderModel() {
@@ -121,7 +122,7 @@ final class AgentControlsPanel {
                 ? host.byok().getModel() : "Not configured"));
         modelLine.setOnClickListener(v -> host.openByok());
 
-        Button save = primary(col, "Save agent configuration");
+        TextView save = outlinedAction(col, "Save agent configuration");
         save.setOnClickListener(v -> {
             try {
                 settings.save(temp.getProgress() / 100f, topP.getProgress() / 100f,
@@ -142,124 +143,195 @@ final class AgentControlsPanel {
         LinearLayout col = column();
         body.addView(col);
         muted(col, "HTTP functions the agent can call via terminal curl workflows.");
-        Button create = primary(col, "Create function");
-        create.setOnClickListener(v -> showHttpBuilder("function", name -> {
-            try {
-                hub.addFunction(name, lastHttpConfig);
+
+        TextView newBtn = outlinedAction(col, "+ New function");
+        newBtn.setOnClickListener(v -> {
+            inlineFunctionEditor = true;
+            showTab("functions");
+        });
+
+        if (inlineFunctionEditor) {
+            divider(col);
+            label(col, "NEW FUNCTION");
+            EditText name = field(col, "Function name", "my_function");
+            HttpRequestEditor editor = new HttpRequestEditor(activity);
+            col.addView(editor.view(), matchWidth());
+            LinearLayout actions = new LinearLayout(activity);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            TextView cancel = outlinedAction(actions, "Cancel");
+            TextView save = outlinedAction(actions, "Save");
+            LinearLayout.LayoutParams lp = matchWidth();
+            lp.topMargin = dp(12);
+            actions.addView(cancel);
+            actions.addView(save);
+            col.addView(actions, lp);
+            cancel.setOnClickListener(v -> {
+                inlineFunctionEditor = false;
                 showTab("functions");
-            } catch (Exception e) {
-                Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }));
-        listJson(col, hub.functions(), "No functions yet.");
+            });
+            save.setOnClickListener(v -> {
+                try {
+                    hub.addFunction(name.getText().toString().trim(), editor.toJson());
+                    inlineFunctionEditor = false;
+                    showTab("functions");
+                } catch (Exception e) {
+                    Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            listJson(col, hub.functions(), "No functions yet.");
+        }
     }
 
     private void renderTools() {
         LinearLayout col = column();
         body.addView(col);
         muted(col, "OpenAI-style tool schemas stored locally for documentation and future wiring.");
-        Button create = primary(col, "Create tool schema");
-        create.setOnClickListener(v -> showHttpBuilder("tool", name -> {
-            try {
-                JSONArray arr = hub.tools();
-                arr.put(new JSONObject()
-                        .put("name", name)
-                        .put("description", "Custom HTTP tool " + name)
-                        .put("http", lastHttpConfig));
-                hub.saveTools(arr);
+
+        TextView newBtn = outlinedAction(col, "+ New tool schema");
+        newBtn.setOnClickListener(v -> {
+            inlineToolEditor = true;
+            showTab("tools");
+        });
+
+        if (inlineToolEditor) {
+            divider(col);
+            label(col, "NEW TOOL");
+            EditText name = field(col, "Tool name", "my_tool");
+            HttpRequestEditor editor = new HttpRequestEditor(activity);
+            col.addView(editor.view(), matchWidth());
+            LinearLayout actions = new LinearLayout(activity);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            TextView cancel = outlinedAction(actions, "Cancel");
+            TextView save = outlinedAction(actions, "Save");
+            LinearLayout.LayoutParams lp = matchWidth();
+            lp.topMargin = dp(12);
+            actions.addView(cancel);
+            actions.addView(save);
+            col.addView(actions, lp);
+            cancel.setOnClickListener(v -> {
+                inlineToolEditor = false;
                 showTab("tools");
-            } catch (Exception e) {
-                Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }));
-        listJson(col, hub.tools(), "No custom tools.");
+            });
+            save.setOnClickListener(v -> {
+                try {
+                    JSONArray arr = hub.tools();
+                    arr.put(new JSONObject()
+                            .put("name", name.getText().toString().trim())
+                            .put("description", "Custom HTTP tool " + name.getText().toString().trim())
+                            .put("http", editor.toJson()));
+                    hub.saveTools(arr);
+                    inlineToolEditor = false;
+                    showTab("tools");
+                } catch (Exception e) {
+                    Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            listJson(col, hub.tools(), "No custom tools.");
+        }
     }
 
     private void renderSkills() {
         LinearLayout col = column();
         body.addView(col);
         muted(col, "Connected skills append premium context to the agent system prompt.");
-        Button create = primary(col, "Create skill");
-        create.setOnClickListener(v -> {
-            EditText title = new EditText(activity);
-            title.setHint("Skill title");
-            EditText desc = new EditText(activity);
-            desc.setMinLines(4);
-            desc.setHint("Full skill instructions…");
-            LinearLayout box = column();
-            box.addView(title);
-            box.addView(desc);
-            new AlertDialog.Builder(activity).setTitle("New skill").setView(box)
-                    .setPositiveButton("Save", (d, w) -> {
-                        try {
-                            hub.addSkill(title.getText().toString().trim(), desc.getText().toString().trim(), "manual");
-                            showTab("skills");
-                        } catch (Exception e) {
-                            Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }).setNegativeButton("Cancel", null).show();
+
+        TextView hubLink = outlinedAction(col, "Open skills hub");
+        hubLink.setOnClickListener(v -> {
+            host.close();
+            activity.startActivity(new Intent(activity, PluginCenterActivity.class)
+                    .putExtra("hub_section", "skills"));
         });
+
+        TextView newBtn = outlinedAction(col, "+ New skill");
+        newBtn.setOnClickListener(v -> {
+            inlineSkillEditor = true;
+            showTab("skills");
+        });
+
+        if (inlineSkillEditor) {
+            divider(col);
+            label(col, "NEW SKILL");
+            EditText title = field(col, "Skill title", "");
+            EditText desc = new EditText(activity);
+            desc.setMinLines(8);
+            desc.setGravity(Gravity.TOP | Gravity.START);
+            desc.setHint("Full skill instructions (markdown)…");
+            desc.setBackgroundResource(R.drawable.auth_field_background);
+            desc.setPadding(dp(12), dp(12), dp(12), dp(12));
+            col.addView(desc, matchWidth());
+            LinearLayout actions = new LinearLayout(activity);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            TextView cancel = outlinedAction(actions, "Cancel");
+            TextView save = outlinedAction(actions, "Save SKILL.md");
+            actions.addView(cancel);
+            actions.addView(save);
+            col.addView(actions, matchWidth());
+            cancel.setOnClickListener(v -> {
+                inlineSkillEditor = false;
+                showTab("skills");
+            });
+            save.setOnClickListener(v -> {
+                try {
+                    hub.addSkill(title.getText().toString().trim(), desc.getText().toString().trim(), "manual");
+                    inlineSkillEditor = false;
+                    showTab("skills");
+                } catch (Exception e) {
+                    Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
         JSONArray skills = hub.skills();
         for (int i = 0; i < skills.length(); i++) {
             JSONObject s = skills.optJSONObject(i);
             if (s == null) continue;
+            String id = s.optString("id");
             LinearLayout card = column();
             card.setBackgroundResource(R.drawable.composer_background);
             card.setPadding(dp(14), dp(12), dp(14), dp(12));
+
             TextView t = new TextView(activity);
             t.setText(s.optString("title"));
             t.setTextColor(0xFF111111);
+            t.setTextSize(15f);
             t.setTypeface(null, Typeface.BOLD);
             card.addView(t);
+
             TextView d = new TextView(activity);
             d.setText(s.optString("description"));
             d.setTextColor(0xFF6B7280);
             d.setTextSize(12f);
             card.addView(d);
-            TextView badge = new TextView(activity);
+
             boolean connected = "connected".equals(s.optString("status"));
-            badge.setText(connected ? "Connected · " + s.optString("source", "manual") : "Disconnected");
-            badge.setTextColor(connected ? 0xFF111111 : 0xFF9CA3AF);
-            badge.setTextSize(11f);
-            card.addView(badge);
-            card.setOnClickListener(v -> toggleSkill(s.optString("id")));
+            TextView toggle = new TextView(activity);
+            toggle.setText(connected ? "Connected" : "Connect");
+            toggle.setTextColor(0xFF111111);
+            toggle.setTextSize(11f);
+            toggle.setTypeface(null, Typeface.BOLD);
+            toggle.setPadding(dp(10), dp(6), dp(10), dp(6));
+            toggle.setBackgroundResource(R.drawable.button_secondary);
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            tlp.topMargin = dp(8);
+            card.addView(toggle, tlp);
+
+            toggle.setOnClickListener(v -> {
+                hub.setSkillConnected(id, !connected);
+                showTab("skills");
+            });
+            card.setOnClickListener(v -> {
+                host.close();
+                activity.startActivity(new Intent(activity, PluginCenterActivity.class)
+                        .putExtra("hub_section", "skills")
+                        .putExtra("skill_id", id));
+            });
+
             LinearLayout.LayoutParams lp = matchWidth();
             lp.topMargin = dp(10);
             col.addView(card, lp);
         }
-        body.addView(col);
-    }
-
-    private void toggleSkill(String id) {
-        try {
-            JSONArray arr = hub.skills();
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject s = arr.getJSONObject(i);
-                if (!id.equals(s.optString("id"))) continue;
-                String status = s.optString("status");
-                s.put("status", "connected".equals(status) ? "disconnected" : "connected");
-            }
-            hub.saveSkills(arr);
-            showTab("skills");
-        } catch (Exception ignored) {}
-    }
-
-    private JSONObject lastHttpConfig;
-
-    private void showHttpBuilder(String kind, java.util.function.Consumer<String> onSave) {
-        LinearLayout root = column();
-        EditText name = field(root, kind + " name", "my_" + kind);
-        HttpRequestEditor editor = new HttpRequestEditor(activity);
-        root.addView(editor.view(), matchWidth());
-        new AlertDialog.Builder(activity).setTitle("Create " + kind).setView(root)
-                .setPositiveButton("Save", (d, w) -> {
-                    try {
-                        lastHttpConfig = editor.toJson();
-                        onSave.accept(name.getText().toString().trim());
-                    } catch (Exception e) {
-                        Toast.makeText(activity, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                }).setNegativeButton("Cancel", null).show();
     }
 
     private void listJson(LinearLayout col, JSONArray arr, String empty) {
@@ -273,6 +345,7 @@ final class AgentControlsPanel {
             TextView row = new TextView(activity);
             row.setText("• " + o.optString("name", o.optString("title", "item")));
             row.setTextColor(0xFF374151);
+            row.setTextSize(14f);
             row.setPadding(0, dp(6), 0, dp(6));
             col.addView(row);
         }
@@ -283,6 +356,16 @@ final class AgentControlsPanel {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(0, dp(16), 0, 0);
         return col;
+    }
+
+    private void divider(LinearLayout parent) {
+        View v = new View(activity);
+        v.setBackgroundColor(0xFFE5E3E0);
+        LinearLayout.LayoutParams lp = matchWidth();
+        lp.height = 1;
+        lp.topMargin = dp(16);
+        lp.bottomMargin = dp(8);
+        parent.addView(v, lp);
     }
 
     private void label(LinearLayout parent, String text) {
@@ -324,6 +407,7 @@ final class AgentControlsPanel {
         SeekBar bar = new SeekBar(activity);
         bar.setMax(max);
         bar.setProgress(Math.max(min, Math.min(max, progress)));
+        OceanUi.styleSeekBar(bar);
         label.setText(title + " · " + bar.getProgress());
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
@@ -340,21 +424,18 @@ final class AgentControlsPanel {
         Switch s = new Switch(activity);
         s.setText(text);
         s.setChecked(on);
-        s.setTextColor(0xFF111111);
+        OceanUi.styleSwitch(s);
         parent.addView(s);
         return s;
     }
 
-    private Button primary(LinearLayout parent, String text) {
-        Button b = new Button(activity);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setBackgroundResource(R.drawable.primary_button_background);
-        b.setTextColor(0xFFFFFFFF);
-        LinearLayout.LayoutParams lp = matchWidth();
-        lp.topMargin = dp(16);
-        parent.addView(b, lp);
-        return b;
+    private TextView outlinedAction(ViewGroup parent, String text) {
+        TextView pill = OceanUi.outlinedPill(activity, text);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(10);
+        lp.rightMargin = dp(8);
+        parent.addView(pill, lp);
+        return pill;
     }
 
     private LinearLayout.LayoutParams matchWidth() {
