@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/leonpresistforever-png/Oceanstudio-packages",
+  "canonicalCommit": "27dbb20464d2847c23fefdf7cba7ea505492d274",
+  "branch": "repair/cursor-package-consolidation-20260930",
+  "syncedAt": "2026-09-30T12:53:00Z",
+  "status": "GENERATED_READ_ONLY_SNAPSHOT",
+  "policy": "DO NOT EDIT. All package recipes, builders, and manifests must be authored in Oceanstudio-packages.",
+  "packagesCount": 6502,
+  "verifiedZeroTermux": true
+}

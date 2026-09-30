@@ -163,6 +163,9 @@ def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     from(rootProject.projectDir.parentFile) {
         include "scripts/verify-native-only.sh"
         include "packages/ocean-prefix.env"
+        include "PACKAGE_SOURCE_POLICY.md"
+        include "ocean-packages/CANONICAL_PACKAGE_SOURCE.json"
+        include "ocean-packages/DO_NOT_EDIT_PACKAGE_SNAPSHOT.md"
         include "ocean-packages/packages/ocean-tools/**"
         include "ocean-packages/scripts/**"
     }
