@@ -6,8 +6,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -83,7 +84,8 @@ public final class RuntimePortHints {
     private static void write(File hints, Set<Integer> ports) {
         try {
             if (!hints.getParentFile().exists() && !hints.getParentFile().mkdirs()) return;
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(hints, StandardCharsets.UTF_8, false))) {
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(hints), StandardCharsets.UTF_8))) {
                 writer.write("# Ocean auto-detected local listener ports\n");
                 for (int port : ports) writer.write(Integer.toString(port) + "\n");
             }
