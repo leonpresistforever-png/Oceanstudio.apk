@@ -14,6 +14,51 @@
       },
       "oauth_client": [
         {
+          "client_id": "2746278315-6j81vsmervqflredvjbihjo87v7schec.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "studio.ocean.app",
+            "certificate_hash": "fedcd3a64a62749a5bc18194a01a346651ff3346"
+          }
+        },
+        {
+          "client_id": "2746278315-vhu0ctt0e2b9kehrt6pq4lh8nsmsdvsd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChoPOrqMgxGk9XAFVXlOtK52W6yw1WtFk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "2746278315-vhu0ctt0e2b9kehrt6pq4lh8nsmsdvsd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:2746278315:android:418e0c18a550b83475b2ee",
+        "android_client_info": {
+          "package_name": "Ocean.studio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "2746278315-6j81vsmervqflredvjbihjo87v7schec.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "Ocean.studio",
+            "certificate_hash": "fedcd3a64a62749a5bc18194a01a346651ff3346"
+          }
+        },
+        {
           "client_id": "2746278315-vhu0ctt0e2b9kehrt6pq4lh8nsmsdvsd.apps.googleusercontent.com",
           "client_type": 3
         }
