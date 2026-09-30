@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
 
 // AppCompat/Core transitively request different Kotlin stdlib generations.
 // Keep every compatibility artifact on one generation to prevent duplicate classes.
@@ -82,6 +83,8 @@ android {
 }
 
 dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-analytics'
     implementation project(':terminal-emulator')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
