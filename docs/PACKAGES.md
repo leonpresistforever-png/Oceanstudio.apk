@@ -23,8 +23,11 @@ The staging quality gate (`ocean-packages/scripts/package_quality.py`) blocks pr
 Indexed duplicates and junk names are reported by:
 
 ```bash
+bash scripts/sync-packages-index-audit.sh
 python3 ocean-packages/scripts/audit_package_index.py --root /path/to/Oceanstudio-packages --json /tmp/audit.json
 ```
+
+See `docs/ocean-terminal/expansion-1000-plan.md` for promotion and priority expansion workflow.
 
 ## Building shard / multiplier packages
 

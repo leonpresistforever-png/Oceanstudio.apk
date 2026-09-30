@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 1,
-  "indexedCount": 6506,
+  "indexed": 6506,
+  "stagedNew": 0,
+  "stagedConflicts": [],
   "priorityMissing": [
     "alsa-utils",
     "libnotify-bin",
@@ -38,5 +39,8 @@
     "gstreamer1.0-tools",
     "v4l-utils"
   ],
-  "notes": "Names here are install targets only; each requires an official Ocean source build before publication."
+  "brokenDepends": [],
+  "junkIndexed": [],
+  "stagingQualityRejected": [],
+  "repositoryRoot": "/tmp/ocean-pkg-sparse"
 }
