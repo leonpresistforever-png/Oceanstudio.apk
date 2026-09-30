@@ -71,8 +71,6 @@ def main() -> int:
     try:
         from index_all_staged import verify_release
 
-        from index_all_staged import verify_release
-
         verify_release(repo / "apt/dists/stable", repo / "apt/ocean.gpg")
         lines.append("[OK] Signed Release matches InRelease and Packages checksums.")
     except Exception as exc:
@@ -82,19 +80,21 @@ def main() -> int:
     staged_conflicts = []
     staged_new = []
     rejected_staging = []
-    for deb in sorted((repo / "staging").rglob("*.deb")):
-        verdict = assess_deb(deb)
-        if verdict.reject:
-            rejected_staging.append((deb.name, list(verdict.reasons)))
-        _, digest = parse_deb(deb)
-        pool = repo / "apt/pool/main" / deb.name
-        rel = deb.relative_to(repo).as_posix()
-        if pool.exists():
-            _, pool_digest = parse_deb(pool)
-            if digest["sha256"] != pool_digest["sha256"]:
-                staged_conflicts.append(rel)
-        else:
-            staged_new.append(deb.name)
+    staging_root = repo / "staging"
+    if staging_root.is_dir():
+        for deb in sorted(staging_root.rglob("*.deb")):
+            verdict = assess_deb(deb)
+            if verdict.reject:
+                rejected_staging.append((deb.name, list(verdict.reasons)))
+            _, digest = parse_deb(deb)
+            pool = repo / "apt/pool/main" / deb.name
+            rel = deb.relative_to(repo).as_posix()
+            if pool.exists():
+                _, pool_digest = parse_deb(pool)
+                if digest["sha256"] != pool_digest["sha256"]:
+                    staged_conflicts.append(rel)
+            else:
+                staged_new.append(deb.name)
 
     lines.extend(["", f"Staged .deb files not in live index: {len(staged_new)}"])
     for name in sorted(staged_new)[:80]:
@@ -163,14 +163,18 @@ def main() -> int:
 
     # Promotion plan
     lines.extend(["", "Promotion plan (read-only):"])
-    try:
-        from index_all_staged import select_packages
+    pool_root = repo / "apt/pool"
+    if pool_root.is_dir() and any(pool_root.rglob("*.deb")):
+        try:
+            from index_all_staged import select_packages
 
-        _, report = select_packages(repo)
-        lines.append(f"  Would index {report['indexedAfter']} entries (currently {report['indexedBefore']}).")
-        lines.append(f"  Pending updates: {len(report['updates'])}")
-    except Exception as exc:
-        lines.append(f"  [BLOCKED] {exc}")
+            _, report = select_packages(repo)
+            lines.append(f"  Would index {report['indexedAfter']} entries (currently {report['indexedBefore']}).")
+            lines.append(f"  Pending updates: {len(report['updates'])}")
+        except Exception as exc:
+            lines.append(f"  [BLOCKED] {exc}")
+    else:
+        lines.append("  [SKIPPED] apt/pool not present (sparse audit checkout).")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("\n".join(lines) + "\n", encoding="utf-8")
