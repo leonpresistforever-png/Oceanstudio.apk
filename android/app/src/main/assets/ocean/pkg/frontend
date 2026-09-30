@@ -126,13 +126,31 @@ ensure_catalog() {
     printf '%s\n' 'No package catalogue is available. Connect to the internet and retry this command.' >&2
     return "$status"
 }
+run_post_install_hooks() {
+    command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true
+}
 command=${1:-help}; shift || true
 case "$command" in
  update) refresh_catalog "$@";;
- upgrade) refresh_catalog && apt-get full-upgrade "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
- install) ensure_catalog && apt-get install "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
+ upgrade)
+    refresh_catalog || exit $?
+    apt-get full-upgrade "$@"
+    r=$?
+    run_post_install_hooks
+    exit "$r";;
+ install)
+    ensure_catalog || exit $?
+    apt-get install "$@"
+    r=$?
+    run_post_install_hooks
+    exit "$r";;
  remove) apt-get remove "$@";;
- reinstall) ensure_catalog && apt-get install --reinstall "$@" && command -v ocean-fix-shebangs >/dev/null && ocean-fix-shebangs || true;;
+ reinstall)
+    ensure_catalog || exit $?
+    apt-get install --reinstall "$@"
+    r=$?
+    run_post_install_hooks
+    exit "$r";;
  search) ensure_catalog && apt-cache search "$@";;
  show) ensure_catalog && apt-cache show "$@";;
  list-installed) dpkg-query -W "$@";;
