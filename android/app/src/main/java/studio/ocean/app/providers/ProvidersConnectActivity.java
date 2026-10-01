@@ -38,6 +38,7 @@ import studio.ocean.app.OceanAgentRunner;
 import studio.ocean.app.OceanByokManager;
 import studio.ocean.app.R;
 import studio.ocean.app.providers.auth.AuthErrorNormalizer;
+import studio.ocean.app.providers.auth.AuthOrchestrator;
 import studio.ocean.app.providers.auth.AuthPreflight;
 import studio.ocean.app.providers.cli.AntigravityCliAdapter;
 import studio.ocean.app.providers.cli.ClaudeCodeCliAdapter;
@@ -90,6 +91,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     private CredentialVault credentialVault;
     private QuotaService quotaService;
     private ModelCatalogService modelCatalogService;
+    private AuthOrchestrator authOrchestrator;
 
     // CLI Adapters
     private AntigravityCliAdapter antigravityCli;
@@ -113,6 +115,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         credentialVault = new CredentialVault(this);
         quotaService = new QuotaService();
         modelCatalogService = new ModelCatalogService();
+        authOrchestrator = new AuthOrchestrator(this);
 
         // Target application dedicated tools prefix (/data/data/studio.ocean.app/files/usr/bin)
         File toolsDir = new File(getFilesDir(), "usr/bin");
@@ -316,6 +319,23 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 if (aConn == bConn) return a.title.compareToIgnoreCase(b.title);
                 return aConn ? -1 : 1;
             });
+        }
+
+        TextView titleView = findViewById(R.id.providers_title);
+        TextView introView = findViewById(R.id.providers_intro);
+        if (titleView != null) {
+            if (activeFilter != FilterCategory.ALL || !searchQuery.isEmpty()) {
+                titleView.setText("Providers (" + filtered.size() + ")");
+            } else {
+                titleView.setText(R.string.providers);
+            }
+        }
+        if (introView != null) {
+            if (activeFilter != FilterCategory.ALL || !searchQuery.isEmpty()) {
+                introView.setText("Showing " + filtered.size() + " matching provider" + (filtered.size() == 1 ? "" : "s"));
+            } else {
+                introView.setText("Connect subscription accounts via official CLI bridges, direct API keys, or local runtimes.");
+            }
         }
 
         if (filtered.isEmpty()) {
@@ -995,45 +1015,61 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     }
 
     private void showDirectConnectFlow(ProviderDescriptor desc) {
-        if (ProviderRegistry.ID_KIMI.equals(desc.id)) {
-            startKimiDeviceCodeFlow(desc);
-            return;
-        }
+        authOrchestrator.startDirectConnect(desc, new AuthOrchestrator.AuthFlowCallback() {
+            @Override
+            public void onRiskWarningRequired(String title, String message, Runnable onProceed) {
+                runOnUiThread(() -> new AlertDialog.Builder(ProvidersConnectActivity.this)
+                        .setTitle(title)
+                        .setMessage(message)
+                        .setPositiveButton("Proceed Anyway", (d, w) -> onProceed.run())
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show());
+            }
 
-        if (ProviderRegistry.ID_OPENAI.equals(desc.id)) {
-            new AlertDialog.Builder(this)
-                    .setTitle("OpenAI · Direct Connect")
-                    .setMessage("Sign in with ChatGPT is feature-gated to verified Ocean client registrations.\n\nTo connect your OpenAI account, use the official Codex CLI Bridge or provide an API Key.")
-                    .setPositiveButton("Use Codex CLI Bridge", (d, w) -> connectViaOfficialCli(desc))
-                    .setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
-            return;
-        }
+            @Override
+            public void onDeviceCodeReceived(String userCode, String verificationUrl, int expiresInSeconds) {
+                runOnUiThread(() -> showDeviceCodeDialog(desc, userCode, verificationUrl, expiresInSeconds));
+            }
 
-        if (ProviderRegistry.ID_GOOGLE.equals(desc.id) || ProviderRegistry.ID_ANTHROPIC.equals(desc.id)) {
-            new AlertDialog.Builder(this)
-                    .setTitle(desc.title + " · Direct Connect")
-                    .setMessage("Direct Connect for " + desc.title + " requires official third-party client registration.\n\nUntil natively supported by the provider, please connect via the official CLI Bridge (" + desc.officialCliName + ") or provide an API Key.")
-                    .setPositiveButton("Use " + desc.officialCliName + " CLI Bridge", (d, w) -> connectViaOfficialCli(desc))
-                    .setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
-            return;
-        }
+            @Override
+            public void onBrowserLaunchRequired(String authUrl) {
+                runOnUiThread(() -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl)));
+                    } catch (Exception e) {
+                        Toast.makeText(ProvidersConnectActivity.this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
 
-        new AlertDialog.Builder(this)
-                .setTitle(desc.title + " · Direct Connect")
-                .setMessage("Direct Connect is unavailable for " + desc.title + " in this build.\n\nPlease connect with an API Key.")
-                .setPositiveButton("Enter API Key", (d, w) -> showApiKeyDialog(desc, null))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+            @Override
+            public void onSuccess(ProviderConnection connection) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ProvidersConnectActivity.this, desc.title + " connected successfully", Toast.LENGTH_SHORT).show();
+                    renderProviders();
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(ProvidersConnectActivity.this)
+                            .setTitle(desc.title + " · Direct Connect")
+                            .setMessage(error)
+                            .setNegativeButton(android.R.string.cancel, null);
+                    if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
+                        builder.setPositiveButton("Use " + desc.officialCliName + " CLI Bridge", (d, w) -> connectViaOfficialCli(desc));
+                    }
+                    if (desc.supports(AuthStrategy.API_KEY)) {
+                        builder.setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null));
+                    }
+                    builder.show();
+                });
+            }
+        });
     }
 
-    private void startKimiDeviceCodeFlow(ProviderDescriptor desc) {
-        String userCode = "KIMI-" + (1000 + new Random().nextInt(9000));
-        String verificationUrl = "https://kimi.com/code/oauth";
-
+    private void showDeviceCodeDialog(ProviderDescriptor desc, String userCode, String verificationUrl, int expiresInSeconds) {
         AlertDialog[] dialogHolder = new AlertDialog[1];
         AtomicBoolean canceled = new AtomicBoolean(false);
 
@@ -1068,7 +1104,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         layout.addView(pollingText);
 
         dialogHolder[0] = new AlertDialog.Builder(this)
-                .setTitle("Kimi Code · Device Authorization")
+                .setTitle(desc.title + " · Device Authorization")
                 .setView(layout)
                 .setPositiveButton("Open Browser", (d, w) -> {
                     try {
@@ -1085,7 +1121,8 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 .show();
 
         new Thread(() -> {
-            for (int i = 0; i < 12; i++) {
+            int maxAttempts = Math.max(1, expiresInSeconds / 5);
+            for (int i = 0; i < maxAttempts; i++) {
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {

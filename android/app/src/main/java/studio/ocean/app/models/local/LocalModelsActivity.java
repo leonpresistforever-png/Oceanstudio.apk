@@ -269,6 +269,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Unloaded " + model.displayName, Toast.LENGTH_SHORT).show();
                 updateRamStatus();
                 renderModels();
+            });
             actions.addView(unloadBtn);
         }
 
