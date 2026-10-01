@@ -136,8 +136,9 @@ jobs:
           set -euo pipefail
           tag="v${VERSION}-test"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::Release $tag already exists; refusing to overwrite it."
-            exit 1
+            echo "Release $tag already exists; updating test APK assets..."
+            gh release upload "$tag" "$APK_PATH" "$APK_CHECKSUM" --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
           fi
           cat > "$RUNNER_TEMP/test-release-notes.md" <<EOF
           Test APK built and verified from source commit $GITHUB_SHA.
