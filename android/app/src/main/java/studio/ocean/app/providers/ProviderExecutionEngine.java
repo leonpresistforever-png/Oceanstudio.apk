@@ -159,6 +159,26 @@ public final class ProviderExecutionEngine {
                     if (!adapter.isSessionAuthenticated()) {
                         throw new IOException("Official CLI session for " + conn.providerId + " is not authenticated");
                     }
+                    // Run harmless verification probe (Directive 2 §3.1)
+                    CountDownLatch probeLatch = new CountDownLatch(1);
+                    boolean[] probeSuccess = new boolean[]{false};
+                    String[] probeErr = new String[]{null};
+                    adapter.runHeadless("ping", new OfficialCliAdapter.StreamCallback() {
+                        @Override public void onLine(String rawLine) { probeSuccess[0] = true; }
+                        @Override public void onJson(JSONObject json) { probeSuccess[0] = true; }
+                        @Override public void onError(String error) { probeErr[0] = error; }
+                        @Override public void onComplete(int exitCode) {
+                            if (exitCode == 0) probeSuccess[0] = true;
+                            probeLatch.countDown();
+                        }
+                    });
+                    boolean finished = probeLatch.await(10, TimeUnit.SECONDS);
+                    if (!finished) {
+                        throw new IOException("CLI verification probe timed out after 10s");
+                    }
+                    if (!probeSuccess[0] && probeErr[0] != null) {
+                        throw new IOException("Verification probe failed: " + probeErr[0]);
+                    }
                     mainHandler.post(callback::onSuccess);
                     return;
                 }

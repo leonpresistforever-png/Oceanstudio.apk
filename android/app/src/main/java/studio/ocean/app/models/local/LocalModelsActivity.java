@@ -55,6 +55,14 @@ public final class LocalModelsActivity extends AppCompatActivity {
         renderModels();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        manager.syncFromDisk();
+        updateRamStatus();
+        renderModels();
+    }
+
     private void refresh() {
         manager.syncFromDisk();
         updateRamStatus();
@@ -261,11 +269,15 @@ public final class LocalModelsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Unloaded " + model.displayName, Toast.LENGTH_SHORT).show();
                 updateRamStatus();
                 renderModels();
-            });
             actions.addView(unloadBtn);
         }
 
+        Button detailsBtn = createButton("Details", false, density);
+        detailsBtn.setOnClickListener(v -> showModelDetails(model));
+        actions.addView(detailsBtn);
+
         card.addView(actions);
+        card.setOnClickListener(v -> showModelDetails(model));
         return card;
     }
 
@@ -336,6 +348,28 @@ public final class LocalModelsActivity extends AppCompatActivity {
                     renderModels();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showModelDetails(LocalModel model) {
+        long sizeMb = model.sizeBytes / (1024 * 1024);
+        String msg = "Model ID: " + model.id + "\n"
+                + "Family: " + model.family + "\n"
+                + "Format: " + model.format + " (" + model.quantization + ")\n"
+                + "File Size: " + sizeMb + " MB (" + model.sizeBytes + " bytes)\n"
+                + "Context Window: " + model.context + " tokens\n"
+                + "Min RAM Required: " + model.minRamMb + " MB\n"
+                + "Runtime Backend: " + model.backend + "\n"
+                + "Target Architecture: " + model.architecture + "\n"
+                + "Open-Source License: " + model.license + "\n"
+                + "Lifecycle State: " + model.state.label + "\n"
+                + "SHA-256 Checksum: " + (model.sha256 != null && !model.sha256.isEmpty() ? model.sha256 : "Not provided") + "\n\n"
+                + "Verified Upstream Source:\n" + model.sourceUrl;
+
+        new AlertDialog.Builder(this)
+                .setTitle(model.displayName)
+                .setMessage(msg)
+                .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
 }

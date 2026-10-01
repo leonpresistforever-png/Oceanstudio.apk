@@ -43,6 +43,7 @@ public final class LocalModelManager {
     private final Map<String, HttpURLConnection> activeDownloads = new ConcurrentHashMap<>();
     private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor();
     private String loadedModelId = null;
+    private android.os.FileObserver modelsWatcher;
 
     private LocalModelManager(Context context) {
         this.context = context;
@@ -55,6 +56,17 @@ public final class LocalModelManager {
 
         initBuiltinCatalog();
         syncFromDisk();
+
+        // Watch models directory for externally installed models (Directive 3 §8.1)
+        try {
+            modelsWatcher = new android.os.FileObserver(modelsDir.getAbsolutePath(), android.os.FileObserver.CLOSE_WRITE | android.os.FileObserver.DELETE | android.os.FileObserver.MOVED_TO) {
+                @Override
+                public void onEvent(int event, String path) {
+                    syncFromDisk();
+                }
+            };
+            modelsWatcher.startWatching();
+        } catch (Exception ignored) {}
     }
 
     private void initBuiltinCatalog() {

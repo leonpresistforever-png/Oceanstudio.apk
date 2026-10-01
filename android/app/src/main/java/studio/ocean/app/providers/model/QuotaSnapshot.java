@@ -59,13 +59,25 @@ public final class QuotaSnapshot {
     public String formatSummary() {
         if (confidence == Confidence.UNKNOWN) {
             return planName != null && !planName.isEmpty()
-                    ? planName + " · Usage unavailable"
-                    : "Usage quota: Unavailable";
+                    ? planName + " · Usage not reported by provider / Usage unavailable"
+                    : "Usage unavailable: not reported by provider";
+        }
+        if (confidence == Confidence.EXACT && remaining != null) {
+            return "Quota: " + remaining + " " + unit.name().toLowerCase() + " remaining (Exact)";
+        }
+        if (confidence == Confidence.ESTIMATED && remaining != null) {
+            return "Quota: ~" + remaining + " " + unit.name().toLowerCase() + " remaining (Estimate)";
+        }
+        if (confidence == Confidence.PROVIDER_REPORTED) {
+            if (remaining != null) {
+                return "Quota: " + remaining + " " + unit.name().toLowerCase() + " remaining (Reported by " + source + ")";
+            }
+            return (planName != null && !planName.isEmpty() ? planName : "Reported") + " · " + source;
         }
         if (remaining != null) {
             return "Quota: " + remaining + " " + unit.name().toLowerCase() + " remaining (" + confidence.name().toLowerCase() + ")";
         }
-        return planName + " · " + source;
+        return (planName != null && !planName.isEmpty() ? planName : "Standard") + " · " + source;
     }
 
     public JSONObject toJson() throws JSONException {

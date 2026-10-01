@@ -394,7 +394,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         title.setTypeface(null, Typeface.BOLD);
         titleRow.addView(title);
 
-        View badge = createStatusBadge(activeConn, density);
+        View badge = createStatusBadge(desc, activeConn, density);
         LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         bLp.setMarginStart((int) (8 * density));
@@ -440,7 +440,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         return row;
     }
 
-    private View createStatusBadge(ProviderConnection conn, float density) {
+    private View createStatusBadge(ProviderDescriptor desc, ProviderConnection conn, float density) {
         TextView badge = new TextView(this);
         badge.setTextSize(9f);
         badge.setTypeface(null, Typeface.BOLD);
@@ -457,12 +457,45 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             badge.setText("CONNECTED");
             badge.setTextColor(getColor(R.color.ocean_paper));
             gd.setColor(getColor(R.color.ocean_ink));
-        } else if (conn != null && conn.status == ConnectionStatus.REAUTH_REQUIRED) {
+        } else if (conn != null && conn.status == ConnectionStatus.VERIFYING) {
+            badge.setText("VERIFYING");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(0xFF2563EB);
+        } else if (conn != null && (conn.status == ConnectionStatus.REAUTH_REQUIRED || conn.status == ConnectionStatus.NEEDS_REAUTH)) {
             badge.setText("RE-AUTH");
             badge.setTextColor(getColor(R.color.ocean_paper));
             gd.setColor(getColor(R.color.ocean_error));
-        } else {
+        } else if (conn != null && conn.status == ConnectionStatus.RATE_LIMITED) {
+            badge.setText("RATE LIMITED");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(0xFFD97706);
+        } else if (conn != null && conn.status == ConnectionStatus.CONFIG_ERROR) {
+            badge.setText("CONFIG ERROR");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(getColor(R.color.ocean_error));
+        } else if (conn != null && conn.status == ConnectionStatus.ERROR) {
+            badge.setText("ERROR");
+            badge.setTextColor(getColor(R.color.ocean_paper));
+            gd.setColor(getColor(R.color.ocean_error));
+        } else if (conn != null && conn.status == ConnectionStatus.OFFLINE) {
             badge.setText("OFFLINE");
+            badge.setTextColor(getColor(R.color.ocean_muted));
+            gd.setColor(getColor(R.color.ocean_surface_2));
+            gd.setStroke((int) (1 * density), getColor(R.color.ocean_border));
+        } else {
+            // Unconfigured or disconnected - never display OFFLINE merely because not configured
+            OfficialCliAdapter adapter = desc != null ? resolveCliAdapter(desc.id) : null;
+            if (adapter != null) {
+                if (!adapter.isInstalled()) {
+                    badge.setText("NOT INSTALLED");
+                } else if (!adapter.isSessionAuthenticated()) {
+                    badge.setText("NEEDS LOGIN");
+                } else {
+                    badge.setText("NOT CONNECTED");
+                }
+            } else {
+                badge.setText("NOT CONNECTED");
+            }
             badge.setTextColor(getColor(R.color.ocean_muted));
             gd.setColor(getColor(R.color.ocean_surface_2));
             gd.setStroke((int) (1 * density), getColor(R.color.ocean_border));
@@ -519,7 +552,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         title.setPadding((int) (10 * density), 0, (int) (8 * density), 0);
         header.addView(title);
 
-        header.addView(createStatusBadge(activeConn, density));
+        header.addView(createStatusBadge(desc, activeConn, density));
         sheet.addView(header);
 
         TextView subtitle = new TextView(this);
@@ -624,9 +657,20 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         block.addView(createMetaRow("Account / Session", conn.displayAccount, density));
         block.addView(createMetaRow("Auth Strategy", conn.strategy.displayName, density));
         block.addView(createMetaRow("Active Model", conn.selectedModel, density));
+        if (conn.strategy == AuthStrategy.OFFICIAL_CLI) {
+            OfficialCliAdapter adapter = resolveCliAdapter(desc.id);
+            if (adapter != null) {
+                block.addView(createMetaRow("CLI Executable", desc.officialCliName, density));
+                block.addView(createMetaRow("CLI Version", adapter.getVersion(), density));
+            }
+        }
         if (conn.baseUrl != null && !conn.baseUrl.isEmpty()) {
             block.addView(createMetaRow("Endpoint URL", conn.baseUrl, density));
         }
+        String lastVerified = conn.lastValidatedAtEpochMs > 0
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date(conn.lastValidatedAtEpochMs))
+                : "Not yet verified";
+        block.addView(createMetaRow("Last Verified", lastVerified, density));
         return block;
     }
 
@@ -799,13 +843,13 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             return;
         }
 
-        // Successfully authenticated!
-        ProviderConnection conn = new ProviderConnection(
+        // Create provisional connection with VERIFYING state (Directive 2 §3.1, §3.2)
+        ProviderConnection provisional = new ProviderConnection(
                 UUID.randomUUID().toString(),
                 desc.id,
                 desc.officialCliName + " CLI session",
                 AuthStrategy.OFFICIAL_CLI,
-                ConnectionStatus.CONNECTED,
+                ConnectionStatus.VERIFYING,
                 desc.defaultBaseUrl,
                 desc.defaultModel,
                 null,
@@ -816,12 +860,47 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 null,
                 System.currentTimeMillis()
         );
-        connectionStore.save(conn);
-        QuotaSnapshot qs = quotaService.inspect(conn);
-        ProviderConnection connWithQuota = conn.withQuota(qs);
+        QuotaSnapshot qs = quotaService.inspect(provisional);
+        ProviderConnection connWithQuota = provisional.withQuota(qs);
         connectionStore.save(connWithQuota);
-        Toast.makeText(this, desc.title + " connected via official CLI bridge", Toast.LENGTH_SHORT).show();
         renderProviders();
+
+        Toast.makeText(this, "Verifying " + desc.title + "…", Toast.LENGTH_SHORT).show();
+        agentRunner.testProviderConnection(connWithQuota, new OceanAgentRunner.ConnectionCallback() {
+            @Override public void onSuccess() {
+                ProviderConnection verified = new ProviderConnection(
+                        connWithQuota.id, connWithQuota.providerId, connWithQuota.displayAccount,
+                        connWithQuota.strategy, ConnectionStatus.CONNECTED,
+                        connWithQuota.baseUrl, connWithQuota.selectedModel,
+                        connWithQuota.credentialRef, connWithQuota.cliSessionRef,
+                        connWithQuota.scopes, connWithQuota.expiresAtEpochMs,
+                        connWithQuota.quota, connWithQuota.models,
+                        System.currentTimeMillis()
+                );
+                connectionStore.save(verified);
+                runOnUiThread(() -> {
+                    Toast.makeText(ProvidersConnectActivity.this, desc.title + " verified and connected", Toast.LENGTH_SHORT).show();
+                    renderProviders();
+                });
+            }
+
+            @Override public void onFailure(String error) {
+                ProviderConnection failed = new ProviderConnection(
+                        connWithQuota.id, connWithQuota.providerId, connWithQuota.displayAccount,
+                        connWithQuota.strategy, ConnectionStatus.NEEDS_REAUTH,
+                        connWithQuota.baseUrl, connWithQuota.selectedModel,
+                        connWithQuota.credentialRef, connWithQuota.cliSessionRef,
+                        connWithQuota.scopes, connWithQuota.expiresAtEpochMs,
+                        connWithQuota.quota, connWithQuota.models,
+                        System.currentTimeMillis()
+                );
+                connectionStore.save(failed);
+                runOnUiThread(() -> {
+                    Toast.makeText(ProvidersConnectActivity.this, "Verification failed: " + error, Toast.LENGTH_LONG).show();
+                    renderProviders();
+                });
+            }
+        });
     }
 
     private OfficialCliAdapter resolveCliAdapter(String providerId) {
