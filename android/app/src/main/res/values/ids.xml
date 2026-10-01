@@ -2,4 +2,7 @@
 <resources>
     <item name="playground_input" type="id" />
     <item name="playground_attachment_scroll" type="id" />
+    <item name="header_title_block" type="id" />
+    <item name="screen_title" type="id" />
+    <item name="top_model_chip" type="id" />
 </resources>
