@@ -6,7 +6,8 @@ import java.util.Collections;
 
 /**
  * Adapter for Kimi Code CLI ('kimi').
- * Bridges managed service session and device-code login.
+ * Bridges managed service session and device-code login (PDF 5 §6.2, §12).
+ * Documented command: 'kimi -p "prompt" --output-format stream-json'.
  */
 public final class KimiCliAdapter extends OfficialCliAdapter {
 
@@ -23,11 +24,16 @@ public final class KimiCliAdapter extends OfficialCliAdapter {
     }
 
     public boolean isSessionAuthenticated() {
-        ExecutionResult res = executeSync(Arrays.asList("account", "status"), null, 5);
-        return res.isSuccess() && !res.stdout.toLowerCase().contains("login required");
+        // Runs a non-interactive auth probe to check session authentication
+        ExecutionResult res = executeSync(Arrays.asList("whoami"), null, 5);
+        if (!res.isSuccess()) {
+            String combined = (res.stdout + " " + res.stderr).toLowerCase();
+            return !combined.contains("login required") && !combined.contains("unauthorized") && !combined.contains("not logged in");
+        }
+        return true;
     }
 
     public void runHeadless(String prompt, StreamCallback callback) {
-        executeStreaming(Arrays.asList("exec", "--json", prompt), null, callback);
+        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "stream-json"), null, callback);
     }
 }

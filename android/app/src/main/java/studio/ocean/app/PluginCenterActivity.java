@@ -310,7 +310,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
         TextView desc=new TextView(this);
         desc.setText(item.description+(item.available?"":" · Required command not installed"));
-        desc.setTextColor(item.available?MUTED:0xff9a3d32);
+        desc.setTextColor(MUTED);
         desc.setTextSize(13);
         desc.setMaxLines(2);
         desc.setEllipsize(TextUtils.TruncateAt.END);
@@ -322,7 +322,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         boolean on=connected(item);
         action.setText(item.available?(on?"•••":"+"):"!");
         action.setTextSize(on?19:26);
-        action.setTextColor(item.available?INK:0xff9a3d32);
+        action.setTextColor(item.available?INK:MUTED);
         action.setGravity(Gravity.CENTER);
         action.setTypeface(null,Typeface.BOLD);
         action.setBackground(roundRect(SURFACE_MUTED,999,item.available?0x00000000:BORDER));

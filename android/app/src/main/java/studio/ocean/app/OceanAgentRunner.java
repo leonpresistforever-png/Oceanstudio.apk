@@ -19,10 +19,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 import org.json.JSONObject;
 import studio.ocean.app.terminal.OceanTerminalActivity;
 import studio.ocean.app.terminal.OceanTerminalRuntimeService;
 import studio.ocean.app.runtime.RuntimePortsActivity;
+import studio.ocean.app.providers.model.AuthStrategy;
+import studio.ocean.app.providers.model.ProviderConnection;
+import studio.ocean.app.providers.router.SmartRouter;
+import studio.ocean.app.providers.state.CredentialVault;
+import studio.ocean.app.providers.state.ProviderConnectionStore;
+import studio.ocean.app.providers.cli.AntigravityCliAdapter;
+import studio.ocean.app.providers.cli.ClaudeCodeCliAdapter;
+import studio.ocean.app.providers.cli.CodexCliAdapter;
+import studio.ocean.app.providers.cli.KimiCliAdapter;
+import studio.ocean.app.providers.cli.OfficialCliAdapter;
 
 /** Connects explicit provider tool calls to the native runtime; prose is never executable. */
 public final class OceanAgentRunner {
@@ -39,6 +50,9 @@ public final class OceanAgentRunner {
     private final Context context;
     private final OceanByokManager byokManager;
     private final OceanAgentSettings agentSettings;
+    private final ProviderConnectionStore connectionStore;
+    private final SmartRouter smartRouter = new SmartRouter();
+    private final CredentialVault credentialVault;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile Thread worker;
@@ -50,6 +64,8 @@ public final class OceanAgentRunner {
         this.context = context.getApplicationContext();
         byokManager = new OceanByokManager(this.context);
         agentSettings = new OceanAgentSettings(this.context);
+        connectionStore = new ProviderConnectionStore(this.context);
+        credentialVault = new CredentialVault(this.context);
     }
     public boolean isRunning() { return running.get(); }
     public void cancel() {
@@ -86,15 +102,53 @@ public final class OceanAgentRunner {
                         result = execution.optInt("exit_code", -1) == 0 ? "Command completed. Output is shown above."
                                 : "Command exited with code " + execution.optInt("exit_code", -1) + ". " + execution.optString("error", "Review its output above.");
                     } else {
-                        if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
-                        OceanModelConfig config = configuredModel();
-                        String digest = byokManager.configurationDigest()+"|"+agentSettings.signature(context);
-                        if (conversation == null || !digest.equals(conversationDigest)) {
-                            conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.effectiveUserInstructions(context));
-                            conversationDigest = digest;
-                        }
-                        status(callback, "Working with " + config.model + "…");
-                        result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
+                        List<ProviderConnection> activeConns = connectionStore.listConnections();
+                        SmartRouter.RouteDecision decision = smartRouter.selectRoute(activeConns, false, false, true);
+
+                        if (decision != null && decision.connection.strategy == AuthStrategy.OFFICIAL_CLI) {
+                            status(callback, decision.rationale);
+                            File filesDir = context.getFilesDir();
+                            OfficialCliAdapter adapter = null;
+                            if ("antigravity".equals(decision.connection.providerId)) adapter = new AntigravityCliAdapter(filesDir);
+                            else if ("kimi".equals(decision.connection.providerId)) adapter = new KimiCliAdapter(filesDir);
+                            else if ("openai".equals(decision.connection.providerId)) adapter = new CodexCliAdapter(filesDir);
+                            else if ("anthropic".equals(decision.connection.providerId)) adapter = new ClaudeCodeCliAdapter(filesDir);
+
+                            if (adapter != null && adapter.isInstalled()) {
+                                StringBuilder cliOutput = new StringBuilder();
+                                CountDownLatch latch = new CountDownLatch(1);
+                                int[] exitCode = new int[]{-1};
+                                adapter.runHeadless(text, new OfficialCliAdapter.StreamCallback() {
+                                    @Override public void onLine(String rawLine) { mainHandler.post(() -> callback.onToolOutput(rawLine)); }
+                                    @Override public void onJson(JSONObject json) {
+                                        String piece = json.optString("response", json.optString("text", json.optString("content", "")));
+                                        if (!piece.isEmpty()) cliOutput.append(piece);
+                                    }
+                                    @Override public void onError(String error) { mainHandler.post(() -> callback.onThought("[CLI stderr] " + error)); }
+                                    @Override public void onComplete(int exit) { exitCode[0] = exit; latch.countDown(); }
+                                });
+                                boolean finished = latch.await(agentSettings.commandTimeoutSeconds(), TimeUnit.SECONDS);
+                                if (!finished) throw new IOException("CLI execution timed out after " + agentSettings.commandTimeoutSeconds() + "s");
+                                result = cliOutput.length() > 0 ? cliOutput.toString() : "CLI execution completed with code " + exitCode[0];
+                            } else {
+                                throw new IOException("CLI tool for " + decision.connection.providerId + " is not installed.");
+                            }
+                        } else {
+                            OceanModelConfig config;
+                            if (decision != null && (decision.connection.strategy == AuthStrategy.API_KEY || decision.connection.strategy == AuthStrategy.CUSTOM_ENDPOINT)) {
+                                String apiKey = credentialVault.retrieve(decision.connection.credentialRef);
+                                config = new OceanModelConfig(decision.connection.providerId, decision.selectedModel, apiKey != null ? apiKey : "", decision.connection.baseUrl);
+                            } else {
+                                if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
+                                config = configuredModel();
+                            }
+                            String digest = (decision != null ? decision.connection.id : byokManager.configurationDigest()) + "|" + agentSettings.signature(context);
+                            if (conversation == null || !digest.equals(conversationDigest)) {
+                                conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.effectiveUserInstructions(context));
+                                conversationDigest = digest;
+                            }
+                            status(callback, "Working with " + config.model + "…");
+                            result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
                             CrashSurvival.mark("EXECUTE_AGENT_TOOL");
                             if (name.equals("open_terminal")) { if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected."); return openTerminal(callback); }
                             if (name.equals("dispatch_android_app")) {
@@ -135,6 +189,7 @@ public final class OceanAgentRunner {
                             if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected.");
                             return runTerminal(args.getString("command"), args.optString("cwd", null), args.optInt("timeout_seconds", agentSettings.commandTimeoutSeconds()), callback);
                         }, thought -> status(callback, thought));
+                        }
                     }
                 }
                 if (Thread.currentThread().isInterrupted()) throw new InterruptedException();

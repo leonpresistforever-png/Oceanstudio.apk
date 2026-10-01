@@ -1,46 +1,64 @@
 package studio.ocean.app.browser;
 
-import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import studio.ocean.app.R;
+import studio.ocean.app.browser.core.NavigationPolicy;
 import studio.ocean.app.browser.normal.BrowserHistoryStore;
 import studio.ocean.app.browser.secure.SecureBrowserActivity;
 import studio.ocean.app.browser.storage.SessionVault;
 
-/** Full-featured in-app browser with tabs, cookies, and JavaScript (System WebView + AndroidX WebKit). */
+/**
+ * Normal persistent browser activity (PDF 4 & PDF 5).
+ * Preserves persistent history in SQLite (BrowserHistoryStore), multi-tab state with PIN/biometric locking,
+ * saved sessions in SessionVault, and standard browsing state.
+ *
+ * CRITICAL RULE: Never wipes or collapses into ephemeral private mode.
+ */
 public final class BrowserActivity extends AppCompatActivity {
-    public static final String EXTRA_URL = "browser_initial_url";
+
+    public static final String EXTRA_INITIAL_URL = "browser_initial_url";
+    private static final String PREF_LOCK = "ocean_browser_security_pref";
+    private static final String KEY_PIN = "browser_tab_lock_pin";
 
     private final List<BrowserTab> tabs = new ArrayList<>();
-    private final LinkedList<BrowserTab> recentlyClosedTabs = new LinkedList<>();
-    private BrowserHistoryStore historyStore;
-    private SessionVault sessionVault;
-    private int currentTabIndex;
-    private boolean urlBarFocused;
-    private boolean desktopSite;
+    private final Deque<BrowserTab> recentlyClosedTabs = new ArrayDeque<>();
+    private int currentTabIndex = 0;
 
     private WebView webView;
     private EditText urlField;
@@ -50,29 +68,46 @@ public final class BrowserActivity extends AppCompatActivity {
     private LinearLayout errorPanel;
     private TextView errorTitle;
     private TextView errorMessage;
+    private boolean urlBarFocused;
+    private boolean desktopSite;
+
+    @Nullable private BrowserHistoryStore historyStore;
+    @Nullable private SessionVault sessionVault;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
+
         historyStore = new BrowserHistoryStore(this);
         sessionVault = new SessionVault(this);
+
         bindViews();
         configureWebView();
-        wireChrome();
+        wireActions();
+
         if (savedInstanceState != null) {
             restoreInstanceState(savedInstanceState);
         } else {
-            String initial = getIntent().getStringExtra(EXTRA_URL);
-            tabs.add(new BrowserTab(BrowserUrlHelper.normalizeInput(initial)));
+            String initial = getIntent().getStringExtra(EXTRA_INITIAL_URL);
+            String startUrl = initial != null && !initial.trim().isEmpty()
+                    ? BrowserUrlHelper.normalizeInput(initial)
+                    : BrowserUrlHelper.DEFAULT_HOME;
+            tabs.add(new BrowserTab(startUrl));
             currentTabIndex = 0;
             loadCurrentTab(false);
         }
+
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (webView.canGoBack()) webView.goBack();
-                else finish();
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                } else if (tabs.size() > 1) {
+                    closeCurrentTab();
+                } else {
+                    finish();
+                }
             }
         });
     }
@@ -88,27 +123,7 @@ public final class BrowserActivity extends AppCompatActivity {
         errorMessage = findViewById(R.id.browser_error_message);
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private void configureWebView() {
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setLoadsImagesAutomatically(true);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
-        settings.setSupportMultipleWindows(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        CookieManager cookies = CookieManager.getInstance();
-        cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
-        webView.setDownloadListener(downloadListener());
-    }
-
-    private void wireChrome() {
+    private void wireActions() {
         findViewById(R.id.browser_close).setOnClickListener(v -> finish());
         findViewById(R.id.browser_nav_back).setOnClickListener(v -> {
             if (webView.canGoBack()) webView.goBack();
@@ -124,13 +139,33 @@ public final class BrowserActivity extends AppCompatActivity {
             hideError();
             webView.reload();
         });
+
         urlField.setOnFocusChangeListener((v, hasFocus) -> urlBarFocused = hasFocus);
         urlField.setOnEditorActionListener((v, actionId, event) -> {
-            navigateTo(BrowserUrlHelper.normalizeInput(urlField.getText().toString()));
+            String text = urlField.getText().toString();
+            navigateTo(BrowserUrlHelper.normalizeInput(text));
             urlField.clearFocus();
             return true;
         });
-        webView.setWebChromeClient(new OceanBrowserChromeClient(new OceanBrowserChromeClient.Callback() {
+    }
+
+    private void configureWebView() {
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+        webView.setDownloadListener(downloadListener());
+        webView.setWebChromeClient(new OceanBrowserWebChromeClient(new OceanBrowserWebChromeClient.Callback() {
             @Override
             public void onProgressChanged(int progress) {
                 if (progress >= 100) {
@@ -143,8 +178,9 @@ public final class BrowserActivity extends AppCompatActivity {
 
             @Override
             public void onReceivedTitle(String title) {
-                if (title == null || title.trim().isEmpty()) return;
-                currentTab().title = title.trim();
+                if (title != null && !title.trim().isEmpty()) {
+                    currentTab().title = title.trim();
+                }
             }
 
             @Override
@@ -264,7 +300,7 @@ public final class BrowserActivity extends AppCompatActivity {
                 return true;
             }
             if (id == R.id.browser_menu_history) {
-                showHistoryDialog();
+                showHistoryScreen();
                 return true;
             }
             if (id == R.id.browser_menu_saved_sessions) {
@@ -284,39 +320,138 @@ public final class BrowserActivity extends AppCompatActivity {
         menu.show();
     }
 
-    private void showHistoryDialog() {
+    /**
+     * Proper History screen with search filter, grouped timeline, domain deletion, and scoped clearing (PDF 5 §8, §15).
+     */
+    private void showHistoryScreen() {
         if (historyStore == null) return;
-        List<BrowserHistoryStore.HistoryGroup> groups = historyStore.getHistoryGrouped();
-        List<String> display = new ArrayList<>();
-        List<String> urls = new ArrayList<>();
-        for (BrowserHistoryStore.HistoryGroup g : groups) {
-            display.add("─── " + g.title + " ───");
-            urls.add(null);
-            for (BrowserHistoryStore.HistoryItem item : g.items) {
-                display.add(item.title + "\n" + item.url);
-                urls.add(item.url);
-            }
-        }
 
-        if (display.isEmpty()) {
-            Toast.makeText(this, "History is empty", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(30, 20, 30, 20);
 
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.browser_history)
-                .setItems(display.toArray(new String[0]), (d, which) -> {
-                    String selectedUrl = urls.get(which);
-                    if (selectedUrl != null) {
-                        navigateTo(selectedUrl);
+        EditText searchBox = new EditText(this);
+        searchBox.setHint("Search browsing history...");
+        layout.addView(searchBox);
+
+        ListView listView = new ListView(this);
+        layout.addView(listView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 800));
+
+        final List<BrowserHistoryStore.HistoryItem> activeItems = new ArrayList<>();
+        final List<String> displayStrings = new ArrayList<>();
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_list_item_1, displayStrings);
+        listView.setAdapter(adapter);
+
+        Runnable refreshList = () -> {
+            displayStrings.clear();
+            activeItems.clear();
+            String q = searchBox.getText().toString().trim();
+            if (q.isEmpty()) {
+                List<BrowserHistoryStore.HistoryGroup> groups = historyStore.getHistoryGrouped();
+                for (BrowserHistoryStore.HistoryGroup g : groups) {
+                    displayStrings.add("── " + g.title + " ──");
+                    activeItems.add(null);
+                    for (BrowserHistoryStore.HistoryItem it : g.items) {
+                        displayStrings.add(it.title + "\n" + it.url);
+                        activeItems.add(it);
                     }
-                })
+                }
+            } else {
+                List<BrowserHistoryStore.HistoryItem> results = historyStore.search(q);
+                for (BrowserHistoryStore.HistoryItem it : results) {
+                    displayStrings.add(it.title + "\n" + it.url);
+                    activeItems.add(it);
+                }
+            }
+            adapter.notifyDataSetChanged();
+        };
+
+        refreshList.run();
+
+        searchBox.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshList.run(); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.browser_history)
+                .setView(layout)
                 .setNegativeButton(R.string.browser_clear_history, (d, w) -> {
-                    historyStore.clearAll();
-                    Toast.makeText(this, "History cleared", Toast.LENGTH_SHORT).show();
+                    showClearHistoryScopeDialog(refreshList);
                 })
                 .setPositiveButton(android.R.string.ok, null)
+                .create();
+
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            BrowserHistoryStore.HistoryItem item = activeItems.get(position);
+            if (item != null) {
+                dialog.dismiss();
+                navigateTo(item.url);
+            }
+        });
+
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            BrowserHistoryStore.HistoryItem item = activeItems.get(position);
+            if (item == null) return false;
+
+            String domain = extractDomain(item.url);
+            String[] options = {"Open URL", "Delete this item", "Delete all from " + domain};
+            new AlertDialog.Builder(this)
+                    .setTitle(domain)
+                    .setItems(options, (d, which) -> {
+                        if (which == 0) {
+                            dialog.dismiss();
+                            navigateTo(item.url);
+                        } else if (which == 1) {
+                            historyStore.deleteItem(item.id);
+                            refreshList.run();
+                        } else if (which == 2) {
+                            historyStore.clearDomain(domain);
+                            refreshList.run();
+                            Toast.makeText(this, "Cleared history for " + domain, Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .show();
+            return true;
+        });
+
+        dialog.show();
+    }
+
+    private void showClearHistoryScopeDialog(Runnable onCleared) {
+        String[] options = {"Clear Today", "Clear Past 7 Days", "Clear All History"};
+        new AlertDialog.Builder(this)
+                .setTitle("Clear History Range")
+                .setItems(options, (d, which) -> {
+                    if (historyStore == null) return;
+                    long now = System.currentTimeMillis();
+                    if (which == 0) {
+                        long dayAgo = now - (24 * 3600 * 1000);
+                        historyStore.clearTimeRange(dayAgo, now);
+                        Toast.makeText(this, "Cleared today's history", Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        long weekAgo = now - (7 * 24 * 3600 * 1000);
+                        historyStore.clearTimeRange(weekAgo, now);
+                        Toast.makeText(this, "Cleared past 7 days history", Toast.LENGTH_SHORT).show();
+                    } else {
+                        historyStore.clearAll();
+                        Toast.makeText(this, "All history cleared", Toast.LENGTH_SHORT).show();
+                    }
+                    if (onCleared != null) onCleared.run();
+                })
                 .show();
+    }
+
+    private String extractDomain(String url) {
+        try {
+            String host = NavigationPolicy.extractHost(url);
+            return host != null ? host : url;
+        } catch (Exception e) {
+            return url;
+        }
     }
 
     private void showSavedSessionsDialog() {
@@ -336,14 +471,36 @@ public final class BrowserActivity extends AppCompatActivity {
                 .setTitle(R.string.browser_saved_sessions)
                 .setItems(names, (d, which) -> {
                     SessionVault.SavedSession chosen = sessions.get(which);
-                    for (SessionVault.SavedTab st : chosen.tabs) {
+                    promptRestoreChoice(chosen);
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void promptRestoreChoice(SessionVault.SavedSession session) {
+        new AlertDialog.Builder(this)
+                .setTitle("Restore: " + session.name)
+                .setMessage("Choose how to restore this session (" + session.tabs.size() + " tabs):")
+                .setPositiveButton("Replace Current Tabs", (d, w) -> {
+                    // Close unpinned tabs
+                    tabs.removeIf(t -> !t.pinned);
+                    for (SessionVault.SavedTab st : session.tabs) {
+                        tabs.add(st.toBrowserTab());
+                    }
+                    if (tabs.isEmpty()) tabs.add(new BrowserTab(BrowserUrlHelper.DEFAULT_HOME));
+                    currentTabIndex = tabs.size() - 1;
+                    loadCurrentTab(false);
+                    Toast.makeText(this, "Replaced session with " + session.name, Toast.LENGTH_SHORT).show();
+                })
+                .setNeutralButton("Add to Current Tabs", (d, w) -> {
+                    for (SessionVault.SavedTab st : session.tabs) {
                         tabs.add(st.toBrowserTab());
                     }
                     currentTabIndex = tabs.size() - 1;
                     loadCurrentTab(false);
-                    Toast.makeText(this, "Restored session " + chosen.name, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Appended session " + session.name, Toast.LENGTH_SHORT).show();
                 })
-                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -414,36 +571,160 @@ public final class BrowserActivity extends AppCompatActivity {
         loadCurrentTab(false);
     }
 
+    /**
+     * Enhanced Tab Switcher with real Pin/Unpin, Lock/Unlock, and authentication gating (PDF 5 §8).
+     */
     private void showTabSwitcher() {
         String[] labels = new String[tabs.size()];
         for (int i = 0; i < tabs.size(); i++) {
             BrowserTab tab = tabs.get(i);
             String title = tab.title == null || tab.title.isEmpty() ? tab.url : tab.title;
-            String prefix = (i == currentTabIndex ? "• " : "") + (tab.pinned ? "[Pinned] " : "") + (tab.locked ? "[Locked] " : "");
+            String prefix = (i == currentTabIndex ? "• " : "")
+                    + (tab.pinned ? "[Pinned 📌] " : "")
+                    + (tab.locked ? "[Locked 🔒] " : "");
             labels[i] = prefix + title;
         }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle(R.string.browser_tabs_title)
                 .setItems(labels, (dialog, which) -> {
                     BrowserTab tab = tabs.get(which);
                     if (tab.locked) {
-                        new AlertDialog.Builder(this)
-                                .setTitle(R.string.browser_lock_tab)
-                                .setMessage(R.string.browser_tab_locked_msg)
-                                .setPositiveButton(android.R.string.ok, (d, w) -> switchToTab(which))
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show();
+                        challengeTabUnlock(which);
                     } else {
                         switchToTab(which);
                     }
                 })
                 .setPositiveButton(R.string.browser_new_tab, (d, w) -> addTab(BrowserUrlHelper.DEFAULT_HOME))
-                .setNeutralButton(R.string.browser_close_tab, (d, w) -> closeCurrentTab());
+                .setNeutralButton("Tab Options", (d, w) -> showTabOptionsDialog());
 
         if (!recentlyClosedTabs.isEmpty()) {
             builder.setNegativeButton(R.string.browser_reopen_tab, (d, w) -> reopenLastClosedTab());
         }
         builder.show();
+    }
+
+    private void showTabOptionsDialog() {
+        String[] tabNames = new String[tabs.size()];
+        for (int i = 0; i < tabs.size(); i++) {
+            BrowserTab t = tabs.get(i);
+            tabNames[i] = (t.pinned ? "📌 " : "") + (t.locked ? "🔒 " : "") + (t.title.isEmpty() ? t.url : t.title);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Select Tab to Configure")
+                .setItems(tabNames, (d, which) -> {
+                    BrowserTab target = tabs.get(which);
+                    String pinAction = target.pinned ? "Unpin Tab" : "Pin Tab";
+                    String lockAction = target.locked ? "Unlock Tab" : "Lock Tab (PIN Protected)";
+                    String closeAction = "Close Tab";
+
+                    new AlertDialog.Builder(this)
+                            .setTitle("Configure Tab " + (which + 1))
+                            .setItems(new String[]{pinAction, lockAction, closeAction}, (d2, act) -> {
+                                if (act == 0) {
+                                    target.pinned = !target.pinned;
+                                    Toast.makeText(this, target.pinned ? "Tab pinned" : "Tab unpinned", Toast.LENGTH_SHORT).show();
+                                    updateTabBadge();
+                                } else if (act == 1) {
+                                    if (target.locked) {
+                                        // Require unlock to remove lock
+                                        challengePin(entered -> {
+                                            if (entered) {
+                                                target.locked = false;
+                                                Toast.makeText(this, "Tab unlocked", Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+                                    } else {
+                                        ensurePinSet(set -> {
+                                            if (set) {
+                                                target.locked = true;
+                                                Toast.makeText(this, "Tab locked with PIN", Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+                                    }
+                                } else if (act == 2) {
+                                    if (target.pinned) {
+                                        Toast.makeText(this, "Unpin tab before closing", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        closeTabAtIndex(which);
+                                    }
+                                }
+                            })
+                            .show();
+                })
+                .show();
+    }
+
+    private void challengeTabUnlock(int tabIndex) {
+        challengePin(granted -> {
+            if (granted) {
+                switchToTab(tabIndex);
+            } else {
+                Toast.makeText(this, "Authentication failed. Tab remains locked.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private interface AuthCallback { void onResult(boolean success); }
+
+    private void challengePin(AuthCallback callback) {
+        SharedPreferences sp = getSharedPreferences(PREF_LOCK, Context.MODE_PRIVATE);
+        String savedPin = sp.getString(KEY_PIN, null);
+        if (savedPin == null) {
+            // No PIN yet configured; grant access
+            callback.onResult(true);
+            return;
+        }
+
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setHint("Enter 4-digit PIN");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Unlock Tab")
+                .setMessage("Enter PIN to access this protected tab:")
+                .setView(input)
+                .setPositiveButton("Unlock", (d, w) -> {
+                    String entered = input.getText().toString().trim();
+                    if (savedPin.equals(entered)) {
+                        callback.onResult(true);
+                    } else {
+                        callback.onResult(false);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, (d, w) -> callback.onResult(false))
+                .show();
+    }
+
+    private void ensurePinSet(AuthCallback callback) {
+        SharedPreferences sp = getSharedPreferences(PREF_LOCK, Context.MODE_PRIVATE);
+        String savedPin = sp.getString(KEY_PIN, null);
+        if (savedPin != null && !savedPin.isEmpty()) {
+            callback.onResult(true);
+            return;
+        }
+
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setHint("Set 4-digit PIN");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Set Security PIN")
+                .setMessage("Create a 4-digit PIN to protect locked tabs:")
+                .setView(input)
+                .setPositiveButton("Save PIN", (d, w) -> {
+                    String pin = input.getText().toString().trim();
+                    if (pin.length() >= 4) {
+                        sp.edit().putString(KEY_PIN, pin).apply();
+                        callback.onResult(true);
+                    } else {
+                        Toast.makeText(this, "PIN must be at least 4 digits", Toast.LENGTH_SHORT).show();
+                        callback.onResult(false);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, (d, w) -> callback.onResult(false))
+                .show();
     }
 
     private void reopenLastClosedTab() {
@@ -455,11 +736,20 @@ public final class BrowserActivity extends AppCompatActivity {
     }
 
     private void closeCurrentTab() {
+        closeTabAtIndex(currentTabIndex);
+    }
+
+    private void closeTabAtIndex(int index) {
         if (tabs.size() <= 1) {
             finish();
             return;
         }
-        BrowserTab removed = tabs.remove(currentTabIndex);
+        BrowserTab target = tabs.get(index);
+        if (target.pinned) {
+            Toast.makeText(this, "Tab is pinned", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        BrowserTab removed = tabs.remove(index);
         recentlyClosedTabs.addFirst(removed.copy());
         while (recentlyClosedTabs.size() > 15) {
             recentlyClosedTabs.removeLast();
@@ -492,7 +782,7 @@ public final class BrowserActivity extends AppCompatActivity {
     }
 
     private void saveWebState() {
-        if (tabs.isEmpty()) return;
+        if (webView == null || tabs.isEmpty()) return;
         Bundle state = new Bundle();
         webView.saveState(state);
         currentTab().webState = state;
@@ -514,6 +804,8 @@ public final class BrowserActivity extends AppCompatActivity {
             outState.putString("tab_url_" + i, tab.url);
             outState.putString("tab_title_" + i, tab.title);
             outState.putBoolean("tab_desktop_" + i, tab.desktopSite);
+            outState.putBoolean("tab_pinned_" + i, tab.pinned);
+            outState.putBoolean("tab_locked_" + i, tab.locked);
             if (tab.webState != null) outState.putBundle("tab_state_" + i, tab.webState);
         }
         super.onSaveInstanceState(outState);
@@ -526,6 +818,8 @@ public final class BrowserActivity extends AppCompatActivity {
             BrowserTab tab = new BrowserTab(state.getString("tab_url_" + i, BrowserUrlHelper.DEFAULT_HOME));
             tab.title = state.getString("tab_title_" + i, "");
             tab.desktopSite = state.getBoolean("tab_desktop_" + i, false);
+            tab.pinned = state.getBoolean("tab_pinned_" + i, false);
+            tab.locked = state.getBoolean("tab_locked_" + i, false);
             tab.webState = state.getBundle("tab_state_" + i);
             tabs.add(tab);
         }

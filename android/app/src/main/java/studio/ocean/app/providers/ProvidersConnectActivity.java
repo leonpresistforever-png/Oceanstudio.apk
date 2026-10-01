@@ -814,11 +814,14 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 desc.officialCliName + "_active",
                 null,
                 null,
-                quotaService.inspect(null),
+                null,
                 null,
                 System.currentTimeMillis()
         );
         connectionStore.save(conn);
+        QuotaSnapshot qs = quotaService.inspect(conn);
+        ProviderConnection connWithQuota = conn.withQuota(qs);
+        connectionStore.save(connWithQuota);
         Toast.makeText(this, desc.title + " connected via official CLI bridge", Toast.LENGTH_SHORT).show();
         renderProviders();
     }
@@ -980,16 +983,37 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
 
     private void testConnection(ProviderDescriptor desc, ProviderConnection conn) {
         Toast.makeText(this, "Testing connection to " + desc.title + "…", Toast.LENGTH_SHORT).show();
-        agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback() {
-            @Override public void onSuccess() {
-                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                        desc.title + " connection verified", Toast.LENGTH_SHORT).show());
+        new Thread(() -> {
+            if (conn != null && conn.strategy == AuthStrategy.OFFICIAL_CLI) {
+                OfficialCliAdapter adapter = resolveCliAdapter(conn.providerId);
+                if (adapter == null || !adapter.isInstalled()) {
+                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                            desc.title + " CLI executable was not found on device", Toast.LENGTH_LONG).show());
+                    return;
+                }
+                boolean auth = adapter.isSessionAuthenticated();
+                if (auth) {
+                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                            desc.title + " CLI session verified (" + adapter.getVersion() + ")", Toast.LENGTH_SHORT).show());
+                } else {
+                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                            desc.title + " CLI session is not authenticated", Toast.LENGTH_LONG).show());
+                }
+                return;
             }
-            @Override public void onFailure(String error) {
-                runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                        "Connection failed: " + error, Toast.LENGTH_LONG).show());
-            }
-        });
+
+            // Fallback for API key or BYOK connections
+            agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback() {
+                @Override public void onSuccess() {
+                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                            desc.title + " connection verified", Toast.LENGTH_SHORT).show());
+                }
+                @Override public void onFailure(String error) {
+                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                            "Connection failed: " + error, Toast.LENGTH_LONG).show());
+                }
+            });
+        }).start();
     }
 
     // ==========================================

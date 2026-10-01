@@ -4,7 +4,7 @@
 The canonical source of truth for all Ocean packages, recipes, package builders, source manifests, APT index generation, and package-owned test suites is:
 
 **Repository**: `https://github.com/leonpresistforever-png/Oceanstudio-packages`  
-**Pinned Canonical Revision**: `27dbb20464d2847c23fefdf7cba7ea505492d274`
+**Authoritative Machine Pointer**: [`ocean-packages/CANONICAL_PACKAGE_SOURCE.json`](ocean-packages/CANONICAL_PACKAGE_SOURCE.json) (Current pinned commit: `7750ea037b9162c7da4f237e40416e3439f1181d`)
 
 ---
 

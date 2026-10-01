@@ -4,22 +4,26 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.webkit.GeolocationPermissions;
-import android.webkit.WebStorage;
 import android.webkit.WebView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.webkit.Profile;
 import androidx.webkit.ProfileStore;
 import androidx.webkit.WebViewFeature;
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
 import studio.ocean.app.browser.network.ProxyControllerAdapter;
+import studio.ocean.app.browser.secure.PrivateProfileRegistry;
 
 /**
- * Executes the strict 9-step private data erasure sequence (PDF 4 §5.2).
- * Guarantees that cookies, WebStorage, network cache, temporary profiles,
- * and ephemeral files are destroyed without forensic residue.
+ * Executes the strict private data erasure sequence.
+ * Guarantees that ephemeral profiles, profile cookies, WebStorage, network cache,
+ * and quarantined downloads are destroyed WITHOUT FORENSIC RESIDUE.
+ *
+ * CRITICAL ISOLATION INVARIANT:
+ * Never invokes global CookieManager, WebStorage, or GeolocationPermissions clear-all APIs.
+ * Doing so erases Normal Browser data. Erasure is strictly scoped to the ephemeral private Profile.
  */
 public final class PrivateDataEraser {
 
@@ -31,12 +35,24 @@ public final class PrivateDataEraser {
     }
 
     /**
-     * Executes the 9-step cleanup order asynchronously on the main looper.
+     * Executes the profile-isolated cleanup order asynchronously on the main looper.
      */
     public static void wipeSession(
             @NonNull Context context,
             @NonNull String profileName,
             @Nullable WebView mainWebView,
+            @Nullable List<WebView> popupWebViews,
+            @Nullable WipeCallback callback) {
+        wipeSession(context, profileName, mainWebView != null ? java.util.Collections.singletonList(mainWebView) : null, popupWebViews, callback);
+    }
+
+    /**
+     * Overload supporting multiple tab WebViews.
+     */
+    public static void wipeSession(
+            @NonNull Context context,
+            @NonNull String profileName,
+            @Nullable Collection<WebView> tabWebViews,
             @Nullable List<WebView> popupWebViews,
             @Nullable WipeCallback callback) {
 
@@ -45,16 +61,18 @@ public final class PrivateDataEraser {
             boolean wipeVerified = true;
 
             try {
-                // Step 1: Block new navigation and detach download callbacks
-                if (mainWebView != null) {
-                    mainWebView.setDownloadListener(null);
-                    mainWebView.setWebViewClient(new android.webkit.WebViewClient());
+                // Step 1: Block new navigation and detach listeners from all tab WebViews
+                if (tabWebViews != null) {
+                    for (WebView wv : tabWebViews) {
+                        if (wv != null) {
+                            wv.setDownloadListener(null);
+                            wv.setWebViewClient(new android.webkit.WebViewClient());
+                            wv.stopLoading();
+                        }
+                    }
                 }
 
-                // Step 2: Stop page loads and destroy child popup WebViews
-                if (mainWebView != null) {
-                    mainWebView.stopLoading();
-                }
+                // Step 2: Stop and destroy all popup WebViews
                 if (popupWebViews != null) {
                     for (WebView popup : popupWebViews) {
                         if (popup != null) {
@@ -69,38 +87,47 @@ public final class PrivateDataEraser {
                     popupWebViews.clear();
                 }
 
-                // Step 3: Clear browsing data (cookies, WebStorage, cache)
-                WebStorage.getInstance().deleteAllData();
-                CookieManager cookieManager = CookieManager.getInstance();
-                cookieManager.removeSessionCookies(null);
-                cookieManager.removeAllCookies(null);
-
-                if (mainWebView != null) {
-                    mainWebView.clearCache(true);
-                    mainWebView.clearFormData();
-                    mainWebView.clearHistory();
-                    mainWebView.clearSslPreferences();
-                }
-
-                // Step 4: Clear profile permissions and site data
-                GeolocationPermissions.getInstance().clearAll();
-
-                // Step 5: Destroy WebView instance and remove from parent
-                if (mainWebView != null) {
-                    mainWebView.loadUrl("about:blank");
-                    if (mainWebView.getParent() instanceof ViewGroup) {
-                        ((ViewGroup) mainWebView.getParent()).removeView(mainWebView);
+                // Step 3: Clear profile-scoped browsing data (cookies, WebStorage, geolocation)
+                // NEVER call global CookieManager.getInstance().removeAllCookies() or WebStorage.getInstance().deleteAllData()!
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+                    try {
+                        Profile profile = ProfileStore.getInstance().getProfile(profileName);
+                        if (profile != null) {
+                            profile.getCookieManager().removeAllCookies(null);
+                            profile.getWebStorage().deleteAllData();
+                            profile.getGeolocationPermissions().clearAll();
+                        }
+                    } catch (Exception ignored) {
                     }
-                    mainWebView.destroy();
                 }
 
-                // Step 6: Delete temporary profile through ProfileStore when supported
+                // Step 4: Clear WebViews caches and destroy them
+                if (tabWebViews != null) {
+                    for (WebView wv : tabWebViews) {
+                        if (wv != null) {
+                            wv.clearCache(true);
+                            wv.clearFormData();
+                            wv.clearHistory();
+                            wv.clearSslPreferences();
+                            wv.loadUrl("about:blank");
+                            if (wv.getParent() instanceof ViewGroup) {
+                                ((ViewGroup) wv.getParent()).removeView(wv);
+                            }
+                            wv.destroy();
+                        }
+                    }
+                }
+
+                // Step 5: Delete ephemeral profile from ProfileStore after WebViews are destroyed
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
                     try {
                         ProfileStore.getInstance().deleteProfile(profileName);
                     } catch (Exception ignored) {
                     }
                 }
+
+                // Step 6: Unregister profile from crash survival registry
+                PrivateProfileRegistry.unregisterProfile(context, profileName);
 
                 // Step 7: Delete private temporary files, quarantined downloads, and cache files
                 File cacheDir = context.getCacheDir();

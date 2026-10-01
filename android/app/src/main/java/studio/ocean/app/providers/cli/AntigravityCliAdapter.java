@@ -7,7 +7,8 @@ import java.util.List;
 
 /**
  * Adapter for Google Antigravity CLI ('agy').
- * Bridges official account/subscription login and headless runs.
+ * Bridges official account/subscription login and headless runs (PDF 5 §6.2, §12).
+ * Documented command: 'agy -p "prompt" --output-format json' / 'stream-json'.
  */
 public final class AntigravityCliAdapter extends OfficialCliAdapter {
 
@@ -24,12 +25,16 @@ public final class AntigravityCliAdapter extends OfficialCliAdapter {
     }
 
     public boolean isSessionAuthenticated() {
-        // Runs a non-interactive auth probe: 'agy auth status' or check config
-        ExecutionResult res = executeSync(Arrays.asList("auth", "status"), null, 5);
-        return res.isSuccess() && !res.stdout.toLowerCase().contains("not logged in");
+        // Runs a non-interactive lightweight probe to check session authentication
+        ExecutionResult res = executeSync(Arrays.asList("-p", "ping", "--output-format", "json"), null, 5);
+        if (!res.isSuccess()) {
+            String combined = (res.stdout + " " + res.stderr).toLowerCase();
+            return !combined.contains("not logged in") && !combined.contains("unauthenticated") && !combined.contains("login required");
+        }
+        return true;
     }
 
     public void runHeadless(String prompt, StreamCallback callback) {
-        executeStreaming(Arrays.asList("run", "--format", "json", prompt), null, callback);
+        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "json"), null, callback);
     }
 }

@@ -3,14 +3,14 @@ package studio.ocean.app.browser.network;
 import androidx.annotation.NonNull;
 
 /**
- * Tracks DNS resolver policy and leak protection status (PDF 4 §7).
- * Reports true observable technical status (no fake DNS badges).
+ * Tracks DNS resolver policy and leak protection status (PDF 4 §7; PDF 5 §10.3).
+ * Reports true observable technical status without fake encrypted claims.
  */
 public final class DnsPolicy {
 
     public enum DnsMode {
-        DIRECT_SYSTEM("Direct DNS"),
-        TUNNEL_DNS("Tunnel DNS"),
+        DIRECT_SYSTEM("Direct / System DNS (Unencrypted)"),
+        TUNNEL_DNS("Tunnel DNS (Disabled)"),
         ENCRYPTED_DOH("Encrypted resolver (DoH)");
 
         public final String label;

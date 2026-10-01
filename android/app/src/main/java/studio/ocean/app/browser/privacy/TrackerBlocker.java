@@ -5,7 +5,7 @@ import android.webkit.WebResourceResponse;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,13 +17,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * High-performance tracker and ad request blocking engine (PDF 4 §8.1).
+ * High-performance tracker and ad request blocking engine (PDF 4 §8.1; PDF 5 §11).
  * Intercepts third-party analytics, tracking pixels, telemetry endpoints, and known ad networks.
  * Returns lightweight empty 204 responses to prevent page layout breakages.
  */
 public final class TrackerBlocker {
 
-    private static final List<String> TRACKER_DOMAINS = Collections.unmodifiableList(Arrays.asList(
+    private static final List<String> BASE_TRACKER_DOMAINS = Collections.unmodifiableList(Arrays.asList(
             "google-analytics.com",
             "googletagmanager.com",
             "googletagservices.com",
@@ -33,7 +33,7 @@ public final class TrackerBlocker {
             "analytics.facebook.com",
             "pixel.facebook.com",
             "connect.facebook.net",
-            "graph.facebook.com/tr",
+            "graph.facebook.com",
             "ads-twitter.com",
             "analytics.twitter.com",
             "criteo.com",
@@ -65,9 +65,21 @@ public final class TrackerBlocker {
             "nr-data.net"
     ));
 
+    private static final List<String> TRACKING_PATH_PREFIXES = Collections.unmodifiableList(Arrays.asList(
+            "/tr",
+            "/telemetry",
+            "/collect",
+            "/pageview",
+            "/events",
+            "/pixel",
+            "/beacon"
+    ));
+
+    private final Set<String> customTrackerDomains = new HashSet<>();
     private final Set<String> perSiteAllowlist = new HashSet<>();
     private final AtomicInteger blockedCounter = new AtomicInteger(0);
     private boolean enabled = true;
+    private final String listVersion = "2026.10-curated";
 
     public TrackerBlocker() {
     }
@@ -80,12 +92,20 @@ public final class TrackerBlocker {
         return enabled;
     }
 
+    public String getListVersion() {
+        return listVersion;
+    }
+
     public int getBlockedCount() {
         return blockedCounter.get();
     }
 
     public void resetBlockedCount() {
         blockedCounter.set(0);
+    }
+
+    public synchronized void addCustomDomain(@NonNull String domain) {
+        customTrackerDomains.add(domain.toLowerCase(Locale.ROOT).trim());
     }
 
     public synchronized void setSiteAllowed(@NonNull String host, boolean allowed) {
@@ -128,19 +148,34 @@ public final class TrackerBlocker {
                 }
             }
 
-            // Check against known tracker domain patterns
-            for (String domain : TRACKER_DOMAINS) {
+            // Check against base tracker domain patterns
+            for (String domain : BASE_TRACKER_DOMAINS) {
                 if (lowerReqHost.equals(domain) || lowerReqHost.endsWith("." + domain)) {
                     blockedCounter.incrementAndGet();
                     return true;
                 }
             }
 
-            // Check specific tracking path indicators
-            if (requestUrl.contains("/telemetry") || requestUrl.contains("/collect") || requestUrl.contains("/pageview")) {
-                if (isKnownThirdPartyTracker(requestUrl, mainFrameUrl)) {
-                    blockedCounter.incrementAndGet();
-                    return true;
+            // Check against user-added custom domains
+            synchronized (this) {
+                for (String domain : customTrackerDomains) {
+                    if (lowerReqHost.equals(domain) || lowerReqHost.endsWith("." + domain)) {
+                        blockedCounter.incrementAndGet();
+                        return true;
+                    }
+                }
+            }
+
+            // Check third-party requests for tracking path patterns
+            if (isKnownThirdParty(lowerReqHost, mainFrameUrl)) {
+                String path = extractPath(requestUrl);
+                if (path != null) {
+                    for (String prefix : TRACKING_PATH_PREFIXES) {
+                        if (path.startsWith(prefix) || path.contains(prefix + "/")) {
+                            blockedCounter.incrementAndGet();
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -150,13 +185,23 @@ public final class TrackerBlocker {
         }
     }
 
-    private boolean isKnownThirdPartyTracker(String requestUrl, String mainFrameUrl) {
+    private String extractPath(String url) {
+        int schemeEnd = url.indexOf("://");
+        int hostStart = schemeEnd >= 0 ? schemeEnd + 3 : 0;
+        int pathStart = url.indexOf('/', hostStart);
+        if (pathStart >= 0) {
+            int queryStart = url.indexOf('?', pathStart);
+            return queryStart >= 0 ? url.substring(pathStart, queryStart) : url.substring(pathStart);
+        }
+        return null;
+    }
+
+    private boolean isKnownThirdParty(String lowerReqHost, String mainFrameUrl) {
         if (mainFrameUrl == null) return false;
         try {
-            String rHost = studio.ocean.app.browser.core.NavigationPolicy.extractHost(requestUrl);
             String mHost = studio.ocean.app.browser.core.NavigationPolicy.extractHost(mainFrameUrl);
-            if (rHost == null || mHost == null) return false;
-            return !rHost.equalsIgnoreCase(mHost);
+            if (mHost == null) return false;
+            return !lowerReqHost.equalsIgnoreCase(mHost.toLowerCase(Locale.ROOT));
         } catch (Exception ignored) {
             return false;
         }

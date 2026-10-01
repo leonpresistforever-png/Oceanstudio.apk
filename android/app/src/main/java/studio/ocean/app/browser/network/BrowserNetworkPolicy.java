@@ -11,16 +11,16 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Enforces network privacy routing, localhost bypass rules, and kill-switch state (PDF 4 §6, §7).
+ * Enforces network privacy routing, localhost bypass rules, and kill-switch state (PDF 4 §6, §7; PDF 5 §10).
  * HARD RULE: Never send localhost, 127.0.0.1, ::1, or Ocean Runtime Ports to a remote proxy/tunnel.
  */
 public final class BrowserNetworkPolicy {
 
     public enum Mode {
-        DIRECT("Direct · No IP change"),
+        DIRECT("Direct · Public IP unchanged"),
         PROXY("Proxy"),
         TOR_ORBOT("Tor / Orbot exit"),
-        VPN_TUNNEL("Tunnel");
+        VPN_TUNNEL("Tunnel (Disabled · Requires Gateway)");
 
         public final String displayLabel;
 
@@ -41,6 +41,7 @@ public final class BrowserNetworkPolicy {
     private Mode mode = Mode.DIRECT;
     @Nullable private String proxyHost;
     private int proxyPort;
+    private boolean proxyVerified = false;
     private boolean tunnelConnected = true;
     private boolean killSwitchEnabled = false;
 
@@ -55,6 +56,7 @@ public final class BrowserNetworkPolicy {
         this.mode = Mode.DIRECT;
         this.proxyHost = null;
         this.proxyPort = 0;
+        this.proxyVerified = false;
         this.tunnelConnected = true;
     }
 
@@ -62,6 +64,7 @@ public final class BrowserNetworkPolicy {
         this.mode = Mode.PROXY;
         this.proxyHost = host;
         this.proxyPort = port;
+        this.proxyVerified = false;
         this.tunnelConnected = true;
     }
 
@@ -69,12 +72,23 @@ public final class BrowserNetworkPolicy {
         this.mode = Mode.TOR_ORBOT;
         this.proxyHost = "127.0.0.1";
         this.proxyPort = 9050;
+        this.proxyVerified = false;
         this.tunnelConnected = true;
     }
 
     public synchronized void setVpnTunnel() {
+        // Honest state: VPN transport is currently disabled until full remote endpoint pump is deployed
         this.mode = Mode.VPN_TUNNEL;
-        this.tunnelConnected = true;
+        this.proxyVerified = false;
+        this.tunnelConnected = false;
+    }
+
+    public synchronized void setProxyVerified(boolean verified) {
+        this.proxyVerified = verified;
+    }
+
+    public synchronized boolean isProxyVerified() {
+        return proxyVerified;
     }
 
     public synchronized void setTunnelConnected(boolean connected) {
@@ -128,15 +142,16 @@ public final class BrowserNetworkPolicy {
     public synchronized String getRouteStatusSummary() {
         switch (mode) {
             case DIRECT:
-                return "Direct · No IP change";
+                return "Direct · Public IP unchanged";
             case PROXY:
-                return "Proxy · " + (proxyHost != null ? proxyHost + ":" + proxyPort : "Configured");
+                String hostStr = (proxyHost != null ? proxyHost + ":" + proxyPort : "Configured");
+                return "Proxy · " + hostStr + (proxyVerified ? " (Verified)" : " (Unverified)");
             case TOR_ORBOT:
-                return "Tor / Orbot · SOCKS 9050";
+                return "Tor / Orbot · SOCKS 127.0.0.1:9050";
             case VPN_TUNNEL:
-                return "Ocean Tunnel · " + (tunnelConnected ? "Connected" : "Disconnected");
+                return "Tunnel · Disabled (No gateway configured)";
             default:
-                return "Direct";
+                return "Direct · Public IP unchanged";
         }
     }
 }

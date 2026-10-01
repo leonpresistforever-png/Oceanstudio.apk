@@ -5,7 +5,7 @@ import org.json.JSONObject;
 
 /**
  * Immutable snapshot of provider quota, usage, and entitlements.
- * Zero-deception policy: never manufactures synthetic percentages or dummy values.
+ * Zero-deception policy: never manufactures synthetic percentages or false "Unmetered" claims (PDF 5 §6, §12).
  */
 public final class QuotaSnapshot {
     public enum Unit {
@@ -59,8 +59,8 @@ public final class QuotaSnapshot {
     public String formatSummary() {
         if (confidence == Confidence.UNKNOWN) {
             return planName != null && !planName.isEmpty()
-                    ? planName + " · Unmetered"
-                    : "Usage quota: Unreported";
+                    ? planName + " · Usage unavailable"
+                    : "Usage quota: Unavailable";
         }
         if (remaining != null) {
             return "Quota: " + remaining + " " + unit.name().toLowerCase() + " remaining (" + confidence.name().toLowerCase() + ")";

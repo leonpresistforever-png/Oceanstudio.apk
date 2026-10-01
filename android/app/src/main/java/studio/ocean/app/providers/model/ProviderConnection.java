@@ -104,4 +104,10 @@ public final class ProviderConnection {
         return new ProviderConnection(id, providerId, displayAccount, strategy, status,
                 baseUrl, selectedModel, credentialRef, cliSessionRef, scopes, expiresAt, quota, models, lastValidatedAt);
     }
+
+    public ProviderConnection withQuota(QuotaSnapshot newQuota) {
+        return new ProviderConnection(id, providerId, displayAccount, strategy, status,
+                baseUrl, selectedModel, credentialRef, cliSessionRef, scopes, expiresAtEpochMs,
+                newQuota, models, System.currentTimeMillis());
+    }
 }

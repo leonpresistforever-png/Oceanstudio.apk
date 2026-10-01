@@ -14,14 +14,15 @@ import androidx.core.app.NotificationCompat;
 import studio.ocean.app.R;
 
 /**
- * Android VpnService implementation for Ocean Tunnel (PDF 4 §6, §15.5).
- * Explicitly operates with user consent and foreground service notification.
- * HARD RULE: Never intercepts 127.0.0.1 or local runtime port traffic.
+ * Android VpnService implementation for Ocean Tunnel (PDF 4 §6; PDF 5 §9, §10.2).
+ * Operates strictly with user consent and foreground service notification.
+ * HARD RULE: Never claims encrypted routing until remote gateway transport is active.
  */
 public final class OceanVpnService extends VpnService {
 
     public static final String ACTION_CONNECT = "studio.ocean.app.vpn.CONNECT";
     public static final String ACTION_DISCONNECT = "studio.ocean.app.vpn.DISCONNECT";
+    public static final String EXTRA_GATEWAY_HOST = "vpn_gateway_host";
     private static final String CHANNEL_ID = "ocean_tunnel_channel";
     private static final int NOTIFICATION_ID = 4040;
 
@@ -40,13 +41,21 @@ public final class OceanVpnService extends VpnService {
             return START_NOT_STICKY;
         }
 
-        establishTunnel();
+        String gatewayHost = intent != null ? intent.getStringExtra(EXTRA_GATEWAY_HOST) : null;
+        if (gatewayHost == null || gatewayHost.trim().isEmpty()) {
+            // No remote gateway endpoint configured; stop immediately to avoid traffic sink
+            disconnectTunnel();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        establishTunnel(gatewayHost);
         return START_STICKY;
     }
 
-    private void establishTunnel() {
+    private void establishTunnel(String gatewayHost) {
         createNotificationChannel();
-        Notification notification = buildForegroundNotification();
+        Notification notification = buildForegroundNotification(gatewayHost);
         startForeground(NOTIFICATION_ID, notification);
 
         try {
@@ -55,10 +64,8 @@ public final class OceanVpnService extends VpnService {
             builder.setMtu(1500);
             builder.addAddress("10.0.0.2", 24);
             builder.addDnsServer("1.1.1.1");
-            // Route internet traffic while keeping loopback/local addresses strictly outside
             builder.addRoute("0.0.0.0", 0);
 
-            // If available on Android 10+, disallow loopback routes
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setMetered(false);
             }
@@ -96,13 +103,13 @@ public final class OceanVpnService extends VpnService {
                     "Ocean Tunnel Service",
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Monitors the active Private Browser encrypted network route");
+            channel.setDescription("Monitors the active Private Browser network route");
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(channel);
         }
     }
 
-    private Notification buildForegroundNotification() {
+    private Notification buildForegroundNotification(String gatewayHost) {
         Intent disconnectIntent = new Intent(this, OceanVpnService.class);
         disconnectIntent.setAction(ACTION_DISCONNECT);
         PendingIntent pendingDisconnect = PendingIntent.getService(
@@ -112,8 +119,8 @@ public final class OceanVpnService extends VpnService {
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_shield_secure)
-                .setContentTitle("Ocean Private Tunnel")
-                .setContentText("Private routing is active · Localhost preserved")
+                .setContentTitle("Ocean Tunnel Service")
+                .setContentText("Gateway: " + gatewayHost + " · Localhost preserved")
                 .addAction(R.drawable.ic_panic, "Disconnect", pendingDisconnect)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true)

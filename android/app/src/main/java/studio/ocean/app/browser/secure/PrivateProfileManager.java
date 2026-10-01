@@ -10,9 +10,12 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 /**
- * Manages AndroidX WebKit ephemeral profiles (PDF 4 §4, §15.1).
+ * Manages AndroidX WebKit ephemeral profiles.
  * Isolates cookies, WebStorage, and cache per private session or per isolated tab.
  * Uses ProfileStore.deleteProfile to guarantee complete destruction on session end.
+ *
+ * CRITICAL ISOLATION RULE:
+ * Never silently collapses into the default profile when MULTI_PROFILE is unavailable.
  */
 public final class PrivateProfileManager {
 
@@ -28,11 +31,12 @@ public final class PrivateProfileManager {
 
     /**
      * Assigns the ephemeral profile to the given WebView before navigation or script evaluation.
+     * Returns true if successfully assigned to a dedicated profile; false if unsupported or failed.
      */
     public boolean applyProfile(@NonNull WebView webView, @NonNull String profileName) {
         if (!multiProfileSupported) {
-            // Fallback: Default profile with strict transient clearing
-            configureFallbackCookies(webView);
+            // MULTI_PROFILE is not supported by installed WebView.
+            // Do NOT touch default CookieManager or default profile data.
             return false;
         }
 
@@ -45,18 +49,8 @@ public final class PrivateProfileManager {
                 cookieManager.setAcceptThirdPartyCookies(webView, false);
             }
             return true;
-        } catch (Exception ignored) {
-            configureFallbackCookies(webView);
+        } catch (Exception e) {
             return false;
-        }
-    }
-
-    private void configureFallbackCookies(@NonNull WebView webView) {
-        try {
-            CookieManager cm = CookieManager.getInstance();
-            cm.setAcceptCookie(true);
-            cm.setAcceptThirdPartyCookies(webView, false);
-        } catch (Exception ignored) {
         }
     }
 
