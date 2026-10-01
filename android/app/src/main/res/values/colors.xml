@@ -9,6 +9,7 @@
     <color name="ocean_line">#FFD9D9D9</color>
     <color name="ocean_surface_2">#FFF3F3F3</color>
     <color name="ocean_surface_1">#FFFAFAFA</color>
+    <color name="ocean_surface_subtle">#FFF3F3F3</color>
     <color name="ocean_paper">#FFFFFFFF</color>
 
     <!-- Semantic aliases mapped to monochrome tokens -->
