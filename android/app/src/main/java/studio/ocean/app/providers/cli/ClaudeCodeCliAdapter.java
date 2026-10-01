@@ -36,6 +36,6 @@ public final class ClaudeCodeCliAdapter extends OfficialCliAdapter {
         java.util.Map<String, String> env = new java.util.HashMap<>();
         // Sanitize child environment to prevent silent API key billing over subscription (Audit §4.4, §10.2)
         env.put("ANTHROPIC_API_KEY", "");
-        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "stream-json"), env, callback);
+        executeStreaming(Arrays.asList("-p", prompt, "--output-format=stream-json", "--verbose", "--bare"), env, callback);
     }
 }

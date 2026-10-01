@@ -33,6 +33,19 @@ public final class ProviderRegistry {
     public static final String ID_LOCAL = "local";
     public static final String ID_CUSTOM = OceanByokManager.PROVIDER_CUSTOM;
 
+    public static final ProviderDescriptor LOCAL_DESCRIPTOR = new ProviderDescriptor(
+            ID_LOCAL,
+            "Local Model",
+            "On-device llama.cpp or local Ollama runtime",
+            "http://127.0.0.1:11434/v1",
+            "qwen2.5-coder",
+            Collections.singletonList(AuthStrategy.LOCAL),
+            "Local host port or model path",
+            R.drawable.ic_terminal,
+            false,
+            null
+    );
+
     private static final List<ProviderDescriptor> ALL = build();
 
     private ProviderRegistry() {}
@@ -43,6 +56,7 @@ public final class ProviderRegistry {
 
     public static ProviderDescriptor find(String id) {
         if (id == null) return null;
+        if (ID_LOCAL.equals(id)) return LOCAL_DESCRIPTOR;
         for (ProviderDescriptor p : ALL) {
             if (p.id.equals(id)) return p;
         }
@@ -262,19 +276,6 @@ public final class ProviderRegistry {
                 null
         ));
 
-        // 16. Local Models
-        list.add(new ProviderDescriptor(
-                ID_LOCAL,
-                "Local Model",
-                "On-device llama.cpp or local Ollama runtime",
-                "http://127.0.0.1:11434/v1",
-                "qwen2.5-coder",
-                Collections.singletonList(AuthStrategy.LOCAL),
-                "Local host port or model path",
-                R.drawable.ic_terminal,
-                false,
-                null
-        ));
 
         // 17. Custom Endpoint
         list.add(new ProviderDescriptor(

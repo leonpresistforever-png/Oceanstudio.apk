@@ -1,6 +1,7 @@
 package studio.ocean.app.providers.cli;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +33,21 @@ public final class AntigravityCliAdapter extends OfficialCliAdapter {
             return !combined.contains("not logged in") && !combined.contains("unauthenticated") && !combined.contains("login required");
         }
         return true;
+    }
+
+    public List<String> listModels() {
+        ExecutionResult res = executeSync(Collections.singletonList("models"), null, 5);
+        if (res.isSuccess() && !res.stdout.isEmpty()) {
+            List<String> models = new ArrayList<>();
+            for (String line : res.stdout.split("\n")) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                    models.add(trimmed);
+                }
+            }
+            return models;
+        }
+        return Collections.emptyList();
     }
 
     public void runHeadless(String prompt, StreamCallback callback) {
