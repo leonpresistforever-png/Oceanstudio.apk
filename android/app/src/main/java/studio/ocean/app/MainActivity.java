@@ -386,6 +386,7 @@ public class MainActivity extends AppCompatActivity {
 
         safeClick(R.id.nav_models, v -> { closeDrawer(); showByokPage(); });
         safeClick(R.id.nav_providers, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)); });
+        safeClick(R.id.nav_local_models, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class)); });
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
 
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
@@ -424,7 +425,8 @@ public class MainActivity extends AppCompatActivity {
         View oldByok = contentFrame.findViewWithTag("BYOK_VIEW");
         if (oldByok != null) contentFrame.removeView(oldByok);
 
-        ((TextView)findViewById(R.id.screen_title)).setText("Providers");
+        TextView screenTitle = findViewById(R.id.screen_title);
+        if (screenTitle != null) screenTitle.setText("Providers");
 
         ScrollView scroll = new ScrollView(this);
         scroll.setTag("BYOK_VIEW");
@@ -879,7 +881,7 @@ public class MainActivity extends AppCompatActivity {
         if(expand){children.setVisibility(View.VISIBLE); children.measure(View.MeasureSpec.makeMeasureSpec(((View)children.getParent()).getWidth(),View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));}
         int end=expand?children.getMeasuredHeight():0; children.setAlpha(expand?0f:1f); ValueAnimator height=ValueAnimator.ofInt(start,end); height.setDuration(220); height.setInterpolator(new DecelerateInterpolator()); height.addUpdateListener(a -> {ViewGroup.LayoutParams p=children.getLayoutParams();p.height=(int)a.getAnimatedValue();children.setLayoutParams(p);children.setAlpha(expand?a.getAnimatedFraction():1f-a.getAnimatedFraction());}); height.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator a){if(!expand)children.setVisibility(View.GONE);ViewGroup.LayoutParams p=children.getLayoutParams();p.height=expand?ViewGroup.LayoutParams.WRAP_CONTENT:0;children.setLayoutParams(p);}}); height.start(); chevron.animate().rotation(expand?90f:0f).setDuration(200).start();
     }
-    private void bindDestination(int id,String title) { findViewById(id).setOnClickListener(v -> { closeDrawer(); View content=findViewById(R.id.home_content); content.animate().alpha(0f).translationY(6f).setDuration(120).withEndAction(() -> { TextView heading=findViewById(R.id.empty_title), message=findViewById(R.id.empty_message); ((TextView)findViewById(R.id.screen_title)).setText(title); if(title.equals("OceanStudio")){ heading.setText(R.string.build_question); message.setText(R.string.build_subtitle); } else { heading.setText(title); message.setText(getString(R.string.destination_unavailable,title)); } content.setTranslationY(6f); content.animate().alpha(1f).translationY(0f).setDuration(190).start(); }).start(); }); }
+    private void bindDestination(int id,String title) { findViewById(id).setOnClickListener(v -> { closeDrawer(); View content=findViewById(R.id.home_content); content.animate().alpha(0f).translationY(6f).setDuration(120).withEndAction(() -> { TextView heading=findViewById(R.id.empty_title), message=findViewById(R.id.empty_message); TextView st=findViewById(R.id.screen_title); if (st != null) st.setText(title); if(title.equals("OceanStudio")){ heading.setText(R.string.build_question); message.setText(R.string.build_subtitle); } else { heading.setText(title); message.setText(getString(R.string.destination_unavailable,title)); } content.setTranslationY(6f); content.animate().alpha(1f).translationY(0f).setDuration(190).start(); }).start(); }); }
     private void newChat() {
         if (agentRunner.isRunning()) { Toast.makeText(this, "Stop the current request before starting a new chat", Toast.LENGTH_SHORT).show(); return; }
         if (drawerOpen) closeDrawer();
@@ -889,7 +891,8 @@ public class MainActivity extends AppCompatActivity {
         if (contentFrame != null) { View byok = contentFrame.findViewWithTag("BYOK_VIEW"); if (byok != null) contentFrame.removeView(byok); }
         findViewById(R.id.home_content).setVisibility(View.VISIBLE);
         ((EditText)findViewById(R.id.prompt)).setText("");
-        ((TextView)findViewById(R.id.screen_title)).setText(R.string.app_name);
+        TextView st = findViewById(R.id.screen_title);
+        if (st != null) st.setText(R.string.app_name);
         ((TextView)findViewById(R.id.empty_title)).setText(R.string.build_question);
         ((TextView)findViewById(R.id.empty_message)).setText(R.string.build_subtitle);
     }

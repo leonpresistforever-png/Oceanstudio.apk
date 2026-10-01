@@ -135,13 +135,15 @@ final class OceanUi {
         TextView pill = new TextView(context);
         pill.setText(label);
         pill.setTextColor(color(context, R.color.ocean_text_primary));
-        pill.setTextSize(14f);
+        pill.setTextSize(13f);
         pill.setTypeface(null, Typeface.BOLD);
-        pill.setPadding(dp(context, 16), dp(context, 10), dp(context, 16), dp(context, 10));
+        pill.setPadding(dp(context, 16), dp(context, 8), dp(context, 16), dp(context, 8));
+        pill.setMinHeight(dp(context, 40));
+        pill.setGravity(Gravity.CENTER);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color(context, R.color.ocean_background));
-        bg.setCornerRadius(dp(context, 999));
-        bg.setStroke(dp(context, 1), color(context, R.color.ocean_text_primary));
+        bg.setColor(color(context, R.color.ocean_surface));
+        bg.setCornerRadius(dp(context, 12));
+        bg.setStroke(dp(context, 1), color(context, R.color.ocean_border));
         pill.setBackground(bg);
         return pill;
     }

@@ -232,6 +232,19 @@ public final class BrowserHistoryStore {
         return results;
     }
 
+    @NonNull
+    public synchronized List<HistoryItem> search(@NonNull String query) {
+        return searchHistory(query);
+    }
+
+    /**
+     * Deletes a single history record by ID.
+     */
+    public synchronized int deleteItem(long id) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        return db.delete(TABLE_HISTORY, COL_ID + " = ?", new String[]{String.valueOf(id)});
+    }
+
     /**
      * Deletes all history records for a given domain/host.
      */

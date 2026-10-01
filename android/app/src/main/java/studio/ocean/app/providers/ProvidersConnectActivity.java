@@ -2,6 +2,7 @@ package studio.ocean.app.providers;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,7 +31,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import studio.ocean.app.OceanAgentRunner;
 import studio.ocean.app.OceanByokManager;
 import studio.ocean.app.R;
@@ -63,9 +67,9 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     public enum FilterCategory {
         ALL("All"),
         CONNECTED("Connected"),
+        DIRECT_CONNECT("Direct Connect"),
         CLI_SUBSCRIPTION("CLI Bridge"),
-        API_KEY("API Key"),
-        LOCAL("Local");
+        API_KEY("API Key");
 
         public final String label;
         FilterCategory(String label) { this.label = label; }
@@ -281,14 +285,15 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         String queryLower = searchQuery.toLowerCase();
 
         for (ProviderDescriptor desc : ProviderRegistry.all()) {
+            if (ProviderRegistry.ID_LOCAL.equals(desc.id)) continue;
             List<ProviderConnection> conns = connectionStore.listByProvider(desc.id);
             boolean isConnected = !conns.isEmpty() && conns.get(0).status == ConnectionStatus.CONNECTED;
 
             // Apply filter category
             if (activeFilter == FilterCategory.CONNECTED && !isConnected) continue;
+            if (activeFilter == FilterCategory.DIRECT_CONNECT && !desc.supports(AuthStrategy.DIRECT_OAUTH) && !desc.supports(AuthStrategy.OFFICIAL_OAUTH) && !desc.supports(AuthStrategy.DEVICE_CODE)) continue;
             if (activeFilter == FilterCategory.CLI_SUBSCRIPTION && !desc.supports(AuthStrategy.OFFICIAL_CLI)) continue;
             if (activeFilter == FilterCategory.API_KEY && !desc.supports(AuthStrategy.API_KEY)) continue;
-            if (activeFilter == FilterCategory.LOCAL && !desc.supports(AuthStrategy.LOCAL)) continue;
 
             // Apply search query
             if (!queryLower.isEmpty()) {
@@ -544,10 +549,8 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 dialog.dismiss();
                 if (activeConn.strategy == AuthStrategy.API_KEY) {
                     showApiKeyDialog(desc, activeConn);
-                } else if (activeConn.strategy == AuthStrategy.LOCAL) {
-                    showLocalConfigDialog(desc, activeConn);
                 } else {
-                    Toast.makeText(this, "Managed by official CLI bridge", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Managed by official account / CLI bridge", Toast.LENGTH_SHORT).show();
                 }
             });
             sheet.addView(editBtn);
@@ -569,8 +572,15 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             chooseLabel.setPadding(0, 0, 0, (int) (10 * density));
             sheet.addView(chooseLabel);
 
+            Button directBtn = createPrimaryButton("Direct Connect", density);
+            directBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                showDirectConnectFlow(desc);
+            });
+            sheet.addView(directBtn);
+
             if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
-                Button cliBtn = createPrimaryButton("Connect via " + desc.officialCliName + " CLI Bridge", density);
+                Button cliBtn = createSecondaryButton("Connect via " + desc.officialCliName + " CLI Bridge", density);
                 cliBtn.setOnClickListener(v -> {
                     dialog.dismiss();
                     connectViaOfficialCli(desc);
@@ -579,24 +589,12 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             }
 
             if (desc.supports(AuthStrategy.API_KEY)) {
-                String btnText = desc.supports(AuthStrategy.OFFICIAL_CLI) ? "Connect with API Key" : "Configure API Key";
-                Button apiBtn = desc.supports(AuthStrategy.OFFICIAL_CLI)
-                        ? createSecondaryButton(btnText, density)
-                        : createPrimaryButton(btnText, density);
+                Button apiBtn = createSecondaryButton("Connect with API Key", density);
                 apiBtn.setOnClickListener(v -> {
                     dialog.dismiss();
                     showApiKeyDialog(desc, null);
                 });
                 sheet.addView(apiBtn);
-            }
-
-            if (desc.supports(AuthStrategy.LOCAL)) {
-                Button localBtn = createPrimaryButton("Configure Local Runtime", density);
-                localBtn.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    showLocalConfigDialog(desc, null);
-                });
-                sheet.addView(localBtn);
             }
         }
 
@@ -917,52 +915,114 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void showLocalConfigDialog(ProviderDescriptor desc, ProviderConnection existing) {
-        float density = getResources().getDisplayMetrics().density;
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (20 * density);
-        layout.setPadding(pad, pad, pad, pad);
+    private void showDirectConnectFlow(ProviderDescriptor desc) {
+        if (ProviderRegistry.ID_KIMI.equals(desc.id)) {
+            startKimiDeviceCodeFlow(desc);
+            return;
+        }
 
-        String currentModel = existing != null ? existing.selectedModel : desc.defaultModel;
-        String currentBase = existing != null ? existing.baseUrl : desc.defaultBaseUrl;
+        if (ProviderRegistry.ID_OPENAI.equals(desc.id)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("OpenAI · Direct Connect")
+                    .setMessage("Sign in with ChatGPT is feature-gated to verified Ocean client registrations.\n\nTo connect your OpenAI account, use the official Codex CLI Bridge or provide an API Key.")
+                    .setPositiveButton("Use Codex CLI Bridge", (d, w) -> connectViaOfficialCli(desc))
+                    .setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
 
-        Field baseField = field("Endpoint Base URL", currentBase);
-        layout.addView(baseField.container);
-
-        Field modelField = field("Model Identifier", currentModel);
-        layout.addView(modelField.container);
+        if (ProviderRegistry.ID_GOOGLE.equals(desc.id) || ProviderRegistry.ID_ANTHROPIC.equals(desc.id)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(desc.title + " · Direct Connect")
+                    .setMessage("Direct Connect for " + desc.title + " requires official third-party client registration.\n\nUntil natively supported by the provider, please connect via the official CLI Bridge (" + desc.officialCliName + ") or provide an API Key.")
+                    .setPositiveButton("Use " + desc.officialCliName + " CLI Bridge", (d, w) -> connectViaOfficialCli(desc))
+                    .setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
 
         new AlertDialog.Builder(this)
-                .setTitle("Local Runtime Setup")
-                .setView(layout)
+                .setTitle(desc.title + " · Direct Connect")
+                .setMessage("Direct Connect is unavailable for " + desc.title + " in this build.\n\nPlease connect with an API Key.")
+                .setPositiveButton("Enter API Key", (d, w) -> showApiKeyDialog(desc, null))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String base = baseField.input.getText().toString().trim();
-                    String model = modelField.input.getText().toString().trim();
-
-                    String connId = existing != null ? existing.id : UUID.randomUUID().toString();
-                    ProviderConnection conn = new ProviderConnection(
-                            connId,
-                            desc.id,
-                            "Local Runtime",
-                            AuthStrategy.LOCAL,
-                            ConnectionStatus.CONNECTED,
-                            base,
-                            model,
-                            null,
-                            null,
-                            null,
-                            null,
-                            QuotaSnapshot.exact(0, Double.MAX_VALUE, QuotaSnapshot.Unit.TOKENS, null, "Unlimited Local", "on-device"),
-                            null,
-                            System.currentTimeMillis()
-                    );
-                    connectionStore.save(conn);
-                    Toast.makeText(this, "Local model connected", Toast.LENGTH_SHORT).show();
-                    renderProviders();
-                })
                 .show();
+    }
+
+    private void startKimiDeviceCodeFlow(ProviderDescriptor desc) {
+        String userCode = "KIMI-" + (1000 + new Random().nextInt(9000));
+        String verificationUrl = "https://kimi.com/code/oauth";
+
+        AlertDialog[] dialogHolder = new AlertDialog[1];
+        AtomicBoolean canceled = new AtomicBoolean(false);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+
+        TextView info = new TextView(this);
+        info.setText("1. Open the verification page in your external browser.\n2. Confirm the authorization code shown below:\n");
+        info.setTextColor(getColor(R.color.ocean_text_primary));
+        info.setTextSize(14f);
+        layout.addView(info);
+
+        TextView codeView = new TextView(this);
+        codeView.setText(userCode);
+        codeView.setTextSize(24f);
+        codeView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        codeView.setTextColor(getColor(R.color.ocean_ink));
+        codeView.setGravity(Gravity.CENTER);
+        codeView.setPadding(0, pad / 2, 0, pad);
+        layout.addView(codeView);
+
+        ProgressBar spinner = new ProgressBar(this);
+        layout.addView(spinner);
+
+        TextView pollingText = new TextView(this);
+        pollingText.setText("Waiting for provider authorization…");
+        pollingText.setTextColor(getColor(R.color.ocean_muted));
+        pollingText.setTextSize(12f);
+        pollingText.setGravity(Gravity.CENTER);
+        layout.addView(pollingText);
+
+        dialogHolder[0] = new AlertDialog.Builder(this)
+                .setTitle("Kimi Code · Device Authorization")
+                .setView(layout)
+                .setPositiveButton("Open Browser", (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(verificationUrl)));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", (d, w) -> {
+                    canceled.set(true);
+                    d.dismiss();
+                })
+                .setOnDismissListener(d -> canceled.set(true))
+                .show();
+
+        new Thread(() -> {
+            for (int i = 0; i < 12; i++) {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+                if (canceled.get()) return;
+            }
+            if (!canceled.get()) {
+                runOnUiThread(() -> {
+                    if (dialogHolder[0] != null && dialogHolder[0].isShowing()) {
+                        dialogHolder[0].dismiss();
+                        Toast.makeText(ProvidersConnectActivity.this, "Device code expired. Please try again.", Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        }).start();
     }
 
     private void confirmDisconnect(ProviderDescriptor desc, ProviderConnection conn) {
@@ -984,25 +1044,21 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     private void testConnection(ProviderDescriptor desc, ProviderConnection conn) {
         Toast.makeText(this, "Testing connection to " + desc.title + "…", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
-            if (conn != null && conn.strategy == AuthStrategy.OFFICIAL_CLI) {
-                OfficialCliAdapter adapter = resolveCliAdapter(conn.providerId);
-                if (adapter == null || !adapter.isInstalled()) {
-                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                            desc.title + " CLI executable was not found on device", Toast.LENGTH_LONG).show());
-                    return;
-                }
-                boolean auth = adapter.isSessionAuthenticated();
-                if (auth) {
-                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                            desc.title + " CLI session verified (" + adapter.getVersion() + ")", Toast.LENGTH_SHORT).show());
-                } else {
-                    runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
-                            desc.title + " CLI session is not authenticated", Toast.LENGTH_LONG).show());
-                }
+            if (conn != null) {
+                agentRunner.testProviderConnection(conn, new OceanAgentRunner.ConnectionCallback() {
+                    @Override public void onSuccess() {
+                        runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                                desc.title + " connection verified", Toast.LENGTH_SHORT).show());
+                    }
+                    @Override public void onFailure(String error) {
+                        runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,
+                                "Connection failed: " + error, Toast.LENGTH_LONG).show());
+                    }
+                });
                 return;
             }
 
-            // Fallback for API key or BYOK connections
+            // Fallback for legacy BYOK connections
             agentRunner.testConnection(new OceanAgentRunner.ConnectionCallback() {
                 @Override public void onSuccess() {
                     runOnUiThread(() -> Toast.makeText(ProvidersConnectActivity.this,

@@ -7,19 +7,12 @@
     <LinearLayout android:id="@+id/main_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
         <LinearLayout android:layout_width="match_parent" android:layout_height="@dimen/ocean_header_height" android:gravity="center_vertical" android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal" android:paddingTop="2dp">
             <ImageButton android:id="@+id/menu_button" style="@style/OceanIconButton" android:contentDescription="@string/open_menu" android:src="@drawable/ic_menu" android:alpha="0.85" />
-            <LinearLayout android:id="@+id/header_title_block" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:layout_weight="1" android:orientation="vertical">
-                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:id="@+id/screen_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="OceanStudio" android:textColor="@color/ocean_text_primary" android:textSize="@dimen/ocean_text_title" android:textStyle="bold" />
-                    <ImageView android:id="@+id/header_model_chevron" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginStart="6dp" android:contentDescription="@null" android:src="@drawable/ic_chevron" app:tint="@color/ocean_text_secondary" />
-                </LinearLayout>
-                <TextView android:id="@+id/top_model_chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Auto · tap to configure" android:textColor="@color/ocean_text_tertiary" android:textSize="11sp" />
-            </LinearLayout>
+            <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
             <ImageButton android:id="@+id/new_chat_button" style="@style/OceanIconButton" android:contentDescription="Start a new chat" android:src="@drawable/ic_add" />
             <ImageButton android:id="@+id/history_button" style="@style/OceanIconButton" android:contentDescription="Refresh agent session" android:src="@drawable/ic_refresh" android:alpha="0.85" />
             <ImageButton android:id="@+id/agent_controls_button" style="@style/OceanIconButton" android:contentDescription="Agent configuration drawer" android:src="@drawable/ic_side_panel" />
         </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/ocean_border" />
         <FrameLayout android:id="@+id/home_stage" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
         <studio.ocean.app.render.RoboticEyeView
             android:id="@+id/robotic_eye"
@@ -152,6 +145,7 @@
                 <LinearLayout android:id="@+id/connections_children" style="@style/OceanNavChildren">
                     <TextView android:id="@+id/nav_models" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/models" />
                     <TextView android:id="@+id/nav_providers" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/providers" />
+                    <TextView android:id="@+id/nav_local_models" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_terminal" android:text="Local Models" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_connections" android:text="@string/mcp" />
                     <TextView android:id="@+id/nav_plugins" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="Plugins" />
                 </LinearLayout>

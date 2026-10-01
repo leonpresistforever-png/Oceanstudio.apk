@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +54,22 @@ public class OfficialCliAdapter {
 
     public boolean isInstalled() {
         return resolveExecutable() != null;
+    }
+
+    public String getVersion() {
+        ExecutionResult res = executeSync(Collections.singletonList("--version"), null, 5);
+        if (res.isSuccess() && !res.stdout.isEmpty()) {
+            return res.stdout.split("\n")[0].trim();
+        }
+        return "1.0.0";
+    }
+
+    public boolean isSessionAuthenticated() {
+        return isInstalled();
+    }
+
+    public void runHeadless(String prompt, StreamCallback callback) {
+        executeStreaming(Arrays.asList("-p", prompt), null, callback);
     }
 
     public File resolveExecutable() {

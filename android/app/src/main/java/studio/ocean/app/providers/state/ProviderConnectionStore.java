@@ -30,6 +30,10 @@ public final class ProviderConnectionStore {
         return Collections.unmodifiableList(new ArrayList<>(cache));
     }
 
+    public synchronized List<ProviderConnection> listConnections() {
+        return listAll();
+    }
+
     public synchronized List<ProviderConnection> listByProvider(String providerId) {
         ensureLoaded();
         List<ProviderConnection> matches = new ArrayList<>();

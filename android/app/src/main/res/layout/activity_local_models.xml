@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/ocean_background">
+
+    <!-- Header Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/ocean_header_height"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal"
+        android:paddingTop="2dp">
+
+        <ImageButton
+            android:id="@+id/local_models_back"
+            style="@style/OceanIconButton"
+            android:contentDescription="Back"
+            android:src="@drawable/ic_back" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Local Models"
+                android:textColor="@color/ocean_text_primary"
+                android:textSize="@dimen/ocean_text_title"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/local_models_ram_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Device RAM: measuring…"
+                android:textColor="@color/ocean_text_tertiary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/local_models_refresh"
+            style="@style/OceanIconButton"
+            android:contentDescription="Refresh models"
+            android:src="@drawable/ic_refresh" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/ocean_border" />
+
+    <!-- Filter chips scroll -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal"
+        android:paddingVertical="8dp">
+
+        <LinearLayout
+            android:id="@+id/local_models_filters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/ocean_line" />
+
+    <!-- Models List -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/local_models_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/ocean_spacing_screen_horizontal"
+            android:paddingVertical="12dp" />
+    </ScrollView>
+</LinearLayout>

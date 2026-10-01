@@ -27,6 +27,6 @@ public final class ClaudeCodeCliAdapter extends OfficialCliAdapter {
     }
 
     public void runHeadless(String prompt, StreamCallback callback) {
-        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "json"), null, callback);
+        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "stream-json"), null, callback);
     }
 }

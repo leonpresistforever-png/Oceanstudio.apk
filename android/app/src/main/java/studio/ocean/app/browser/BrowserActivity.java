@@ -165,7 +165,7 @@ public final class BrowserActivity extends AppCompatActivity {
         cookieManager.setAcceptThirdPartyCookies(webView, true);
 
         webView.setDownloadListener(downloadListener());
-        webView.setWebChromeClient(new OceanBrowserWebChromeClient(new OceanBrowserWebChromeClient.Callback() {
+        webView.setWebChromeClient(new OceanBrowserChromeClient(new OceanBrowserChromeClient.Callback() {
             @Override
             public void onProgressChanged(int progress) {
                 if (progress >= 100) {

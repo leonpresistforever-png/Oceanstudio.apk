@@ -608,6 +608,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
             if(!mq.isEmpty()&&!name.toLowerCase(java.util.Locale.ROOT).contains(mq)
                     &&!cmd.toLowerCase(java.util.Locale.ROOT).contains(mq))continue;
             boolean connected=m.optBoolean("connected",false);
+            if("connected".equals(statusFilter)&&!connected)continue;
+            if("draft".equals(statusFilter))continue;
             LinearLayout card=mcpRow(m,connected);
             card.setOnClickListener(v->toggleMcp(m.optString("id"),!connected));
             mcpsList.addView(card);
@@ -615,7 +617,7 @@ public final class PluginCenterActivity extends AppCompatActivity {
         }
         if(mShown==0&&mcps.length()>0){
             TextView empty=new TextView(this);
-            empty.setText("No matching MCP servers.");
+            empty.setText("connected".equals(statusFilter)?"No connected MCP servers.":"No matching MCP servers.");
             empty.setTextColor(MUTED);empty.setTextSize(13);
             mcpsList.addView(empty);
         }

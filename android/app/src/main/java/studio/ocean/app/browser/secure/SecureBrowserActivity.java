@@ -335,11 +335,13 @@ public final class SecureBrowserActivity extends AppCompatActivity {
         });
 
         wv.setWebViewClient(new WebViewClient() {
+            private final AtomicReference<String> mainFrameUrl = new AtomicReference<>("about:blank");
+
             @Nullable
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String requestUrl = request.getUrl().toString();
-                String mainUrl = view.getUrl();
+                String mainUrl = request.isForMainFrame() ? requestUrl : mainFrameUrl.get();
                 if (trackerBlocker.shouldBlock(requestUrl, mainUrl)) {
                     sessionManager.incrementTrackerBlocked();
                     return TrackerBlocker.createBlockedResponse();
@@ -376,6 +378,7 @@ public final class SecureBrowserActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                mainFrameUrl.set(url);
                 if (tabIndex == tabController.getCurrentTabIndex()) {
                     hideError();
                     updateUrlBar(url);

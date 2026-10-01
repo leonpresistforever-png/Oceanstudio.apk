@@ -39,9 +39,15 @@ public final class QuotaService {
             return QuotaSnapshot.unknown("Pay-as-you-go API", "api-header");
         }
 
+        if (connection.strategy == AuthStrategy.ENTERPRISE && connection.quota != null && connection.quota.used != null && connection.quota.remaining != null) {
+            return QuotaSnapshot.exact(connection.quota.used, connection.quota.remaining, connection.quota.unit,
+                    connection.quota.resetsAtEpochMs, "Enterprise Exact Quota", "provider-api");
+        }
+
         if (connection.strategy == AuthStrategy.LOCAL) {
-            return QuotaSnapshot.exact(0, Double.MAX_VALUE, QuotaSnapshot.Unit.TOKENS,
-                    null, "Unlimited Local", "on-device");
+            // Local on-device runtime: do not fabricate infinite token quota (Directive Point 6)
+            return QuotaSnapshot.reported(null, null, QuotaSnapshot.Unit.PROVIDER_DEFINED,
+                    null, "On-Device Runtime", "local-engine");
         }
 
         return QuotaSnapshot.unknown("Standard", "default");

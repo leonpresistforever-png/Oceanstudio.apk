@@ -53,6 +53,7 @@ public final class OceanAgentRunner {
     private final ProviderConnectionStore connectionStore;
     private final SmartRouter smartRouter = new SmartRouter();
     private final CredentialVault credentialVault;
+    private final ProviderExecutionEngine providerExecutionEngine;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile Thread worker;
@@ -66,6 +67,7 @@ public final class OceanAgentRunner {
         agentSettings = new OceanAgentSettings(this.context);
         connectionStore = new ProviderConnectionStore(this.context);
         credentialVault = new CredentialVault(this.context);
+        providerExecutionEngine = new ProviderExecutionEngine(this.context);
     }
     public boolean isRunning() { return running.get(); }
     public void cancel() {
@@ -228,6 +230,10 @@ public final class OceanAgentRunner {
                 mainHandler.post(() -> callback.onFailure(OceanAgentConversation.safeMessage(error)));
             }
         }, "ocean-byok-test").start();
+    }
+
+    public void testProviderConnection(ProviderConnection conn, ConnectionCallback callback) {
+        providerExecutionEngine.testConnection(conn, callback);
     }
 
     private JSONObject send(OceanModelConfig config, JSONObject body) throws Exception {
