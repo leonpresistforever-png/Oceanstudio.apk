@@ -32,7 +32,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -443,9 +442,10 @@ public final class SecureBrowserActivity extends AppCompatActivity {
     }
 
     private void showPrivacyStatusSheet() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
         View sheet = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_privacy_status, null);
-        dialog.setContentView(sheet);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(sheet)
+                .create();
 
         TextView sessionVal = sheet.findViewById(R.id.privacy_sheet_session_val);
         TextView routeVal = sheet.findViewById(R.id.privacy_sheet_route_val);
