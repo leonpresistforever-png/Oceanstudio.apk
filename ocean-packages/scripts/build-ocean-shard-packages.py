@@ -39,6 +39,7 @@ def build_one(package: str, script_name: str, description: str, pool: Path) -> d
         raise SystemExit(f"Missing shard source: {source}")
     with tempfile.TemporaryDirectory(prefix=f"{package}-") as temporary:
         stage = Path(temporary)
+        stage.chmod(0o755)
         root = stage / PREFIX.lstrip("/")
         (root / "bin").mkdir(parents=True)
         dest = root / "bin" / script_name
@@ -46,6 +47,7 @@ def build_one(package: str, script_name: str, description: str, pool: Path) -> d
         dest.chmod(0o755)
         debian = stage / "DEBIAN"
         debian.mkdir(mode=0o755)
+        debian.chmod(0o755)
         control = "\n".join(
             [
                 f"Package: {package}",

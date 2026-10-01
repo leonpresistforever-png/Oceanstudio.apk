@@ -42,7 +42,9 @@ class IndexQualityGateTests(unittest.TestCase):
                     f"""
 set -euo pipefail
 work=$(mktemp -d)
+chmod 755 "$work"
 mkdir -p "$work/DEBIAN" "$work/data/data/studio.ocean.app/files/usr/bin"
+chmod 755 "$work/DEBIAN"
 printf 'Package: ocean-term-media-001\\nVersion: 1.0.0-1+ocean1\\nArchitecture: all\\nMaintainer: t\\nDepends: bash\\nDescription: filler\\n' > "$work/DEBIAN/control"
 printf '#!/bin/sh\\necho ok\\n' > "$work/data/data/studio.ocean.app/files/usr/bin/fake"
 chmod 755 "$work/data/data/studio.ocean.app/files/usr/bin/fake"
@@ -65,7 +67,9 @@ dpkg-deb --root-owner-group -b "$work" "{junk}"
                     f"""
 set -euo pipefail
 work=$(mktemp -d)
+chmod 755 "$work"
 mkdir -p "$work/DEBIAN" "$work/data/data/studio.ocean.app/files/usr/bin"
+chmod 755 "$work/DEBIAN"
 printf 'Package: bash\\nVersion: 1.0\\nArchitecture: aarch64\\nMaintainer: t\\nDescription: d\\n' > "$work/DEBIAN/control"
 printf '#!/bin/sh\\necho bash\\n' > "$work/data/data/studio.ocean.app/files/usr/bin/bash"
 chmod 755 "$work/data/data/studio.ocean.app/files/usr/bin/bash"
