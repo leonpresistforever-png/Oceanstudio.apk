@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -104,6 +105,12 @@ public final class SecureBrowserActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                WebView.setDataDirectorySuffix("secure_browser");
+            } catch (Exception ignored) {
+            }
+        }
         super.onCreate(savedInstanceState);
         // Default screenshot protection in private mode
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
