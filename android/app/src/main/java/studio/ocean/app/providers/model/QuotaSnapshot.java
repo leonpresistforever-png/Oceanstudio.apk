@@ -22,6 +22,7 @@ public final class QuotaSnapshot {
     public final Long resetsAtEpochMs;
     public final Confidence confidence;
     public final String planName;
+    public final String planTier;
     public final String source;
     public final long capturedAtEpochMs;
 
@@ -33,6 +34,7 @@ public final class QuotaSnapshot {
         this.resetsAtEpochMs = resetsAtEpochMs;
         this.confidence = confidence != null ? confidence : Confidence.UNKNOWN;
         this.planName = planName != null ? planName : "";
+        this.planTier = this.planName;
         this.source = source != null ? source : "unknown";
         this.capturedAtEpochMs = capturedAtEpochMs;
     }
@@ -43,15 +45,27 @@ public final class QuotaSnapshot {
     }
 
     public static QuotaSnapshot exact(double used, double remaining, Unit unit, Long resetsAtEpochMs,
-                                     String planName, String source) {
+                                      String planName, String source) {
         return new QuotaSnapshot(used, remaining, unit, resetsAtEpochMs,
                 Confidence.EXACT, planName, source, System.currentTimeMillis());
     }
 
     public static QuotaSnapshot reported(Double used, Double remaining, Unit unit, Long resetsAtEpochMs,
-                                        String planName, String source) {
+                                         String planName, String source) {
         return new QuotaSnapshot(used, remaining, unit, resetsAtEpochMs,
                 Confidence.PROVIDER_REPORTED, planName, source, System.currentTimeMillis());
+    }
+
+    public String formatSummary() {
+        if (confidence == Confidence.UNKNOWN) {
+            return planName != null && !planName.isEmpty()
+                    ? planName + " · Unmetered"
+                    : "Usage quota: Unreported";
+        }
+        if (remaining != null) {
+            return "Quota: " + remaining + " " + unit.name().toLowerCase() + " remaining (" + confidence.name().toLowerCase() + ")";
+        }
+        return planName + " · " + source;
     }
 
     public JSONObject toJson() throws JSONException {

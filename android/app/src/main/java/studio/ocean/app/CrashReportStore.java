@@ -41,4 +41,7 @@ final class CrashReportStore {
         }
     }
     static String identity(String text) { return text.length() + ":" + Integer.toHexString(text.hashCode()); }
+    static void record(String tag, Throwable error) {
+        if (tag == null || error == null) return;
+    }
 }

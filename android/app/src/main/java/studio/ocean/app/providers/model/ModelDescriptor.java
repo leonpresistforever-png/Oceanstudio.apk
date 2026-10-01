@@ -9,6 +9,8 @@ import org.json.JSONObject;
 public final class ModelDescriptor {
     public final String id;
     public final String name;
+    public final String modelId;
+    public final String displayName;
     public final int contextLength;
     public final boolean isDefault;
     public final boolean supportsTools;
@@ -19,6 +21,8 @@ public final class ModelDescriptor {
                            boolean supportsTools, boolean supportsVision, String cooldownStatus) {
         this.id = id;
         this.name = name != null ? name : id;
+        this.modelId = this.id;
+        this.displayName = this.name;
         this.contextLength = contextLength;
         this.isDefault = isDefault;
         this.supportsTools = supportsTools;
