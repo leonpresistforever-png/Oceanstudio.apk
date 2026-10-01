@@ -26,7 +26,16 @@ public final class ClaudeCodeCliAdapter extends OfficialCliAdapter {
         return res.isSuccess() && !res.stdout.toLowerCase().contains("not authenticated");
     }
 
+    public boolean hasApiKeyPrecedence() {
+        String key = System.getenv("ANTHROPIC_API_KEY");
+        return key != null && !key.trim().isEmpty();
+    }
+
+    @Override
     public void runHeadless(String prompt, StreamCallback callback) {
-        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "stream-json"), null, callback);
+        java.util.Map<String, String> env = new java.util.HashMap<>();
+        // Sanitize child environment to prevent silent API key billing over subscription (Audit §4.4, §10.2)
+        env.put("ANTHROPIC_API_KEY", "");
+        executeStreaming(Arrays.asList("-p", prompt, "--output-format", "stream-json"), env, callback);
     }
 }

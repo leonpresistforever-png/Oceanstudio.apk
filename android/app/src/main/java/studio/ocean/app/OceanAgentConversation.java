@@ -9,10 +9,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /** Provider wire protocols and a bounded tool loop, independent of Android and the PTY. */
-final class OceanAgentConversation {
-    interface Transport { JSONObject send(JSONObject request) throws Exception; }
-    interface ToolExecutor { JSONObject execute(String name, JSONObject arguments) throws Exception; }
-    interface Progress { void status(String text); }
+public final class OceanAgentConversation {
+    public interface Transport { JSONObject send(JSONObject request) throws Exception; }
+    public interface ToolExecutor { JSONObject execute(String name, JSONObject arguments) throws Exception; }
+    public interface Progress { void status(String text); }
     static final int MAX_TOOL_CALLS = 24, MAX_ROUNDS = 16;
     private static final String SYSTEM = "You are Ocean Agent, the assistant built into OceanStudio on Android. Screen inspection and gestures require Device Access with live control enabled; dispatch_android_app sends JSON-shaped intents (broadcast, service, or activity) without opening Ocean UI and does not require live control, but still respects App Access package rules. Use dispatch_android_app for in-app tasks that accept broadcasts or background services; use open_android_app when the user wants the visible app UI. Terminal CLIs ocean-app-task and ocean-api app-task post the same JSON to localhost IPC. Never bypass protected screens or private app storage. "
             + "You have real local tools: run_terminal_command executes Bash headlessly in Ocean's native runtime, "
@@ -42,11 +42,11 @@ final class OceanAgentConversation {
     private final String userInstructions, reasoningEffort;
     private final ArrayDeque<JSONArray> turns = new ArrayDeque<>();
 
-    OceanAgentConversation(String provider, String model) {
+    public OceanAgentConversation(String provider, String model) {
         this(provider,model,0.7f,1.0f,2048,MAX_ROUNDS,MAX_TOOL_CALLS,true,"default","");
     }
 
-    OceanAgentConversation(String provider,String model,float temperature,float topP,int maxTokens,int maxRounds,int maxToolCalls,boolean keepSessionAlive,String reasoningEffort,String userInstructions) {
+    public OceanAgentConversation(String provider,String model,float temperature,float topP,int maxTokens,int maxRounds,int maxToolCalls,boolean keepSessionAlive,String reasoningEffort,String userInstructions) {
         this.provider=provider; this.model=model; this.temperature=temperature; this.topP=topP; this.maxTokens=maxTokens;
         this.maxRounds=maxRounds; this.maxToolCalls=maxToolCalls; this.keepSessionAlive=keepSessionAlive;
         this.reasoningEffort=("low".equals(reasoningEffort)||"medium".equals(reasoningEffort)||"high".equals(reasoningEffort))?reasoningEffort:"default";
@@ -58,7 +58,7 @@ final class OceanAgentConversation {
         return SYSTEM + "\n\nUser-provided persistent instructions:\n" + userInstructions;
     }
 
-    String run(String prompt, Transport transport, ToolExecutor executor, Progress progress) throws Exception {
+    public String run(String prompt, Transport transport, ToolExecutor executor, Progress progress) throws Exception {
         JSONArray messages = new JSONArray();
         if (keepSessionAlive) for (JSONArray turn : turns) for (int i = 0; i < turn.length(); i++) messages.put(turn.get(i));
         int start = messages.length();
@@ -116,7 +116,7 @@ final class OceanAgentConversation {
         throw new IOException("Agent turn limit reached. Completed commands remain visible; no commands were retried.");
     }
 
-    String testConnection(Transport transport) throws Exception {
+    public String testConnection(Transport transport) throws Exception {
         Reply reply = parse(transport.send(request(new JSONArray().put(user("Reply with exactly: OCEAN_CONNECTION_OK")), false)));
         if (reply.text.trim().isEmpty()) throw new IOException("Provider returned an empty connection-test response");
         return reply.text;
@@ -472,7 +472,7 @@ final class OceanAgentConversation {
         return new JSONObject().put("role", "tool").put("tool_call_id", call.id).put("content", textResult.toString());
     }
 
-    static String safeMessage(Throwable error) { return error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage(); }
+    public static String safeMessage(Throwable error) { return error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage(); }
     private static final class Reply { JSONObject message; String text = ""; List<Call> calls = new ArrayList<>(); }
     private static final class Call {
         final String id, name; final JSONObject arguments; JSONObject result;

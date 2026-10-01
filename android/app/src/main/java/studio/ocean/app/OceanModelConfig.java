@@ -4,10 +4,10 @@ import java.net.URI;
 import java.util.Locale;
 
 /** Immutable provider settings: a request must not mix settings edited during a tool run. */
-final class OceanModelConfig {
-    final String provider, model, apiKey, baseUrl;
+public final class OceanModelConfig {
+    public final String provider, model, apiKey, baseUrl;
 
-    OceanModelConfig(String provider, String model, String apiKey, String baseUrl) {
+    public OceanModelConfig(String provider, String model, String apiKey, String baseUrl) {
         this.provider = provider == null ? "" : provider.trim().toLowerCase(Locale.ROOT);
         this.model = normalizeModel(this.provider, model);
         this.apiKey = apiKey == null ? "" : apiKey.trim();
@@ -46,7 +46,7 @@ final class OceanModelConfig {
         return base;
     }
 
-    String endpoint() {
+    public String endpoint() {
         if (provider.equals("google")) {
             String base = baseUrl.endsWith("/v1beta") || baseUrl.endsWith("/v1") ? baseUrl : baseUrl + "/v1beta";
             return base + "/models/" + model + ":generateContent";

@@ -34,6 +34,7 @@ import studio.ocean.app.providers.cli.ClaudeCodeCliAdapter;
 import studio.ocean.app.providers.cli.CodexCliAdapter;
 import studio.ocean.app.providers.cli.KimiCliAdapter;
 import studio.ocean.app.providers.cli.OfficialCliAdapter;
+import studio.ocean.app.providers.ProviderExecutionEngine;
 
 /** Connects explicit provider tool calls to the native runtime; prose is never executable. */
 public final class OceanAgentRunner {

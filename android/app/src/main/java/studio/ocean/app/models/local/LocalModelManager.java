@@ -125,6 +125,11 @@ public final class LocalModelManager {
         return catalog.get(id);
     }
 
+    public synchronized boolean isModelInstalled(String id) {
+        LocalModel model = getModel(id);
+        return model != null && (model.state == LocalModel.State.INSTALLED || model.state == LocalModel.State.LOADED);
+    }
+
     public synchronized String getLoadedModelId() {
         return loadedModelId;
     }
