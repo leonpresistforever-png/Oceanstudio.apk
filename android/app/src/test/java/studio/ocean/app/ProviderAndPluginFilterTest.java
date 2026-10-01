@@ -30,17 +30,8 @@ public final class ProviderAndPluginFilterTest {
 
     @Test
     public void providerDirectConnectFilterPredicate() {
-        ProviderDescriptor oauthDesc = new ProviderDescriptor(
-                "kimi", "Kimi Code", "Moonshot AI", null, "moonshot-v1-auto",
-                Arrays.asList(AuthStrategy.DEVICE_CODE, AuthStrategy.OFFICIAL_CLI),
-                null, true, false
-        );
-
-        ProviderDescriptor apiKeyOnlyDesc = new ProviderDescriptor(
-                "groq", "Groq", "Fast Inference", null, "llama-3.3-70b-versatile",
-                Collections.singletonList(AuthStrategy.API_KEY),
-                null, false, false
-        );
+        ProviderDescriptor oauthDesc = ProviderRegistry.find(ProviderRegistry.ID_KIMI);
+        ProviderDescriptor apiKeyOnlyDesc = ProviderRegistry.find(ProviderRegistry.ID_GROQ);
 
         boolean oauthMatches = oauthDesc.supports(AuthStrategy.DIRECT_OAUTH)
                 || oauthDesc.supports(AuthStrategy.OFFICIAL_OAUTH)

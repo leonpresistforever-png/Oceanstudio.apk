@@ -50,13 +50,10 @@ public final class AuthPreflightTest {
     @Test
     public void validateRejectsUnsupportedStrategyWithoutBrowserLaunch() {
         AuthPreflight preflight = new AuthPreflight(null);
-        ProviderDescriptor provider = new ProviderDescriptor(
-                "openai", "OpenAI", "API and Codex CLI", null, "gpt-4o",
-                java.util.Collections.singletonList(AuthStrategy.API_KEY),
-                null, true, false
-        );
+        ProviderDescriptor provider = studio.ocean.app.providers.ProviderRegistry.find(
+                studio.ocean.app.providers.ProviderRegistry.ID_GROQ);
 
-        // Official OAuth is not supported on this descriptor, must fail preflight cleanly
+        // Official OAuth is not supported on Groq, must fail preflight cleanly
         AuthPreflight.PreflightResult result = preflight.validate(provider, AuthStrategy.OFFICIAL_OAUTH, null, null);
         assertFalse(result.isReady);
         assertEquals("Strategy Not Supported", result.failureTitle);
