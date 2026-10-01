@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/ocean_background"
+    android:orientation="vertical">
+
+    <!-- Top Header Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="6dp">
+
+        <ImageButton
+            android:id="@+id/secure_browser_close"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/ocean_ink" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="4dp"
+            android:text="@string/secure_browser"
+            android:textColor="@color/ocean_ink"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- Shield Preset Button -->
+        <LinearLayout
+            android:id="@+id/secure_browser_shield_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/model_chip_background"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp">
+
+            <ImageView
+                android:id="@+id/secure_browser_shield_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_shield_secure"
+                app:tint="@color/ocean_ink" />
+
+            <TextView
+                android:id="@+id/secure_browser_shield_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Balanced"
+                android:textColor="@color/ocean_ink"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Panic Button -->
+        <ImageButton
+            android:id="@+id/secure_browser_panic"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/privacy_panic"
+            android:src="@drawable/ic_panic"
+            app:tint="@color/ocean_ink" />
+
+        <!-- Overflow Menu -->
+        <ImageButton
+            android:id="@+id/secure_browser_menu"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/browser_menu"
+            android:src="@drawable/ic_menu" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/ocean_border" />
+
+    <!-- Navigation Actions Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp">
+
+        <ImageButton
+            android:id="@+id/secure_browser_nav_back"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/browser_back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/ocean_ink" />
+
+        <ImageButton
+            android:id="@+id/secure_browser_nav_forward"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/browser_forward"
+            android:src="@drawable/ic_forward" />
+
+        <ImageButton
+            android:id="@+id/secure_browser_nav_refresh"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/refresh"
+            android:src="@drawable/ic_refresh" />
+
+        <ImageButton
+            android:id="@+id/secure_browser_nav_home"
+            style="@style/OceanIconButton"
+            android:contentDescription="@string/browser_home"
+            android:src="@drawable/ic_home" />
+    </LinearLayout>
+
+    <!-- Address Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/auth_field_background"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp">
+
+        <ImageView
+            android:id="@+id/secure_browser_lock_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_lock_insecure" />
+
+        <EditText
+            android:id="@+id/secure_browser_url"
+            style="@style/OceanAuthField"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="@string/browser_url_hint"
+            android:imeOptions="actionGo"
+            android:inputType="textUri|textNoSuggestions"
+            android:paddingHorizontal="0dp"
+            android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/secure_browser_tab_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:background="@drawable/model_chip_background"
+            android:gravity="center"
+            android:minWidth="28dp"
+            android:paddingHorizontal="8dp"
+            android:text="1/1"
+            android:textColor="@color/ocean_text_secondary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Loading Progress Bar -->
+    <ProgressBar
+        android:id="@+id/secure_browser_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/browser_progress"
+        android:visibility="gone" />
+
+    <!-- Kill Switch Degraded Protection Banner (PDF 4 §19) -->
+    <LinearLayout
+        android:id="@+id/secure_browser_degraded_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/ocean_surface_2"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_degraded_title"
+            android:textColor="@color/ocean_ink"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/secure_browser_degraded_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/privacy_degraded_tunnel"
+            android:textColor="@color/ocean_muted"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/secure_browser_degraded_reconnect"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/privacy_reconnect"
+                android:textAllCaps="false"
+                android:textColor="@color/ocean_ink" />
+
+            <Button
+                android:id="@+id/secure_browser_degraded_change_route"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/privacy_change_route"
+                android:textAllCaps="false"
+                android:textColor="@color/ocean_ink" />
+
+            <Button
+                android:id="@+id/secure_browser_degraded_exit"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/privacy_exit_session"
+                android:textAllCaps="false"
+                android:textColor="@color/ocean_ink" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Main Content Area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <WebView
+            android:id="@+id/secure_browser_webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/ocean_background" />
+
+        <!-- Error Panel -->
+        <LinearLayout
+            android:id="@+id/secure_browser_error_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/ocean_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/secure_browser_error_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/ocean_ink"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/secure_browser_error_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:textColor="@color/ocean_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/secure_browser_error_retry"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/primary_button_background"
+                android:minWidth="120dp"
+                android:paddingHorizontal="20dp"
+                android:text="@string/browser_retry"
+                android:textAllCaps="false"
+                android:textColor="@color/ocean_background" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

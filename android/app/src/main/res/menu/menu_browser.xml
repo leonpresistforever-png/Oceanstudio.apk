@@ -8,6 +8,18 @@
         android:id="@+id/browser_menu_new_tab"
         android:title="@string/browser_new_tab" />
     <item
+        android:id="@+id/browser_menu_history"
+        android:title="@string/browser_history" />
+    <item
+        android:id="@+id/browser_menu_saved_sessions"
+        android:title="@string/browser_saved_sessions" />
+    <item
+        android:id="@+id/browser_menu_save_session"
+        android:title="@string/browser_save_session" />
+    <item
+        android:id="@+id/browser_menu_open_private"
+        android:title="@string/browser_open_private" />
+    <item
         android:id="@+id/browser_menu_share"
         android:title="@string/browser_share" />
     <item

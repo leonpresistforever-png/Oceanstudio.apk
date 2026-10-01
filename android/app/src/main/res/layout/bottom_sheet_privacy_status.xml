@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/ocean_background"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_shield_secure" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/privacy_status_title"
+            android:textColor="@color/ocean_ink"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_preset_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/model_chip_background"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:text="Balanced"
+            android:textColor="@color/ocean_ink"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="14dp"
+        android:background="@color/ocean_border" />
+
+    <!-- Session Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_session_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_session_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Fresh · 0 min"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Network Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_route_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_route_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Direct · No IP change"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- DNS Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_dns_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_dns_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Direct DNS"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Cookies Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_cookies_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_cookies_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/privacy_cookies_ephemeral"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Trackers Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_trackers_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_trackers_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0 blocked"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Popups Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_popups_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_popups_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0 blocked"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Permissions Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_permissions_label"
+            android:textColor="@color/ocean_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/privacy_sheet_permissions_val"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/privacy_permissions_none"
+            android:textColor="@color/ocean_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Actions Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/privacy_sheet_btn_new_identity"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/auth_field_background"
+            android:text="@string/privacy_new_identity"
+            android:textAllCaps="false"
+            android:textColor="@color/ocean_ink" />
+
+        <Button
+            android:id="@+id/privacy_sheet_btn_end_session"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/primary_button_background"
+            android:text="@string/privacy_end_session"
+            android:textAllCaps="false"
+            android:textColor="@color/ocean_background" />
+    </LinearLayout>
+</LinearLayout>

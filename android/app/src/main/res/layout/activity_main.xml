@@ -143,6 +143,7 @@
                 <LinearLayout android:id="@+id/tools_children" style="@style/OceanNavChildren">
                     <TextView android:id="@+id/nav_runtime_ports" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_ports" android:text="@string/runtime_ports" />
                     <TextView android:id="@+id/nav_browser" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser_nav" android:text="@string/browser" />
+                    <TextView android:id="@+id/nav_private_browser" style="@style/OceanNavChild" android:drawableStart="@drawable/ic_browser_private_nav" android:text="@string/secure_browser" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_tools" android:text="@string/playground" />
                     <TextView style="@style/OceanNavChild" android:drawableStart="@drawable/ic_models" android:text="@string/automations" />
                 </LinearLayout>

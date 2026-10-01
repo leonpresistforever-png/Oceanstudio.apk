@@ -23,14 +23,21 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import studio.ocean.app.R;
+import studio.ocean.app.browser.normal.BrowserHistoryStore;
+import studio.ocean.app.browser.secure.SecureBrowserActivity;
+import studio.ocean.app.browser.storage.SessionVault;
 
 /** Full-featured in-app browser with tabs, cookies, and JavaScript (System WebView + AndroidX WebKit). */
 public final class BrowserActivity extends AppCompatActivity {
     public static final String EXTRA_URL = "browser_initial_url";
 
     private final List<BrowserTab> tabs = new ArrayList<>();
+    private final LinkedList<BrowserTab> recentlyClosedTabs = new LinkedList<>();
+    private BrowserHistoryStore historyStore;
+    private SessionVault sessionVault;
     private int currentTabIndex;
     private boolean urlBarFocused;
     private boolean desktopSite;
@@ -48,6 +55,8 @@ public final class BrowserActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
+        historyStore = new BrowserHistoryStore(this);
+        sessionVault = new SessionVault(this);
         bindViews();
         configureWebView();
         wireChrome();
@@ -157,6 +166,9 @@ public final class BrowserActivity extends AppCompatActivity {
                     currentTab().url = url;
                     updateUrlBar(url);
                     saveWebState();
+                    if (historyStore != null) {
+                        historyStore.recordVisit(url, currentTab().title);
+                    }
                 }
                 updateTabBadge();
             }
@@ -251,9 +263,106 @@ public final class BrowserActivity extends AppCompatActivity {
                 addTab(BrowserUrlHelper.DEFAULT_HOME);
                 return true;
             }
+            if (id == R.id.browser_menu_history) {
+                showHistoryDialog();
+                return true;
+            }
+            if (id == R.id.browser_menu_saved_sessions) {
+                showSavedSessionsDialog();
+                return true;
+            }
+            if (id == R.id.browser_menu_save_session) {
+                promptSaveSession();
+                return true;
+            }
+            if (id == R.id.browser_menu_open_private) {
+                startActivity(new Intent(this, SecureBrowserActivity.class));
+                return true;
+            }
             return false;
         });
         menu.show();
+    }
+
+    private void showHistoryDialog() {
+        if (historyStore == null) return;
+        List<BrowserHistoryStore.HistoryGroup> groups = historyStore.getHistoryGrouped();
+        List<String> display = new ArrayList<>();
+        List<String> urls = new ArrayList<>();
+        for (BrowserHistoryStore.HistoryGroup g : groups) {
+            display.add("─── " + g.title + " ───");
+            urls.add(null);
+            for (BrowserHistoryStore.HistoryItem item : g.items) {
+                display.add(item.title + "\n" + item.url);
+                urls.add(item.url);
+            }
+        }
+
+        if (display.isEmpty()) {
+            Toast.makeText(this, "History is empty", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.browser_history)
+                .setItems(display.toArray(new String[0]), (d, which) -> {
+                    String selectedUrl = urls.get(which);
+                    if (selectedUrl != null) {
+                        navigateTo(selectedUrl);
+                    }
+                })
+                .setNegativeButton(R.string.browser_clear_history, (d, w) -> {
+                    historyStore.clearAll();
+                    Toast.makeText(this, "History cleared", Toast.LENGTH_SHORT).show();
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void showSavedSessionsDialog() {
+        if (sessionVault == null) return;
+        List<SessionVault.SavedSession> sessions = sessionVault.listSessions();
+        if (sessions.isEmpty()) {
+            Toast.makeText(this, "No saved sessions found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] names = new String[sessions.size()];
+        for (int i = 0; i < sessions.size(); i++) {
+            names[i] = sessions.get(i).name + " (" + sessions.get(i).tabs.size() + " tabs)";
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.browser_saved_sessions)
+                .setItems(names, (d, which) -> {
+                    SessionVault.SavedSession chosen = sessions.get(which);
+                    for (SessionVault.SavedTab st : chosen.tabs) {
+                        tabs.add(st.toBrowserTab());
+                    }
+                    currentTabIndex = tabs.size() - 1;
+                    loadCurrentTab(false);
+                    Toast.makeText(this, "Restored session " + chosen.name, Toast.LENGTH_SHORT).show();
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void promptSaveSession() {
+        if (sessionVault == null) return;
+        EditText input = new EditText(this);
+        input.setHint("Session name");
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.browser_save_session)
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (!name.isEmpty()) {
+                        boolean ok = sessionVault.saveSession(name, tabs, "direct");
+                        Toast.makeText(this, ok ? "Session saved" : "Failed to save session", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void applyDesktopMode() {
@@ -310,14 +419,39 @@ public final class BrowserActivity extends AppCompatActivity {
         for (int i = 0; i < tabs.size(); i++) {
             BrowserTab tab = tabs.get(i);
             String title = tab.title == null || tab.title.isEmpty() ? tab.url : tab.title;
-            labels[i] = (i == currentTabIndex ? "• " : "") + title;
+            String prefix = (i == currentTabIndex ? "• " : "") + (tab.pinned ? "[Pinned] " : "") + (tab.locked ? "[Locked] " : "");
+            labels[i] = prefix + title;
         }
-        new AlertDialog.Builder(this)
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle(R.string.browser_tabs_title)
-                .setItems(labels, (dialog, which) -> switchToTab(which))
+                .setItems(labels, (dialog, which) -> {
+                    BrowserTab tab = tabs.get(which);
+                    if (tab.locked) {
+                        new AlertDialog.Builder(this)
+                                .setTitle(R.string.browser_lock_tab)
+                                .setMessage(R.string.browser_tab_locked_msg)
+                                .setPositiveButton(android.R.string.ok, (d, w) -> switchToTab(which))
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+                    } else {
+                        switchToTab(which);
+                    }
+                })
                 .setPositiveButton(R.string.browser_new_tab, (d, w) -> addTab(BrowserUrlHelper.DEFAULT_HOME))
-                .setNeutralButton(R.string.browser_close_tab, (d, w) -> closeCurrentTab())
-                .show();
+                .setNeutralButton(R.string.browser_close_tab, (d, w) -> closeCurrentTab());
+
+        if (!recentlyClosedTabs.isEmpty()) {
+            builder.setNegativeButton(R.string.browser_reopen_tab, (d, w) -> reopenLastClosedTab());
+        }
+        builder.show();
+    }
+
+    private void reopenLastClosedTab() {
+        if (recentlyClosedTabs.isEmpty()) return;
+        BrowserTab restored = recentlyClosedTabs.removeFirst();
+        tabs.add(restored);
+        currentTabIndex = tabs.size() - 1;
+        loadCurrentTab(true);
     }
 
     private void closeCurrentTab() {
@@ -325,7 +459,11 @@ public final class BrowserActivity extends AppCompatActivity {
             finish();
             return;
         }
-        tabs.remove(currentTabIndex);
+        BrowserTab removed = tabs.remove(currentTabIndex);
+        recentlyClosedTabs.addFirst(removed.copy());
+        while (recentlyClosedTabs.size() > 15) {
+            recentlyClosedTabs.removeLast();
+        }
         if (currentTabIndex >= tabs.size()) currentTabIndex = tabs.size() - 1;
         loadCurrentTab(true);
     }

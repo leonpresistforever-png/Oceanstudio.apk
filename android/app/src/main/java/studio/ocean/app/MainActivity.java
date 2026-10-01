@@ -350,6 +350,7 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_x11, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.render.OceanX11Activity.class)); });
         safeClick(R.id.nav_runtime_ports, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
         safeClick(R.id.nav_browser, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.browser.BrowserActivity.class)); });
+        safeClick(R.id.nav_private_browser, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.browser.secure.SecureBrowserActivity.class)); });
         safeClick(R.id.nav_agent_settings, v -> { closeDrawer(); openAgentControls(); });
         safeClick(R.id.nav_hub_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         safeClick(R.id.nav_hub_device, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); });
