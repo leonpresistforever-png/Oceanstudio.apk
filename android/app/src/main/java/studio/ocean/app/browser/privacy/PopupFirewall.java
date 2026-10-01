@@ -81,13 +81,14 @@ public final class PopupFirewall {
             return false;
         }
 
-        String host = "";
+        String extractedHost = "";
         if (targetUrl != null) {
             String extracted = studio.ocean.app.browser.core.NavigationPolicy.extractHost(targetUrl);
-            if (extracted != null) host = extracted.toLowerCase(Locale.ROOT);
+            if (extracted != null) extractedHost = extracted.toLowerCase(Locale.ROOT);
         }
+        final String finalHost = extractedHost;
 
-        if (!host.isEmpty() && isSessionAllowed(host)) {
+        if (!finalHost.isEmpty() && isSessionAllowed(finalHost)) {
             onDecision.onDecision(true, false);
             return true;
         }
@@ -100,10 +101,10 @@ public final class PopupFirewall {
         }
 
         if (promptCallback != null) {
-            promptCallback.onPromptPopup(targetUrl, host, isUserGesture, (allow, remember) -> {
+            promptCallback.onPromptPopup(targetUrl, finalHost, isUserGesture, (allow, remember) -> {
                 if (allow) {
-                    if (remember && !host.isEmpty()) {
-                        setSessionAllowed(host);
+                    if (remember && !finalHost.isEmpty()) {
+                        setSessionAllowed(finalHost);
                     }
                 } else {
                     blockedCount.incrementAndGet();
