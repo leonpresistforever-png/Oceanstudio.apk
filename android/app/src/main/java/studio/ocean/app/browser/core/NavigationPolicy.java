@@ -139,6 +139,15 @@ public final class NavigationPolicy {
         try {
             int schemeEnd = url.indexOf("://");
             int start = schemeEnd >= 0 ? schemeEnd + 3 : 0;
+            if (start >= url.length()) return null;
+
+            if (url.charAt(start) == '[') {
+                int closeBracket = url.indexOf(']', start);
+                if (closeBracket > start) {
+                    return url.substring(start + 1, closeBracket);
+                }
+            }
+
             int slash = url.indexOf('/', start);
             int colon = url.indexOf(':', start);
             int end = url.length();
