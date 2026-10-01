@@ -1,0 +1,109 @@
+#!/data/data/studio.ocean.app/files/usr/bin/bash
+# OceanStudio - ocean-model (Directive 3 §8.3)
+set -euo pipefail
+
+MODELS_DIR="${HOME:-/data/data/studio.ocean.app/files/home}/../models"
+VAR_DIR="${PREFIX:-/data/data/studio.ocean.app/files/usr}/var/models"
+STATUS_FILE="$VAR_DIR/status.json"
+
+mkdir -p "$MODELS_DIR" "$VAR_DIR"
+if [[ ! -f "$STATUS_FILE" ]]; then
+  echo '{"loaded":null,"models":{}}' > "$STATUS_FILE"
+fi
+
+usage() {
+  cat <<'EOF'
+OceanStudio Local Model CLI
+Usage:
+  ocean-model list
+  ocean-model install <id>
+  ocean-model load <id>
+  ocean-model unload <id>
+  ocean-model status <id>
+
+Supported built-in models:
+  smollm2-360m-instruct   SmolLM2 360M Instruct (~218 MB, min 512 MB RAM)
+  qwen2.5-coder-0.5b      Qwen2.5 Coder 0.5B (~398 MB, min 1024 MB RAM)
+  llama-3.2-1b-instruct   Llama 3.2 1B Instruct (~770 MB, min 2048 MB RAM)
+EOF
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  list)
+    echo "ID                      STATUS      SIZE     MIN RAM  BACKEND"
+    echo "-----------------------------------------------------------------"
+    for id in smollm2-360m-instruct qwen2.5-coder-0.5b llama-3.2-1b-instruct; do
+      model_file="$MODELS_DIR/$id.gguf"
+      status="Available"
+      size="-"
+      if [[ -f "$model_file" ]]; then
+        status="Installed"
+        size="$(du -h "$model_file" | cut -f1)"
+        if grep -q "\"loaded\": *\"$id\"" "$STATUS_FILE" 2>/dev/null; then
+          status="Loaded"
+        fi
+      fi
+      case "$id" in
+        smollm2-360m-instruct) echo "smollm2-360m-instruct   $status   ~218MB   512MB    llama.cpp" ;;
+        qwen2.5-coder-0.5b)    echo "qwen2.5-coder-0.5b      $status   ~398MB   1024MB   llama.cpp" ;;
+        llama-3.2-1b-instruct) echo "llama-3.2-1b-instruct   $status   ~770MB   2048MB   llama.cpp" ;;
+      esac
+    done
+    ;;
+  install)
+    [[ $# -ge 2 ]] || { echo "Usage: ocean-model install <id>" >&2; exit 1; }
+    id="$2"
+    url=""
+    case "$id" in
+      smollm2-360m-instruct) url="https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf" ;;
+      qwen2.5-coder-0.5b)    url="https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf" ;;
+      llama-3.2-1b-instruct) url="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" ;;
+      *) echo "Unknown model id: $id" >&2; exit 2 ;;
+    esac
+    target="$MODELS_DIR/$id.gguf"
+    partial="$MODELS_DIR/$id.gguf.partial"
+    echo "Downloading $id..."
+    curl -L --fail --progress-bar "$url" -o "$partial"
+    mv "$partial" "$target"
+    echo "Model $id installed successfully to $target"
+    ;;
+  load)
+    [[ $# -ge 2 ]] || { echo "Usage: ocean-model load <id>" >&2; exit 1; }
+    id="$2"
+    target="$MODELS_DIR/$id.gguf"
+    [[ -f "$target" ]] || { echo "Model $id is not installed. Run 'ocean-model install $id' first." >&2; exit 3; }
+    echo "{\"loaded\":\"$id\",\"updated\":$(date +%s)}" > "$STATUS_FILE"
+    echo "Model $id loaded into active runtime"
+    ;;
+  unload)
+    [[ $# -ge 2 ]] || { echo "Usage: ocean-model unload <id>" >&2; exit 1; }
+    id="$2"
+    echo "{\"loaded\":null,\"updated\":$(date +%s)}" > "$STATUS_FILE"
+    echo "Model $id unloaded"
+    ;;
+  status)
+    [[ $# -ge 2 ]] || { echo "Usage: ocean-model status <id>" >&2; exit 1; }
+    id="$2"
+    target="$MODELS_DIR/$id.gguf"
+    if [[ -f "$target" ]]; then
+      size="$(du -h "$target" | cut -f1)"
+      is_loaded="No"
+      if grep -q "\"loaded\": *\"$id\"" "$STATUS_FILE" 2>/dev/null; then
+        is_loaded="Yes (Active)"
+      fi
+      echo "Model: $id"
+      echo "Installed: Yes ($target)"
+      echo "Size: $size"
+      echo "Loaded: $is_loaded"
+    else
+      echo "Model: $id"
+      echo "Installed: No"
+      echo "Loaded: No"
+    fi
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
