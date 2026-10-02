@@ -116,7 +116,7 @@ public final class SmartRouter {
             if (conn.strategy == AuthStrategy.OFFICIAL_CLI) {
                 String model = chooseModel(conn, requiresTools, requiresVision);
                 if (model != null) {
-                    return new RouteDecision(conn, model, "Routed via official CLI session (" + conn.providerId + ")");
+                    return new RouteDecision(conn, model, "Routed via subscription CLI (" + conn.providerId + ")");
                 }
             }
         }
