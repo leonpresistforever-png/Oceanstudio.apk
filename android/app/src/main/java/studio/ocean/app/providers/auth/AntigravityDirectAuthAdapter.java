@@ -48,32 +48,23 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
 
     @Override
     public Availability preflight(Context ctx) {
-        String sessionToken = getStoredSessionToken();
-        if (sessionToken != null && !sessionToken.trim().isEmpty()) {
-            return Availability.available();
-        }
-
-        // Check if an existing product session file exists in local storage
-        File toolsDir = new File(ctx.getFilesDir(), "usr/bin");
-        File agyBin = new File(toolsDir, "agy");
-        boolean hasAgy = agyBin.exists() && agyBin.canExecute();
-
-        return Availability.unavailable(
-                "Google Antigravity requires a verified Antigravity product session or CLI login ('agy auth login').\n\n"
-                + "Generic Google OAuth tokens do not carry Antigravity product entitlement. "
-                + (hasAgy ? "Please authenticate via the 'agy' CLI Bridge." : "Please sign in via the Antigravity product CLI or import a valid product session.")
-        );
+        // Antigravity product sessions are verified via direct browser authorization or CLI keyring.
+        // Generic Google OAuth tokens do not carry Antigravity product entitlement.
+        return Availability.available();
     }
 
     @Override
     public AuthStartResult start(AuthRequest request) throws Exception {
         String sessionToken = getStoredSessionToken();
-        if (sessionToken == null || sessionToken.trim().isEmpty()) {
-            throw new IllegalStateException("Antigravity product session is not authenticated. Generic Google OAuth cannot be used for Antigravity entitlement.");
+        if (sessionToken != null && !sessionToken.trim().isEmpty()) {
+            // Direct product session verification
+            return AuthStartResult.browser("https://antigravity.google/auth/session?state=" + request.state);
         }
 
-        // Direct product session verification
-        return AuthStartResult.browser("https://antigravity.google/auth/session");
+        // Direct browser sign-in for Antigravity product session
+        String redirectUri = request.redirectUri != null ? request.redirectUri : "ocean://auth/callback";
+        String encodedRedirect = java.net.URLEncoder.encode(redirectUri, "UTF-8");
+        return AuthStartResult.browser("https://antigravity.google/auth/session?state=" + request.state + "&redirect_uri=" + encodedRedirect);
     }
 
     @Override

@@ -16,6 +16,9 @@ import studio.ocean.app.providers.model.ProviderDescriptor;
 public final class ProviderRegistry {
 
     public static final String ID_ANTIGRAVITY = "antigravity";
+    public static final String ID_ANTIGRAVITY_CLI = "antigravity";
+    public static final String ID_ANTIGRAVITY_IDE = "antigravity_ide";
+    public static final String ID_ANTIGRAVITY_20 = "antigravity_20";
     public static final String ID_KIMI = "kimi";
     public static final String ID_OPENAI = OceanByokManager.PROVIDER_OPENAI;
     public static final String ID_ANTHROPIC = OceanByokManager.PROVIDER_ANTHROPIC;
@@ -66,16 +69,44 @@ public final class ProviderRegistry {
     private static List<ProviderDescriptor> build() {
         List<ProviderDescriptor> list = new ArrayList<>();
 
-        // 1. Google Antigravity
+        // 1a. Google Antigravity IDE
+        list.add(new ProviderDescriptor(
+                ID_ANTIGRAVITY_IDE,
+                "Google Antigravity IDE",
+                "Cloud IDE workspace · session & browser sign-in",
+                "https://antigravity.google",
+                "gemini-2.5-flash",
+                Arrays.asList(AuthStrategy.DIRECT_CONNECT, AuthStrategy.API_KEY),
+                "Antigravity session token or API key",
+                R.drawable.ic_editor,
+                false,
+                null
+        ));
+
+        // 1b. Google Antigravity 2.0
+        list.add(new ProviderDescriptor(
+                ID_ANTIGRAVITY_20,
+                "Google Antigravity 2.0",
+                "Next-gen agentic reasoning · browser authorization & Direct Connect",
+                "https://generativelanguage.googleapis.com",
+                "gemini-2.5-pro",
+                Arrays.asList(AuthStrategy.DIRECT_CONNECT, AuthStrategy.API_KEY),
+                "Antigravity 2.0 token or Gemini API key",
+                R.drawable.ic_spark,
+                false,
+                null
+        ));
+
+        // 1c. Google Antigravity CLI
         list.add(new ProviderDescriptor(
                 ID_ANTIGRAVITY,
-                "Google Antigravity",
+                "Google Antigravity CLI",
                 "Official CLI session · subscription login via agy",
                 "https://generativelanguage.googleapis.com",
                 "gemini-2.5-flash",
                 Arrays.asList(AuthStrategy.OFFICIAL_CLI, AuthStrategy.API_KEY),
                 "AIza… API key or agy CLI login",
-                R.drawable.ic_agent,
+                R.drawable.ic_terminal,
                 false,
                 "agy"
         ));

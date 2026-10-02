@@ -65,6 +65,8 @@ public final class AuthOrchestrator {
     private void registerDefaultAdapters() {
         adapters.put(ProviderRegistry.ID_GOOGLE, new GoogleDirectAuthAdapter(context));
         adapters.put(ProviderRegistry.ID_ANTIGRAVITY, new AntigravityDirectAuthAdapter(context));
+        adapters.put(ProviderRegistry.ID_ANTIGRAVITY_IDE, new AntigravityDirectAuthAdapter(context));
+        adapters.put(ProviderRegistry.ID_ANTIGRAVITY_20, new AntigravityDirectAuthAdapter(context));
         adapters.put(ProviderRegistry.ID_OPENAI, new OpenAiDirectAuthAdapter(context));
         adapters.put(ProviderRegistry.ID_ANTHROPIC, new AnthropicDirectAuthAdapter(context));
         adapters.put(ProviderRegistry.ID_KIMI, new KimiDirectAuthAdapter(context));

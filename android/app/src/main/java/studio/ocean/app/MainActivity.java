@@ -22,6 +22,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -1142,8 +1143,8 @@ public class MainActivity extends AppCompatActivity {
             java.util.List<studio.ocean.app.providers.model.ProviderConnection> conns = new studio.ocean.app.providers.state.ProviderConnectionStore(this).listAll();
             if (conns != null && !conns.isEmpty()) {
                 studio.ocean.app.providers.model.ProviderConnection active = conns.get(0);
-                String title = active.name != null ? active.name : active.providerId;
-                String modelStr = active.activeModel != null && !active.activeModel.isEmpty() ? active.activeModel : title;
+                String title = active.displayAccount != null && !active.displayAccount.isEmpty() ? active.displayAccount : active.providerId;
+                String modelStr = active.selectedModel != null && !active.selectedModel.isEmpty() ? active.selectedModel : title;
                 if (sub != null) sub.setText("Cloud · " + modelStr);
                 if (modelBtn != null) modelBtn.setText(modelStr);
                 return;
