@@ -20,6 +20,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import studio.ocean.app.providers.model.ModelDescriptor;
 import studio.ocean.app.providers.model.QuotaSnapshot;
+import studio.ocean.app.providers.state.CredentialRecord;
 import studio.ocean.app.providers.state.CredentialVault;
 
 /**
@@ -289,6 +290,26 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         }
         credentialVault.store("openai_account_email", accountEmail);
 
+        // Structured record storage (Directive §13)
+        List<String> scopesList = Arrays.asList(grantedScope.split(" "));
+        CredentialRecord credRecord = new CredentialRecord(
+                "openai",
+                accountSubject,
+                accessToken,
+                refreshToken,
+                idToken,
+                expiresAtEpochMs,
+                scopesList,
+                "https://auth.openai.com",
+                effectiveClientId,
+                accountEmail,
+                "ChatGPT Plan",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                1L
+        );
+        credentialVault.storeRecord(credRecord);
+
         return AuthResult.success(accessToken, refreshToken, expiresAtEpochMs, accountSubject, accountEmail, "Direct OAuth (PKCE)");
     }
 
@@ -325,6 +346,11 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         // Atomic replacement
         credentialVault.store("openai_access_token", newAccessToken);
         credentialVault.store("openai_refresh_token", newRefreshToken);
+
+        CredentialRecord existingRecord = credentialVault.retrieveRecord("openai");
+        if (existingRecord != null) {
+            credentialVault.rotateRecord(existingRecord.withRotatedTokens(newAccessToken, newRefreshToken, expiresAtEpochMs));
+        }
 
         String email = credentialVault.retrieve("openai_account_email");
         if (email == null) email = "ChatGPT Account";

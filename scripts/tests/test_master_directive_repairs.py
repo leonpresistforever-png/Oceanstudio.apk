@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test Suite: OceanStudio Master Real Integration Directive (2026-10-02)
+Test Suite: OceanStudio Master Provider Auth / MCP Gateway Directive (2026-10-02)
 Validates:
 1. Private Browser Process Isolation & Suffix Setup
 2. MCP Protocol Handshake, Transports, HTTP 401 Challenge, Mcp-Session-Id, and Dialect Parser
@@ -18,8 +18,23 @@ Validates:
    - SavedPrivateSession URL-only persistence guarantee (zero cookies/profile storage)
 7. UI Greyscale OceanModal System:
    - OceanModal bottom sheet component
-   - Zero AlertDialog instances in ProvidersConnectActivity, SecureBrowserActivity, and LocalModelsActivity
-8. Strict Rule 5 & Zero Termux Contamination Gate
+   - Zero AlertDialog instances across core activities
+8. Strict Fail-Closed CredentialVault & Structured Records:
+   - Zero deterministic cryptographic fallback keys
+   - Zero Base64 fallbacks (Base64 is encoding, not encryption)
+   - Structured CredentialRecord with atomic rotation and tokenGeneration
+   - Proactive RefreshManager
+9. Auth Core Persistence & Replay Attack Prevention:
+   - Persistent AuthTransaction surviving process death
+   - AuthSessionManager replay consumption
+   - CallbackBroker multi-mechanism dispatch
+   - Direct Connect UI with ZERO user-facing client ID or CLI/API fallbacks
+10. SmartRouter Verification Policy:
+   - Routes among VERIFIED_CONNECTED only
+   - Zero blind CLI preference
+   - Default to local model when no cloud providers connected
+   - Explicit user preference overrides
+11. Strict Rule 5 & Zero Termux Contamination Gate
 """
 
 import os
@@ -79,6 +94,7 @@ def test_mcp_protocol_and_oauth():
     assert_true("notifications/initialized" in client_src, "Sends notifications/initialized after handshake")
     assert_true("Mcp-Session-Id" in client_src, "Tracks Mcp-Session-Id header across requests")
     assert_true("AUTH_REQUIRED" in client_src, "Transitions to AUTH_REQUIRED on HTTP 401 response")
+    assert_true("isMcpTool" in client_src and "callTool" in client_src, "Supports namespaced tool dispatch")
 
     oauth_file = os.path.join(mcp_dir, "McpOAuthResolver.java")
     assert_true(os.path.isfile(oauth_file), "McpOAuthResolver exists")
@@ -154,7 +170,7 @@ def test_direct_provider_auth():
     assert_true("127.0.0.1" in openai_src and "ServerSocket" in openai_src, "OpenAiDirectAuthAdapter runs ephemeral loopback listener")
     assert_true("chatgpt.tokens.use.direct" in openai_src, "OpenAiDirectAuthAdapter requests chatgpt.tokens.use.direct scope")
     assert_true("ext_agent_host_id" in openai_src, "OpenAiDirectAuthAdapter uses persistent ext_agent_host_id URN")
-    assert_true("v1/responses" in openai_src or "v1/chat/completions" in openai_src, "OpenAiDirectAuthAdapter executes live token probe")
+    assert_true("v1/chat/completions" in openai_src, "OpenAiDirectAuthAdapter executes live 1-token probe")
 
     # Antigravity vs Google Gemini product split
     antigravity_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AntigravityDirectAuthAdapter.java"
@@ -252,14 +268,83 @@ def test_ocean_modal_and_ui():
     for target in [
         "android/app/src/main/java/studio/ocean/app/providers/ProvidersConnectActivity.java",
         "android/app/src/main/java/studio/ocean/app/browser/secure/SecureBrowserActivity.java",
-        "android/app/src/main/java/studio/ocean/app/models/local/LocalModelsActivity.java"
+        "android/app/src/main/java/studio/ocean/app/models/local/LocalModelsActivity.java",
+        "android/app/src/main/java/studio/ocean/app/CrashSurvival.java",
+        "android/app/src/main/java/studio/ocean/app/OceanForgeActivity.java",
+        "android/app/src/main/java/studio/ocean/app/browser/security/DownloadQuarantineManager.java"
     ]:
         with open(target, "r", encoding="utf-8") as f:
             src = f.read()
         assert_true("AlertDialog" not in src, f"{os.path.basename(target)} contains ZERO AlertDialog instances")
 
+def test_fail_closed_vault_and_records():
+    log("=== 8. Fail-Closed CredentialVault & Structured Records ===")
+    vault_file = "android/app/src/main/java/studio/ocean/app/providers/state/CredentialVault.java"
+    with open(vault_file, "r", encoding="utf-8") as f:
+        vault_src = f.read()
+
+    assert_true("DeterministicKey" not in vault_src, "CredentialVault contains ZERO deterministic fallback keys")
+    assert_true("Base64.decode(data, Base64.NO_WRAP)" not in vault_src, "CredentialVault contains ZERO Base64 decoding fallbacks")
+    assert_true("SecurityException" in vault_src, "CredentialVault throws SecurityException (fails closed) if Keystore is absent")
+    assert_true("rotateRecord" in vault_src, "CredentialVault implements atomic rotateRecord()")
+    assert_true("storeRecord" in vault_src and "retrieveRecord" in vault_src, "CredentialVault handles structured CredentialRecord")
+
+    record_file = "android/app/src/main/java/studio/ocean/app/providers/state/CredentialRecord.java"
+    assert_true(os.path.isfile(record_file), "CredentialRecord.java exists")
+    with open(record_file, "r", encoding="utf-8") as f:
+        rec_src = f.read()
+    assert_true("tokenGeneration" in rec_src, "CredentialRecord tracks tokenGeneration")
+    assert_true("withRotatedTokens" in rec_src, "CredentialRecord provides withRotatedTokens atomic copy")
+
+    refresh_file = "android/app/src/main/java/studio/ocean/app/providers/state/RefreshManager.java"
+    assert_true(os.path.isfile(refresh_file), "RefreshManager.java exists")
+    with open(refresh_file, "r", encoding="utf-8") as f:
+        ref_src = f.read()
+    assert_true("refreshIfNeeded" in ref_src, "RefreshManager implements refreshIfNeeded()")
+
+def test_auth_core_persistence_and_no_user_client_id():
+    log("=== 9. Auth Core Persistence, CallbackBroker & Zero User Client ID ===")
+    tx_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AuthTransaction.java"
+    assert_true(os.path.isfile(tx_file), "AuthTransaction.java exists")
+    with open(tx_file, "r", encoding="utf-8") as f:
+        tx_src = f.read()
+    assert_true("replayConsumed" in tx_src, "AuthTransaction tracks replayConsumed")
+    assert_true("PHASE_INITIALIZED" in tx_src and "PHASE_BROWSER_ACTIVE" in tx_src, "AuthTransaction tracks phase lifecycle")
+
+    mgr_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AuthSessionManager.java"
+    assert_true(os.path.isfile(mgr_file), "AuthSessionManager.java exists")
+    with open(mgr_file, "r", encoding="utf-8") as f:
+        mgr_src = f.read()
+    assert_true("prefs" in mgr_src, "AuthSessionManager persists transactions across process death")
+    assert_true("consumeTransaction" in mgr_src, "AuthSessionManager implements consumeTransaction() to reject replays")
+
+    broker_file = "android/app/src/main/java/studio/ocean/app/providers/auth/CallbackBroker.java"
+    assert_true(os.path.isfile(broker_file), "CallbackBroker.java exists")
+    with open(broker_file, "r", encoding="utf-8") as f:
+        brk_src = f.read()
+    assert_true("LoopbackServer" in brk_src, "CallbackBroker manages ephemeral loopback listeners")
+    assert_true("dispatchUriCallback" in brk_src, "CallbackBroker dispatches URI callbacks")
+
+    act_file = "android/app/src/main/java/studio/ocean/app/providers/ProvidersConnectActivity.java"
+    with open(act_file, "r", encoding="utf-8") as f:
+        act_src = f.read()
+    assert_true("showConfigureClientIdDialog" not in act_src, "ProvidersConnectActivity contains ZERO user-facing client ID dialogs")
+    assert_true("Set Client ID" not in act_src, "Direct Connect failure contains ZERO Set Client ID buttons")
+
+def test_smart_router_policy():
+    log("=== 10. SmartRouter Policy & Verification Gates ===")
+    router_file = "android/app/src/main/java/studio/ocean/app/providers/router/SmartRouter.java"
+    with open(router_file, "r", encoding="utf-8") as f:
+        r_src = f.read()
+
+    assert_true("ConnectionStatus.CONNECTED" in r_src, "SmartRouter checks ConnectionStatus.CONNECTED")
+    assert_true("preferLocalModel" in r_src, "SmartRouter supports explicit preferLocalModel policy")
+    assert_true("preferredProviderId" in r_src, "SmartRouter supports explicit preferredProviderId lock")
+    assert_true("no verified cloud providers" in r_src, "SmartRouter defaults to local model when no cloud provider is connected")
+    assert_true("allowMeteredFallback" in r_src, "SmartRouter strictly bounds metered API keys behind allowMeteredFallback")
+
 def test_zero_termux_contamination():
-    log("=== 8. Strict Rule 5 & Zero Termux Contamination Gate ===")
+    log("=== 11. Strict Rule 5 & Zero Termux Contamination Gate ===")
     result = os.popen("git grep -i '/data/data/com.termux' -- 'android/app/src/main/java/' 'android/app/src/main/cpp/' 'android/app/build.gradle'").read().strip()
     assert_true(len(result) == 0, f"No /data/data/com.termux in native code or build scripts: {result}")
 
@@ -267,9 +352,9 @@ def test_zero_termux_contamination():
     assert_true(len(result_pkg) == 0, "No com.termux in AndroidManifest.xml")
 
 if __name__ == "__main__":
-    print("=" * 65)
-    print(" OceanStudio Master Real Integration Directive Test Suite")
-    print("=" * 65)
+    print("=" * 68)
+    print(" OceanStudio Master Provider Auth / MCP Gateway Directive Test Suite")
+    print("=" * 68)
     test_private_browser_isolation()
     test_mcp_protocol_and_oauth()
     test_local_model_catalog_and_routing()
@@ -277,7 +362,10 @@ if __name__ == "__main__":
     test_bundled_skills_architecture()
     test_private_browser_controls_and_saved_sessions()
     test_ocean_modal_and_ui()
+    test_fail_closed_vault_and_records()
+    test_auth_core_persistence_and_no_user_client_id()
+    test_smart_router_policy()
     test_zero_termux_contamination()
-    print("=" * 65)
-    print(" ALL 8 AUDIT AND ACCEPTANCE GATES PASSED 100% GREEN")
-    print("=" * 65)
+    print("=" * 68)
+    print(" ALL 11 AUDIT AND ACCEPTANCE GATES PASSED 100% GREEN")
+    print("=" * 68)

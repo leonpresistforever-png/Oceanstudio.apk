@@ -13,7 +13,7 @@ import android.provider.MediaStore;
 import android.webkit.URLUtil;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
+import studio.ocean.app.OceanModal;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -153,11 +153,12 @@ public final class DownloadQuarantineManager {
                 + "SHA-256:\n" + record.sha256Hex + "\n\n"
                 + "Status: Quarantined in app-private storage. Do you wish to export to your device Downloads?";
 
-        new AlertDialog.Builder(context)
+        OceanModal.create(context)
                 .setTitle("Download Quarantined")
-                .setMessage(details)
-                .setPositiveButton("Export to Downloads", (d, w) -> exportToDownloads(context, record))
-                .setNegativeButton("Discard", (d, w) -> {
+                .setExplanation("The downloaded file has been safely quarantined in app-private storage.")
+                .setDetailsText(details)
+                .setPositiveButton("Export to Downloads", btn -> exportToDownloads(context, record))
+                .setNegativeButton("Discard", btn -> {
                     //noinspection ResultOfMethodCallIgnored
                     record.file.delete();
                 })

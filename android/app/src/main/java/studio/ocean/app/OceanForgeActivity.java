@@ -11,7 +11,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AlertDialog;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -94,11 +93,11 @@ public final class OceanForgeActivity extends AppCompatActivity {
         });
         checkpoint.setOnClickListener(v->runForge("ocean-forge checkpoint manual",120));
         diff.setOnClickListener(v->runForge("ocean-forge diff",120));
-        rollback.setOnClickListener(v->new AlertDialog.Builder(this)
+        rollback.setOnClickListener(v->OceanModal.create(this)
                 .setTitle("Rollback Forge workspace?")
-                .setMessage("Restore the last Forge checkpoint and discard newer workspace changes.")
-                .setNegativeButton("Cancel",null)
-                .setPositiveButton("Rollback",(d,w)->runForge("ocean-forge rollback",180))
+                .setExplanation("Restore the last Forge checkpoint and discard newer workspace changes.")
+                .setPositiveButton("Rollback", btn -> runForge("ocean-forge rollback",180))
+                .setNegativeButton("Cancel", null)
                 .show());
 
         clone.setOnClickListener(v->{
@@ -117,14 +116,15 @@ public final class OceanForgeActivity extends AppCompatActivity {
         build.setOnClickListener(v->runForge("ocean-forge build",3600));
         verify.setOnClickListener(v->runForge("ocean-forge verify",120));
         saveSigning.setOnClickListener(v->saveSigningIdentity());
-        forgetSigning.setOnClickListener(v->new AlertDialog.Builder(this)
+        forgetSigning.setOnClickListener(v->OceanModal.create(this)
                 .setTitle("Forget saved signing identity?")
-                .setMessage("Ocean will delete the private keystore copy and its encrypted saved credentials.")
-                .setNegativeButton("Cancel",null)
-                .setPositiveButton("Forget",(d,w)->{
+                .setExplanation("Ocean will delete the private keystore copy and its encrypted saved credentials.")
+                .setPositiveButton("Forget", btn -> {
                     signingStore.clear();
                     updateSigningStatus();
-                }).show());
+                })
+                .setNegativeButton("Cancel", null)
+                .show());
         updateSigningStatus();
 
         buildSigned.setOnClickListener(v->buildSignedCandidate());
@@ -136,11 +136,11 @@ public final class OceanForgeActivity extends AppCompatActivity {
             }
         });
 
-        install.setOnClickListener(v->new AlertDialog.Builder(this)
+        install.setOnClickListener(v->OceanModal.create(this)
                 .setTitle("Update Ocean?")
-                .setMessage("Forge will verify the candidate signature first. Android PackageInstaller will handle the final update approval.")
-                .setNegativeButton("Cancel",null)
-                .setPositiveButton("Verify & update",(d,w)->runForge("ocean-forge install",120))
+                .setExplanation("Forge will verify the candidate signature first. Android PackageInstaller will handle the final update approval.")
+                .setPositiveButton("Verify & update", btn -> runForge("ocean-forge install",120))
+                .setNegativeButton("Cancel", null)
                 .show());
 
         bindService(new Intent(this,OceanTerminalRuntimeService.class),connection,Context.BIND_AUTO_CREATE);

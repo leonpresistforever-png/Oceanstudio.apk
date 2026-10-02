@@ -456,6 +456,12 @@ public final class McpClientManager {
         }
         processReaders.remove(serverId);
         processWriters.remove(serverId);
+        McpServerConfig config = getServer(serverId);
+        if (config != null) {
+            config.sessionId = null;
+            config.status = McpStatus.DISCONNECTED;
+            updateServerInStore(config);
+        }
     }
 
     public List<McpServerConfig> listServers() {
@@ -516,7 +522,14 @@ public final class McpClientManager {
             if (s.isConnected()) {
                 for (int i = 0; i < s.tools.length(); i++) {
                     JSONObject t = s.tools.optJSONObject(i);
-                    if (t != null && toolName.equals(t.optString("name"))) return true;
+                    if (t != null) {
+                        String name = t.optString("name");
+                        if (toolName.equals(name)
+                                || toolName.equals(s.id + ":" + name)
+                                || toolName.equals(s.name + ":" + name)) {
+                            return true;
+                        }
+                    }
                 }
             }
         }
@@ -528,8 +541,13 @@ public final class McpClientManager {
             if (s.isConnected()) {
                 for (int i = 0; i < s.tools.length(); i++) {
                     JSONObject t = s.tools.optJSONObject(i);
-                    if (t != null && toolName.equals(t.optString("name"))) {
-                        return executeToolOnServer(s, toolName, args);
+                    if (t != null) {
+                        String name = t.optString("name");
+                        if (toolName.equals(name)
+                                || toolName.equals(s.id + ":" + name)
+                                || toolName.equals(s.name + ":" + name)) {
+                            return executeToolOnServer(s, name, args);
+                        }
                     }
                 }
             }
@@ -548,6 +566,7 @@ public final class McpClientManager {
                 .put("method", "tools/call")
                 .put("params", params);
 
+        JSONObject resp;
         if (server.transport == McpTransportType.STDIO) {
             BufferedWriter writer = processWriters.get(server.id);
             BufferedReader reader = processReaders.get(server.id);
@@ -555,15 +574,26 @@ public final class McpClientManager {
                 throw new IOException("STDIO session for " + server.name + " is not connected.");
             }
             sendJsonRpc(writer, req);
-            JSONObject resp = readJsonRpcResponse(reader, 30000);
+            resp = readJsonRpcResponse(reader, 30000);
             if (resp == null) throw new IOException("Tool execution timed out.");
-            if (resp.has("error")) throw new IOException("MCP error: " + resp.getJSONObject("error").optString("message"));
-            return resp.optJSONObject("result") != null ? resp.getJSONObject("result").toString() : "Success";
         } else {
-            JSONObject resp = sendHttpPost(server, req);
-            if (resp.has("error")) throw new IOException("Remote MCP error: " + resp.getJSONObject("error").optString("message"));
-            return resp.optJSONObject("result") != null ? resp.getJSONObject("result").toString() : "Success";
+            resp = sendHttpPost(server, req);
         }
+
+        if (resp.has("error")) {
+            throw new IOException("MCP error: " + resp.getJSONObject("error").optString("message"));
+        }
+
+        JSONObject res = resp.optJSONObject("result");
+        if (res != null) {
+            if (res.optBoolean("isError", false)) {
+                JSONArray content = res.optJSONArray("content");
+                String errDetail = content != null ? content.toString() : res.toString();
+                throw new IOException("MCP tool reported execution failure: " + errDetail);
+            }
+            return res.toString();
+        }
+        return "Success";
     }
 
     private File resolveExecutable(String execName) {

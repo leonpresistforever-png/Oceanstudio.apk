@@ -1074,16 +1074,13 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             @Override
             public void onFailure(String error) {
                 runOnUiThread(() -> {
-                    OceanModal.Builder builder = OceanModal.create(ProvidersConnectActivity.this)
+                    OceanModal.create(ProvidersConnectActivity.this)
                             .setTitle(desc.title + " · Direct Connect")
                             .setExplanation("Direct connect could not be completed.")
                             .setInlineError(error)
                             .setDetailsText(error)
-                            .setNegativeButton("Dismiss", null);
-                    if (error != null && (error.contains("Client ID") || error.contains("OAuth 2.0"))) {
-                        builder.setPositiveButton("Set Client ID", v -> showConfigureClientIdDialog(desc));
-                    }
-                    builder.show();
+                            .setNegativeButton("Dismiss", null)
+                            .show();
                 });
             }
         });
@@ -1125,32 +1122,6 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 });
             }
         });
-    }
-
-    private void showConfigureClientIdDialog(ProviderDescriptor desc) {
-        EditText input = new EditText(this);
-        input.setHint("Enter " + desc.title + " OAuth Client ID");
-        String existing = credentialVault.retrieve("oauth_client_id_" + desc.id);
-        if (existing != null) input.setText(existing);
-        input.setSingleLine(true);
-        input.setTextColor(getColor(R.color.ocean_ink));
-        input.setBackgroundResource(R.drawable.auth_field_background);
-        int pad = (int) (12 * getResources().getDisplayMetrics().density);
-        input.setPadding(pad, pad, pad, pad);
-
-        OceanModal.create(this)
-                .setTitle("Configure OAuth Client ID")
-                .setExplanation("Provide your registered OAuth 2.0 Client ID for " + desc.title + " (RFC 8252 native client). Secrets are never required or embedded.")
-                .setCustomView(input)
-                .setPositiveButton("Save & Connect", v -> {
-                    String val = input.getText().toString().trim();
-                    if (!val.isEmpty()) {
-                        credentialVault.store("oauth_client_id_" + desc.id, val);
-                        showDirectConnectFlow(desc);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private void showDeviceCodeDialog(ProviderDescriptor desc, String userCode, String verificationUrl, int expiresInSeconds) {

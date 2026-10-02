@@ -3,6 +3,8 @@ package studio.ocean.app.providers.auth;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Base64;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -15,13 +17,15 @@ import studio.ocean.app.providers.model.ModelDescriptor;
 import studio.ocean.app.providers.model.ProviderConnection;
 import studio.ocean.app.providers.model.ProviderDescriptor;
 import studio.ocean.app.providers.model.QuotaSnapshot;
+import studio.ocean.app.providers.state.CredentialRecord;
 import studio.ocean.app.providers.state.CredentialVault;
 import studio.ocean.app.providers.state.ProviderConnectionStore;
 
 /**
  * Orchestrates Direct Connect authentication, PKCE challenge generation,
- * state validation, transaction lifecycle, and credential persistence (Directive 2026-10-02 §4, §5).
+ * state validation, transaction lifecycle, and credential persistence (Directive 2026-10-02 §11, §12, §13).
  * Connects only to genuine upstream endpoints; strictly bans fake tokens and scaffolds.
+ * Fully survives Android process death and protects against replay attacks using AuthSessionManager.
  */
 public final class AuthOrchestrator {
 
@@ -37,15 +41,25 @@ public final class AuthOrchestrator {
     private final Context context;
     private final CredentialVault credentialVault;
     private final ProviderConnectionStore connectionStore;
+    private final AuthSessionManager sessionManager;
+    private final CallbackBroker callbackBroker;
     private final Map<String, DirectAuthAdapter> adapters = new ConcurrentHashMap<>();
-    private final Map<String, DirectAuthAdapter.AuthRequest> activeRequestsByTxId = new ConcurrentHashMap<>();
-    private final Map<String, DirectAuthAdapter.AuthRequest> activeRequestsByState = new ConcurrentHashMap<>();
 
     public AuthOrchestrator(Context context) {
         this.context = context.getApplicationContext();
         this.credentialVault = new CredentialVault(this.context);
         this.connectionStore = new ProviderConnectionStore(this.context);
+        this.sessionManager = new AuthSessionManager(this.context);
+        this.callbackBroker = new CallbackBroker(this.context, this.sessionManager);
         registerDefaultAdapters();
+    }
+
+    public AuthSessionManager getSessionManager() {
+        return sessionManager;
+    }
+
+    public CallbackBroker getCallbackBroker() {
+        return callbackBroker;
     }
 
     private void registerDefaultAdapters() {
@@ -112,14 +126,27 @@ public final class AuthOrchestrator {
                 String verifier = generateCodeVerifier();
                 String challenge = generateCodeChallenge(verifier);
 
-                String customClientId = credentialVault.retrieve("oauth_client_id_" + desc.id);
-                DirectAuthAdapter.AuthRequest req = new DirectAuthAdapter.AuthRequest(
-                        txId, desc.id, customClientId, state, verifier, challenge, "ocean://auth/callback", Collections.singletonList("model:chat")
+                // Persist transaction across process death in AuthSessionManager (Directive §11, §12)
+                AuthTransaction tx = sessionManager.createTransaction(
+                        txId,
+                        desc.id,
+                        state,
+                        null,
+                        verifier,
+                        challenge,
+                        "ocean://auth/callback",
+                        null,
+                        Collections.singletonList("model:chat"),
+                        null
                 );
-                activeRequestsByTxId.put(txId, req);
-                activeRequestsByState.put(state, req);
+
+                DirectAuthAdapter.AuthRequest req = new DirectAuthAdapter.AuthRequest(
+                        txId, desc.id, null, state, verifier, challenge, "ocean://auth/callback", Collections.singletonList("model:chat")
+                );
 
                 DirectAuthAdapter.AuthStartResult startResult = adapter.start(req);
+                sessionManager.updatePhase(txId, AuthTransaction.PHASE_BROWSER_ACTIVE);
+
                 if (startResult.isDeviceCode) {
                     callback.onDeviceCodeReceived(startResult.userCode, startResult.verificationUri, startResult.expiresInSeconds);
                 } else {
@@ -142,49 +169,68 @@ public final class AuthOrchestrator {
         }
 
         String stateFromUri = uri.getQueryParameter("state");
-        DirectAuthAdapter.AuthRequest req = null;
+        AuthTransaction tx = null;
 
         if (transactionId != null) {
-            req = activeRequestsByTxId.remove(transactionId);
+            tx = sessionManager.getTransaction(transactionId);
         }
-        if (req == null && stateFromUri != null) {
-            req = activeRequestsByState.remove(stateFromUri);
+        if (tx == null && stateFromUri != null) {
+            tx = sessionManager.getTransactionByState(stateFromUri);
         }
 
-        if (req == null) {
-            callback.onFailure("Authentication transaction expired or already completed (replay rejected).");
+        if (tx == null) {
+            callback.onFailure("Authentication transaction expired or not found.");
             return;
         }
 
-        // Clean up both maps to prevent replay
-        activeRequestsByTxId.remove(req.transactionId);
-        activeRequestsByState.remove(req.state);
+        if (tx.replayConsumed) {
+            callback.onFailure("Security violation: OAuth transaction was already consumed (replay attack rejected).");
+            return;
+        }
 
         // Verify state parameter matches
-        if (stateFromUri == null || !stateFromUri.equals(req.state)) {
+        if (stateFromUri == null || !stateFromUri.equals(tx.state)) {
             callback.onFailure("Authentication state mismatch. Possible replay or CSRF attack rejected.");
             return;
         }
 
-        final DirectAuthAdapter.AuthRequest finalReq = req;
+        // Mark consumed immediately to prevent replay
+        AuthTransaction consumedTx;
+        try {
+            consumedTx = sessionManager.consumeTransaction(tx.id);
+        } catch (Exception e) {
+            callback.onFailure(e.getMessage());
+            return;
+        }
+
+        final AuthTransaction finalTx = consumedTx;
         new Thread(() -> {
             try {
                 String err = uri.getQueryParameter("error");
                 String errDesc = uri.getQueryParameter("error_description");
                 if (err != null) {
+                    sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
                     callback.onFailure("Provider authorization was denied: " + (errDesc != null ? errDesc : err));
                     return;
                 }
 
-                DirectAuthAdapter adapter = adapters.get(finalReq.providerId);
+                DirectAuthAdapter adapter = adapters.get(finalTx.providerId);
                 if (adapter == null) {
-                    callback.onFailure("No authentication adapter configured for " + finalReq.providerId);
+                    sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
+                    callback.onFailure("No authentication adapter configured for " + finalTx.providerId);
                     return;
                 }
 
+                sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_VERIFYING);
+
                 // 1. Live token exchange
-                DirectAuthAdapter.AuthResult result = adapter.handleCallback(uri, finalReq);
+                DirectAuthAdapter.AuthRequest originalReq = new DirectAuthAdapter.AuthRequest(
+                        finalTx.id, finalTx.providerId, null, finalTx.state, finalTx.codeVerifier,
+                        finalTx.codeChallenge, finalTx.redirectDescriptor, finalTx.requestedScopes
+                );
+                DirectAuthAdapter.AuthResult result = adapter.handleCallback(uri, originalReq);
                 if (!result.isSuccess) {
+                    sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
                     callback.onFailure("Token exchange failed: " + result.error);
                     return;
                 }
@@ -194,11 +240,13 @@ public final class AuthOrchestrator {
                 try {
                     probeSuccess = adapter.probe(result.accessToken, null);
                 } catch (Exception probeEx) {
+                    sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
                     callback.onFailure("Authentication probe failed: " + probeEx.getMessage());
                     return;
                 }
 
                 if (!probeSuccess) {
+                    sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
                     callback.onFailure("Provider rejected authentication probe: invalid token or insufficient scopes.");
                     return;
                 }
@@ -217,17 +265,35 @@ public final class AuthOrchestrator {
                 String defaultModel = (discoveredModels != null && !discoveredModels.isEmpty())
                         ? discoveredModels.get(0).id : null;
 
-                // 4. Secure storage in Keystore-backed CredentialVault
+                // 4. Secure storage in Keystore-backed CredentialVault (both structured record and ref key)
                 String tokenToStore = (result.refreshToken != null && !result.refreshToken.isEmpty())
                         ? result.refreshToken : result.accessToken;
                 String credRef = credentialVault.store(tokenToStore);
+
+                CredentialRecord record = new CredentialRecord(
+                        finalTx.providerId,
+                        result.accountId,
+                        result.accessToken,
+                        result.refreshToken,
+                        null,
+                        result.expiresAtEpochMs != null ? result.expiresAtEpochMs : 0L,
+                        finalTx.requestedScopes,
+                        null,
+                        null,
+                        result.displayName,
+                        result.planTier,
+                        System.currentTimeMillis(),
+                        System.currentTimeMillis(),
+                        1L
+                );
+                credentialVault.storeRecord(record);
 
                 // 5. Save verified ProviderConnection
                 String connId = UUID.randomUUID().toString();
                 String displayName = result.displayName != null ? result.displayName : "Connected Account";
                 ProviderConnection connection = new ProviderConnection(
                         connId,
-                        finalReq.providerId,
+                        finalTx.providerId,
                         displayName,
                         AuthStrategy.DIRECT_OAUTH,
                         ConnectionStatus.CONNECTED,
@@ -235,7 +301,7 @@ public final class AuthOrchestrator {
                         defaultModel,
                         credRef,
                         null,
-                        finalReq.scopes,
+                        finalTx.requestedScopes,
                         result.expiresAtEpochMs,
                         quota,
                         discoveredModels,
@@ -243,9 +309,11 @@ public final class AuthOrchestrator {
                 );
 
                 connectionStore.save(connection);
+                sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_COMPLETED);
                 callback.onSuccess(connection);
 
             } catch (Exception e) {
+                sessionManager.updatePhase(finalTx.id, AuthTransaction.PHASE_FAILED);
                 callback.onFailure("Authentication callback processing failed: " + e.getMessage());
             }
         }).start();

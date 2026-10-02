@@ -12,7 +12,6 @@ import android.graphics.Typeface;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -69,20 +68,17 @@ public final class CrashSurvival {
             final String text=report;
             activity.runOnUiThread(() -> {
                 if(activity.isFinishing()||activity.isDestroyed()){requested.set(false);return;}
-                if(text.isEmpty()){requested.set(false);return;}
-                int pad=Math.round(18*activity.getResources().getDisplayMetrics().density);
-                TextView body=new TextView(activity);body.setText(text);body.setTextSize(12);body.setTypeface(Typeface.MONOSPACE);body.setTextIsSelectable(true);body.setPadding(pad,pad,pad,pad);
-                ScrollView scroll=new ScrollView(activity);scroll.addView(body);
-                AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("Previous app crash / interruption")
-                    .setView(scroll).setPositiveButton("Dismiss",(d,w)->app.getSharedPreferences("crash-survival",0).edit().putString("seen",CrashReportStore.identity(text)).apply())
-                    .setNeutralButton("Copy report",null).create();
-                dialog.setCanceledOnTouchOutside(false);dialog.setCancelable(false);dialog.show();
-                dialog.getWindow().setLayout(-1,Math.round(activity.getResources().getDisplayMetrics().heightPixels*.82f));
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
-                    ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Ocean crash report",text));
-                    Toast.makeText(activity,"Crash report copied",Toast.LENGTH_SHORT).show();
-                });
+                OceanModal.create(activity)
+                        .setTitle("Previous App Crash / Interruption")
+                        .setExplanation("Ocean recovered from an unexpected shutdown.")
+                        .setDetailsText(text)
+                        .setPositiveButton("Dismiss", v -> app.getSharedPreferences("crash-survival", 0).edit().putString("seen", CrashReportStore.identity(text)).apply())
+                        .setNegativeButton("Copy Report", v -> {
+                            ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Ocean crash report", text));
+                            Toast.makeText(activity, "Crash report copied", Toast.LENGTH_SHORT).show();
+                        })
+                        .show();
             });
         },"ocean-crash-report").start();
     }
