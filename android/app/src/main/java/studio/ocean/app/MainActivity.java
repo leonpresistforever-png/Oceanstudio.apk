@@ -390,6 +390,16 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
 
         findViewById(R.id.sign_out).setOnClickListener(v -> { developmentSession=false; authState=authClient.configured()?AuthState.CONFIGURED_LOGGED_OUT:AuthState.CONFIGURATION_MISSING; getSharedPreferences(PREFS,MODE_PRIVATE).edit().clear().apply(); showAuth(); });
+        TextView versionView = findViewById(R.id.app_version_provenance);
+        if (versionView != null) {
+            String commit = BuildConfig.OCEAN_BUILD_COMMIT;
+            if (commit != null && commit.length() > 8) commit = commit.substring(0, 8);
+            versionView.setText("v" + BuildConfig.VERSION_NAME + " (" + commit + ")");
+            versionView.setOnClickListener(v -> {
+                closeDrawer();
+                startActivity(new Intent(this, CrashDiagnosticsActivity.class));
+            });
+        }
         sidebar.post(() -> { int width=Math.min((int)(getResources().getDisplayMetrics().widthPixels*.76f),(int)(360*getResources().getDisplayMetrics().density)); ViewGroup.LayoutParams p=sidebar.getLayoutParams(); p.width=width; sidebar.setLayoutParams(p); sidebar.setTranslationX(-width); });
         View skeleton=findViewById(R.id.home_skeleton), content=findViewById(R.id.home_content); content.post(() -> { skeleton.animate().alpha(0f).setDuration(220).withEndAction(() -> skeleton.setVisibility(View.GONE)).start(); content.animate().alpha(1f).translationY(0f).setDuration(260).start(); });
         View recentSkeleton=findViewById(R.id.recent_skeleton); recentSkeleton.post(() -> { recentSkeleton.animate().alpha(0f).setDuration(180).withEndAction(() -> { recentSkeleton.setVisibility(View.GONE); refreshRecentSessions(); }).start(); });

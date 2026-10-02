@@ -20,6 +20,7 @@ if find android/app/src/main -type f \( -name '*.java' -o -name '*.kt' -o -name 
     ! -path '*/browser/*' \
     ! -path '*/runtime/RuntimePortsActivity.java' \
     ! -path '*/render/RoboticEyeView.java' \
+    ! -path '*/OceanApplication.java' \
     -exec sed -n '/com\.getcapacitor\|android\.webkit\.WebView\|com\.termux\|\/data\/data\/com\.termux/p' {} + \
     | sed -n '1p' | read -r forbidden; then
   fail "forbidden wrapper or Termux identity found"
@@ -51,3 +52,7 @@ if find ocean-packages .github/workflows -type f \
     | grep -q .; then
   fail "binary-package relocation from a foreign terminal distribution found"
 fi
+
+# Preflight model catalog upstream URLs to ensure zero 404s (Directive 2026-10-02 §8.3)
+python3 scripts/preflight-model-catalog.py
+

@@ -129,6 +129,8 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         initHeaderActions();
         renderFilterPills();
         renderProviders();
+
+        handleIncomingOAuthIntent(getIntent());
     }
 
     private void seedFromLegacyByokIfNeeded() {
@@ -1060,13 +1062,74 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                     if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
                         builder.setPositiveButton("Use " + desc.officialCliName + " CLI Bridge", (d, w) -> connectViaOfficialCli(desc));
                     }
-                    if (desc.supports(AuthStrategy.API_KEY)) {
+                    if (error != null && (error.contains("Client ID") || error.contains("OAuth 2.0"))) {
+                        builder.setNeutralButton("Set Client ID", (d, w) -> showConfigureClientIdDialog(desc));
+                    } else if (desc.supports(AuthStrategy.API_KEY)) {
                         builder.setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null));
                     }
                     builder.show();
                 });
             }
         });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingOAuthIntent(intent);
+    }
+
+    private void handleIncomingOAuthIntent(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        boolean isOceanCallback = "ocean".equalsIgnoreCase(data.getScheme()) && "auth".equalsIgnoreCase(data.getHost());
+        boolean isStudioCallback = "studio.ocean.app".equalsIgnoreCase(data.getScheme()) && "oauth".equalsIgnoreCase(data.getHost());
+        if (!isOceanCallback && !isStudioCallback) return;
+
+        Toast.makeText(this, "Verifying account authorization…", Toast.LENGTH_SHORT).show();
+        authOrchestrator.handleCallback(data, new AuthOrchestrator.AuthFlowCallback() {
+            @Override public void onRiskWarningRequired(String title, String message, Runnable onProceed) {}
+            @Override public void onDeviceCodeReceived(String userCode, String verificationUrl, int expiresInSeconds) {}
+            @Override public void onBrowserLaunchRequired(String authUrl) {}
+            @Override public void onSuccess(ProviderConnection connection) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ProvidersConnectActivity.this, "Connected account successfully verified", Toast.LENGTH_LONG).show();
+                    renderProviders();
+                });
+            }
+            @Override public void onFailure(String error) {
+                runOnUiThread(() -> {
+                    new AlertDialog.Builder(ProvidersConnectActivity.this)
+                            .setTitle("Authentication Failed")
+                            .setMessage(error)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                });
+            }
+        });
+    }
+
+    private void showConfigureClientIdDialog(ProviderDescriptor desc) {
+        EditText input = new EditText(this);
+        input.setHint("Enter " + desc.title + " OAuth Client ID");
+        String existing = credentialVault.retrieve("oauth_client_id_" + desc.id);
+        if (existing != null) input.setText(existing);
+        input.setSingleLine(true);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Configure OAuth Client ID")
+                .setMessage("Provide your registered OAuth 2.0 Client ID for " + desc.title + " (RFC 8252 native client). Secrets are never required or embedded.")
+                .setView(input)
+                .setPositiveButton("Save & Connect", (d, w) -> {
+                    String val = input.getText().toString().trim();
+                    if (!val.isEmpty()) {
+                        credentialVault.store("oauth_client_id_" + desc.id, val);
+                        showDirectConnectFlow(desc);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void showDeviceCodeDialog(ProviderDescriptor desc, String userCode, String verificationUrl, int expiresInSeconds) {

@@ -26,7 +26,25 @@
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/device_accessibility" />
         </service>
         <activity android:name=".runtime.RuntimePortsActivity" android:label="Runtime Ports" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".providers.ProvidersConnectActivity" android:label="@string/providers_connect_title" android:exported="false" android:theme="@style/AppTheme" />
+        <activity
+            android:name=".providers.ProvidersConnectActivity"
+            android:label="@string/providers_connect_title"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/AppTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ocean" android:host="auth" android:path="/callback" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="studio.ocean.app" android:host="oauth" android:path="/callback" />
+            </intent-filter>
+        </activity>
         <activity android:name=".models.local.LocalModelsActivity" android:label="Local Models" android:exported="false" android:theme="@style/AppTheme" />
         <activity android:name=".browser.BrowserActivity" android:label="@string/browser" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".browser.secure.SecureBrowserActivity" android:process=":secure_browser" android:label="@string/secure_browser" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />

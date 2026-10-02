@@ -1,0 +1,543 @@
+package studio.ocean.app.mcp;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import studio.ocean.app.OceanAgentHubStore;
+import studio.ocean.app.providers.state.CredentialVault;
+
+/**
+ * Real protocol client and lifecycle manager for Model Context Protocol (MCP) servers (Directive 2026-10-02 §10, §11).
+ * Executes JSON-RPC handshakes, version negotiation, capability discovery, and tool routing.
+ * Strictly guarantees that random commands or unverified endpoints produce visible START_ERROR / PROTOCOL_ERROR
+ * and never false-positive CONNECTED states.
+ */
+public final class McpClientManager {
+
+    private static final String TAG = "McpClientManager";
+    public static final String PROTOCOL_VERSION = "2024-11-05";
+
+    public interface HandshakeCallback {
+        void onProgress(McpStatus status);
+        void onSuccess(McpServerConfig config);
+        void onFailure(McpStatus errorStatus, String error);
+    }
+
+    private static volatile McpClientManager instance;
+
+    public static synchronized McpClientManager getInstance(Context context) {
+        if (instance == null) {
+            instance = new McpClientManager(context.getApplicationContext());
+        }
+        return instance;
+    }
+
+    private final Context context;
+    private final OceanAgentHubStore hubStore;
+    private final CredentialVault credentialVault;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    // Active STDIO child processes
+    private final Map<String, Process> activeProcesses = new ConcurrentHashMap<>();
+    private final Map<String, BufferedReader> processReaders = new ConcurrentHashMap<>();
+    private final Map<String, BufferedWriter> processWriters = new ConcurrentHashMap<>();
+    private final AtomicInteger requestIdCounter = new AtomicInteger(100);
+
+    private McpClientManager(Context context) {
+        this.context = context;
+        this.hubStore = new OceanAgentHubStore(context);
+        this.credentialVault = new CredentialVault(context);
+    }
+
+    /**
+     * Connects to an MCP server and runs the complete protocol handshake.
+     * Transitions: SAVED -> CONNECTING -> INITIALIZING -> DISCOVERING -> CONNECTED
+     * Failures: START_ERROR or PROTOCOL_ERROR.
+     */
+    public void connect(McpServerConfig config, HandshakeCallback callback) {
+        config.status = McpStatus.CONNECTING;
+        config.lastError = null;
+        updateServerInStore(config);
+        postProgress(callback, McpStatus.CONNECTING);
+
+        executor.submit(() -> {
+            long startTime = System.currentTimeMillis();
+            try {
+                if (config.transport == McpTransportType.STDIO) {
+                    performStdioHandshake(config, callback, startTime);
+                } else {
+                    performHttpHandshake(config, callback, startTime);
+                }
+            } catch (Throwable t) {
+                McpStatus errStatus = (t instanceof FileNotFoundException || (t.getMessage() != null && t.getMessage().contains("Executable not found")))
+                        ? McpStatus.START_ERROR : McpStatus.PROTOCOL_ERROR;
+                config.status = errStatus;
+                config.lastError = t.getMessage() != null ? t.getMessage() : t.toString();
+                disconnect(config.id);
+                updateServerInStore(config);
+                postFailure(callback, errStatus, config.lastError);
+            }
+        });
+    }
+
+    private void performStdioHandshake(McpServerConfig config, HandshakeCallback callback, long startTime) throws Exception {
+        if (config.command == null || config.command.trim().isEmpty()) {
+            throw new FileNotFoundException("Executable command is empty.");
+        }
+
+        // Tokenize command string safely to prevent shell injection
+        List<String> cmdTokens = tokenizeCommand(config.command);
+        if (cmdTokens.isEmpty()) {
+            throw new FileNotFoundException("No executable specified in command.");
+        }
+
+        String execName = cmdTokens.get(0);
+        File resolvedExec = resolveExecutable(execName);
+        if (resolvedExec == null || !resolvedExec.exists() || !resolvedExec.canExecute()) {
+            throw new FileNotFoundException("Executable not found or not executable on device: " + execName);
+        }
+
+        // Build command argument list
+        List<String> fullCmd = new ArrayList<>();
+        fullCmd.add(resolvedExec.getAbsolutePath());
+        for (int i = 1; i < cmdTokens.size(); i++) fullCmd.add(cmdTokens.get(i));
+        fullCmd.addAll(config.args);
+
+        postProgress(callback, McpStatus.INITIALIZING);
+        config.status = McpStatus.INITIALIZING;
+
+        // Disconnect previous process if running
+        disconnect(config.id);
+
+        ProcessBuilder pb = new ProcessBuilder(fullCmd);
+        if (config.workingDir != null && !config.workingDir.trim().isEmpty()) {
+            File workDir = new File(config.workingDir.trim());
+            if (workDir.exists() && workDir.isDirectory()) pb.directory(workDir);
+        }
+
+        // Environment variables
+        Map<String, String> env = pb.environment();
+        File usrBin = new File(context.getFilesDir(), "usr/bin");
+        File forgeBin = new File(context.getFilesDir(), "forge-tools/bin");
+        String currentPath = env.get("PATH");
+        env.put("PATH", usrBin.getAbsolutePath() + ":" + forgeBin.getAbsolutePath() + (currentPath != null ? ":" + currentPath : ""));
+        env.put("HOME", context.getFilesDir().getAbsolutePath());
+        env.put("TMPDIR", context.getCacheDir().getAbsolutePath());
+        env.putAll(config.env);
+
+        Process process = pb.start();
+        activeProcesses.put(config.id, process);
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
+        processReaders.put(config.id, reader);
+        processWriters.put(config.id, writer);
+
+        // Separate thread for stderr capture
+        BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+        executor.submit(() -> {
+            try {
+                String line;
+                while ((line = stderrReader.readLine()) != null) {
+                    Log.d(TAG, "[" + config.name + " stderr] " + line);
+                }
+            } catch (IOException ignored) {}
+        });
+
+        // Step 1: Send JSON-RPC initialize
+        JSONObject initParams = new JSONObject()
+                .put("protocolVersion", PROTOCOL_VERSION)
+                .put("capabilities", new JSONObject()
+                        .put("roots", new JSONObject().put("listChanged", true))
+                        .put("sampling", new JSONObject()))
+                .put("clientInfo", new JSONObject()
+                        .put("name", "OceanStudio")
+                        .put("version", "1.2.6"));
+
+        JSONObject initReq = new JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("id", 1)
+                .put("method", "initialize")
+                .put("params", initParams);
+
+        sendJsonRpc(writer, initReq);
+
+        // Await initialize response (timeout 5s)
+        JSONObject initResp = readJsonRpcResponse(reader, 5000);
+        if (initResp == null) {
+            throw new IOException("Server did not respond to initialize within 5 seconds.");
+        }
+        if (initResp.has("error")) {
+            throw new IOException("Protocol initialize error: " + initResp.getJSONObject("error").optString("message", "Unknown protocol error"));
+        }
+
+        JSONObject result = initResp.optJSONObject("result");
+        if (result == null) {
+            throw new IOException("Malformed JSON-RPC response: missing result object.");
+        }
+
+        config.protocolVersion = result.optString("protocolVersion", PROTOCOL_VERSION);
+        JSONObject serverInfo = result.optJSONObject("serverInfo");
+        if (serverInfo != null) {
+            config.serverName = serverInfo.optString("name", config.name);
+            config.serverVersion = serverInfo.optString("version", "1.0.0");
+        }
+        JSONObject caps = result.optJSONObject("capabilities");
+        config.capabilities = caps != null ? caps : new JSONObject();
+
+        // Step 2: Send initialized notification
+        JSONObject notifyInitialized = new JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("method", "notifications/initialized");
+        sendJsonRpc(writer, notifyInitialized);
+
+        // Step 3: Discover capabilities (tools/list)
+        postProgress(callback, McpStatus.DISCOVERING);
+        config.status = McpStatus.DISCOVERING;
+
+        if (config.capabilities.has("tools")) {
+            JSONObject toolsReq = new JSONObject()
+                    .put("jsonrpc", "2.0")
+                    .put("id", 2)
+                    .put("method", "tools/list");
+            sendJsonRpc(writer, toolsReq);
+
+            JSONObject toolsResp = readJsonRpcResponse(reader, 5000);
+            if (toolsResp != null && toolsResp.has("result")) {
+                JSONArray toolsList = toolsResp.getJSONObject("result").optJSONArray("tools");
+                config.tools = toolsList != null ? toolsList : new JSONArray();
+            }
+        }
+
+        config.latencyMs = System.currentTimeMillis() - startTime;
+        config.lastHandshakeEpochMs = System.currentTimeMillis();
+        config.status = McpStatus.CONNECTED;
+        config.lastError = null;
+
+        updateServerInStore(config);
+        postSuccess(callback, config);
+    }
+
+    private void performHttpHandshake(McpServerConfig config, HandshakeCallback callback, long startTime) throws Exception {
+        if (config.endpointUrl == null || !config.endpointUrl.startsWith("http")) {
+            throw new IllegalArgumentException("Invalid HTTP endpoint URL: " + config.endpointUrl);
+        }
+
+        postProgress(callback, McpStatus.INITIALIZING);
+        config.status = McpStatus.INITIALIZING;
+
+        JSONObject initParams = new JSONObject()
+                .put("protocolVersion", PROTOCOL_VERSION)
+                .put("capabilities", new JSONObject()
+                        .put("roots", new JSONObject().put("listChanged", true))
+                        .put("sampling", new JSONObject()))
+                .put("clientInfo", new JSONObject()
+                        .put("name", "OceanStudio")
+                        .put("version", "1.2.6"));
+
+        JSONObject initReq = new JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("id", 1)
+                .put("method", "initialize")
+                .put("params", initParams);
+
+        JSONObject initResp = sendHttpPost(config, initReq);
+        if (initResp.has("error")) {
+            throw new IOException("Remote MCP error: " + initResp.getJSONObject("error").optString("message"));
+        }
+
+        JSONObject result = initResp.optJSONObject("result");
+        if (result == null) {
+            throw new IOException("Remote server returned invalid JSON-RPC result.");
+        }
+
+        config.protocolVersion = result.optString("protocolVersion", PROTOCOL_VERSION);
+        JSONObject serverInfo = result.optJSONObject("serverInfo");
+        if (serverInfo != null) {
+            config.serverName = serverInfo.optString("name", config.name);
+            config.serverVersion = serverInfo.optString("version", "1.0.0");
+        }
+        JSONObject caps = result.optJSONObject("capabilities");
+        config.capabilities = caps != null ? caps : new JSONObject();
+
+        postProgress(callback, McpStatus.DISCOVERING);
+        config.status = McpStatus.DISCOVERING;
+
+        if (config.capabilities.has("tools")) {
+            JSONObject toolsReq = new JSONObject()
+                    .put("jsonrpc", "2.0")
+                    .put("id", 2)
+                    .put("method", "tools/list");
+            JSONObject toolsResp = sendHttpPost(config, toolsReq);
+            if (toolsResp.has("result")) {
+                JSONArray toolsList = toolsResp.getJSONObject("result").optJSONArray("tools");
+                config.tools = toolsList != null ? toolsList : new JSONArray();
+            }
+        }
+
+        config.latencyMs = System.currentTimeMillis() - startTime;
+        config.lastHandshakeEpochMs = System.currentTimeMillis();
+        config.status = McpStatus.CONNECTED;
+        config.lastError = null;
+
+        updateServerInStore(config);
+        postSuccess(callback, config);
+    }
+
+    private JSONObject sendHttpPost(McpServerConfig config, JSONObject payload) throws Exception {
+        URL url = new URL(config.endpointUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setConnectTimeout(8000);
+        conn.setReadTimeout(10000);
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("User-Agent", "OceanStudio/1.2.6 (MCP Client)");
+
+        if (config.bearerTokenRef != null) {
+            String token = credentialVault.retrieve(config.bearerTokenRef);
+            if (token != null && !token.isEmpty()) conn.setRequestProperty("Authorization", "Bearer " + token);
+        }
+
+        for (Map.Entry<String, String> header : config.headers.entrySet()) {
+            conn.setRequestProperty(header.getKey(), header.getValue());
+        }
+
+        byte[] bodyBytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(bodyBytes);
+        }
+
+        int code = conn.getResponseCode();
+        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+        if (is == null) throw new IOException("HTTP " + code + " with empty response");
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buf = new byte[2048];
+        int r;
+        while ((r = is.read(buf)) != -1) baos.write(buf, 0, r);
+
+        String resp = baos.toString(StandardCharsets.UTF_8.name());
+        if (code < 200 || code >= 300) {
+            throw new IOException("HTTP " + code + ": " + resp);
+        }
+        return new JSONObject(resp);
+    }
+
+    private void sendJsonRpc(BufferedWriter writer, JSONObject obj) throws IOException {
+        String str = obj.toString();
+        writer.write(str);
+        writer.newLine();
+        writer.flush();
+    }
+
+    private JSONObject readJsonRpcResponse(BufferedReader reader, int timeoutMs) throws IOException {
+        long end = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < end) {
+            if (reader.ready()) {
+                String line = reader.readLine();
+                if (line == null) return null;
+                line = line.trim();
+                if (line.startsWith("{")) {
+                    try {
+                        return new JSONObject(line);
+                    } catch (Exception ignored) {}
+                }
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+        return null;
+    }
+
+    public synchronized void disconnect(String serverId) {
+        Process p = activeProcesses.remove(serverId);
+        if (p != null) {
+            try { p.destroy(); } catch (Exception ignored) {}
+        }
+        processReaders.remove(serverId);
+        processWriters.remove(serverId);
+    }
+
+    public List<McpServerConfig> listServers() {
+        List<McpServerConfig> result = new ArrayList<>();
+        JSONArray arr = hubStore.mcps();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject obj = arr.optJSONObject(i);
+            if (obj != null) result.add(McpServerConfig.fromJson(obj));
+        }
+        return result;
+    }
+
+    public McpServerConfig getServer(String id) {
+        for (McpServerConfig s : listServers()) {
+            if (s.id.equals(id)) return s;
+        }
+        return null;
+    }
+
+    public void updateServerInStore(McpServerConfig config) {
+        try {
+            JSONArray arr = hubStore.mcps();
+            boolean found = false;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.optJSONObject(i);
+                if (obj != null && config.id.equals(obj.optString("id"))) {
+                    arr.put(i, config.toJson());
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                arr.put(config.toJson());
+            }
+            hubStore.saveMcps(arr);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to persist MCP server in store", e);
+        }
+    }
+
+    public void deleteServer(String id) {
+        disconnect(id);
+        try {
+            JSONArray arr = hubStore.mcps();
+            JSONArray updated = new JSONArray();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.optJSONObject(i);
+                if (obj != null && !id.equals(obj.optString("id"))) {
+                    updated.put(obj);
+                }
+            }
+            hubStore.saveMcps(updated);
+        } catch (Exception ignored) {}
+    }
+
+    public boolean isMcpTool(String toolName) {
+        for (McpServerConfig s : listServers()) {
+            if (s.isConnected()) {
+                for (int i = 0; i < s.tools.length(); i++) {
+                    JSONObject t = s.tools.optJSONObject(i);
+                    if (t != null && toolName.equals(t.optString("name"))) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public String callTool(String toolName, JSONObject args) throws Exception {
+        for (McpServerConfig s : listServers()) {
+            if (s.isConnected()) {
+                for (int i = 0; i < s.tools.length(); i++) {
+                    JSONObject t = s.tools.optJSONObject(i);
+                    if (t != null && toolName.equals(t.optString("name"))) {
+                        return executeToolOnServer(s, toolName, args);
+                    }
+                }
+            }
+        }
+        throw new IOException("No connected MCP server advertises tool: " + toolName);
+    }
+
+    private String executeToolOnServer(McpServerConfig server, String toolName, JSONObject args) throws Exception {
+        int reqId = requestIdCounter.incrementAndGet();
+        JSONObject params = new JSONObject()
+                .put("name", toolName)
+                .put("arguments", args != null ? args : new JSONObject());
+        JSONObject req = new JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("id", reqId)
+                .put("method", "tools/call")
+                .put("params", params);
+
+        if (server.transport == McpTransportType.STDIO) {
+            BufferedWriter writer = processWriters.get(server.id);
+            BufferedReader reader = processReaders.get(server.id);
+            if (writer == null || reader == null) {
+                throw new IOException("STDIO session for " + server.name + " is not connected.");
+            }
+            sendJsonRpc(writer, req);
+            JSONObject resp = readJsonRpcResponse(reader, 30000);
+            if (resp == null) throw new IOException("Tool execution timed out.");
+            if (resp.has("error")) throw new IOException("MCP error: " + resp.getJSONObject("error").optString("message"));
+            return resp.optJSONObject("result") != null ? resp.getJSONObject("result").toString() : "Success";
+        } else {
+            JSONObject resp = sendHttpPost(server, req);
+            if (resp.has("error")) throw new IOException("Remote MCP error: " + resp.getJSONObject("error").optString("message"));
+            return resp.optJSONObject("result") != null ? resp.getJSONObject("result").toString() : "Success";
+        }
+    }
+
+    private File resolveExecutable(String execName) {
+        if (execName.startsWith("/") || execName.startsWith("./")) {
+            File f = new File(execName);
+            return f.exists() ? f : null;
+        }
+
+        File usrBin = new File(context.getFilesDir(), "usr/bin/" + execName);
+        if (usrBin.exists()) return usrBin;
+
+        File forgeBin = new File(context.getFilesDir(), "forge-tools/bin/" + execName);
+        if (forgeBin.exists()) return forgeBin;
+
+        String path = System.getenv("PATH");
+        if (path != null) {
+            for (String dir : path.split(":")) {
+                File candidate = new File(dir, execName);
+                if (candidate.exists()) return candidate;
+            }
+        }
+        return null;
+    }
+
+    private List<String> tokenizeCommand(String cmd) {
+        List<String> list = new ArrayList<>();
+        if (cmd == null) return list;
+        boolean inQuote = false;
+        char quoteChar = 0;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < cmd.length(); i++) {
+            char c = cmd.charAt(i);
+            if ((c == '"' || c == '\'') && !inQuote) {
+                inQuote = true;
+                quoteChar = c;
+            } else if (inQuote && c == quoteChar) {
+                inQuote = false;
+            } else if (Character.isWhitespace(c) && !inQuote) {
+                if (sb.length() > 0) {
+                    list.add(sb.toString());
+                    sb.setLength(0);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        if (sb.length() > 0) list.add(sb.toString());
+        return list;
+    }
+
+    private void postProgress(HandshakeCallback cb, McpStatus status) {
+        if (cb != null) mainHandler.post(() -> cb.onProgress(status));
+    }
+
+    private void postSuccess(HandshakeCallback cb, McpServerConfig config) {
+        if (cb != null) mainHandler.post(() -> cb.onSuccess(config));
+    }
+
+    private void postFailure(HandshakeCallback cb, McpStatus status, String error) {
+        if (cb != null) mainHandler.post(() -> cb.onFailure(status, error));
+    }
+}

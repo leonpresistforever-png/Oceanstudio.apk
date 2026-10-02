@@ -185,30 +185,39 @@ public final class AuthPreflight {
             } catch (Exception ignored) {}
         }
 
+        String customClientId = null;
+        if (context != null) {
+            studio.ocean.app.providers.state.CredentialVault vault = new studio.ocean.app.providers.state.CredentialVault(context);
+            customClientId = vault.retrieve("oauth_client_id_" + provider.id);
+        }
+        String effectiveClientId = (customClientId != null && !customClientId.trim().isEmpty()) ? customClientId.trim() : registeredClientId;
+
         // Google / Antigravity OAuth preflight checks
         if ("google".equals(provider.id) || "antigravity".equals(provider.id)) {
-            if (registeredClientId == null || registeredClientId.contains("YOUR_CLIENT_ID")
-                    || registeredClientId.trim().isEmpty()) {
+            if (effectiveClientId == null || effectiveClientId.contains("YOUR_CLIENT_ID")
+                    || effectiveClientId.trim().isEmpty()) {
                 return PreflightResult.fail("OAuth Client Not Configured",
-                        "Ocean does not have an active OAuth client registration for " + provider.title + ".",
+                        "Ocean does not have an active OAuth client registration for " + provider.title + ".\n\nPlease configure your OAuth Client ID, or connect using the official 'agy' CLI / API key.",
                         "Client ID missing or placeholder in build manifest",
-                        "Connect using the official CLI or an API key.");
+                        "Configure OAuth Client ID or use agy CLI / Gemini API key.");
             }
+            return PreflightResult.success();
+        }
 
-            // Loopback validation: Reject loopback redirects to eliminate 400 redirect_uri_mismatch
-            return PreflightResult.fail("Direct OAuth Restricted",
-                    "Provider authorization requires an official registered HTTPS relay. Local loopback redirects are rejected by Google.",
-                    "redirect_uri_mismatch prevention rule active",
-                    "Use the Antigravity CLI account bridge or Gemini API key.");
+        if ("openai".equals(provider.id)) {
+            if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
+                return PreflightResult.fail("OAuth Client Not Configured",
+                        "OpenAI Direct OAuth requires a configured OAuth 2.0 Client ID (RFC 8252).\n\nPlease configure your OpenAI OAuth Client ID, or connect using Codex CLI / API Key.",
+                        "Client ID missing",
+                        "Configure OAuth Client ID or connect via Codex CLI / API key.");
+            }
+            return PreflightResult.success();
         }
 
         return PreflightResult.success();
     }
 
     private PreflightResult validateDeviceCodeStrategy(ProviderDescriptor provider) {
-        if ("kimi".equals(provider.id)) {
-            return PreflightResult.success();
-        }
         return PreflightResult.fail("Device Code Auth Unavailable",
                 "Device-code authorization is not exposed by " + provider.title + " for this client.",
                 "Endpoints not registered for client",

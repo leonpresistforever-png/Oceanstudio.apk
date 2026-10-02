@@ -35,6 +35,7 @@ import studio.ocean.app.providers.cli.CodexCliAdapter;
 import studio.ocean.app.providers.cli.KimiCliAdapter;
 import studio.ocean.app.providers.cli.OfficialCliAdapter;
 import studio.ocean.app.providers.ProviderExecutionEngine;
+import studio.ocean.app.mcp.McpClientManager;
 
 /** Connects explicit provider tool calls to the native runtime; prose is never executable. */
 public final class OceanAgentRunner {
@@ -55,6 +56,7 @@ public final class OceanAgentRunner {
     private final SmartRouter smartRouter = new SmartRouter();
     private final CredentialVault credentialVault;
     private final ProviderExecutionEngine providerExecutionEngine;
+    private final McpClientManager mcpClientManager;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile Thread worker;
@@ -69,6 +71,7 @@ public final class OceanAgentRunner {
         connectionStore = new ProviderConnectionStore(this.context);
         credentialVault = new CredentialVault(this.context);
         providerExecutionEngine = new ProviderExecutionEngine(this.context);
+        mcpClientManager = McpClientManager.getInstance(this.context);
     }
     public boolean isRunning() { return running.get(); }
     public void cancel() {
@@ -138,9 +141,13 @@ public final class OceanAgentRunner {
                             }
                         } else {
                             OceanModelConfig config;
-                            if (decision != null && (decision.connection.strategy == AuthStrategy.API_KEY || decision.connection.strategy == AuthStrategy.CUSTOM_ENDPOINT)) {
-                                String apiKey = credentialVault.retrieve(decision.connection.credentialRef);
-                                config = new OceanModelConfig(decision.connection.providerId, decision.selectedModel, apiKey != null ? apiKey : "", decision.connection.baseUrl);
+                            if (decision != null && (decision.connection.strategy == AuthStrategy.API_KEY
+                                    || decision.connection.strategy == AuthStrategy.CUSTOM_ENDPOINT
+                                    || decision.connection.strategy == AuthStrategy.DIRECT_OAUTH
+                                    || decision.connection.strategy == AuthStrategy.DEVICE_CODE
+                                    || decision.connection.strategy == AuthStrategy.OFFICIAL_OAUTH)) {
+                                String tokenOrKey = credentialVault.retrieve(decision.connection.credentialRef);
+                                config = new OceanModelConfig(decision.connection.providerId, decision.selectedModel, tokenOrKey != null ? tokenOrKey : "", decision.connection.baseUrl);
                             } else {
                                 if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
                                 config = configuredModel();
@@ -153,6 +160,15 @@ public final class OceanAgentRunner {
                             status(callback, "Working with " + config.model + "…");
                             result = conversation.run(text, body -> { CrashSurvival.mark("PROVIDER_REQUEST"); JSONObject reply=send(config,body); CrashSurvival.mark("PROVIDER_RESPONSE_RECEIVED"); return reply; }, (name, args) -> {
                             CrashSurvival.mark("EXECUTE_AGENT_TOOL");
+                            if (mcpClientManager.isMcpTool(name)) {
+                                return runRuntimeTool("MCP tool", name, callback, () -> {
+                                    try {
+                                        return mcpClientManager.callTool(name, args);
+                                    } catch (Exception e) {
+                                        throw new IOException("MCP tool execution failed: " + e.getMessage(), e);
+                                    }
+                                });
+                            }
                             if (name.equals("open_terminal")) { if(!pluginConnected("terminal")) throw new IOException("Ocean Terminal plugin is disconnected."); return openTerminal(callback); }
                             if (name.equals("dispatch_android_app")) {
                                 return runRuntimeTool("App messaging", name, callback, () -> studio.ocean.app.device.DeviceControlService.execute(context, name, args));

@@ -158,6 +158,15 @@
             </LinearLayout>
         </ScrollView>
         <TextView android:id="@+id/sign_out" style="@style/OceanNavItem" android:text="@string/sign_out" />
+        <TextView android:id="@+id/app_version_provenance"
+            style="@style/OceanNavMuted"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="12dp"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:textColor="#A8A29E" />
     </LinearLayout>
     <include android:id="@+id/agent_controls_drawer" layout="@layout/drawer_agent_controls"
         android:layout_width="320dp" android:layout_height="match_parent"

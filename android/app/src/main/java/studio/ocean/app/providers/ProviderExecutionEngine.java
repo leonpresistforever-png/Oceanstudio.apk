@@ -200,6 +200,10 @@ public final class ProviderExecutionEngine {
                     if (conn.expiresAtEpochMs != null && System.currentTimeMillis() > conn.expiresAtEpochMs) {
                         throw new IOException("Authentication session expired; reauthentication required");
                     }
+                    boolean probeOk = probeOAuthToken(conn.providerId, token);
+                    if (!probeOk) {
+                        throw new IOException("Provider authentication probe failed: token invalid, revoked, or expired");
+                    }
                     mainHandler.post(callback::onSuccess);
                     return;
                 }
@@ -255,5 +259,22 @@ public final class ProviderExecutionEngine {
             throw new IOException("HTTP " + code + ": " + respText);
         }
         return new JSONObject(respText);
+    }
+
+    private boolean probeOAuthToken(String providerId, String token) {
+        try {
+            String probeUrl = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1";
+            if ("openai".equals(providerId)) {
+                probeUrl = "https://api.openai.com/v1/models";
+            }
+            HttpURLConnection conn = (HttpURLConnection) new URL(probeUrl).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
+            return conn.getResponseCode() >= 200 && conn.getResponseCode() < 300;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

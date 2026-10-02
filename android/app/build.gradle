@@ -20,6 +20,21 @@ def resolveOceanFirebaseApiKey() {
     return ''
 }
 
+def resolveOceanBuildCommit() {
+    def fromEnv = System.getenv('OCEAN_BUILD_COMMIT')
+    if (fromEnv != null && !fromEnv.trim().isEmpty()) return fromEnv.trim()
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-parse', 'HEAD'
+            standardOutput = stdout
+        }
+        def res = stdout.toString().trim()
+        if (!res.isEmpty()) return res
+    } catch (Exception ignored) {}
+    return 'local'
+}
+
 // AppCompat/Core transitively request different Kotlin stdlib generations.
 // Keep every compatibility artifact on one generation to prevent duplicate classes.
 configurations.configureEach {
@@ -47,7 +62,7 @@ android {
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild { cmake { arguments '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON' } }
         buildConfigField "String", "OCEAN_FIREBASE_API_KEY", "\"${resolveOceanFirebaseApiKey()}\""
-        buildConfigField "String", "OCEAN_BUILD_COMMIT", "\"${System.getenv('OCEAN_BUILD_COMMIT') ?: 'local'}\""
+        buildConfigField "String", "OCEAN_BUILD_COMMIT", "\"${resolveOceanBuildCommit()}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_VERSION", "\"${System.getenv('OCEAN_BOOTSTRAP_VERSION') ?: 'not-bundled'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_SHA256", "\"${System.getenv('OCEAN_BOOTSTRAP_SHA256') ?: 'not-bundled'}\""

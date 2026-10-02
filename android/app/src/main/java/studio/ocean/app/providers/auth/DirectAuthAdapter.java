@@ -42,20 +42,30 @@ public interface DirectAuthAdapter {
 
     final class AuthRequest {
         public final String transactionId;
+        public final String providerId;
+        public final String clientId;
         public final String state;
         public final String codeVerifier;
         public final String codeChallenge;
         public final String redirectUri;
         public final List<String> scopes;
 
-        public AuthRequest(String transactionId, String state, String codeVerifier,
-                           String codeChallenge, String redirectUri, List<String> scopes) {
+        public AuthRequest(String transactionId, String providerId, String clientId,
+                           String state, String codeVerifier, String codeChallenge,
+                           String redirectUri, List<String> scopes) {
             this.transactionId = transactionId;
+            this.providerId = providerId;
+            this.clientId = clientId;
             this.state = state;
             this.codeVerifier = codeVerifier;
             this.codeChallenge = codeChallenge;
             this.redirectUri = redirectUri;
             this.scopes = scopes;
+        }
+
+        public AuthRequest(String transactionId, String state, String codeVerifier,
+                           String codeChallenge, String redirectUri, List<String> scopes) {
+            this(transactionId, "unknown", null, state, codeVerifier, codeChallenge, redirectUri, scopes);
         }
     }
 

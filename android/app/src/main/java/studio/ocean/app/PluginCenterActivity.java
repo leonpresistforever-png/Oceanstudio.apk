@@ -31,6 +31,10 @@ import java.util.HashSet;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import studio.ocean.app.mcp.McpClientManager;
+import studio.ocean.app.mcp.McpServerConfig;
+import studio.ocean.app.mcp.McpStatus;
+import studio.ocean.app.mcp.McpTransportType;
 
 /**
  * Native capability center for tools the Ocean Agent can use.
@@ -69,7 +73,9 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private String hubSection = "plugins";
     private String skillsFilter = "";
     private String skillsSortMode = "name";
-    private String statusFilter = "all";
+    private String pluginStatusFilter = "all";
+    private String skillStatusFilter = "all";
+    private String mcpStatusFilter = "all";
     private String mcpsFilter = "";
     private ActivityResultLauncher<String> pluginImportPicker;
     private ActivityResultLauncher<String> skillImportPicker;
@@ -213,13 +219,21 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
         int visible=0,installed=0;
         for(Item item:items){
-            if(connected(item)){
+            boolean isConnected = connected(item);
+            if(isConnected){
                 addInstalledTile(item);
                 installed++;
             }
             if(!q.isEmpty()&&!item.name.toLowerCase(java.util.Locale.ROOT).contains(q)
                     &&!item.description.toLowerCase(java.util.Locale.ROOT).contains(q)
                     &&!item.id.toLowerCase(java.util.Locale.ROOT).contains(q)) continue;
+
+            boolean matchesStatus = "all".equals(pluginStatusFilter)
+                    || ("connected".equals(pluginStatusFilter) && isConnected)
+                    || ("available".equals(pluginStatusFilter) && item.available)
+                    || ("unavailable".equals(pluginStatusFilter) && !item.available);
+            if (!matchesStatus) continue;
+
             addRow(item);
             visible++;
         }
@@ -551,7 +565,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
         if(pluginsScroll!=null)pluginsScroll.setVisibility("plugins".equals(section)?View.VISIBLE:View.GONE);
         if(skillsScroll!=null)skillsScroll.setVisibility("skills".equals(section)?View.VISIBLE:View.GONE);
         if(mcpsScroll!=null)mcpsScroll.setVisibility("mcps".equals(section)?View.VISIBLE:View.GONE);
-        if("skills".equals(section)||"mcps".equals(section))renderHubSections();
+        if("plugins".equals(section)) render(search != null ? search.getText().toString() : "");
+        else renderHubSections();
     }
 
     private void renderHubSections(){
@@ -574,8 +589,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
                     &&!id.toLowerCase(java.util.Locale.ROOT).contains(q))continue;
             boolean connected="connected".equals(s.optString("status"));
             boolean draft="draft".equals(s.optString("status"));
-            if("connected".equals(statusFilter)&&!connected)continue;
-            if("draft".equals(statusFilter)&&!draft)continue;
+            if("connected".equals(skillStatusFilter)&&!connected)continue;
+            if("draft".equals(skillStatusFilter)&&!draft)continue;
             LinearLayout card=skillRow(s,connected,draft);
             card.setOnClickListener(v->openSkillDetailSheet(id));
             skillsList.addView(card);
@@ -589,35 +604,40 @@ public final class PluginCenterActivity extends AppCompatActivity {
         }
         mcpsList.removeAllViews();
         TextView mIntro=new TextView(this);
-        mIntro.setText("MCP servers created or saved by you or the agent. Connect to enable tools in a session.");
+        mIntro.setText("MCP servers created or saved by you or the agent. Connect to perform real protocol handshake and discover capabilities.");
         mIntro.setTextColor(MUTED);mIntro.setTextSize(13);mIntro.setPadding(0,0,0,dp(14));
         mcpsList.addView(mIntro);
-        JSONArray mcps=hub.mcps();
-        if(mcps.length()==0){
+        List<McpServerConfig> mcps=McpClientManager.getInstance(this).listServers();
+        if(mcps.isEmpty()){
             TextView empty=new TextView(this);
-            empty.setText("No MCP servers yet. Ask the agent to scaffold one, or add manually from Agent drawer.");
+            empty.setText("No MCP servers yet. Tap '+ Add MCP' below to register a server.");
             empty.setTextColor(MUTED);empty.setTextSize(13);
             mcpsList.addView(empty);
         }
         String mq=mcpsFilter==null?"":mcpsFilter.trim().toLowerCase(java.util.Locale.ROOT);
         int mShown=0;
-        for(int i=0;i<mcps.length();i++){
-            JSONObject m=mcps.optJSONObject(i);if(m==null)continue;
-            String name=m.optString("name");
-            String cmd=m.optString("command","stdio transport");
+        for(McpServerConfig m : mcps){
+            if(m==null)continue;
+            String name=m.name!=null?m.name:"";
+            String cmd=m.command!=null?m.command:"";
+            String ep=m.endpointUrl!=null?m.endpointUrl:"";
             if(!mq.isEmpty()&&!name.toLowerCase(java.util.Locale.ROOT).contains(mq)
-                    &&!cmd.toLowerCase(java.util.Locale.ROOT).contains(mq))continue;
-            boolean connected=m.optBoolean("connected",false);
-            if("connected".equals(statusFilter)&&!connected)continue;
-            if("draft".equals(statusFilter))continue;
-            LinearLayout card=mcpRow(m,connected);
-            card.setOnClickListener(v->toggleMcp(m.optString("id"),!connected));
+                    &&!cmd.toLowerCase(java.util.Locale.ROOT).contains(mq)
+                    &&!ep.toLowerCase(java.util.Locale.ROOT).contains(mq))continue;
+
+            boolean connected=m.isConnected();
+            if("connected".equals(mcpStatusFilter)&&!connected)continue;
+            if("saved".equals(mcpStatusFilter)&&(connected||m.status==McpStatus.START_ERROR||m.status==McpStatus.PROTOCOL_ERROR))continue;
+            if("error".equals(mcpStatusFilter)&&m.status!=McpStatus.START_ERROR&&m.status!=McpStatus.PROTOCOL_ERROR)continue;
+
+            LinearLayout card=mcpRow(m);
+            card.setOnClickListener(v->openMcpDetailSheet(m));
             mcpsList.addView(card);
             mShown++;
         }
-        if(mShown==0&&mcps.length()>0){
+        if(mShown==0&&!mcps.isEmpty()){
             TextView empty=new TextView(this);
-            empty.setText("connected".equals(statusFilter)?"No connected MCP servers.":"No matching MCP servers.");
+            empty.setText("connected".equals(mcpStatusFilter)?"No connected MCP servers.":"No matching MCP servers.");
             empty.setTextColor(MUTED);empty.setTextSize(13);
             mcpsList.addView(empty);
         }
@@ -666,11 +686,13 @@ public final class PluginCenterActivity extends AppCompatActivity {
         return row;
     }
 
-    private LinearLayout mcpRow(JSONObject m,boolean connected){
-        String transport=m.optString("transport","stdio");
-        int iconRes = OceanIconRegistry.getSkillIcon(m.optString("id"), m.optString("name"), m.optString("command"));
-        return hubCard(m.optString("name"),transport+" · "+m.optString("command",""),
-                connected?"Connected":"Connect",connected,iconRes);
+    private LinearLayout mcpRow(McpServerConfig m){
+        int iconRes = OceanIconRegistry.getSkillIcon(m.id, m.name, m.command);
+        String subtitle = m.transport.label + " · " + m.getRedactedEndpointOrCommand();
+        if (m.tools != null && m.tools.length() > 0) {
+            subtitle += " · " + m.tools.length() + " tool" + (m.tools.length() > 1 ? "s" : "");
+        }
+        return hubCard(m.name, subtitle, m.status.label, m.isConnected(), iconRes);
     }
 
     private void openSkillDetailSheet(String id){
@@ -894,23 +916,71 @@ public final class PluginCenterActivity extends AppCompatActivity {
     private void showFilterBottomSheet(){
         Dialog dialog=new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout sheet=hubBottomSheet("Filter capabilities");
-        addSheetAction(sheet,"All capabilities"+("all".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
-            statusFilter="all";
-            renderHubSections();
-            dialog.dismiss();
-        });
-        addSheetAction(sheet,"Connected only"+("connected".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
-            statusFilter="connected";
-            renderHubSections();
-            dialog.dismiss();
-        });
-        addSheetAction(sheet,"Drafts only"+("draft".equals(statusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
-            statusFilter="draft";
-            renderHubSections();
-            dialog.dismiss();
-        });
-        dialog.setContentView(sheet);
+        if ("plugins".equals(hubSection)) {
+            LinearLayout sheet=hubBottomSheet("Filter plugins");
+            addSheetAction(sheet,"All plugins"+("all".equals(pluginStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                pluginStatusFilter="all";
+                render(search!=null?search.getText().toString():"");
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Connected only"+("connected".equals(pluginStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                pluginStatusFilter="connected";
+                render(search!=null?search.getText().toString():"");
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Available only"+("available".equals(pluginStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                pluginStatusFilter="available";
+                render(search!=null?search.getText().toString():"");
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Unavailable only"+("unavailable".equals(pluginStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                pluginStatusFilter="unavailable";
+                render(search!=null?search.getText().toString():"");
+                dialog.dismiss();
+            });
+            dialog.setContentView(sheet);
+        } else if ("skills".equals(hubSection)) {
+            LinearLayout sheet=hubBottomSheet("Filter skills");
+            addSheetAction(sheet,"All skills"+("all".equals(skillStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                skillStatusFilter="all";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Connected only"+("connected".equals(skillStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                skillStatusFilter="connected";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Drafts only"+("draft".equals(skillStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                skillStatusFilter="draft";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            dialog.setContentView(sheet);
+        } else {
+            LinearLayout sheet=hubBottomSheet("Filter MCP servers");
+            addSheetAction(sheet,"All servers"+("all".equals(mcpStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                mcpStatusFilter="all";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Connected only"+("connected".equals(mcpStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                mcpStatusFilter="connected";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Saved / Not verified"+("saved".equals(mcpStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                mcpStatusFilter="saved";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            addSheetAction(sheet,"Error only"+("error".equals(mcpStatusFilter)?"  ✓":""),R.drawable.ic_filter,()->{
+                mcpStatusFilter="error";
+                renderHubSections();
+                dialog.dismiss();
+            });
+            dialog.setContentView(sheet);
+        }
         presentBottomSheet(dialog);
     }
 
@@ -1100,39 +1170,290 @@ public final class PluginCenterActivity extends AppCompatActivity {
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setPadding(dp(26),dp(12),dp(26),dp(28));
         sheet.setBackground(topSheet());
+
+        View handle=new View(this);
+        handle.setBackground(roundRect(0xff737373,999,0x00000000));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(dp(52),dp(4));
+        hp.gravity=Gravity.CENTER_HORIZONTAL;hp.bottomMargin=dp(16);
+        sheet.addView(handle,hp);
+
         TextView title=new TextView(this);
         title.setText("Add MCP server");
         title.setTextColor(INK);title.setTextSize(20);title.setTypeface(null,Typeface.BOLD);
         sheet.addView(title);
-        EditText name=new EditText(this);name.setHint("Server name");
+
+        TextView subtitle=new TextView(this);
+        subtitle.setText("Model Context Protocol server. Registered with status Saved; Connect to verify capabilities.");
+        subtitle.setTextColor(MUTED);subtitle.setTextSize(13);
+        LinearLayout.LayoutParams subLp=new LinearLayout.LayoutParams(-1,-2);
+        subLp.topMargin=dp(4);subLp.bottomMargin=dp(14);
+        sheet.addView(subtitle,subLp);
+
+        // Transport selector buttons
+        final String[] selectedTransport = {"stdio"};
+        LinearLayout transportBar = new LinearLayout(this);
+        transportBar.setOrientation(LinearLayout.HORIZONTAL);
+        TextView stdioBtn = new TextView(this);
+        stdioBtn.setText("STDIO (Local)");
+        stdioBtn.setGravity(Gravity.CENTER);
+        stdioBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
+        stdioBtn.setTextColor(INK);stdioBtn.setTypeface(null, Typeface.BOLD);
+        stdioBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        tLp.rightMargin = dp(6);
+        transportBar.addView(stdioBtn, tLp);
+
+        TextView httpBtn = new TextView(this);
+        httpBtn.setText("HTTP (Remote)");
+        httpBtn.setGravity(Gravity.CENTER);
+        httpBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
+        httpBtn.setTextColor(MUTED);
+        httpBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+        transportBar.addView(httpBtn, new LinearLayout.LayoutParams(0, -2, 1f));
+        sheet.addView(transportBar);
+
+        EditText name=new EditText(this);name.setHint("Server name (e.g. SQLite / Git MCP)");
         name.setBackgroundResource(R.drawable.auth_field_background);
         name.setPadding(dp(12),dp(10),dp(12),dp(10));
-        EditText cmd=new EditText(this);cmd.setHint("Command e.g. npx -y @scope/mcp");
-        cmd.setBackgroundResource(R.drawable.auth_field_background);
-        cmd.setPadding(dp(12),dp(10),dp(12),dp(10));
-        LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2);
-        flp.topMargin=dp(14);
-        sheet.addView(name,flp);
-        flp.topMargin=dp(10);
-        sheet.addView(cmd,flp);
+        LinearLayout.LayoutParams nLp=new LinearLayout.LayoutParams(-1,-2);
+        nLp.topMargin=dp(14);
+        sheet.addView(name,nLp);
+
+        EditText targetInput=new EditText(this);
+        targetInput.setHint("Executable command (e.g. ocean-tool or python3 server.py)");
+        targetInput.setBackgroundResource(R.drawable.auth_field_background);
+        targetInput.setPadding(dp(12),dp(10),dp(12),dp(10));
+        LinearLayout.LayoutParams cLp=new LinearLayout.LayoutParams(-1,-2);
+        cLp.topMargin=dp(10);
+        sheet.addView(targetInput,cLp);
+
+        stdioBtn.setOnClickListener(v -> {
+            selectedTransport[0] = "stdio";
+            stdioBtn.setTextColor(INK);stdioBtn.setTypeface(null, Typeface.BOLD);
+            stdioBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
+            httpBtn.setTextColor(MUTED);httpBtn.setTypeface(null, Typeface.NORMAL);
+            httpBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            targetInput.setHint("Executable command (e.g. ocean-tool or python3 server.py)");
+        });
+
+        httpBtn.setOnClickListener(v -> {
+            selectedTransport[0] = "http";
+            httpBtn.setTextColor(INK);httpBtn.setTypeface(null, Typeface.BOLD);
+            httpBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
+            stdioBtn.setTextColor(MUTED);stdioBtn.setTypeface(null, Typeface.NORMAL);
+            stdioBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            targetInput.setHint("Endpoint URL (e.g. https://api.example.com/mcp)");
+        });
+
         TextView save=new TextView(this);
         save.setGravity(Gravity.CENTER);
-        save.setText("Save MCP");
+        save.setText("Save MCP (Unverified)");
         save.setTextColor(Color.WHITE);
         save.setTypeface(null,Typeface.BOLD);
         save.setBackground(roundRect(0xff111111,999,0x00000000));
-        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(52));
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,dp(50));
         slp.topMargin=dp(20);
         sheet.addView(save,slp);
+
         save.setOnClickListener(v->{
+            String sName = name.getText().toString().trim();
+            String sTarget = targetInput.getText().toString().trim();
+            if (sName.isEmpty()) {
+                Toast.makeText(this, "Please enter a server name", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (sTarget.isEmpty()) {
+                Toast.makeText(this, "Please enter a command or endpoint URL", Toast.LENGTH_SHORT).show();
+                return;
+            }
             try{
-                hub.addMcp(name.getText().toString().trim(),"stdio",cmd.getText().toString().trim());
+                McpServerConfig cfg = new McpServerConfig(sName, McpTransportType.fromString(selectedTransport[0]));
+                if ("stdio".equals(selectedTransport[0])) {
+                    cfg.command = sTarget;
+                } else {
+                    cfg.endpointUrl = sTarget;
+                }
+                cfg.status = McpStatus.SAVED;
+                McpClientManager.getInstance(this).updateServerInStore(cfg);
                 dialog.dismiss();
                 renderHubSections();
+                Toast.makeText(this, "MCP saved. Tap server card to verify connection.", Toast.LENGTH_SHORT).show();
             }catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();}
         });
         dialog.setContentView(sheet);
         presentBottomSheet(dialog);
+    }
+
+    private void openMcpDetailSheet(McpServerConfig server) {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(26), dp(12), dp(26), dp(28));
+        sheet.setBackground(topSheet());
+
+        View handle = new View(this);
+        handle.setBackground(roundRect(0xff737373, 999, 0x00000000));
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(dp(52), dp(4));
+        hp.gravity = Gravity.CENTER_HORIZONTAL; hp.bottomMargin = dp(16);
+        sheet.addView(handle, hp);
+
+        TextView title = new TextView(this);
+        title.setText(server.name);
+        title.setTextColor(INK); title.setTextSize(20); title.setTypeface(null, Typeface.BOLD);
+        sheet.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText(server.transport.label + " · Status: " + server.status.label);
+        sub.setTextColor(server.isConnected() ? INK : (server.status == McpStatus.START_ERROR || server.status == McpStatus.PROTOCOL_ERROR ? 0xffdc2626 : MUTED));
+        sub.setTextSize(13);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.topMargin = dp(4); subLp.bottomMargin = dp(14);
+        sheet.addView(sub, subLp);
+
+        // Technical details container
+        LinearLayout infoBox = new LinearLayout(this);
+        infoBox.setOrientation(LinearLayout.VERTICAL);
+        infoBox.setBackground(roundRect(SURFACE_MUTED, 12, BORDER));
+        infoBox.setPadding(dp(14), dp(12), dp(14), dp(12));
+        sheet.addView(infoBox);
+
+        addInfoRow(infoBox, "Target", server.getRedactedEndpointOrCommand());
+        addInfoRow(infoBox, "Protocol Version", server.protocolVersion != null ? server.protocolVersion : "Not negotiated");
+        addInfoRow(infoBox, "Server Version", server.serverVersion != null ? server.serverVersion : "N/A");
+        addInfoRow(infoBox, "Latency", server.latencyMs > 0 ? server.latencyMs + " ms" : "N/A");
+        addInfoRow(infoBox, "Discovered Tools", String.valueOf(server.tools != null ? server.tools.length() : 0));
+
+        // Discovered tools list
+        if (server.tools != null && server.tools.length() > 0) {
+            TextView toolsTitle = new TextView(this);
+            toolsTitle.setText("Advertised Tools:");
+            toolsTitle.setTextColor(INK); toolsTitle.setTextSize(14); toolsTitle.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams ttLp = new LinearLayout.LayoutParams(-1, -2);
+            ttLp.topMargin = dp(14); ttLp.bottomMargin = dp(6);
+            sheet.addView(toolsTitle, ttLp);
+
+            for (int i = 0; i < Math.min(server.tools.length(), 6); i++) {
+                JSONObject t = server.tools.optJSONObject(i);
+                if (t == null) continue;
+                TextView toolItem = new TextView(this);
+                toolItem.setText("• " + t.optString("name") + " — " + t.optString("description", "No description"));
+                toolItem.setTextColor(MUTED); toolItem.setTextSize(12);
+                toolItem.setPadding(0, dp(2), 0, dp(2));
+                sheet.addView(toolItem);
+            }
+            if (server.tools.length() > 6) {
+                TextView more = new TextView(this);
+                more.setText("+ " + (server.tools.length() - 6) + " more tools");
+                more.setTextColor(MUTED); more.setTextSize(12);
+                sheet.addView(more);
+            }
+        }
+
+        // Error message if present
+        if (server.lastError != null && !server.lastError.isEmpty()) {
+            TextView errView = new TextView(this);
+            errView.setText("Last Error: " + server.lastError);
+            errView.setTextColor(0xffdc2626); errView.setTextSize(12);
+            errView.setPadding(dp(12), dp(8), dp(12), dp(8));
+            errView.setBackground(roundRect(0xfffef2f2, 8, 0xfffca5a5));
+            LinearLayout.LayoutParams epLp = new LinearLayout.LayoutParams(-1, -2);
+            epLp.topMargin = dp(12);
+            sheet.addView(errView, epLp);
+        }
+
+        // Action Buttons Row
+        LinearLayout actionsRow = new LinearLayout(this);
+        actionsRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionsRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams aLp = new LinearLayout.LayoutParams(-1, dp(48));
+        aLp.topMargin = dp(20);
+        sheet.addView(actionsRow, aLp);
+
+        TextView actionBtn = new TextView(this);
+        actionBtn.setGravity(Gravity.CENTER);
+        actionBtn.setTextSize(13); actionBtn.setTypeface(null, Typeface.BOLD);
+        if (server.isConnected()) {
+            actionBtn.setText("Disconnect");
+            actionBtn.setTextColor(INK);
+            actionBtn.setBackground(roundRect(SURFACE_MUTED, 999, BORDER));
+            actionBtn.setOnClickListener(v -> {
+                McpClientManager.getInstance(this).disconnect(server.id);
+                server.status = McpStatus.DISCONNECTED;
+                McpClientManager.getInstance(this).updateServerInStore(server);
+                dialog.dismiss();
+                renderHubSections();
+                Toast.makeText(this, "Disconnected from " + server.name, Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            actionBtn.setText(server.status == McpStatus.START_ERROR || server.status == McpStatus.PROTOCOL_ERROR ? "Retry Handshake" : "Connect & Verify");
+            actionBtn.setTextColor(Color.WHITE);
+            actionBtn.setBackground(roundRect(0xff111111, 999, 0x00000000));
+            actionBtn.setOnClickListener(v -> {
+                actionBtn.setText("Connecting...");
+                actionBtn.setEnabled(false);
+                McpClientManager.getInstance(this).connect(server, new McpClientManager.HandshakeCallback() {
+                    @Override
+                    public void onProgress(McpStatus status) {
+                        runOnUiThread(() -> actionBtn.setText(status.label));
+                    }
+                    @Override
+                    public void onSuccess(McpServerConfig config) {
+                        runOnUiThread(() -> {
+                            dialog.dismiss();
+                            renderHubSections();
+                            Toast.makeText(PluginCenterActivity.this, "Connected! Discovered " + config.tools.length() + " tools.", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                    @Override
+                    public void onFailure(McpStatus errorStatus, String error) {
+                        runOnUiThread(() -> {
+                            actionBtn.setEnabled(true);
+                            actionBtn.setText("Retry Handshake");
+                            Toast.makeText(PluginCenterActivity.this, "Handshake failed: " + error, Toast.LENGTH_LONG).show();
+                            dialog.dismiss();
+                            renderHubSections();
+                        });
+                    }
+                });
+            });
+        }
+        actionsRow.addView(actionBtn, new LinearLayout.LayoutParams(0, dp(44), 1f));
+
+        TextView deleteBtn = new TextView(this);
+        deleteBtn.setText("Delete");
+        deleteBtn.setGravity(Gravity.CENTER);
+        deleteBtn.setTextColor(0xffdc2626);
+        deleteBtn.setTextSize(13); deleteBtn.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams delLp = new LinearLayout.LayoutParams(dp(80), dp(44));
+        delLp.leftMargin = dp(8);
+        deleteBtn.setOnClickListener(v -> {
+            McpClientManager.getInstance(this).deleteServer(server.id);
+            dialog.dismiss();
+            renderHubSections();
+            Toast.makeText(this, "Server removed", Toast.LENGTH_SHORT).show();
+        });
+        actionsRow.addView(deleteBtn, delLp);
+
+        dialog.setContentView(sheet);
+        presentBottomSheet(dialog);
+    }
+
+    private void addInfoRow(LinearLayout container, String key, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(2), 0, dp(2));
+        TextView kView = new TextView(this);
+        kView.setText(key + ":");
+        kView.setTextColor(MUTED); kView.setTextSize(12);
+        kView.setLayoutParams(new LinearLayout.LayoutParams(dp(130), -2));
+        row.addView(kView);
+        TextView vView = new TextView(this);
+        vView.setText(value);
+        vView.setTextColor(INK); vView.setTextSize(12); vView.setTypeface(null, Typeface.BOLD);
+        vView.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(vView);
+        container.addView(row);
     }
 
     private LinearLayout hubCard(String title,String body,String action,boolean active,int iconRes){
@@ -1172,18 +1493,6 @@ public final class PluginCenterActivity extends AppCompatActivity {
         a.setBackground(roundRect(SURFACE_MUTED,999,BORDER));
         card.addView(a);
         return card;
-    }
-
-    private void toggleMcp(String id,boolean connect){
-        try{
-            JSONArray arr=hub.mcps();
-            for(int i=0;i<arr.length();i++){
-                JSONObject m=arr.getJSONObject(i);
-                if(id.equals(m.optString("id"))){m.put("connected",connect);m.put("status",connect?"connected":"saved");}
-            }
-            hub.saveMcps(arr);
-            renderHubSections();
-        }catch(Exception ignored){}
     }
 
     private boolean exists(String relative){

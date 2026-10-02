@@ -11,14 +11,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import studio.ocean.app.providers.ProviderRegistry;
 import studio.ocean.app.providers.model.AuthStrategy;
 import studio.ocean.app.providers.model.ConnectionStatus;
+import studio.ocean.app.providers.model.ModelDescriptor;
 import studio.ocean.app.providers.model.ProviderConnection;
 import studio.ocean.app.providers.model.ProviderDescriptor;
+import studio.ocean.app.providers.model.QuotaSnapshot;
 import studio.ocean.app.providers.state.CredentialVault;
 import studio.ocean.app.providers.state.ProviderConnectionStore;
 
 /**
  * Orchestrates Direct Connect authentication, PKCE challenge generation,
- * state validation, transaction lifecycle, and credential persistence (Directive 3 §5).
+ * state validation, transaction lifecycle, and credential persistence (Directive 2026-10-02 §4, §5).
+ * Connects only to genuine upstream endpoints; strictly bans fake tokens and scaffolds.
  */
 public final class AuthOrchestrator {
 
@@ -35,7 +38,8 @@ public final class AuthOrchestrator {
     private final CredentialVault credentialVault;
     private final ProviderConnectionStore connectionStore;
     private final Map<String, DirectAuthAdapter> adapters = new ConcurrentHashMap<>();
-    private final Map<String, DirectAuthAdapter.AuthRequest> activeRequests = new ConcurrentHashMap<>();
+    private final Map<String, DirectAuthAdapter.AuthRequest> activeRequestsByTxId = new ConcurrentHashMap<>();
+    private final Map<String, DirectAuthAdapter.AuthRequest> activeRequestsByState = new ConcurrentHashMap<>();
 
     public AuthOrchestrator(Context context) {
         this.context = context.getApplicationContext();
@@ -45,8 +49,13 @@ public final class AuthOrchestrator {
     }
 
     private void registerDefaultAdapters() {
-        // Register Kimi device-code adapter
-        adapters.put(ProviderRegistry.ID_KIMI, new KimiDirectAuthAdapter());
+        GoogleDirectAuthAdapter googleAdapter = new GoogleDirectAuthAdapter(context);
+        adapters.put(ProviderRegistry.ID_GOOGLE, googleAdapter);
+        adapters.put(ProviderRegistry.ID_ANTIGRAVITY, googleAdapter);
+
+        adapters.put(ProviderRegistry.ID_OPENAI, new OpenAiDirectAuthAdapter(context));
+        adapters.put(ProviderRegistry.ID_ANTHROPIC, new AnthropicDirectAuthAdapter(context));
+        adapters.put(ProviderRegistry.ID_KIMI, new KimiDirectAuthAdapter(context));
     }
 
     public static String generateCodeVerifier() {
@@ -78,16 +87,7 @@ public final class AuthOrchestrator {
     public void startDirectConnect(ProviderDescriptor desc, AuthFlowCallback callback) {
         DirectAuthAdapter adapter = adapters.get(desc.id);
         if (adapter == null) {
-            // Direct Connect unavailable for providers without registered public client flows
-            if (ProviderRegistry.ID_OPENAI.equals(desc.id)) {
-                callback.onFailure("Sign in with ChatGPT is feature-gated to registered Ocean client IDs.\n\nPlease connect with Codex CLI Bridge or provide an API Key.");
-            } else if (ProviderRegistry.ID_GOOGLE.equals(desc.id) || ProviderRegistry.ID_ANTIGRAVITY.equals(desc.id)) {
-                callback.onFailure("Google Antigravity account login is managed via the official CLI bridge ('agy').\n\nPlease connect via agy CLI Bridge or provide an API Key.");
-            } else if (ProviderRegistry.ID_ANTHROPIC.equals(desc.id)) {
-                callback.onFailure("Claude Code account sessions are managed via the official CLI ('claude').\n\nPlease connect via Claude Code CLI Bridge or provide an API Key.");
-            } else {
-                callback.onFailure("Direct Connect is unavailable for " + desc.title + " in this build.\n\nPlease connect using an API Key.");
-            }
+            callback.onFailure("Direct Connect is unavailable for " + desc.title + " in this build.\n\nPlease connect using an API Key.");
             return;
         }
 
@@ -114,10 +114,12 @@ public final class AuthOrchestrator {
                 String verifier = generateCodeVerifier();
                 String challenge = generateCodeChallenge(verifier);
 
+                String customClientId = credentialVault.retrieve("oauth_client_id_" + desc.id);
                 DirectAuthAdapter.AuthRequest req = new DirectAuthAdapter.AuthRequest(
-                        txId, state, verifier, challenge, "ocean://auth/callback", Collections.singletonList("model:chat")
+                        txId, desc.id, customClientId, state, verifier, challenge, "ocean://auth/callback", Collections.singletonList("model:chat")
                 );
-                activeRequests.put(txId, req);
+                activeRequestsByTxId.put(txId, req);
+                activeRequestsByState.put(state, req);
 
                 DirectAuthAdapter.AuthStartResult startResult = adapter.start(req);
                 if (startResult.isDeviceCode) {
@@ -131,80 +133,123 @@ public final class AuthOrchestrator {
         }).start();
     }
 
+    public void handleCallback(Uri uri, AuthFlowCallback callback) {
+        handleCallback(uri, null, callback);
+    }
+
     public void handleCallback(Uri uri, String transactionId, AuthFlowCallback callback) {
-        if (uri == null || transactionId == null) {
-            callback.onFailure("Invalid authentication callback URI or transaction ID.");
+        if (uri == null) {
+            callback.onFailure("Invalid authentication callback: URI is null.");
             return;
         }
 
-        DirectAuthAdapter.AuthRequest req = activeRequests.get(transactionId);
-        if (req == null) {
-            callback.onFailure("Authentication transaction expired or already completed.");
-            return;
-        }
-
-        // Verify state token matches to prevent CSRF / session fixation attacks (Directive 3 §5.1)
         String stateFromUri = uri.getQueryParameter("state");
+        DirectAuthAdapter.AuthRequest req = null;
+
+        if (transactionId != null) {
+            req = activeRequestsByTxId.remove(transactionId);
+        }
+        if (req == null && stateFromUri != null) {
+            req = activeRequestsByState.remove(stateFromUri);
+        }
+
+        if (req == null) {
+            callback.onFailure("Authentication transaction expired or already completed (replay rejected).");
+            return;
+        }
+
+        // Clean up both maps to prevent replay
+        activeRequestsByTxId.remove(req.transactionId);
+        activeRequestsByState.remove(req.state);
+
+        // Verify state parameter matches
         if (stateFromUri == null || !stateFromUri.equals(req.state)) {
-            activeRequests.remove(transactionId);
             callback.onFailure("Authentication state mismatch. Possible replay or CSRF attack rejected.");
             return;
         }
 
-        // State matched! Remove active request to prevent reuse
-        activeRequests.remove(transactionId);
+        final DirectAuthAdapter.AuthRequest finalReq = req;
+        new Thread(() -> {
+            try {
+                String err = uri.getQueryParameter("error");
+                String errDesc = uri.getQueryParameter("error_description");
+                if (err != null) {
+                    callback.onFailure("Provider authorization was denied: " + (errDesc != null ? errDesc : err));
+                    return;
+                }
 
-        // Process token exchange
-        // ... (Stores secrets in credentialVault and updates ProviderConnectionStore)
-    }
+                DirectAuthAdapter adapter = adapters.get(finalReq.providerId);
+                if (adapter == null) {
+                    callback.onFailure("No authentication adapter configured for " + finalReq.providerId);
+                    return;
+                }
 
-    private static final class KimiDirectAuthAdapter implements DirectAuthAdapter {
-        @Override
-        public Availability preflight(Context context) {
-            return Availability.available();
-        }
+                // 1. Live token exchange
+                DirectAuthAdapter.AuthResult result = adapter.handleCallback(uri, finalReq);
+                if (!result.isSuccess) {
+                    callback.onFailure("Token exchange failed: " + result.error);
+                    return;
+                }
 
-        @Override
-        public AuthStartResult start(AuthRequest request) {
-            String userCode = "KIMI-" + (1000 + new Random().nextInt(9000));
-            return AuthStartResult.deviceCode(userCode, "https://kimi.com/code/oauth", 5, 600);
-        }
+                // 2. Real minimal authenticated probe before CONNECTED (Directive §4.3 #8, §5)
+                boolean probeSuccess = false;
+                try {
+                    probeSuccess = adapter.probe(result.accessToken, null);
+                } catch (Exception probeEx) {
+                    callback.onFailure("Authentication probe failed: " + probeEx.getMessage());
+                    return;
+                }
 
-        @Override
-        public AuthResult handleCallback(Uri callback, AuthRequest originalRequest) {
-            return AuthResult.failure("Device code flow does not use redirect callbacks.");
-        }
+                if (!probeSuccess) {
+                    callback.onFailure("Provider rejected authentication probe: invalid token or insufficient scopes.");
+                    return;
+                }
 
-        @Override
-        public AuthResult pollDeviceCode(String transactionId) {
-            return AuthResult.success("kimi_device_token_" + UUID.randomUUID(), null,
-                    System.currentTimeMillis() + 86400000L, "kimi_user", "Kimi Account", "Managed Plan");
-        }
+                // 3. Discover models & quota
+                List<ModelDescriptor> discoveredModels = null;
+                try {
+                    discoveredModels = adapter.discoverModels(result.accessToken);
+                } catch (Exception ignored) {}
 
-        @Override
-        public AuthResult refresh(String refreshToken) {
-            return AuthResult.success("kimi_refreshed_" + UUID.randomUUID(), refreshToken,
-                    System.currentTimeMillis() + 86400000L, "kimi_user", "Kimi Account", "Managed Plan");
-        }
+                QuotaSnapshot quota = null;
+                try {
+                    quota = adapter.fetchQuota(result.accessToken);
+                } catch (Exception ignored) {}
 
-        @Override
-        public List<studio.ocean.app.providers.model.ModelDescriptor> discoverModels(String accessToken) {
-            return Collections.emptyList();
-        }
+                String defaultModel = (discoveredModels != null && !discoveredModels.isEmpty())
+                        ? discoveredModels.get(0).id : null;
 
-        @Override
-        public studio.ocean.app.providers.model.QuotaSnapshot fetchQuota(String accessToken) {
-            return studio.ocean.app.providers.model.QuotaSnapshot.reported(null, null,
-                    studio.ocean.app.providers.model.QuotaSnapshot.Unit.PROVIDER_DEFINED, null,
-                    "Kimi Managed Plan", "device-oauth");
-        }
+                // 4. Secure storage in Keystore-backed CredentialVault
+                String tokenToStore = (result.refreshToken != null && !result.refreshToken.isEmpty())
+                        ? result.refreshToken : result.accessToken;
+                String credRef = credentialVault.store(tokenToStore);
 
-        @Override
-        public boolean probe(String accessToken, String model) {
-            return true;
-        }
+                // 5. Save verified ProviderConnection
+                String connId = UUID.randomUUID().toString();
+                String displayName = result.displayName != null ? result.displayName : "Connected Account";
+                ProviderConnection connection = new ProviderConnection(
+                        connId,
+                        finalReq.providerId,
+                        displayName,
+                        AuthStrategy.DIRECT_OAUTH,
+                        ConnectionStatus.CONNECTED,
+                        null,
+                        defaultModel,
+                        credRef,
+                        result.accountId,
+                        result.displayName,
+                        result.planTier,
+                        quota,
+                        result.expiresAtEpochMs,
+                        System.currentTimeMillis()
+                );
 
-        @Override
-        public void logout(String accessToken) {}
+                connectionStore.save(connection);
+                callback.onSuccess(connection);
+
+            } catch (Exception e) {
+                callback.onFailure("Authentication callback processing failed: " + e.getMessage());
+            }
+        }).start();
     }
 }

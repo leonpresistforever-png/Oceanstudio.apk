@@ -70,54 +70,93 @@ public final class LocalModelManager {
     }
 
     private void initBuiltinCatalog() {
-        // Genuine upstream open-source GGUF releases with verified metadata and licenses
-        addCatalogEntry(new LocalModel(
-                "smollm2-360m-instruct",
-                "SmolLM2 360M Instruct",
-                "SmolLM2",
-                "gguf",
-                "Q4_K_M",
-                229267456L, // ~218 MB
-                512,
-                4096,
-                "llama.cpp",
-                "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf",
-                "f9b3f3604f81c9b68c9bc88a55b2d713c7db1bbf58e1b1239c0fa4644a428c0b",
-                "Apache-2.0",
-                "arm64"
-        ));
+        // Attempt to load from models-manifest.json in assets
+        boolean loadedFromManifest = false;
+        try {
+            if (context != null && context.getAssets() != null) {
+                try (InputStream is = context.getAssets().open("models-manifest.json")) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] b = new byte[4096];
+                    int r;
+                    while ((r = is.read(b)) != -1) baos.write(b, 0, r);
+                    JSONObject root = new JSONObject(baos.toString(StandardCharsets.UTF_8.name()));
+                    JSONArray modelsArr = root.optJSONArray("models");
+                    if (modelsArr != null) {
+                        for (int i = 0; i < modelsArr.length(); i++) {
+                            JSONObject mObj = modelsArr.getJSONObject(i);
+                            LocalModel model = new LocalModel(
+                                    mObj.optString("id"),
+                                    mObj.optString("name", mObj.optString("displayName")),
+                                    mObj.optString("family"),
+                                    mObj.optString("format", "gguf"),
+                                    mObj.optString("quantization", "Q4_K_M"),
+                                    mObj.optLong("size", mObj.optLong("sizeBytes")),
+                                    mObj.optInt("min_ram_mb", mObj.optInt("minRamMb", 1024)),
+                                    mObj.optInt("context_length", mObj.optInt("context", 4096)),
+                                    mObj.optString("runtime", "llama.cpp"),
+                                    mObj.optString("url", mObj.optString("sourceUrl")),
+                                    mObj.optString("sha256"),
+                                    mObj.optString("license", "Apache-2.0"),
+                                    mObj.optString("arch", "arm64")
+                            );
+                            addCatalogEntry(model);
+                        }
+                        loadedFromManifest = true;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
 
-        addCatalogEntry(new LocalModel(
-                "qwen2.5-coder-0.5b",
-                "Qwen 2.5 Coder 0.5B Instruct",
-                "Qwen2.5-Coder",
-                "gguf",
-                "Q4_K_M",
-                393842688L, // ~375 MB
-                1024,
-                8192,
-                "llama.cpp",
-                "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
-                "89a263fa7db38ac68748d5eb2eb644e54c86b24d9c79f97ad76e01a884da4595",
-                "Apache-2.0",
-                "arm64"
-        ));
+        if (!loadedFromManifest) {
+            // Genuine upstream open-source GGUF releases with verified metadata and licenses
+            addCatalogEntry(new LocalModel(
+                    "qwen2.5-coder-0.5b",
+                    "Qwen 2.5 Coder 0.5B Instruct",
+                    "Qwen2.5-Coder",
+                    "gguf",
+                    "Q4_K_M",
+                    491400064L, // ~491 MB
+                    1024,
+                    8192,
+                    "llama.cpp",
+                    "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+                    "1d9614638d18024d0fbb36575a15f1302a3adf044df10345688ec4f6e1c4ff32",
+                    "Apache-2.0",
+                    "arm64"
+            ));
 
-        addCatalogEntry(new LocalModel(
-                "llama-3.2-1b-instruct",
-                "Llama 3.2 1B Instruct",
-                "Llama-3.2",
-                "gguf",
-                "Q4_K_M",
-                808386560L, // ~770 MB
-                2048,
-                8192,
-                "llama.cpp",
-                "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-                "256a42a0b16a4e98f0907d3bdfd8a8767980153ef7174dbca56ea137452d3a95",
-                "Llama-3.2",
-                "arm64"
-        ));
+            addCatalogEntry(new LocalModel(
+                    "smollm2-360m-instruct",
+                    "SmolLM2 360M Instruct",
+                    "SmolLM2",
+                    "gguf",
+                    "Q4_K_M",
+                    270590560L, // ~271 MB
+                    512,
+                    4096,
+                    "llama.cpp",
+                    "https://huggingface.co/unsloth/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+                    "16c7f1667fea34bacad196a57b548effcb37614db4ab5677a20c8c7b823b9e63",
+                    "Apache-2.0",
+                    "arm64"
+            ));
+
+            addCatalogEntry(new LocalModel(
+                    "llama-3.2-1b-instruct",
+                    "Llama 3.2 1B Instruct",
+                    "Llama-3.2",
+                    "gguf",
+                    "Q4_K_M",
+                    807694464L, // ~808 MB
+                    2048,
+                    8192,
+                    "llama.cpp",
+                    "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+                    "6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83",
+                    "Llama-3.2-Community",
+                    "arm64"
+            ));
+        }
     }
 
     private void addCatalogEntry(LocalModel model) {
@@ -220,6 +259,19 @@ public final class LocalModelManager {
             return;
         }
 
+        // Check free storage headroom (Directive 2026-10-02 §8.3: model size + 15% headroom)
+        long requiredBytes = (long) (model.sizeBytes * 1.15);
+        long usableBytes = modelsDir.getUsableSpace();
+        if (usableBytes > 0 && usableBytes < requiredBytes) {
+            String errMsg = "Insufficient storage: " + (usableBytes / (1024 * 1024)) + " MB free, but "
+                    + (requiredBytes / (1024 * 1024)) + " MB required (including 15% headroom).";
+            model.state = LocalModel.State.ERROR;
+            model.errorMessage = errMsg;
+            persistStatus();
+            if (callback != null) callback.onFailure(errMsg);
+            return;
+        }
+
         model.state = LocalModel.State.DOWNLOADING;
         model.downloadProgress = 0;
         model.errorMessage = null;
@@ -231,17 +283,39 @@ public final class LocalModelManager {
 
             HttpURLConnection conn = null;
             try {
-                URL url = new URL(model.sourceUrl);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(30000);
-                conn.setRequestProperty("User-Agent", "OceanStudio/1.0 (Android Bionic)");
-                activeDownloads.put(id, conn);
+                // Follow redirects up to 5 hops (e.g. HuggingFace 302/307 to CDN)
+                String currentUrl = model.sourceUrl;
+                int redirects = 0;
+                while (redirects < 5) {
+                    URL url = new URL(currentUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setInstanceFollowRedirects(false);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(30000);
+                    conn.setRequestProperty("User-Agent", "OceanStudio/1.2.6 (Android Bionic)");
+                    activeDownloads.put(id, conn);
 
-                int respCode = conn.getResponseCode();
-                if (respCode < 200 || respCode >= 300) {
-                    throw new IOException("HTTP error " + respCode + ": " + conn.getResponseMessage());
+                    int respCode = conn.getResponseCode();
+                    if (respCode == HttpURLConnection.HTTP_MOVED_TEMP || respCode == HttpURLConnection.HTTP_MOVED_PERM
+                            || respCode == HttpURLConnection.HTTP_SEE_OTHER || respCode == 307 || respCode == 308) {
+                        String loc = conn.getHeaderField("Location");
+                        conn.disconnect();
+                        activeDownloads.remove(id);
+                        if (loc == null || loc.trim().isEmpty()) {
+                            throw new IOException("HTTP " + respCode + " redirect without Location header");
+                        }
+                        currentUrl = loc;
+                        redirects++;
+                        continue;
+                    }
+
+                    if (respCode < 200 || respCode >= 300) {
+                        throw new IOException("HTTP error " + respCode + ": " + conn.getResponseMessage());
+                    }
+                    break;
                 }
+
+                if (conn == null) throw new IOException("Failed to establish HTTP connection");
 
                 long totalBytes = conn.getContentLengthLong();
                 if (totalBytes <= 0) totalBytes = model.sizeBytes;
@@ -291,7 +365,7 @@ public final class LocalModelManager {
                 if (callback != null) callback.onSuccess();
 
             } catch (Exception e) {
-                partialFile.delete();
+                if (partialFile.exists()) partialFile.delete();
                 model.state = LocalModel.State.ERROR;
                 model.errorMessage = e.getMessage();
                 persistStatus();
