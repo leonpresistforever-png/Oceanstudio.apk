@@ -119,9 +119,15 @@ final class AgentControlsPanel {
         instructions.setText(settings.userInstructions());
         col.addView(instructions, matchWidth());
 
-        TextView modelLine = muted(col, "Model · " + (host.byok() != null && host.byok().isVerified()
-                ? host.byok().getModel() : "Not configured"));
+        TextView modelLine = muted(col, "AI Providers · " + (host.byok() != null && host.byok().isVerified()
+                ? host.byok().getModel() : "Manage providers & Direct Connect"));
         modelLine.setOnClickListener(v -> host.openByok());
+
+        TextView localLine = muted(col, "Local Models · On-device GGUF inference");
+        localLine.setOnClickListener(v -> {
+            host.close();
+            activity.startActivity(new Intent(activity, studio.ocean.app.models.local.LocalModelsActivity.class));
+        });
 
         TextView save = outlinedAction(col, "Save agent configuration");
         save.setOnClickListener(v -> {

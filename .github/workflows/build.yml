@@ -140,18 +140,27 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${VERSION}-test"
+          cat > "$RUNNER_TEMP/test-release-notes.md" <<EOF
+          ### OceanStudio ${VERSION} Test Release
+          Test APK built and verified from commit \`${GITHUB_SHA:0:8}\`.
+
+          #### What's New in v${VERSION}:
+          - **AI Provider Hub & Direct Connect**: 17+ verified AI providers including OpenAI, Anthropic Claude, Google Gemini, Antigravity, Kimi, DeepSeek, Groq, Ollama, OpenRouter, Mistral, and official CLI bridges with OAuth 2.0 PKCE and API key management.
+          - **On-Device Local Models (GGUF)**: Offline on-device LLM inference engine supporting SmolLM2, Qwen2.5, and Llama 3.2 with hardware RAM validation and loopback inference runtime.
+          - **Secure Private Web Browser**: Ephemeral privacy-first browser with tracker shielding, popup firewall, DNS/WebRTC leak protection, and zero disk traces.
+          - **Unified Home & Composer UI**: New interactive suggestion cards, quick action chips below composer, dynamic top model chip, and streamlined navigation drawer.
+          - **Android minSdk 28 & Bionic Decoupling**: Fully autonomous native environment targeting Android 9.0+ with zero Termux contamination.
+
+          #### Installation Note:
+          This is a debug-signed test build. If you have an older version installed, please uninstall it first before installing this APK.
+          EOF
+
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $tag already exists; updating test APK assets..."
+            echo "Release $tag already exists; updating test APK assets and notes..."
             gh release upload "$tag" "$APK_PATH" "$APK_CHECKSUM" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "OceanStudio ${VERSION} test APK" --notes-file "$RUNNER_TEMP/test-release-notes.md"
             exit 0
           fi
-          cat > "$RUNNER_TEMP/test-release-notes.md" <<EOF
-          Test APK built and verified from source commit $GITHUB_SHA.
-
-          Includes the local robotic eye GLB, a visible animated agent background, slash commands, moving agent status, npm launcher repair, Android FFmpeg and FFprobe built from the verified official 8.1.2 source, bundled signed package catalogue, and native bootstrap.
-
-          This is a debug-signed test build with a testing-only sign-in path. Its signing certificate ($CERTIFICATE) differs from the existing published APK. Android cannot install it as an update: uninstall the older app first, which removes its app data. The production APK remains blocked until the existing release signing keystore and authentication secret are configured.
-          EOF
           gh release create "$tag" "$APK_PATH" "$APK_CHECKSUM" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "OceanStudio ${VERSION} test APK" --notes-file "$RUNNER_TEMP/test-release-notes.md"

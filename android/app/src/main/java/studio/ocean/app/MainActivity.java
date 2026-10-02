@@ -60,10 +60,13 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout chatMessagesLayout;
     private String selectedModelPreset = "auto";
     private static final String[][] SLASH_COMMANDS = {
+            {"/providers", "Manage AI providers & Direct Connect"},
+            {"/local", "Manage on-device GGUF local models"},
+            {"/browser", "Open Secure Private Browser"},
             {"/run", "Run a terminal command"},
             {"/terminal", "Open Ocean Terminal"},
             {"/new", "Start a fresh conversation"},
-            {"/model", "Configure the active model"},
+            {"/model", "Configure the active model & providers"},
             {"/mode", "Choose agent work or cost mode"},
             {"/cost", "Use fewer tokens and tool calls"},
             {"/work", "Use full agent capacity"},
@@ -114,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             CrashSurvival.showPending(this);
             if (agentControlsOpen) refreshAgentControlsSummary();
+            updateTopModelChip();
         } catch (Throwable t) {
             android.util.Log.w("MainActivity", "onPostResume error", t);
         }
@@ -316,21 +320,29 @@ public class MainActivity extends AppCompatActivity {
         
         TextView modelBtn = findViewById(R.id.model_button);
         if (modelBtn != null) {
-            if (byokManager != null) modelBtn.setText(byokManager.isVerified()?byokManager.getModel():"Configure model");
-            modelBtn.setOnClickListener(v -> showByokPage());
+            modelBtn.setOnClickListener(v -> showModelHubChooser());
         }
         View headerBlock = findViewById(R.id.header_title_block);
-        if (headerBlock != null) headerBlock.setOnClickListener(v -> showHeaderModelPicker());
+        if (headerBlock != null) headerBlock.setOnClickListener(v -> showModelHubChooser());
         safeClick(R.id.history_button, v -> refreshAgentSession());
         safeClick(R.id.new_chat_button, v -> newChat());
+        safeClick(R.id.suggest_card_providers, v -> startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)));
+        safeClick(R.id.suggest_card_local, v -> startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class)));
+        safeClick(R.id.suggest_card_browser, v -> startActivity(new Intent(this, studio.ocean.app.browser.secure.SecureBrowserActivity.class)));
         safeClick(R.id.suggest_card_plan, v -> setStarterPrompt("Plan and execute this task: "));
         safeClick(R.id.suggest_card_terminal, v -> setStarterPrompt("Use my terminal to "));
         safeClick(R.id.suggest_card_build, v -> setStarterPrompt("Build or improve "));
         updateTopModelChip();
         safeClick(R.id.send_button, v -> { if (agentRunner != null && agentRunner.isRunning()) agentRunner.cancel(); else submitAgentPrompt(); });
+        safeClick(R.id.starter_providers, v -> startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)));
+        safeClick(R.id.starter_local_models, v -> startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class)));
+        safeClick(R.id.starter_private_browser, v -> startActivity(new Intent(this, studio.ocean.app.browser.secure.SecureBrowserActivity.class)));
         safeClick(R.id.starter_plan, v -> setStarterPrompt("Plan and execute this task: "));
         safeClick(R.id.starter_terminal, v -> setStarterPrompt("Use my terminal to "));
         safeClick(R.id.starter_build, v -> setStarterPrompt("Build or improve "));
+        safeClick(R.id.quick_providers, v -> startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)));
+        safeClick(R.id.quick_local, v -> startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class)));
+        safeClick(R.id.quick_browser, v -> startActivity(new Intent(this, studio.ocean.app.browser.secure.SecureBrowserActivity.class)));
         safeClick(R.id.quick_search, v -> openAgentSearch());
         safeClick(R.id.quick_files, v -> { closeDrawer(); bindQuickDestination("Files"); });
         safeClick(R.id.quick_screenshot, v -> setStarterPrompt("Take a screenshot and inspect it"));
@@ -355,11 +367,11 @@ public class MainActivity extends AppCompatActivity {
         safeClick(R.id.nav_hub_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         safeClick(R.id.nav_hub_device, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); });
         safeClick(R.id.nav_hub_runtime, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.runtime.RuntimePortsActivity.class)); });
-        safeClick(R.id.nav_hub_models, v -> { closeDrawer(); showByokPage(); });
+        safeClick(R.id.nav_hub_models, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)); });
         safeClick(R.id.nav_crash_diagnostics, v -> { closeDrawer(); startActivity(new Intent(this, CrashDiagnosticsActivity.class)); });
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
         
-        // Add Playground + BYOK Models into sidebar Tools children. Playground launches a fully isolated product surface.
+        // Add Playground + Providers Hub + Local Models + BYOK into sidebar Tools children.
         LinearLayout toolsChildren = findViewById(R.id.tools_children);
         if (toolsChildren != null) {
             TextView playgroundNav = new TextView(this);
@@ -371,20 +383,27 @@ public class MainActivity extends AppCompatActivity {
             playgroundNav.setCompoundDrawablePadding(dp(12));
             playgroundNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, PlaygroundActivity.class)); });
             toolsChildren.addView(playgroundNav, 0);
-            TextView deviceNav = new TextView(this); deviceNav.setText("Device Access"); deviceNav.setTextSize(14); deviceNav.setTextColor(0xFF44464B); deviceNav.setPadding(dp(24),dp(16),dp(24),dp(16)); deviceNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); }); toolsChildren.addView(deviceNav);
+
+            TextView deviceNav = new TextView(this);
+            deviceNav.setText("Device Access");
+            deviceNav.setTextSize(14);
+            deviceNav.setTextColor(0xFF44464B);
+            deviceNav.setPadding(dp(24),dp(16),dp(24),dp(16));
+            deviceNav.setOnClickListener(v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.device.DeviceAccessActivity.class)); });
+            toolsChildren.addView(deviceNav);
 
             TextView byokNav = new TextView(this);
-            byokNav.setText("BYOK Models & APIs");
+            byokNav.setText("BYOK Custom Endpoint");
             byokNav.setTextColor(getColor(R.color.ocean_ink));
             byokNav.setTextSize(14f);
             byokNav.setPadding((int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density), (int)(16 * getResources().getDisplayMetrics().density), (int)(10 * getResources().getDisplayMetrics().density));
-            byokNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_models), null, null, null);
+            byokNav.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_tools), null, null, null);
             byokNav.setCompoundDrawablePadding((int)(12 * getResources().getDisplayMetrics().density));
             byokNav.setOnClickListener(v -> { closeDrawer(); showByokPage(); });
-            toolsChildren.addView(byokNav, 0);
+            toolsChildren.addView(byokNav, 1);
         }
 
-        safeClick(R.id.nav_models, v -> { closeDrawer(); showByokPage(); });
+        safeClick(R.id.nav_models, v -> { closeDrawer(); showModelHubChooser(); });
         safeClick(R.id.nav_providers, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class)); });
         safeClick(R.id.nav_local_models, v -> { closeDrawer(); startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class)); });
         safeClick(R.id.nav_plugins, v -> { closeDrawer(); startActivity(new Intent(this, PluginCenterActivity.class)); });
@@ -694,7 +713,16 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, studio.ocean.app.terminal.OceanTerminalActivity.class));
                 return true;
             case "/new": newChat(); return true;
-            case "/model": showByokPage(); return true;
+            case "/providers":
+                startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class));
+                return true;
+            case "/local":
+                startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class));
+                return true;
+            case "/browser":
+                startActivity(new Intent(this, studio.ocean.app.browser.secure.SecureBrowserActivity.class));
+                return true;
+            case "/model": showModelHubChooser(); return true;
             case "/settings": openAgentControls("model"); return true;
             case "/skills": openAgentControls("skills"); return true;
             case "/mcp": startActivity(new Intent(this, PluginCenterActivity.class).putExtra("hub_section", "mcps")); return true;
@@ -940,36 +968,114 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showHeaderModelPicker() {
-        android.app.Dialog dialog = new android.app.Dialog(this);
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setPadding(dp(26), dp(12), dp(26), dp(28));
-        sheet.setBackground(OceanUi.topSheetBackground(this));
+    private LinearLayout createHubChooserOption(int iconRes, String titleText, String subtitleText) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
+        row.setBackgroundResource(R.drawable.settings_row_background);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(8);
+        row.setLayoutParams(lp);
 
-        View handle = new View(this);
-        handle.setBackground(OceanUi.roundRect(this, 0xff737373, 999, 0));
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(dp(52), dp(4));
-        hp.gravity = Gravity.CENTER_HORIZONTAL;
-        hp.bottomMargin = dp(20);
-        sheet.addView(handle, hp);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.ocean_ink_100)));
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(22), dp(22));
+        iconLp.rightMargin = dp(14);
+        row.addView(icon, iconLp);
+
+        LinearLayout textCol = new LinearLayout(this);
+        textCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        textCol.setLayoutParams(textLp);
 
         TextView title = new TextView(this);
-        title.setText("OceanStudio");
+        title.setText(titleText);
         title.setTextColor(getColor(R.color.ocean_text_primary));
-        title.setTextSize(20);
+        title.setTextSize(14f);
+        title.setTypeface(null, Typeface.BOLD);
+        textCol.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText(subtitleText);
+        sub.setTextColor(getColor(R.color.ocean_text_secondary));
+        sub.setTextSize(12f);
+        sub.setPadding(0, dp(2), 0, 0);
+        textCol.addView(sub);
+
+        row.addView(textCol);
+
+        ImageView chevron = new ImageView(this);
+        chevron.setImageResource(R.drawable.ic_chevron);
+        chevron.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.ocean_text_tertiary)));
+        LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(dp(16), dp(16));
+        row.addView(chevron, chevLp);
+
+        return row;
+    }
+
+    private void showModelHubChooser() {
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(20), dp(12), dp(20), dp(24));
+
+        TextView title = new TextView(this);
+        title.setText("AI Models & Providers");
+        title.setTextColor(getColor(R.color.ocean_text_primary));
+        title.setTextSize(18f);
         title.setTypeface(null, Typeface.BOLD);
         sheet.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Model & workspace");
-        subtitle.setTextColor(getColor(R.color.ocean_text_tertiary));
-        subtitle.setTextSize(13);
-        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
-        subLp.bottomMargin = dp(16);
-        subLp.topMargin = dp(4);
-        sheet.addView(subtitle, subLp);
+        subtitle.setText("Select how you want OceanStudio to run inference.");
+        subtitle.setTextColor(getColor(R.color.ocean_text_secondary));
+        subtitle.setTextSize(13f);
+        subtitle.setPadding(0, dp(4), 0, dp(16));
+        sheet.addView(subtitle);
+
+        Dialog[] dialogRef = new Dialog[1];
+
+        LinearLayout optProviders = createHubChooserOption(
+                R.drawable.ic_connections,
+                "AI Providers & Direct Connect",
+                "17+ providers: OpenAI, Claude, Gemini, Antigravity, Kimi, DeepSeek, CLI bridges, OAuth"
+        );
+        optProviders.setOnClickListener(v -> {
+            if (dialogRef[0] != null) dialogRef[0].dismiss();
+            startActivity(new Intent(this, studio.ocean.app.providers.ProvidersConnectActivity.class));
+        });
+        sheet.addView(optProviders);
+
+        LinearLayout optLocal = createHubChooserOption(
+                R.drawable.ic_models,
+                "On-Device Local Models (GGUF)",
+                "Run SmolLM2, Qwen2.5, Llama 3.2 offline on your device RAM"
+        );
+        optLocal.setOnClickListener(v -> {
+            if (dialogRef[0] != null) dialogRef[0].dismiss();
+            startActivity(new Intent(this, studio.ocean.app.models.local.LocalModelsActivity.class));
+        });
+        sheet.addView(optLocal);
+
+        LinearLayout optByok = createHubChooserOption(
+                R.drawable.ic_tools,
+                "Configure BYOK / Custom Endpoint",
+                "Manual API key and custom base URL endpoint configuration"
+        );
+        optByok.setOnClickListener(v -> {
+            if (dialogRef[0] != null) dialogRef[0].dismiss();
+            showByokPage();
+        });
+        sheet.addView(optByok);
+
+        TextView presetsHeader = new TextView(this);
+        presetsHeader.setText("MODEL PRESETS");
+        presetsHeader.setTextSize(11f);
+        presetsHeader.setTypeface(null, Typeface.BOLD);
+        presetsHeader.setTextColor(getColor(R.color.ocean_text_tertiary));
+        presetsHeader.setPadding(0, dp(12), 0, dp(4));
+        sheet.addView(presetsHeader);
 
         String[][] presets = {
                 {"auto", "Auto"},
@@ -982,39 +1088,28 @@ public class MainActivity extends AppCompatActivity {
             TextView row = new TextView(this);
             row.setText(preset[1] + (on ? "  ✓" : ""));
             row.setTextColor(getColor(R.color.ocean_text_primary));
-            row.setTextSize(16);
-            row.setPadding(0, dp(16), 0, dp(16));
+            row.setTextSize(14);
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            row.setBackgroundResource(R.drawable.settings_row_background);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = dp(4);
+            row.setLayoutParams(lp);
             row.setOnClickListener(v -> {
                 selectModelPreset(preset[0], preset[1]);
-                dialog.dismiss();
+                if (dialogRef[0] != null) dialogRef[0].dismiss();
             });
             sheet.addView(row);
         }
-        TextView byok = new TextView(this);
-        byok.setText("Configure BYOK / API keys");
-        byok.setTextColor(getColor(R.color.ocean_text_primary));
-        byok.setTextSize(16);
-        byok.setTypeface(null, Typeface.BOLD);
-        byok.setPadding(0, dp(16), 0, dp(16));
-        byok.setOnClickListener(v -> { dialog.dismiss(); showByokPage(); });
-        sheet.addView(byok);
 
-        TextView drawer = new TextView(this);
-        drawer.setText("Agent controls drawer");
-        drawer.setTextColor(getColor(R.color.ocean_text_secondary));
-        drawer.setTextSize(15);
-        drawer.setPadding(0, dp(12), 0, dp(8));
-        drawer.setOnClickListener(v -> { dialog.dismiss(); openAgentControls("model"); });
-        sheet.addView(drawer);
+        dialogRef[0] = OceanModal.create(this)
+                .setTitle("AI Models & Inference")
+                .setCustomView(sheet)
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
 
-        dialog.setContentView(sheet);
-        dialog.show();
-        android.view.Window w = dialog.getWindow();
-        if (w != null) {
-            w.setBackgroundDrawableResource(android.R.color.transparent);
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            w.setGravity(Gravity.BOTTOM);
-        }
+    private void showHeaderModelPicker() {
+        showModelHubChooser();
     }
 
     private void refreshAgentSession() {
@@ -1029,12 +1124,46 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTopModelChip() {
         TextView sub = findViewById(R.id.top_model_chip);
-        if (sub == null) return;
-        String model = byokManager != null && byokManager.isVerified() ? byokManager.getModel() : "Not configured";
-        String presetLabel = "auto".equals(selectedModelPreset) ? "Auto" :
-                "gemini".equals(selectedModelPreset) ? "Gemini Flash" :
-                "claude".equals(selectedModelPreset) ? "Claude Sonnet" : "GPT-4o";
-        sub.setText(presetLabel + " · " + model);
+        TextView modelBtn = findViewById(R.id.model_button);
+
+        // Check on-device local model first
+        try {
+            studio.ocean.app.models.local.LocalModel local = studio.ocean.app.models.local.LocalModelManager.getInstance(this).getConnectedModel();
+            if (local != null) {
+                String text = "Local · " + local.displayName;
+                if (sub != null) sub.setText(text);
+                if (modelBtn != null) modelBtn.setText(local.displayName);
+                return;
+            }
+        } catch (Throwable ignored) {}
+
+        // Check Provider Hub connections
+        try {
+            java.util.List<studio.ocean.app.providers.model.ProviderConnection> conns = new studio.ocean.app.providers.state.ProviderConnectionStore(this).listAll();
+            if (conns != null && !conns.isEmpty()) {
+                studio.ocean.app.providers.model.ProviderConnection active = conns.get(0);
+                String title = active.name != null ? active.name : active.providerId;
+                String modelStr = active.activeModel != null && !active.activeModel.isEmpty() ? active.activeModel : title;
+                if (sub != null) sub.setText("Cloud · " + modelStr);
+                if (modelBtn != null) modelBtn.setText(modelStr);
+                return;
+            }
+        } catch (Throwable ignored) {}
+
+        // Check legacy BYOK
+        if (byokManager != null && byokManager.isVerified()) {
+            String presetLabel = "auto".equals(selectedModelPreset) ? "Auto" :
+                    "gemini".equals(selectedModelPreset) ? "Gemini Flash" :
+                    "claude".equals(selectedModelPreset) ? "Claude Sonnet" : "GPT-4o";
+            String model = byokManager.getModel();
+            if (sub != null) sub.setText(presetLabel + " · " + model);
+            if (modelBtn != null) modelBtn.setText(model);
+            return;
+        }
+
+        // Default: Not configured
+        if (sub != null) sub.setText("Auto · Connect Provider");
+        if (modelBtn != null) modelBtn.setText("Providers");
     }
 
     private void recordRecentChat(String prompt) {
