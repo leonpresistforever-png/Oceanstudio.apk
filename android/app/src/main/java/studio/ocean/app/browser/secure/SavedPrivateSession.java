@@ -2,6 +2,7 @@ package studio.ocean.app.browser.secure;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import studio.ocean.app.browser.BrowserUrlHelper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

@@ -44,6 +44,15 @@ public final class ProviderConnectionStore {
         return Collections.unmodifiableList(matches);
     }
 
+    public synchronized ProviderConnection findByProviderId(String providerId) {
+        ensureLoaded();
+        if (providerId == null) return null;
+        for (ProviderConnection conn : cache) {
+            if (providerId.equals(conn.providerId)) return conn;
+        }
+        return null;
+    }
+
     public synchronized ProviderConnection get(String id) {
         ensureLoaded();
         if (id == null) return null;

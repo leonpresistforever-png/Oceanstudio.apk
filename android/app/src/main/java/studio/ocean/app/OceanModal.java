@@ -238,7 +238,7 @@ public final class OceanModal {
                 });
                 LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(
                         0, dp(context, 44), 1.0f);
-                nLp.marginEnd = pad8;
+                nLp.setMarginEnd(pad8);
                 buttonBar.addView(neutralBtn, nLp);
             }
 
@@ -256,7 +256,7 @@ public final class OceanModal {
                 });
                 LinearLayout.LayoutParams negLp = new LinearLayout.LayoutParams(
                         0, dp(context, 44), 1.0f);
-                negLp.marginEnd = TextUtils.isEmpty(positiveText) ? 0 : pad8;
+                negLp.setMarginEnd(TextUtils.isEmpty(positiveText) ? 0 : pad8);
                 buttonBar.addView(negBtn, negLp);
             }
 

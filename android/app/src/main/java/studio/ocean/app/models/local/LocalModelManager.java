@@ -400,7 +400,7 @@ public final class LocalModelManager {
         if (!file.exists() || file.length() == 0) return false;
 
         // Verify RAM headroom (Directive §11.2)
-        int availRam = getAvailableDeviceRamMb();
+        long availRam = getAvailableDeviceRamMb();
         if (availRam > 0 && availRam < model.minRamMb) {
             model.errorMessage = "Insufficient RAM: " + availRam + " MB available, requires " + model.minRamMb + " MB.";
             return false;

@@ -56,6 +56,11 @@ public final class QuotaSnapshot {
                 Confidence.PROVIDER_REPORTED, planName, source, System.currentTimeMillis());
     }
 
+    public static QuotaSnapshot unlimited(String planName, String source) {
+        return new QuotaSnapshot(0.0, Double.POSITIVE_INFINITY, Unit.REQUESTS, null,
+                Confidence.EXACT, planName, source, System.currentTimeMillis());
+    }
+
     public String formatSummary() {
         if (confidence == Confidence.UNKNOWN) {
             return planName != null && !planName.isEmpty()

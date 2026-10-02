@@ -925,7 +925,7 @@ public final class SecureBrowserActivity extends AppCompatActivity {
             btnRestore.setBackgroundResource(R.drawable.primary_button_background);
             btnRestore.setOnClickListener(v -> restoreSavedSession(s));
             LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(0, (int) (36 * density), 1.0f);
-            rLp.marginEnd = (int) (8 * density);
+            rLp.setMarginEnd((int) (8 * density));
             actions.addView(btnRestore, rLp);
 
             Button btnDelete = new Button(this);
