@@ -52,6 +52,11 @@ jobs:
       - name: Verify Ocean architecture
         run: ./scripts/verify-native-only.sh
 
+      - name: Run Master Directive Repairs and Provider Hub Tests
+        run: |
+          python3 scripts/tests/test_master_directive_repairs.py
+          python3 scripts/tests/test_provider_hub.py
+
       - name: Verify bundled signed package catalogue
         run: |
           python3 ocean-packages/tests/test-apk-package-catalog.py \
