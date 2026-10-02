@@ -32,6 +32,12 @@ public final class PrivateSessionManager {
     private boolean perTabIsolation = false;
     private boolean autoCloseEnabled = true;
     private long autoCloseTimeoutMinutes = 15;
+    private boolean trackerBlockingEnabled = true;
+    private boolean popupFirewallEnabled = true;
+    private boolean killSwitchEnabled = true;
+    private String webRtcMode = "Restricted";
+    private String dnsMode = "System";
+    private String routeMode = "Direct";
 
     private final AtomicInteger trackerBlockCount = new AtomicInteger(0);
     private final AtomicInteger popupBlockCount = new AtomicInteger(0);
@@ -98,6 +104,57 @@ public final class PrivateSessionManager {
 
     public synchronized void setAutoCloseEnabled(boolean enabled) {
         this.autoCloseEnabled = enabled;
+    }
+
+    public synchronized boolean isTrackerBlockingEnabled() {
+        return trackerBlockingEnabled;
+    }
+
+    public synchronized void setTrackerBlockingEnabled(boolean enabled) {
+        this.trackerBlockingEnabled = enabled;
+    }
+
+    public synchronized boolean isPopupFirewallEnabled() {
+        return popupFirewallEnabled;
+    }
+
+    public synchronized void setPopupFirewallEnabled(boolean enabled) {
+        this.popupFirewallEnabled = enabled;
+    }
+
+    public synchronized boolean isKillSwitchEnabled() {
+        return killSwitchEnabled;
+    }
+
+    public synchronized void setKillSwitchEnabled(boolean enabled) {
+        this.killSwitchEnabled = enabled;
+    }
+
+    @NonNull
+    public synchronized String getWebRtcMode() {
+        return webRtcMode;
+    }
+
+    public synchronized void setWebRtcMode(@NonNull String mode) {
+        this.webRtcMode = mode;
+    }
+
+    @NonNull
+    public synchronized String getDnsMode() {
+        return dnsMode;
+    }
+
+    public synchronized void setDnsMode(@NonNull String mode) {
+        this.dnsMode = mode;
+    }
+
+    @NonNull
+    public synchronized String getRouteMode() {
+        return routeMode;
+    }
+
+    public synchronized void setRouteMode(@NonNull String mode) {
+        this.routeMode = mode;
     }
 
     public void incrementTrackerBlocked() {

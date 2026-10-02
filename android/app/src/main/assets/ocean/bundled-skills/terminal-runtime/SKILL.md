@@ -1,158 +1,77 @@
 ---
 id: terminal-runtime
 name: Terminal & Runtime
-description: Operate Ocean bash, packages, and localhost services.
-status: connected
-source: bundled
+description: Ocean autonomous runtime environment, process supervision, custom prefix isolation, and CLI diagnostics.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+optional_tools:
+  - search_web
 ---
 
 # Terminal & Runtime
 
-Operate Ocean bash, packages, and localhost services.
+## 1. Mission and Scope
+Oversee process execution, shell lifecycle management, package management within the dedicated Ocean application filesystem prefix, and runtime port diagnostics. Enforce strict isolation from third-party runtime trees (Rule 5 Termux Decoupling) and ensure deterministic execution of native Android Bionic binaries.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Managing child process lifecycles, background daemon supervision, or PTY terminal sessions.
+  - Inspecting runtime ports, network sockets, and localhost listener processes.
+  - Configuring environment variables (`PATH`, `LD_LIBRARY_PATH`, `HOME`, `PREFIX`) for the Ocean application sandbox.
+  - Debugging native binary execution issues, dynamic linker paths (`/system/bin/linker64`), or missing shared libraries.
+- **Do NOT Invoke When**:
+  - Writing Java/Kotlin UI layouts or Activities (use UX Design or Deep Coding).
+  - Executing basic code edits inside the Android app project that do not involve the runtime environment.
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Target command line, process arguments, working directory, and environment variable requirements.
+2. Active Ocean prefix directory (e.g., `/data/data/<app_package_id>/files/usr/`).
+3. Process stdout/stderr output, exit codes, and signal codes (SIGSEGV, SIGABRT, SIGKILL).
+4. Socket listening status and port allocations via `ss`, `netstat`, or internal runtime port checkers.
 
+## 4. Tool Policy for This Domain
+- Execute commands using `run_command` with non-interactive flags (`-y`, `--batch`, `PAGER=cat`).
+- Never run unbounded blocking commands without timeouts or asynchronous task tracking.
+- Do not hardcode paths to `/data/data/com.termux` under any circumstances (Rule 5 compliance).
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Environment Initialization**: Establish required environment variables: `PREFIX`, `HOME`, `PATH` pointing to the Ocean binary directories, and `TMPDIR`.
+2. **Package Lookup & Verification**: When a tool is required, verify presence via `which <cmd>`. If absent, inspect the package manifest and install the genuine upstream package into the application prefix.
+3. **Execution & Supervision**: Launch processes with explicit argument arrays (avoiding shell escaping vulnerabilities). Monitor child process PID and handle I/O streams safely.
+4. **Port & Socket Auditing**: If running a local daemon (e.g. `ocean-authd` or mock test servers), verify binding to `127.0.0.1` and probe the listening port via HTTP or socket ping.
+5. **Clean Termination**: Ensure child processes respond to SIGTERM, falling back to SIGKILL on timeout to prevent zombie processes.
+6. **Diagnostics & Reporting**: Capture exit status, elapsed execution time, and any dynamic linker diagnostic messages (`LD_DEBUG=all` when diagnosing linking issues).
 
-When working on Terminal & Runtime, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Bionic RPATH Enforcement**: Ensure all native binaries in the runtime utilize `$ORIGIN/../lib` or explicit RPATHs targeting the Ocean prefix, preventing dependency on system libc overrides.
+- **Non-Interactive Execution**: Always pass `--noprofile --norc` and disable color escape sequences when piping CLI output to automated processing pipelines.
+- **Process Orphan Prevention**: Track all spawned child PIDs in a runtime registry to ensure clean termination on app pause or crash.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Process exit code (must be 0 for successful operations).
+- Terminal stdout/stderr transcripts demonstrating execution and output correctness.
+- Socket binding verification proving localhost-only listener security.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Dynamic Linker Error (Library Not Found)*: Inspect library dependencies with `objdump -p` or `readelf -d` and ensure dependent `.so` files are located in the Ocean `usr/lib` path.
+- *Port Already in Use (EADDRINUSE)*: Query active listeners, locate the conflicting PID, and terminate stale processes before re-binding.
+- *Process Killed (Signal 9 / OOM)*: Inspect Android low-memory killer (LMK) status and reduce process memory footprint or worker concurrency.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Confine all file system operations strictly within the application's private sandbox and external storage permissions.
+- Absolute prohibition of Termux binaries, package archives, or environment references.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Process launches, executes expected logic, and exits with expected status code.
+2. Environment variables do not leak sensitive credentials or unauthorized paths.
+3. Local network listeners bind strictly to loopback (`127.0.0.1`) and release sockets upon termination.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Runtime Command Executed**: Full command string with sanitized parameters.
+- **Exit Code & Timing**: Termination status code and elapsed execution time.
+- **I/O Transcript**: Summary of stdout and stderr diagnostics.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Terminal & Runtime, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Terminal & Runtime**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Verifying local auth helper daemon: Spawning `ocean-authd` on dynamic loopback port, verifying HTTP 200 response on `http://127.0.0.1:<port>/health`, executing callback test, and verifying graceful socket teardown.

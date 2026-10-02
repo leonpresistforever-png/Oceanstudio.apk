@@ -1,158 +1,78 @@
 ---
 id: data-pipeline
-name: Data & Files
-description: Structured file workflows under Ocean home.
-status: connected
-source: bundled
+name: Data Pipeline & State Streaming
+description: Reactive data streams, state persistence, SQLite schema migrations, and event processing.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+optional_tools:
+  - search_web
 ---
 
-# Data & Files
+# Data Pipeline & State Streaming
 
-Structured file workflows under Ocean home.
+## 1. Mission and Scope
+Design, maintain, and optimize data ingestion, reactive event streams, database persistence, and schema migrations across Ocean subsystems. Guarantee transactional integrity, zero state corruption, efficient backpressure handling, and clean separation between storage engines and application presentation layers.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Designing or modifying SQLite databases, Room entities, or schema migration scripts.
+  - Implementing Server-Sent Events (SSE), WebSocket streams, or reactive Flow/Rx pipelines.
+  - Optimizing data serialization, JSON/protobuf parsing, or caching tiers.
+  - Resolving data corruption, lock contention, or slow database query performance.
+- **Do NOT Invoke When**:
+  - Writing visual UI views or styles (use UX Design).
+  - Configuring remote provider OAuth authentications (use API Integration).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Data schema definitions, table schemas, and indexing strategies.
+2. Stream velocity, expected data throughput, and memory constraints.
+3. Database version, target migration path (e.g., v1 -> v2), and migration scripts.
+4. Transaction boundaries and consistency requirements (ACID vs eventual consistency).
 
+## 4. Tool Policy for This Domain
+- Inspect schema definitions and SQL queries using `view_file`.
+- Verify database migrations and schema consistency via automated test suites.
+- Never execute unparameterized SQL queries constructed via raw string concatenation.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Schema Design & Versioning**: Model data entities with explicit primary keys, foreign key constraints, and indices for frequently queried columns.
+2. **Migration Scripting**: When modifying existing tables, write automated migration scripts (`ALTER TABLE`, column defaults) with roll-forward verification.
+3. **Reactive Stream Pipeline**: Construct streaming pipelines with explicit backpressure strategies (buffering, dropping oldest, or backpressure suspension).
+4. **Transaction Management**: Enclose multi-statement writes in atomic database transactions (`beginTransaction()` / `endTransaction()`).
+5. **Serialization Optimization**: Use streaming JSON parsers (Jackson/Gson streaming or kotlinx.serialization) to prevent large memory spikes on large payloads.
+6. **Integrity & Index Verification**: Test queries with `EXPLAIN QUERY PLAN` to ensure index coverage and prevent full table scans on critical paths.
 
-When working on Data & Files, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **WAL Mode Preference**: Always enable Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent read/write throughput without blocking UI readers.
+- **Batched Inserts**: Batch multiple inserts into chunks (e.g., 100-500 rows per transaction) to minimize disk sync overhead.
+- **Backpressure Buffer Sizing**: Cap memory buffers for real-time SSE streams to avoid OOM when consumer threads fall behind fast producers.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Database migration test logs confirming schema upgrade without data loss.
+- `EXPLAIN QUERY PLAN` output demonstrating indexed lookups.
+- Stream processing benchmarks confirming zero dropped events and stable memory footprint.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *SQLite Database Locked (`SQLITE_BUSY`)*: Ensure long-running queries do not hold write locks; utilize WAL mode and appropriate timeout pragmas.
+- *Schema Migration Exception*: Catch migration failures, roll back transaction, preserve existing database backup, and report actionable schema mismatch.
+- *Stream Backpressure Buffer Overflow*: Apply bounded ring buffers and notify user of dropped frames rather than exhausting application heap.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Store sensitive tokens, credentials, and cryptographic keys in encrypted storage, never in plaintext SQLite tables.
+- Confine database files strictly to the application's private app directory (`context.getDatabasePath()`).
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Database schema migrations upgrade cleanly from all previous versions without crashes.
+2. Streaming pipelines process high-frequency event streams without memory leaks or ANRs.
+3. SQL injection vulnerabilities are eliminated through 100% parameterized queries.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Pipeline Component**: Storage engine, table names, or stream channel.
+- **Schema Delta**: Table migration definitions and index modifications.
+- **Performance Verification**: Benchmark metrics and query plan validation.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Data & Files, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Data & Files**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Streaming MCP events: Implemented SSE chunk parser with bounded 64KB buffer, validated JSON-RPC payload parsing, emitted events to UI Flow, and confirmed zero memory growth during long-lived server streaming sessions.

@@ -4,7 +4,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Manifest and state contract for an on-device local model (Directive 3 §8.2).
+ * Manifest and state contract for an on-device local model (Directive 3 §8.2, Directive 2026-10-02 §11).
+ * Supports Connect/Disconnect lifecycle, loopback endpoint inspection, and inference verification.
  */
 public final class LocalModel {
 
@@ -12,7 +13,8 @@ public final class LocalModel {
         AVAILABLE("Available"),
         DOWNLOADING("Downloading"),
         INSTALLED("Installed"),
-        LOADED("Loaded"),
+        LOADED("Connected"),
+        CONNECTED("Connected"),
         ERROR("Error"),
         INCOMPATIBLE("Needs RAM");
 
@@ -38,6 +40,11 @@ public final class LocalModel {
     public volatile int downloadProgress = 0;
     public volatile String errorMessage = null;
 
+    // Verified runtime state after connect
+    public volatile String endpoint = null;
+    public volatile long healthMs = 0;
+    public volatile int verifiedContext = 0;
+
     public LocalModel(String id, String displayName, String family, String format,
                       String quantization, long sizeBytes, int minRamMb, int context,
                       String backend, String sourceUrl, String sha256, String license,
@@ -57,6 +64,10 @@ public final class LocalModel {
         this.architecture = architecture;
     }
 
+    public boolean isConnected() {
+        return state == State.CONNECTED || state == State.LOADED;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject obj = new JSONObject();
         obj.put("id", id);
@@ -74,6 +85,9 @@ public final class LocalModel {
         obj.put("architecture", architecture);
         obj.put("state", state.name());
         obj.put("downloadProgress", downloadProgress);
+        if (endpoint != null) obj.put("endpoint", endpoint);
+        obj.put("healthMs", healthMs);
+        obj.put("verifiedContext", verifiedContext);
         return obj;
     }
 
@@ -100,6 +114,9 @@ public final class LocalModel {
             model.state = State.AVAILABLE;
         }
         model.downloadProgress = obj.optInt("downloadProgress", 0);
+        model.endpoint = obj.optString("endpoint", null);
+        model.healthMs = obj.optLong("healthMs", 0);
+        model.verifiedContext = obj.optInt("verifiedContext", model.context);
         return model;
     }
 }

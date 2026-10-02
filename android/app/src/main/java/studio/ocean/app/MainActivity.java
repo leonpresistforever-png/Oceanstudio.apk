@@ -33,7 +33,6 @@ import android.graphics.Typeface;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AlertDialog;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -704,9 +703,33 @@ public class MainActivity extends AppCompatActivity {
             case "/screen": setStarterPrompt("Inspect my current screen and "); return true;
             case "/files": setStarterPrompt("Work with my files to "); return true;
             case "/mode":
-                new AlertDialog.Builder(this).setTitle("Agent mode")
-                        .setItems(new String[]{"Cost efficient · shorter runs", "Work efficient · full capacity"},
-                                (dialog, which) -> changeAgentMode(which == 0 ? "cost" : "work"))
+                LinearLayout modeList = new LinearLayout(this);
+                modeList.setOrientation(LinearLayout.VERTICAL);
+                String[] modes = {"Cost efficient · shorter runs", "Work efficient · full capacity"};
+                String[] modeKeys = {"cost", "work"};
+                Dialog[] modeDialog = new Dialog[1];
+                for (int mi = 0; mi < modes.length; mi++) {
+                    final String k = modeKeys[mi];
+                    TextView mItem = new TextView(this);
+                    mItem.setText(modes[mi]);
+                    mItem.setTextSize(13f);
+                    mItem.setTextColor(getColor(R.color.ocean_ink));
+                    mItem.setBackgroundResource(R.drawable.settings_row_background);
+                    mItem.setPadding(dp(12), dp(12), dp(12), dp(12));
+                    LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    mlp.bottomMargin = dp(6);
+                    mItem.setLayoutParams(mlp);
+                    mItem.setOnClickListener(v -> {
+                        if (modeDialog[0] != null) modeDialog[0].dismiss();
+                        changeAgentMode(k);
+                    });
+                    modeList.addView(mItem);
+                }
+                modeDialog[0] = OceanModal.create(this)
+                        .setTitle("Agent Mode")
+                        .setExplanation("Select agent resource optimization strategy.")
+                        .setCustomView(modeList)
+                        .setNegativeButton("Cancel", null)
                         .show();
                 return true;
             case "/cost": changeAgentMode("cost"); return true;
@@ -1087,17 +1110,16 @@ public class MainActivity extends AppCompatActivity {
         query.setCompoundDrawablePadding(dp(10));
         query.setPadding(dp(16), 0, dp(16), 0);
         query.setBackgroundResource(R.drawable.composer_background);
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle("Search OceanStudio")
-                .setView(query)
-                .setPositiveButton("Search", (d, which) -> {
-                    String term=query.getText().toString().trim();
-                    if(!term.isEmpty()) Toast.makeText(this, "Search ready · " + term, Toast.LENGTH_SHORT).show();
+                .setExplanation("Search tools, files, and conversation history.")
+                .setCustomView(query)
+                .setPositiveButton("Search", v -> {
+                    String term = query.getText().toString().trim();
+                    if (!term.isEmpty()) Toast.makeText(this, "Search ready · " + term, Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Cancel", null)
-                .create();
-        dialog.setOnShowListener(d -> query.requestFocus());
-        dialog.show();
+                .show();
     }
 
     private void openAgentControls() {

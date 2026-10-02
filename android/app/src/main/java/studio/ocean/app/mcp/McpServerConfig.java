@@ -37,6 +37,9 @@ public final class McpServerConfig {
     public String protocolVersion = null;
     public String serverName = null;
     public String serverVersion = null;
+    public String sessionId = null;
+    public String oauthAuthorizationUrl = null;
+    public List<String> disabledTools = new ArrayList<>();
     public JSONObject capabilities = new JSONObject();
     public JSONArray tools = new JSONArray();
     public long lastHandshakeEpochMs = 0;
@@ -106,6 +109,14 @@ public final class McpServerConfig {
         if (serverName != null) obj.put("serverName", serverName);
         if (serverVersion != null) obj.put("serverVersion", serverVersion);
 
+        if (sessionId != null) obj.put("sessionId", sessionId);
+        if (oauthAuthorizationUrl != null) obj.put("oauthAuthorizationUrl", oauthAuthorizationUrl);
+        if (!disabledTools.isEmpty()) {
+            JSONArray dtArr = new JSONArray();
+            for (String dt : disabledTools) dtArr.put(dt);
+            obj.put("disabledTools", dtArr);
+        }
+
         obj.put("capabilities", capabilities);
         obj.put("tools", tools);
         obj.put("lastHandshakeEpochMs", lastHandshakeEpochMs);
@@ -159,6 +170,13 @@ public final class McpServerConfig {
         cfg.protocolVersion = obj.optString("protocolVersion", null);
         cfg.serverName = obj.optString("serverName", null);
         cfg.serverVersion = obj.optString("serverVersion", null);
+        cfg.sessionId = obj.optString("sessionId", null);
+        cfg.oauthAuthorizationUrl = obj.optString("oauthAuthorizationUrl", null);
+
+        JSONArray dtArr = obj.optJSONArray("disabledTools");
+        if (dtArr != null) {
+            for (int i = 0; i < dtArr.length(); i++) cfg.disabledTools.add(dtArr.optString(i));
+        }
 
         cfg.capabilities = obj.optJSONObject("capabilities");
         if (cfg.capabilities == null) cfg.capabilities = new JSONObject();
@@ -169,6 +187,104 @@ public final class McpServerConfig {
         cfg.lastHandshakeEpochMs = obj.optLong("lastHandshakeEpochMs", 0);
         cfg.latencyMs = obj.optLong("latencyMs", 0);
         cfg.restartCount = obj.optInt("restartCount", 0);
+
+        return cfg;
+    }
+
+    /**
+     * Normalizes multiple MCP configuration dialects (Directive 2026-10-02 §9):
+     * 1. Portable Claude/Cursor format (mcpServers: { name: { type, url, command, args, env } })
+     * 2. VS Code format (servers: { name: { type, url, headers, oauth, command, args, cwd } })
+     * 3. Antigravity format (mcpServers: { name: { serverUrl, headers, oauth, disabledTools } })
+     */
+    public static List<McpServerConfig> parseConfigDialects(String jsonText) throws JSONException {
+        List<McpServerConfig> list = new ArrayList<>();
+        if (jsonText == null || jsonText.trim().isEmpty()) return list;
+
+        JSONObject root = new JSONObject(jsonText.trim());
+        JSONObject serversMap = null;
+
+        if (root.has("mcpServers")) {
+            serversMap = root.optJSONObject("mcpServers");
+        } else if (root.has("servers")) {
+            serversMap = root.optJSONObject("servers");
+        }
+
+        if (serversMap != null) {
+            Iterator<String> keys = serversMap.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject serverEntry = serversMap.optJSONObject(key);
+                if (serverEntry != null) {
+                    list.add(parseSingleEntry(key, serverEntry));
+                }
+            }
+        } else if (root.has("url") || root.has("serverUrl") || root.has("command")) {
+            list.add(parseSingleEntry("Imported Server", root));
+        }
+
+        return list;
+    }
+
+    private static McpServerConfig parseSingleEntry(String name, JSONObject obj) {
+        McpServerConfig cfg = new McpServerConfig();
+        cfg.name = name;
+
+        String rawType = obj.optString("type", "");
+        String rawUrl = obj.optString("url", obj.optString("serverUrl", ""));
+
+        if (!rawUrl.isEmpty()) {
+            cfg.endpointUrl = rawUrl;
+            if ("sse".equalsIgnoreCase(rawType)) {
+                cfg.transport = McpTransportType.LEGACY_SSE;
+            } else {
+                cfg.transport = McpTransportType.STREAMABLE_HTTP;
+            }
+        } else if (obj.has("command")) {
+            cfg.transport = McpTransportType.STDIO;
+            cfg.command = obj.optString("command", "");
+        } else if ("http".equalsIgnoreCase(rawType)) {
+            cfg.transport = McpTransportType.STREAMABLE_HTTP;
+            cfg.endpointUrl = rawUrl;
+        } else {
+            cfg.transport = McpTransportType.STDIO;
+            cfg.command = obj.optString("command", "");
+        }
+
+        // Args
+        JSONArray argsArr = obj.optJSONArray("args");
+        if (argsArr != null) {
+            for (int i = 0; i < argsArr.length(); i++) cfg.args.add(argsArr.optString(i));
+        }
+
+        // Working directory (VS Code 'cwd' or standard 'workingDir')
+        cfg.workingDir = obj.optString("cwd", obj.optString("workingDir", ""));
+
+        // Env
+        JSONObject envObj = obj.optJSONObject("env");
+        if (envObj != null) {
+            Iterator<String> keys = envObj.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                cfg.env.put(k, envObj.optString(k));
+            }
+        }
+
+        // Headers
+        JSONObject headersObj = obj.optJSONObject("headers");
+        if (headersObj != null) {
+            Iterator<String> keys = headersObj.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                cfg.headers.put(k, headersObj.optString(k));
+            }
+        }
+
+        // Disabled tools
+        JSONArray dtArr = obj.optJSONArray("disabledTools");
+        if (dtArr != null) {
+            for (int i = 0; i < dtArr.length(); i++) cfg.disabledTools.add(dtArr.optString(i));
+        }
 
         return cfg;
     }

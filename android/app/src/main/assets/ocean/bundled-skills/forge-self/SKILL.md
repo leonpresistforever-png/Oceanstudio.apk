@@ -1,158 +1,81 @@
 ---
 id: forge-self
-name: Ocean Forge
-description: Self-modify OceanStudio via confined Forge workspace.
-status: connected
-source: bundled
+name: Forge Workspace & Self-Evolution
+description: Confined self-modification, AST transformations, build verification loops, and workspace rollback protection.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+  - write_to_file
+optional_tools:
+  - search_web
 ---
 
-# Ocean Forge
+# Forge Workspace & Self-Evolution
 
-Self-modify OceanStudio via confined Forge workspace.
+## 1. Mission and Scope
+Safely execute autonomous modifications, structural refactoring, automated code upgrades, and self-evolution of the Ocean application codebase. Protect developer workspace integrity through mandatory pre-modification snapshots, incremental compiler gates, automated rollback checkpoints, and strict confinement to project boundaries.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Executing systematic architectural refactors affecting multiple packages.
+  - Adding or modifying bundled skills, plugin templates, or built-in system tools.
+  - Upgrading dependencies, SDK targets, or build toolchains across Gradle modules.
+  - Creating automated code repair patches with compile-and-verify feedback loops.
+- **Do NOT Invoke When**:
+  - Modifying files outside the project repository directory (strictly forbidden).
+  - Executing destructive file operations without prior version control checkpoints.
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Working repository directory and clean git status (`git status -s`).
+2. List of target files, classes, and interfaces to modify.
+3. Build verification target (`./gradlew assembleDebug` or test runner).
+4. Rollback checkpoint (git stash or dedicated working branch).
 
+## 4. Tool Policy for This Domain
+- Inspect project structures with `view_file`.
+- Apply targeted contiguous edits using `replace_file_content`.
+- Never execute wholesale rewrites of complex files when surgical patches are viable.
+- Run automated build checks via `run_command` immediately after modifying source files.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Workspace Safety Checkpoint**: Verify git cleanliness. If unstaged changes exist, ensure they are committed or stashed before starting a multi-file refactor.
+2. **Impact Boundary Mapping**: Analyze symbol dependencies, interface implementations, and callers across the project.
+3. **Atomic Modification Batch**: Apply modifications package by package in logical dependency order (interfaces first, then implementations, then callers).
+4. **Compile Gate Execution**: Run `./gradlew compileDebugJavaWithJavac` or equivalent fast compile task to verify syntactic and type correctness.
+5. **Test Gate Execution**: Run relevant unit test suites to detect regressions.
+6. **Rollback on Unrecoverable Failure**: If a modification sequence breaks invariants and cannot be cleanly repaired, rollback to the checkpoint commit.
+7. **Audit & Cleanup**: Remove scratch scripts, temporary files, and debug logging before marking the refactor complete.
 
-When working on Ocean Forge, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Least Blast Radius**: Structure refactoring steps so that each intermediate step leaves the codebase in a compilable state.
+- **Interface Segregation**: Prefer creating new focused interfaces over bloating existing core interfaces.
+- **Automated Rollback Trigger**: If a patch fails compilation after 3 consecutive repair iterations, trigger an automated rollback rather than compounding broken assumptions.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Git diff showing minimal, auditable changes.
+- Terminal output confirming successful compilation and test pass.
+- Proof of zero leftover temporary files in repository root.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Compilation Failure on Transitive Symbols*: Check for unexported packages or missed method signature updates across subclasses.
+- *Workspace Contamination*: Use `git checkout -- <file>` or `git clean -fd` to restore clean state.
+- *Build Cache Invalidation*: Execute `./gradlew clean` if incremental compilation produces stale class artifacts.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Strictly confine all operations to the project repository root. Never access parent directories or system paths.
+- Enforce Rule 5: absolutely zero references to Termux paths in modified code or build manifests.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Project compiles cleanly with zero warnings or errors.
+2. Unit and integration tests pass 100% green.
+3. Working tree diff is clean, documented, and free of extraneous modifications.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Refactoring Scope**: Modules and packages transformed.
+- **Verification Gate**: Compile and test status.
+- **Git Checkpoint**: Final commit SHA or diff summary.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Ocean Forge, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Ocean Forge**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Updating bundled skills architecture: Added new skills (`mcp-integration`, `local-models`), updated `OceanBundledSkills.java` registry, verified asset loading in `OceanAgentHubStoreTest`, and confirmed clean compilation.

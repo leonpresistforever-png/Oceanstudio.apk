@@ -23,8 +23,8 @@ public final class AnthropicDirectAuthAdapter implements DirectAuthAdapter {
     @Override
     public Availability preflight(Context ctx) {
         return Availability.unavailable(
-                "Anthropic does not offer public third-party OAuth for native mobile apps.\n\n"
-                + "Please connect via the official Claude Code CLI Bridge ('claude') or enter your Anthropic API Key."
+                "Provider has not exposed a supported third-party account authorization flow.\n\n"
+                + "Anthropic documents Claude subscription OAuth only for native Claude apps and Claude Code, and recommends API-key authentication for third-party tools. Please connect using an API Key."
         );
     }
 

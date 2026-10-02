@@ -43,12 +43,6 @@ public final class GoogleDirectAuthAdapter implements DirectAuthAdapter {
         if (customId != null && !customId.trim().isEmpty()) {
             return customId.trim();
         }
-        try {
-            String resId = context.getString(R.string.default_web_client_id);
-            if (resId != null && !resId.contains("YOUR_CLIENT_ID") && !resId.trim().isEmpty()) {
-                return resId.trim();
-            }
-        } catch (Exception ignored) {}
         return null;
     }
 
@@ -57,8 +51,9 @@ public final class GoogleDirectAuthAdapter implements DirectAuthAdapter {
         String clientId = getEffectiveClientId();
         if (clientId == null || clientId.isEmpty()) {
             return Availability.unavailable(
-                    "Google Direct OAuth requires a configured OAuth 2.0 Client ID.\n\n"
-                    + "Please configure your OAuth Client ID in settings, or connect using the official 'agy' CLI Bridge / API Key."
+                    "Google Gemini API Direct OAuth requires a registered Android OAuth 2.0 Client ID with Generative Language API enabled.\n\n"
+                    + "Generic web client registrations reject custom callback schemes and result in Error 400 invalid_request. "
+                    + "Please configure your verified Android OAuth Client ID in settings, or connect using an API Key."
             );
         }
         return Availability.available();

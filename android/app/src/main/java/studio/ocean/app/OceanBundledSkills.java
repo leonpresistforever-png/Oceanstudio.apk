@@ -15,6 +15,8 @@ final class OceanBundledSkills {
             "forge-self",
             "research",
             "release-ops",
+            "mcp-integration",
+            "local-models",
     };
 
     private OceanBundledSkills() {}

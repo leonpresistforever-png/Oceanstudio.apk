@@ -109,7 +109,22 @@ public final class OceanAgentRunner {
                                 : "Command exited with code " + execution.optInt("exit_code", -1) + ". " + execution.optString("error", "Review its output above.");
                     } else {
                         List<ProviderConnection> activeConns = connectionStore.listConnections();
-                        SmartRouter.RouteDecision decision = smartRouter.selectRoute(activeConns, false, false, true);
+
+                        // Directive 2026-10-02 §11.3: Check if persistent "Local model override" is enabled
+                        studio.ocean.app.models.local.LocalModelManager lmm = studio.ocean.app.models.local.LocalModelManager.getInstance(context);
+                        SmartRouter.RouteDecision decision = null;
+                        if (lmm.isLocalOverrideEnabled()) {
+                            studio.ocean.app.models.local.LocalModel connectedLocal = lmm.getConnectedModel();
+                            if (connectedLocal != null) {
+                                ProviderConnection localConn = connectionStore.findByProviderId(studio.ocean.app.providers.ProviderRegistry.ID_LOCAL);
+                                if (localConn != null) {
+                                    decision = new SmartRouter.RouteDecision(localConn, connectedLocal.id, "Local model override enabled: " + connectedLocal.displayName);
+                                }
+                            }
+                        }
+                        if (decision == null) {
+                            decision = smartRouter.selectRoute(activeConns, false, false, true);
+                        }
 
                         if (decision != null && decision.connection.strategy == AuthStrategy.OFFICIAL_CLI) {
                             status(callback, decision.rationale);
@@ -145,7 +160,8 @@ public final class OceanAgentRunner {
                                     || decision.connection.strategy == AuthStrategy.CUSTOM_ENDPOINT
                                     || decision.connection.strategy == AuthStrategy.DIRECT_OAUTH
                                     || decision.connection.strategy == AuthStrategy.DEVICE_CODE
-                                    || decision.connection.strategy == AuthStrategy.OFFICIAL_OAUTH)) {
+                                    || decision.connection.strategy == AuthStrategy.OFFICIAL_OAUTH
+                                    || decision.connection.strategy == AuthStrategy.LOCAL)) {
                                 String tokenOrKey = credentialVault.retrieve(decision.connection.credentialRef);
                                 config = new OceanModelConfig(decision.connection.providerId, decision.selectedModel, tokenOrKey != null ? tokenOrKey : "", decision.connection.baseUrl);
                             } else {
@@ -271,6 +287,10 @@ public final class OceanAgentRunner {
         } else if (config.provider.equals("anthropic")) {
             conn.setRequestProperty("x-api-key", config.apiKey);
             conn.setRequestProperty("anthropic-version", "2023-06-01");
+        } else if (config.provider.equals("local")) {
+            if (config.apiKey != null && !config.apiKey.isEmpty()) {
+                conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
+            }
         } else conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
         conn.setConnectTimeout(agentSettings.connectTimeoutMs());
         conn.setReadTimeout(agentSettings.antiTimeout()?agentSettings.readTimeoutMs():Math.min(agentSettings.readTimeoutMs(),60000));

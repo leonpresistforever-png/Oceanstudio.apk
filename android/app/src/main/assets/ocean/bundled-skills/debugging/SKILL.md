@@ -1,158 +1,78 @@
 ---
 id: debugging
-name: Debugging & RCA
-description: Hypothesis-driven debugging with reproducible evidence.
-status: connected
-source: bundled
+name: Debugging & Incident Analysis
+description: Systematic root-cause isolation, crash dump analysis, race condition triage, and diagnostic reproduction.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+optional_tools:
+  - search_web
 ---
 
-# Debugging & RCA
+# Debugging & Incident Analysis
 
-Hypothesis-driven debugging with reproducible evidence.
+## 1. Mission and Scope
+Systematically isolate, reproduce, and resolve defects, unhandled exceptions, ANRs, deadlocks, and silent data corruptions. Debugging applies scientific hypothesis testing and differential diagnosis to eliminate bugs at their source rather than masking symptoms with defensive null-checks or swallow-catch blocks.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Investigating unhandled exceptions, crash logs, or native SIGSEGV/SIGABRT signals.
+  - Diagnosing non-deterministic race conditions, UI freezes (ANRs), or thread deadlocks.
+  - Tracing state corruption across activity lifecycles or background services.
+- **Do NOT Invoke When**:
+  - Writing greenfield features or normal feature iterations (use Deep Coding).
+  - Conducting general code formatting or style refactorings (out of scope).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Full stack trace, logcat transcript, or terminal error output with timestamps.
+2. Exact steps to reproduce, user inputs, and device/environment state.
+3. Relevant class files along the call stack and suspect threading contexts.
+4. Recent commit history or git diff that introduced the regression.
 
+## 4. Tool Policy for This Domain
+- Inspect call stacks and line references with `view_file` at the exact line numbers reported.
+- Reproduce crashes using targeted unit tests or terminal commands with `run_command`.
+- Never suppress exceptions with empty `catch` blocks or silent fallbacks.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Triage & Reproduce**: Confirm the error with a minimal reproduction sequence or failing test case.
+2. **Isolate Root Cause**: Walk the stack trace backward from the exception point to the source of invalid state.
+3. **Formulate Falsifiable Hypothesis**: Articulate why the failure occurs (e.g., null reference, detached view, race between background thread and UI main thread).
+4. **Inspect Concurrency & State**: Audit variable mutability, thread boundaries (`runOnUiThread`, `Handler`, coroutines), and lifecycle states (`onPause`, `onDestroy`).
+5. **Construct Minimal Fix**: Apply the most direct, elegant correction that restores correct program invariants.
+6. **Verify Resolution**: Re-run the reproduction sequence and confirm the exception no longer occurs.
+7. **Regression Guard**: Add an automated unit or integration test that asserts the correct behavior and prevents regressions.
 
-When working on Debugging & RCA, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Bisection**: When a bug appeared after multiple changes, use `git bisect` to locate the introducing commit.
+- **Temporal Invariants**: Verify that asynchronous callbacks do not access destroyed activities or views after `onDestroy`.
+- **First Exception Dominance**: In cascading failure logs, always focus on the very first exception in the chain.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Stack trace before the fix showing reproduction.
+- Terminal log or test execution output demonstrating clean execution after the fix.
+- Code diff showing invariant restoration.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Non-Reproducible Heisenbug*: Increase logging granularity with atomic event tracers or run thread-sanitizer builds.
+- *Native Crash Without Stack*: Inspect tombstone dumps in `/data/tombstones/` and symbolicate addresses with `addr2line`.
+- *Fix Breaks Existing Tests*: Re-examine assumptions; fix must satisfy both legacy requirements and edge cases.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Redact user secrets, passwords, and private tokens when extracting logcat logs or stack dumps.
+- Do not bypass security checks to silence permission denials.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Crash or error condition is completely eliminated under identical reproduction steps.
+2. Regression test fails before the patch and passes cleanly after the patch.
+3. No defensive hacks, stubbed returns, or swallowed exceptions introduced.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Root Cause Summary**: Concise explanation of the defect mechanism.
+- **Patch Applied**: Description of code changes and preserved invariants.
+- **Verification Proof**: Test execution logs confirming the fix.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Debugging & RCA, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Debugging & RCA**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Resolving `IllegalStateException: The specified child already has a parent`: Traced view attachment in bottom sheet presenter, introduced proper view detachment check before re-adding to dynamic layout container, and verified across configuration changes.

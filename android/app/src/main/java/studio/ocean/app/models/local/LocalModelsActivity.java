@@ -9,9 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.List;
+import studio.ocean.app.OceanModal;
 import studio.ocean.app.R;
 
 /**
@@ -247,33 +247,42 @@ public final class LocalModelsActivity extends AppCompatActivity {
             });
             actions.addView(cancelBtn);
         } else if (model.state == LocalModel.State.INSTALLED) {
-            Button loadBtn = createButton("Load Model", true, density);
-            loadBtn.setOnClickListener(v -> {
-                if (manager.loadModel(model.id)) {
-                    Toast.makeText(this, "Loaded " + model.displayName, Toast.LENGTH_SHORT).show();
+            Button connectBtn = createButton("CONNECT", true, density);
+            connectBtn.setOnClickListener(v -> {
+                if (manager.connectModel(model.id)) {
+                    Toast.makeText(this, "Connected " + model.displayName + " on " + model.endpoint, Toast.LENGTH_SHORT).show();
                     updateRamStatus();
                     renderModels();
                 } else {
-                    Toast.makeText(this, "Failed to load model", Toast.LENGTH_SHORT).show();
+                    String err = model.errorMessage != null ? model.errorMessage : "Failed to connect model runtime";
+                    Toast.makeText(this, err, Toast.LENGTH_LONG).show();
                 }
             });
-            actions.addView(loadBtn);
+            actions.addView(connectBtn);
 
-            Button deleteBtn = createButton("Delete", false, density);
+            Button deleteBtn = createButton("DELETE", false, density);
             deleteBtn.setOnClickListener(v -> confirmDelete(model));
             actions.addView(deleteBtn);
-        } else if (model.state == LocalModel.State.LOADED) {
-            Button unloadBtn = createButton("Unload", false, density);
-            unloadBtn.setOnClickListener(v -> {
-                manager.unloadModel(model.id);
-                Toast.makeText(this, "Unloaded " + model.displayName, Toast.LENGTH_SHORT).show();
+        } else if (model.isConnected()) {
+            Button useBtn = createButton("USE FOR OCEAN", true, density);
+            useBtn.setOnClickListener(v -> {
+                manager.setLocalOverrideEnabled(true);
+                Toast.makeText(this, "Local model override enabled: Ocean Agent will route prompts to " + model.displayName, Toast.LENGTH_LONG).show();
+                renderModels();
+            });
+            actions.addView(useBtn);
+
+            Button disconnectBtn = createButton("DISCONNECT", false, density);
+            disconnectBtn.setOnClickListener(v -> {
+                manager.disconnectModel(model.id);
+                Toast.makeText(this, "Disconnected " + model.displayName, Toast.LENGTH_SHORT).show();
                 updateRamStatus();
                 renderModels();
             });
-            actions.addView(unloadBtn);
+            actions.addView(disconnectBtn);
         }
 
-        Button detailsBtn = createButton("Details", false, density);
+        Button detailsBtn = createButton("DETAILS", false, density);
         detailsBtn.setOnClickListener(v -> showModelDetails(model));
         actions.addView(detailsBtn);
 
@@ -340,15 +349,15 @@ public final class LocalModelsActivity extends AppCompatActivity {
     }
 
     private void confirmDelete(LocalModel model) {
-        new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle("Delete Model")
-                .setMessage("Delete local model file for " + model.displayName + "?")
-                .setPositiveButton("Delete", (d, w) -> {
+                .setExplanation("Delete local model file for " + model.displayName + "?")
+                .setPositiveButton("Delete", v -> {
                     manager.deleteModel(model.id);
                     Toast.makeText(this, "Model deleted", Toast.LENGTH_SHORT).show();
                     renderModels();
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -367,10 +376,11 @@ public final class LocalModelsActivity extends AppCompatActivity {
                 + "SHA-256 Checksum: " + (model.sha256 != null && !model.sha256.isEmpty() ? model.sha256 : "Not provided") + "\n\n"
                 + "Verified Upstream Source:\n" + model.sourceUrl;
 
-        new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle(model.displayName)
-                .setMessage(msg)
-                .setPositiveButton(android.R.string.ok, null)
+                .setExplanation(model.family + " · " + model.quantization + " · " + sizeMb + " MB · " + model.license)
+                .setDetailsText(msg)
+                .setPositiveButton("Done", null)
                 .show();
     }
 }

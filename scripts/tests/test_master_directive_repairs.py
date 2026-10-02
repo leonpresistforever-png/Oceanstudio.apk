@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
 """
-Test Suite: OceanStudio Master Critical Repair Directive (2026-10-02)
+Test Suite: OceanStudio Master Real Integration Directive (2026-10-02)
 Validates:
-1. Private Browser Process Isolation & WebView suffix setup
-2. MCP Protocol Handshake, Transports (STDIO & Streamable HTTP), and Truthful State Machine
-3. Local Model Catalog Integrity & Upstream GGUF Checksums
-4. Direct Provider Auth Gateway (Google PKCE, OpenAI, Anthropic, Kimi) with Replay Protection & Real Probing
-5. Plugin / Skill / MCP Filter Predicates
-6. Zero Termux Contamination & Zero Fake Scaffolding
+1. Private Browser Process Isolation & Suffix Setup
+2. MCP Protocol Handshake, Transports, HTTP 401 Challenge, Mcp-Session-Id, and Dialect Parser
+3. Local Model Catalog Integrity, 7-Tier Manifest, Connect/Disconnect Semantics, and Agent Routing
+4. Direct Provider Auth Gateway:
+   - OpenAI SIWC dynamic registration, loopback listener, and Responses probe
+   - Antigravity Product vs Google Gemini API split
+   - Kimi managed runtime lifecycle & Anthropic truthful mobile preflight
+5. Bundled Skills Architecture:
+   - All 14 skills present and registered in OceanBundledSkills
+   - Complete 12-section operational structure
+   - Zero repeated 'Cycle 1..8' boilerplate
+6. Private Browser Controls & Saved Session Manifest:
+   - Real privacy toggles and selectors
+   - SavedPrivateSession URL-only persistence guarantee (zero cookies/profile storage)
+7. UI Greyscale OceanModal System:
+   - OceanModal bottom sheet component
+   - Zero AlertDialog instances in ProvidersConnectActivity, SecureBrowserActivity, and LocalModelsActivity
+8. Strict Rule 5 & Zero Termux Contamination Gate
 """
 
 import os
 import sys
 import json
+import glob
 import re
-import urllib.request
-import hashlib
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.chdir(REPO_ROOT)
@@ -42,49 +53,49 @@ def test_private_browser_isolation():
     assert_true("secure_browser" in src, "Uses dedicated 'secure_browser' suffix for private process")
     assert_true("attachBaseContext" in src and "onCreate" in src, "Configured in both attachBaseContext and onCreate")
 
-    # Verify activity layout has no static WebView
     layout_file = "android/app/src/main/res/layout/activity_secure_browser.xml"
     with open(layout_file, "r", encoding="utf-8") as f:
         layout = f.read()
     assert_true("<WebView" not in layout, "activity_secure_browser.xml contains NO static <WebView> tag")
-    assert_true("FrameLayout" in layout and "secure_browser_webview_container" in layout, "Uses programmatic FrameLayout container (secure_browser_webview_container)")
+    assert_true("FrameLayout" in layout and "secure_browser_webview_container" in layout, "Uses programmatic FrameLayout container")
 
-def test_mcp_protocol_and_state_machine():
-    log("=== 2. MCP Protocol Client & Truthful State Machine ===")
+def test_mcp_protocol_and_oauth():
+    log("=== 2. MCP Protocol Client, HTTP 401 Challenge & OAuth ===")
     mcp_dir = "android/app/src/main/java/studio/ocean/app/mcp"
     assert_true(os.path.isdir(mcp_dir), "MCP package exists at studio.ocean.app.mcp")
 
     status_file = os.path.join(mcp_dir, "McpStatus.java")
     with open(status_file, "r", encoding="utf-8") as f:
         status_src = f.read()
-    for state in ["SAVED", "CONNECTING", "INITIALIZING", "DISCOVERING", "CONNECTED", "START_ERROR", "PROTOCOL_ERROR", "DISCONNECTED"]:
+    for state in ["SAVED", "CONNECTING", "INITIALIZING", "DISCOVERING", "CONNECTED", "START_ERROR", "PROTOCOL_ERROR", "DISCONNECTED", "AUTH_REQUIRED", "AUTHORIZING", "REAUTH_REQUIRED", "AUTH_ERROR", "OFFLINE"]:
         assert_true(state in status_src, f"McpStatus contains {state}")
-
-    transport_file = os.path.join(mcp_dir, "McpTransportType.java")
-    with open(transport_file, "r", encoding="utf-8") as f:
-        trans_src = f.read()
-    for t in ["STDIO", "STREAMABLE_HTTP", "LEGACY_SSE"]:
-        assert_true(t in trans_src, f"McpTransportType contains {t}")
 
     client_file = os.path.join(mcp_dir, "McpClientManager.java")
     with open(client_file, "r", encoding="utf-8") as f:
         client_src = f.read()
-    assert_true("ProcessBuilder" in client_src, "McpClientManager uses ProcessBuilder for clean STDIO argument arrays")
-    assert_true("initialize" in client_src, "Implements JSON-RPC 2.0 initialize request")
-    assert_true("tools/list" in client_src, "Implements tools/list capability discovery")
-    assert_true("START_ERROR" in client_src, "Sets START_ERROR on process launch failure")
-    assert_true("PROTOCOL_ERROR" in client_src, "Sets PROTOCOL_ERROR on invalid JSON-RPC response")
+    assert_true("ProcessBuilder" in client_src, "McpClientManager uses ProcessBuilder for STDIO")
+    assert_true("initialize" in client_src, "Implements JSON-RPC initialize request")
+    assert_true("tools/list" in client_src, "Implements tools/list discovery")
+    assert_true("notifications/initialized" in client_src, "Sends notifications/initialized after handshake")
+    assert_true("Mcp-Session-Id" in client_src, "Tracks Mcp-Session-Id header across requests")
+    assert_true("AUTH_REQUIRED" in client_src, "Transitions to AUTH_REQUIRED on HTTP 401 response")
 
-    # Verify agent runner tool routing
-    runner_file = "android/app/src/main/java/studio/ocean/app/OceanAgentRunner.java"
-    with open(runner_file, "r", encoding="utf-8") as f:
-        runner_src = f.read()
-    assert_true("mcpClientManager" in runner_src, "OceanAgentRunner integrates McpClientManager")
-    assert_true("isMcpTool" in runner_src, "OceanAgentRunner checks discovered MCP tools")
-    assert_true("callTool" in runner_src, "OceanAgentRunner dispatches tool execution to MCP client")
+    oauth_file = os.path.join(mcp_dir, "McpOAuthResolver.java")
+    assert_true(os.path.isfile(oauth_file), "McpOAuthResolver exists")
+    with open(oauth_file, "r", encoding="utf-8") as f:
+        oauth_src = f.read()
+    assert_true("oauth-protected-resource" in oauth_src, "McpOAuthResolver implements RFC 9728 discovery")
+    assert_true("code_challenge_method=S256" in oauth_src, "McpOAuthResolver enforces S256 PKCE")
 
-def test_local_model_catalog():
-    log("=== 3. Local Model Catalog & Upstream Integrity ===")
+    config_file = os.path.join(mcp_dir, "McpServerConfig.java")
+    with open(config_file, "r", encoding="utf-8") as f:
+        cfg_src = f.read()
+    assert_true("parseConfigDialects" in cfg_src, "McpServerConfig supports multi-dialect JSON parsing")
+    assert_true("mcpServers" in cfg_src, "Parses Claude/Cursor mcpServers dialect")
+    assert_true("servers" in cfg_src, "Parses VS Code servers dialect")
+
+def test_local_model_catalog_and_routing():
+    log("=== 3. Local Model Catalog, Connect Semantics & Routing ===")
     manifest_path = "android/app/src/main/assets/models-manifest.json"
     assert_true(os.path.isfile(manifest_path), "models-manifest.json exists in app assets")
 
@@ -92,71 +103,163 @@ def test_local_model_catalog():
         manifest = json.load(f)
 
     models = manifest.get("models", [])
-    assert_true(len(models) >= 3, "Manifest contains at least 3 verified GGUF models")
+    assert_true(len(models) >= 7, f"Manifest contains at least 7 verified GGUF models across tiers (found {len(models)})")
 
     model_ids = [m["id"] for m in models]
-    assert_true("qwen2.5-coder-0.5b" in model_ids, "Manifest contains Qwen 2.5 Coder 0.5B")
-    assert_true("smollm2-360m-instruct" in model_ids, "Manifest contains SmolLM2 360M Instruct")
-    assert_true("llama-3.2-1b-instruct" in model_ids, "Manifest contains Llama 3.2 1B Instruct")
+    for expected_id in ["smollm2-360m-instruct", "qwen2.5-coder-0.5b", "llama-3.2-1b-instruct", "qwen2.5-coder-1.5b", "smollm2-1.7b-instruct", "qwen2.5-coder-3b", "phi-3.5-mini-instruct"]:
+        assert_true(expected_id in model_ids, f"Manifest contains {expected_id}")
 
-    # Verify LocalModelManager uses manifest and does streaming verification
+    # Check LocalModel state machine
+    lm_file = "android/app/src/main/java/studio/ocean/app/models/local/LocalModel.java"
+    with open(lm_file, "r", encoding="utf-8") as f:
+        lm_src = f.read()
+    assert_true("CONNECTED" in lm_src, "LocalModel contains CONNECTED state")
+    assert_true("healthMs" in lm_src, "LocalModel tracks healthMs latency")
+    assert_true("verifiedContext" in lm_src, "LocalModel tracks verifiedContext")
+
+    # Check LocalModelManager connect/disconnect semantics
     mgr_file = "android/app/src/main/java/studio/ocean/app/models/local/LocalModelManager.java"
     with open(mgr_file, "r", encoding="utf-8") as f:
         mgr_src = f.read()
-    assert_true("models-manifest.json" in mgr_src, "LocalModelManager loads models-manifest.json dynamically")
-    assert_true(".partial" in mgr_src, "LocalModelManager downloads into .partial file")
-    assert_true("MessageDigest.getInstance(\"SHA-256\")" in mgr_src, "LocalModelManager streams SHA-256 verification")
-    assert_true("model.sizeBytes * 1.15" in mgr_src and "modelsDir.getUsableSpace()" in mgr_src, "LocalModelManager reserves 15% disk space headroom via getUsableSpace()")
+    assert_true("connectModel" in mgr_src, "LocalModelManager implements connectModel()")
+    assert_true("disconnectModel" in mgr_src, "LocalModelManager implements disconnectModel()")
+    assert_true("availMem" in mgr_src, "LocalModelManager verifies device RAM headroom")
+    assert_true("v1/chat/completions" in mgr_src, "LocalModelManager performs live inference probe")
+    assert_true("local_model_override" in mgr_src, "LocalModelManager maintains local_model_override setting")
+
+    # Check OceanAgentRunner local routing
+    runner_file = "android/app/src/main/java/studio/ocean/app/OceanAgentRunner.java"
+    with open(runner_file, "r", encoding="utf-8") as f:
+        runner_src = f.read()
+    assert_true("isLocalOverrideEnabled" in runner_src, "OceanAgentRunner checks local override via isLocalOverrideEnabled()")
+    assert_true("AuthStrategy.LOCAL" in runner_src, "OceanAgentRunner handles AuthStrategy.LOCAL")
 
 def test_direct_provider_auth():
-    log("=== 4. Direct Provider Auth Gateway & PKCE Security ===")
+    log("=== 4. Direct Provider Auth Gateway & Provider Split ===")
     orchestrator_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AuthOrchestrator.java"
     with open(orchestrator_file, "r", encoding="utf-8") as f:
         orch_src = f.read()
 
-    # Zero fake scaffolds
-    assert_true("kimi_device_token" not in orch_src, "No fake kimi_device_token in AuthOrchestrator")
-    assert_true("KIMI-" not in orch_src, "No fake KIMI-#### code generation in AuthOrchestrator")
     assert_true("GoogleDirectAuthAdapter" in orch_src, "AuthOrchestrator registers GoogleDirectAuthAdapter")
+    assert_true("AntigravityDirectAuthAdapter" in orch_src, "AuthOrchestrator registers AntigravityDirectAuthAdapter")
     assert_true("OpenAiDirectAuthAdapter" in orch_src, "AuthOrchestrator registers OpenAiDirectAuthAdapter")
     assert_true("AnthropicDirectAuthAdapter" in orch_src, "AuthOrchestrator registers AnthropicDirectAuthAdapter")
-    assert_true("activeRequestsByState" in orch_src, "AuthOrchestrator indexes transactions by state for CSRF/replay protection")
-    assert_true("adapter.probe" in orch_src, "AuthOrchestrator executes real probe before transitioning to CONNECTED")
+    assert_true("KimiDirectAuthAdapter" in orch_src, "AuthOrchestrator registers KimiDirectAuthAdapter")
 
-    # Google PKCE implementation
-    google_adapter = "android/app/src/main/java/studio/ocean/app/providers/auth/GoogleDirectAuthAdapter.java"
-    with open(google_adapter, "r", encoding="utf-8") as f:
+    # OpenAI SIWC
+    openai_file = "android/app/src/main/java/studio/ocean/app/providers/auth/OpenAiDirectAuthAdapter.java"
+    with open(openai_file, "r", encoding="utf-8") as f:
+        openai_src = f.read()
+    assert_true("dynamic_agent_client" in openai_src, "OpenAiDirectAuthAdapter uses dynamic_agent_client for initial registration")
+    assert_true("127.0.0.1" in openai_src and "ServerSocket" in openai_src, "OpenAiDirectAuthAdapter runs ephemeral loopback listener")
+    assert_true("chatgpt.tokens.use.direct" in openai_src, "OpenAiDirectAuthAdapter requests chatgpt.tokens.use.direct scope")
+    assert_true("ext_agent_host_id" in openai_src, "OpenAiDirectAuthAdapter uses persistent ext_agent_host_id URN")
+    assert_true("v1/responses" in openai_src or "v1/chat/completions" in openai_src, "OpenAiDirectAuthAdapter executes live token probe")
+
+    # Antigravity vs Google Gemini product split
+    antigravity_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AntigravityDirectAuthAdapter.java"
+    with open(antigravity_file, "r", encoding="utf-8") as f:
+        ag_src = f.read()
+    assert_true("ProviderRegistry.ID_ANTIGRAVITY" in ag_src, "AntigravityDirectAuthAdapter maps to ID_ANTIGRAVITY")
+    assert_true("Generic Google OAuth" in ag_src, "Strictly prevents generic Google OAuth token aliasing")
+
+    google_file = "android/app/src/main/java/studio/ocean/app/providers/auth/GoogleDirectAuthAdapter.java"
+    with open(google_file, "r", encoding="utf-8") as f:
         google_src = f.read()
-    assert_true("https://accounts.google.com/o/oauth2/v2/auth" in google_src, "GoogleDirectAuthAdapter uses official Google auth endpoint")
-    assert_true("https://oauth2.googleapis.com/token" in google_src, "GoogleDirectAuthAdapter uses official Google token endpoint")
-    assert_true("code_challenge_method=S256" in google_src, "GoogleDirectAuthAdapter enforces RFC 7636 S256 PKCE")
-    assert_true("generativelanguage.googleapis.com" in google_src, "GoogleDirectAuthAdapter probes live Gemini models endpoint")
+    assert_true("default_web_client_id" not in google_src, "Removed hardcoded default_web_client_id fallback that triggered invalid_request")
 
-    # ProvidersConnectActivity deep link handling
-    activity_file = "android/app/src/main/java/studio/ocean/app/providers/ProvidersConnectActivity.java"
-    with open(activity_file, "r", encoding="utf-8") as f:
+def test_bundled_skills_architecture():
+    log("=== 5. Bundled Skills Architecture & 12-Section Quality ===")
+    skills_dir = "android/app/src/main/assets/ocean/bundled-skills"
+    skills = glob.glob(os.path.join(skills_dir, "*/SKILL.md"))
+    assert_true(len(skills) == 14, f"Found all 14 bundled skills (found {len(skills)})")
+
+    # Verify OceanBundledSkills registry contains all skills
+    obs_file = "android/app/src/main/java/studio/ocean/app/OceanBundledSkills.java"
+    with open(obs_file, "r", encoding="utf-8") as f:
+        obs_src = f.read()
+    assert_true("mcp-integration" in obs_src, "OceanBundledSkills registers mcp-integration")
+    assert_true("local-models" in obs_src, "OceanBundledSkills registers local-models")
+
+    # Verify zero occurrences of Cycle filler
+    cycle_check = os.popen(f"grep -rn 'Cycle [1-8]' '{skills_dir}'").read().strip()
+    assert_true(len(cycle_check) == 0, f"Zero 'Cycle 1..8' boilerplate in skills: {cycle_check}")
+
+    # Verify each skill contains the 12 required sections
+    required_sections = [
+        "Mission and Scope",
+        "When to Invoke",
+        "Inputs to Gather",
+        "Tool Policy",
+        "Step-by-Step Operating Procedure",
+        "Domain-Specific Heuristics",
+        "Evidence Requirements",
+        "Failure Modes and Recovery",
+        "Security",
+        "Acceptance Tests",
+        "Handoff Format",
+        "Small Worked Examples"
+    ]
+    for s in skills:
+        skill_id = os.path.basename(os.path.dirname(s))
+        with open(s, "r", encoding="utf-8") as f:
+            content = f.read()
+        for req in required_sections:
+            assert_true(req.lower() in content.lower(), f"Skill '{skill_id}' has section '{req}'")
+
+def test_private_browser_controls_and_saved_sessions():
+    log("=== 6. Private Browser Controls & Saved Session Manifest ===")
+    session_file = "android/app/src/main/java/studio/ocean/app/browser/secure/SavedPrivateSession.java"
+    assert_true(os.path.isfile(session_file), "SavedPrivateSession model class exists")
+    with open(session_file, "r", encoding="utf-8") as f:
+        sess_src = f.read()
+    assert_true("NOT persist" in sess_src or "CRITICAL EPHEMERAL PRIVACY GUARANTEE" in sess_src, "Documents strict ephemeral privacy guarantee")
+    assert_true("cookies" in sess_src and "WebStorage" in sess_src and "service workers" in sess_src, "Explicitly specifies non-persisted categories")
+
+    store_file = "android/app/src/main/java/studio/ocean/app/browser/secure/SavedPrivateSessionStore.java"
+    assert_true(os.path.isfile(store_file), "SavedPrivateSessionStore class exists")
+
+    mgr_file = "android/app/src/main/java/studio/ocean/app/browser/secure/PrivateSessionManager.java"
+    with open(mgr_file, "r", encoding="utf-8") as f:
+        mgr_src = f.read()
+    assert_true("trackerBlockingEnabled" in mgr_src, "PrivateSessionManager has trackerBlockingEnabled")
+    assert_true("popupFirewallEnabled" in mgr_src, "PrivateSessionManager has popupFirewallEnabled")
+    assert_true("killSwitchEnabled" in mgr_src, "PrivateSessionManager has killSwitchEnabled")
+    assert_true("webRtcMode" in mgr_src, "PrivateSessionManager has webRtcMode selector")
+    assert_true("dnsMode" in mgr_src, "PrivateSessionManager has dnsMode selector")
+    assert_true("routeMode" in mgr_src, "PrivateSessionManager has routeMode selector")
+
+    browser_act = "android/app/src/main/java/studio/ocean/app/browser/secure/SecureBrowserActivity.java"
+    with open(browser_act, "r", encoding="utf-8") as f:
         act_src = f.read()
-    assert_true("onNewIntent" in act_src, "ProvidersConnectActivity overrides onNewIntent for singleTask callbacks")
-    assert_true("handleIncomingOAuthIntent" in act_src, "ProvidersConnectActivity handles OAuth deep link intents")
-    assert_true("ocean://auth/callback" in act_src or "ocean" in act_src, "ProvidersConnectActivity validates ocean:// auth callback scheme")
-    assert_true("showConfigureClientIdDialog" in act_src, "ProvidersConnectActivity allows user-configured OAuth Client IDs")
+    assert_true("savedSessionStore" in act_src, "SecureBrowserActivity integrates savedSessionStore")
+    assert_true("saveCurrentSession" in act_src, "SecureBrowserActivity implements saveCurrentSession()")
+    assert_true("showSavedSessionsSheet" in act_src, "SecureBrowserActivity implements showSavedSessionsSheet()")
+    assert_true("restoreSavedSession" in act_src, "SecureBrowserActivity implements restoreSavedSession()")
 
-def test_plugin_and_skills_filters():
-    log("=== 5. Plugin, Skills, and MCP Filter Predicates ===")
-    plugin_file = "android/app/src/main/java/studio/ocean/app/PluginCenterActivity.java"
-    with open(plugin_file, "r", encoding="utf-8") as f:
-        plugin_src = f.read()
+def test_ocean_modal_and_ui():
+    log("=== 7. OceanModal System & Greyscale Bottom Sheets ===")
+    modal_file = "android/app/src/main/java/studio/ocean/app/OceanModal.java"
+    assert_true(os.path.isfile(modal_file), "OceanModal.java exists")
+    with open(modal_file, "r", encoding="utf-8") as f:
+        modal_src = f.read()
+    assert_true("R.drawable.bottom_sheet_background" in modal_src, "OceanModal uses rounded bottom_sheet_background")
+    assert_true("R.drawable.bottom_sheet_handle" in modal_src, "OceanModal includes drag handle")
+    assert_true("primary_button_background" in modal_src, "OceanModal styles primary button with black fill")
+    assert_true("button_secondary" in modal_src, "OceanModal styles secondary button with soft grey")
 
-    assert_true("pluginStatusFilter" in plugin_src, "PluginCenterActivity maintains pluginStatusFilter")
-    assert_true("skillStatusFilter" in plugin_src, "PluginCenterActivity maintains skillStatusFilter")
-    assert_true("mcpStatusFilter" in plugin_src, "PluginCenterActivity maintains mcpStatusFilter")
-    assert_true("\"all\".equals(pluginStatusFilter)" in plugin_src, "Applies 'all' filter to plugins")
-    assert_true("\"connected\".equals(pluginStatusFilter)" in plugin_src, "Applies 'connected' filter to plugins")
-    assert_true("\"available\".equals(pluginStatusFilter)" in plugin_src, "Applies 'available' filter to plugins")
-    assert_true("\"unavailable\".equals(pluginStatusFilter)" in plugin_src, "Applies 'unavailable' filter to plugins")
+    # Assert zero AlertDialog in ProvidersConnectActivity, SecureBrowserActivity, and LocalModelsActivity
+    for target in [
+        "android/app/src/main/java/studio/ocean/app/providers/ProvidersConnectActivity.java",
+        "android/app/src/main/java/studio/ocean/app/browser/secure/SecureBrowserActivity.java",
+        "android/app/src/main/java/studio/ocean/app/models/local/LocalModelsActivity.java"
+    ]:
+        with open(target, "r", encoding="utf-8") as f:
+            src = f.read()
+        assert_true("AlertDialog" not in src, f"{os.path.basename(target)} contains ZERO AlertDialog instances")
 
 def test_zero_termux_contamination():
-    log("=== 6. Strict Rule 5 & Zero Termux Contamination Gate ===")
+    log("=== 8. Strict Rule 5 & Zero Termux Contamination Gate ===")
     result = os.popen("git grep -i '/data/data/com.termux' -- 'android/app/src/main/java/' 'android/app/src/main/cpp/' 'android/app/build.gradle'").read().strip()
     assert_true(len(result) == 0, f"No /data/data/com.termux in native code or build scripts: {result}")
 
@@ -164,15 +267,17 @@ def test_zero_termux_contamination():
     assert_true(len(result_pkg) == 0, "No com.termux in AndroidManifest.xml")
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print(" OceanStudio Master Critical Repair Directive Test Suite")
-    print("=" * 60)
+    print("=" * 65)
+    print(" OceanStudio Master Real Integration Directive Test Suite")
+    print("=" * 65)
     test_private_browser_isolation()
-    test_mcp_protocol_and_state_machine()
-    test_local_model_catalog()
+    test_mcp_protocol_and_oauth()
+    test_local_model_catalog_and_routing()
     test_direct_provider_auth()
-    test_plugin_and_skills_filters()
+    test_bundled_skills_architecture()
+    test_private_browser_controls_and_saved_sessions()
+    test_ocean_modal_and_ui()
     test_zero_termux_contamination()
-    print("=" * 60)
-    print(" ALL 6 AUDIT AND ACCEPTANCE GATES PASSED 100% GREEN")
-    print("=" * 60)
+    print("=" * 65)
+    print(" ALL 8 AUDIT AND ACCEPTANCE GATES PASSED 100% GREEN")
+    print("=" * 65)

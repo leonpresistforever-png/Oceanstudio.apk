@@ -1,158 +1,86 @@
 ---
 id: ux-design
 name: Design & UX
-description: Greyscale premium UI critique and implementation guidance.
-status: connected
-source: bundled
+description: Visual hierarchy, touch target ergonomics, accessibility, and Ocean monochrome design system implementation.
+version: 2.0.0
+required_tools:
+  - view_file
+  - replace_file_content
+  - write_to_file
+  - run_command
+optional_tools:
+  - generate_image
 ---
 
 # Design & UX
 
-Greyscale premium UI critique and implementation guidance.
+## 1. Mission and Scope
+Enforce high visual clarity, ergonomic touch targets, and strict compliance with the Ocean monochrome design language. Design & UX eliminates generic Material green/teal text dialogs, thick borders, and inconsistent paddings in favor of rounded bottom sheets, subtle drag handles, and high-contrast typography.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Designing or refining user flows, modals, bottom sheets, or activity layouts.
+  - Auditing touch targets, typography contrast, or component density for mobile ergonomics.
+  - Replacing standard platform dialogs with Ocean monochrome modal sheets.
+- **Do NOT Invoke When**:
+  - Implementing backend network protocols or daemon lifecycle (use Deep Coding or Terminal & Runtime).
+  - Building low-level CLI utilities with no graphical presentation.
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Target activity layout files (`activity_*.xml`, `bottom_sheet_*.xml`).
+2. Current color palette definitions (`res/values/colors.xml`, `res/values/styles.xml`).
+3. Screenshot or layout hierarchy of the screen under evaluation.
+4. User interactions and primary vs secondary action priorities.
 
+## 4. Tool Policy for This Domain
+- Inspect layout XML with `view_file` to verify DP measurements and color tokens.
+- Apply surgical edits using `replace_file_content` to layout structures and custom view adapters.
+- Validate on-device or with viewport rendering before approving design changes.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Audit Hierarchy**: Identify the primary user goal on the screen. Ensure primary action is unmistakable and singular.
+2. **Apply Ocean Monochrome Palette**:
+   - Background: Pure White (`#FFFFFF`) or Off-White surface (`#FAFAFA` / `#F5F5F4`).
+   - Primary Text: High-contrast Dark Ink (`#191817` or `#18181B`).
+   - Secondary / Helper Text: Muted Charcoal (`#77736E` or `#71717A`).
+   - Borders: Subtle hairline border (`#D8D8D8` or `#E7E5E4`), never heavy black outlines.
+3. **Ergonomic Touch Targets**: Guarantee all interactive elements have a minimum bounding box of 48dp x 48dp.
+4. **Modal Bottom Sheets**:
+   - Replace square `AlertDialog` dialogs with rounded bottom sheets (top corners radius 20dp+).
+   - Include a subtle horizontal drag handle (width 40-52dp, height 4dp, centered, muted grey).
+   - Primary button: Solid black fill (`#191817`), white text (`#FFFFFF`), rounded corners (8-12dp).
+   - Secondary button: Soft grey surface (`#F4F4F5`) with subtle border, dark ink text.
+   - Inline errors: Subtle light-red background with dark red text directly below affected inputs.
+   - Details: Hide advanced diagnostics behind an expandable "Details" disclosure toggle.
 
-When working on Design & UX, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Visual Weight Rule**: Only one primary filled black button per viewport level; all other actions must be secondary or tertiary outlines.
+- **No Color Confusion**: Never use green or teal text for system actions. Reserve color strictly for status indicators (amber for rate-limiting, subtle red for auth errors).
+- **Proportional Spacing Grid**: Use an 8dp baseline grid (8dp, 12dp, 16dp, 20dp, 24dp) for consistent rhythm.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- XML diff confirming updated color attributes, corner radiuses, and padding dimensions.
+- Touch target measurement verification (bounds >= 48dp).
+- Absence of default platform dialog styling in user-facing connection sheets.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Cramped Touch Targets*: Increase padding or set `minHeight="48dp"` and `minWidth="48dp"`.
+- *Low Contrast Text*: Test contrast ratios against WCAG 2.1 AA standards (minimum 4.5:1 for body copy).
+- *Cluttered Modals*: Move secondary configurations into a dedicated "Advanced" sheet or collapsible disclosure.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Respect `WindowManager.LayoutParams.FLAG_SECURE` where private data or credential input is present.
+- Never render unmasked credentials or raw OAuth bearer tokens on screen.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Interactive buttons meet or exceed 48dp touch target guidelines.
+2. Modal dialogs use Ocean monochrome bottom sheets with drag handles and rounded corners.
+3. Color palette strictly complies with Ocean greyscale specification with zero teal/green text actions.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Design Overview**: Summary of layout hierarchy, spacing improvements, and component adaptations.
+- **Tokens Applied**: Exact color and dimension tokens modified.
+- **Verification**: Visual inspection confirmation and touch-target audit results.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Design & UX, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Design & UX**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Converting a generic `AlertDialog` for Provider Connection into an `OceanBottomSheet` featuring rounded corners, centered drag handle, black primary "Direct Connect" button, and expandable technical details.

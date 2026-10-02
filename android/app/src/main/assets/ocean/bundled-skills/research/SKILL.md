@@ -1,158 +1,80 @@
 ---
 id: research
 name: Research & Synthesis
-description: Evidence-backed summaries for decisions.
-status: connected
-source: bundled
+description: Evidence-backed literature review, upstream specification analysis, and structured decision syntheses.
+version: 2.0.0
+required_tools:
+  - search_web
+  - read_url_content
+  - view_file
+optional_tools:
+  - run_command
 ---
 
 # Research & Synthesis
 
-Evidence-backed summaries for decisions.
+## 1. Mission and Scope
+Provide rigorous, evidence-grounded research, upstream protocol verification, and architectural decision briefs. This skill eliminates speculative guesswork by sourcing facts directly from authoritative standards (RFCs, official vendor API documentation, upstream source code, and release notes) and synthesizing them into auditable decision matrices.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Investigating new provider protocols (e.g., OAuth 2.1, RFC 9728, SSE transport).
+  - Comparing architectural tradeoffs between libraries, database engines, or IPC models.
+  - Sourcing cryptographic hashes, canonical release mirrors, or upstream source URLs.
+  - Resolving contradictory information across disparate technical documentations.
+- **Do NOT Invoke When**:
+  - Direct code changes or bug fixing is requested without research needs (use Deep Coding).
+  - The problem is an internal compiler syntax error already isolated to a single file (use Debugging).
+  - Writing code modifications (route findings to appropriate implementation skill).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Clear problem statement and specific technical question(s) to answer.
+2. Canonical upstream documentation URLs, RFC numbers, or authoritative specifications.
+3. Target deployment constraints (e.g., Android API 28+, ARM64, Bionic libc limitations).
+4. Known failure symptoms or ambiguous behaviors observed in existing systems.
 
+## 4. Tool Policy for This Domain
+- Sourcing must prioritize primary upstream references (official developer docs, IETF RFCs, canonical git repositories) over third-party blog posts.
+- Use `search_web` to discover authoritative documentation URLs.
+- Use `read_url_content` to extract exact protocol specifications and parameter schemas.
+- Record the exact URLs, document revision dates, and specific section headers as citations.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Deconstruct Query**: Break the inquiry into testable technical assertions and information requirements.
+2. **Authoritative Discovery**: Search for primary sources (RFCs, official provider guides, vendor API references).
+3. **Extraction & Cross-Examination**: Read the exact specification sections. If secondary sources disagree with primary RFCs, primary RFCs take precedence.
+4. **Recency & Deprecation Check**: Verify whether APIs or protocols have been superseded (e.g., OAuth 2.0 implicit flow vs OAuth 2.1 PKCE).
+5. **Claim-to-Source Matrix**: Map each proposed design decision to a specific, cited upstream specification requirement.
+6. **Synthesize Decision Brief**: Structure recommendations with explicit tradeoffs, invariants, and fallback mechanisms.
 
-When working on Research & Synthesis, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Primary Source Dominance**: Official protocol specs and canonical source code always override developer forums or outdated tutorials.
+- **Triangulation of Ambiguity**: If an upstream spec is ambiguous, examine the reference implementation code in canonical GitHub repositories.
+- **Zero Hallucination Rule**: If a provider does not support a desired capability (e.g., no public mobile OAuth flow), document the limitation truthfully rather than inventing workarounds.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Direct quotes and line/section citations from authoritative standards.
+- Exact URLs with access timestamps and document versions.
+- Explicit matrix comparing alternative approaches on performance, security, and complexity.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Contradictory Sources*: Verify publishing dates; newer protocol versions or official errata resolve conflicts.
+- *Stale / Deprecated Documentation*: Check changelogs and API deprecation notices to confirm active validity.
+- *Paywalled / Restricted Endpoints*: Rely on public official RFCs or open-source reference implementations.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Never request or process confidential credentials during research inquiries.
+- Adhere strictly to clean-room engineering principles: cite open public specifications only.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Every technical recommendation is backed by at least one primary upstream citation.
+2. Tradeoffs, known limitations, and edge cases are clearly enumerated.
+3. No unsupported or speculative claims exist in the synthesis.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Executive Summary**: 2-3 sentences summarizing the conclusion and recommended direction.
+- **Claim-to-Source Matrix**: Markdown table mapping each architectural claim to its URL and section citation.
+- **Actionable Steps**: Concrete implementation tasks ready to hand off to Deep Coding or API Integration.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Research & Synthesis, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Research & Synthesis**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Verifying OpenAI Sign-in with ChatGPT (SIWC) protocol: Discovered dynamic client registration endpoint (`/api/accounts/authorize` with `client_id=dynamic_agent_client`), loopback redirect handling, and issued client ID exchange rules, citing official OpenAI developer documentation.

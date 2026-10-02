@@ -1,158 +1,78 @@
 ---
 id: android-device
-name: Android Device Ops
-description: Responsible use of Ocean device tools and App Access profiles.
-status: connected
-source: bundled
+name: Android Device & Hardware Integration
+description: Android platform API integration, hardware sensors, battery/thermal management, and system capability routing.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+optional_tools:
+  - search_web
 ---
 
-# Android Device Ops
+# Android Device & Hardware Integration
 
-Responsible use of Ocean device tools and App Access profiles.
+## 1. Mission and Scope
+Integrate with native Android platform capabilities, system services, hardware sensors, battery state monitors, and filesystem providers targeting Android API 28+ (minSdk 28). Ensure strict adherence to modern Android permission models, background execution limits, and hardware resource constraints.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Interfacing with Android system services (`ActivityManager`, `BatteryManager`, `ConnectivityManager`).
+  - Handling device lifecycle events, screen orientation, memory pressure callbacks (`onTrimMemory`).
+  - Managing scoped storage, SAF (Storage Access Framework), or native Bionic hardware acceleration (NNAPI, GPU, NEON).
+  - Monitoring CPU thermal throttling and adjusting local inference workloads accordingly.
+- **Do NOT Invoke When**:
+  - Writing pure user interface styling without hardware interactions (use UX Design).
+  - Executing standard Unix shell scripts inside the terminal (use Terminal & Runtime).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Target Android API level (minSdk 28, targetSdk 34+).
+2. Hardware profile: CPU cores, ABI (arm64-v8a), total RAM, available disk space, thermal status.
+3. Required Android permissions (`Manifest.permission.*`) and user grant status.
+4. Active system power save mode and battery state.
 
+## 4. Tool Policy for This Domain
+- Inspect Android manifest and Java/Kotlin system service wrappers using `view_file`.
+- Check device hardware properties using `adb` or device shell commands where available.
+- Never use non-SDK interface reflection blocked by Android hidden API restrictions (greylist/blacklist).
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Capability Detection**: Check hardware feature availability via `PackageManager.hasSystemFeature()` before querying hardware sensors.
+2. **Permission Verification**: Check `ContextCompat.checkSelfPermission()`. If missing, initiate runtime permission request with clear user rationale.
+3. **Hardware Resource Check**: Inspect battery percentage and thermal status via `PowerManager.isPowerSaveMode()` and thermal listener callbacks.
+4. **Service Binding & Lifecycle**: Bind to Android system services with lifecycle awareness. Unregister listeners in `onPause` or `onStop` to prevent battery drain.
+5. **Memory Management**: Listen for `ComponentCallbacks2.onTrimMemory()`. When trim level is `TRIM_MEMORY_RUNNING_CRITICAL`, gracefully scale down cache sizes and suspend non-critical background processing.
+6. **Hardware Acceleration**: Configure native libraries to detect ARM NEON or GPU compute capabilities at runtime.
 
-When working on Android Device Ops, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Thermal-Aware Throttling**: If device thermal status indicates throttling (`THERMAL_STATUS_SEVERE`), dynamically reduce local model inference thread counts by 50% or pause background batch tasks.
+- **Battery Conservation**: Suspend heavy model downloads and continuous indexing when device battery falls below 15% and is not charging.
+- **Storage Scoped Routing**: Prefer app-specific private storage (`getExternalFilesDir()`) to avoid complex runtime permission prompts for common cache and model files.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Logcat entries demonstrating clean service registration and unregistration.
+- Verification that `onTrimMemory` events are properly handled without crash.
+- Absence of hidden API reflection warnings in Android system logs.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *SecurityException (Permission Denied)*: Gracefully degrade functionality, explain required capability to the user, and direct to app settings if permanently denied.
+- *Memory Pressure Kill (LMK)*: Intercept `TRIM_MEMORY` and reduce resident memory footprint before the kernel terminates the process.
+- *Sensor Unavailable*: Return a structured unsupported state instead of returning null or throwing exceptions.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Never request permissions that are not strictly necessary for stated application features.
+- Strictly adhere to Android platform security: never attempt root elevation or SELinux bypasses.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. System service calls operate cleanly on API 28 through the latest Android versions.
+2. Listeners cleanly detach on activity lifecycle transitions without leaking memory.
+3. Low memory and battery callbacks trigger appropriate resource preservation actions.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Hardware Feature**: Subsystem integrated (RAM, thermal, battery, storage).
+- **API Level & Constraints**: Minimum SDK requirements and permission status.
+- **Verification Evidence**: Lifecycle and resource test results.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Android Device Ops, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Android Device Ops**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: RAM headroom verification in `LocalModelManager`: Queried `ActivityManager.MemoryInfo.availMem`, verified available RAM against model `minRamBytes`, and prevented model loading when remaining memory would trigger system OOM.

@@ -1,158 +1,80 @@
 ---
 id: api-integration
-name: API Integration
-description: Compose HTTP tools, auth, and terminal verification.
-status: connected
-source: bundled
+name: API & Network Integration
+description: HTTP/REST, SSE/WebSocket networking, provider API adapters, OAuth token lifecycle, and resilient retry policies.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+optional_tools:
+  - search_web
+  - read_url_content
 ---
 
-# API Integration
+# API & Network Integration
 
-Compose HTTP tools, auth, and terminal verification.
+## 1. Mission and Scope
+Build, integrate, and verify robust network adapters for external AI providers (OpenAI, Anthropic, Gemini, Kimi, Antigravity) and web services. Ensure strict adherence to upstream protocol specifications, truthful connection states, secure credential vaults, and resilient transport layers.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Implementing or modifying provider direct auth adapters (OAuth 2.0/2.1, PKCE, API keys).
+  - Building REST or streaming HTTP clients for completions, chat, or embedding endpoints.
+  - Handling HTTP 401 challenges, rate limits (HTTP 429), or transient network timeouts.
+  - Validating network security configurations, TLS cipher suites, and proxy configurations.
+- **Do NOT Invoke When**:
+  - Managing on-device local GGUF models (use Local Models).
+  - Designing UI buttons, modals, or sheets (use UX Design).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Upstream API documentation, endpoint URLs, headers, and payload schemas.
+2. Required authentication strategy: Direct OAuth, Managed Loopback, or API Key (BYOK).
+3. Supported streaming protocols: Server-Sent Events (SSE) or chunked transfer encoding.
+4. Error response codes, rate limit headers (`Retry-After`), and retry guidelines.
 
+## 4. Tool Policy for This Domain
+- Inspect adapter implementations with `view_file`.
+- Test network endpoints using `run_command` with `curl` to capture HTTP status codes and headers.
+- Never hardcode API keys, secrets, or fake mock tokens into code or configuration files.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Protocol Verification**: Check official provider API documentation for endpoint URLs, required headers, and authentication schemas.
+2. **Adapter Construction**: Implement the `ProviderAuthAdapter` contract with explicit preflight, initiation, callback handling, and probe methods.
+3. **Loopback Server Handling**: If the provider requires loopback OAuth redirect (e.g. OpenAI SIWC), bind an ephemeral server to `127.0.0.1:<port>` with high-entropy PKCE verifier and state parameter.
+4. **Token Exchange & Vaulting**: Exchange authorization codes for access and refresh tokens. Store encrypted tokens in `CredentialVault`.
+5. **Connection Health Probe**: Execute a live 1-token or model-list query to verify that credentials are genuinely operational before setting status to `CONNECTED`.
+6. **Resilience & Retry**: Implement exponential backoff for HTTP 429 and 503 errors, respecting `Retry-After` response headers.
 
-When working on API Integration, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Zero-Faking Connection Rule**: Never report `CONNECTED` unless a real network probe to the provider's API returns HTTP 200 with valid payload data.
+- **Provider Disambiguation**: Keep distinct products isolated; never allow generic tokens from one service (e.g. Google Gemini API) to masquerade as another (e.g. Antigravity product).
+- **Ephemeral Session Security**: Terminate local loopback listening sockets immediately after handling the incoming OAuth redirect callback.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Raw HTTP response status codes and headers from probe requests.
+- Log showing successful token exchange without printing token values.
+- Clean transition through authentication states (`UNCONFIGURED` -> `AUTHORIZING` -> `CONNECTED`).
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *HTTP 401 (Unauthorized)*: Attempt token refresh using refresh token; if refresh fails, transition to `AUTH_REQUIRED` and prompt user for re-authentication.
+- *HTTP 429 (Rate Limit)*: Parse `Retry-After` header, delay next request accordingly, and notify user of rate limit cooldown.
+- *Network Unreachable*: Transition to `OFFLINE` state and queue outbound requests or notify the user.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- All network traffic must use TLS 1.3 or TLS 1.2; cleartext HTTP is prohibited except for `127.0.0.1` loopback testing.
+- Store sensitive bearer tokens in encrypted keystore-backed storage.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Adapter completes OAuth handshake or API key validation cleanly.
+2. Health probe successfully executes and verifies token authenticity against live provider.
+3. Refresh token flow seamlessly renews expired access tokens without user interruption.
+4. Network errors and rate limits are handled gracefully with actionable diagnostics.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Provider Identifier**: Name, endpoint, and authentication strategy.
+- **Connection Status**: Operational state and latency metrics from health probe.
+- **Supported Capabilities**: Available models, streaming support, and token limits.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on API Integration, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **API Integration**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: OpenAI Direct Connect SIWC integration: Spawned ephemeral loopback listener on `127.0.0.1:<port>`, launched browser to `https://auth.openai.com/api/accounts/authorize`, received authorization code, exchanged code using issued client ID, stored tokens in `CredentialVault`, executed 1-token Responses probe, and verified `CONNECTED` state.

@@ -1196,23 +1196,33 @@ public final class PluginCenterActivity extends AppCompatActivity {
         TextView stdioBtn = new TextView(this);
         stdioBtn.setText("STDIO (Local)");
         stdioBtn.setGravity(Gravity.CENTER);
-        stdioBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
+        stdioBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
         stdioBtn.setTextColor(INK);stdioBtn.setTypeface(null, Typeface.BOLD);
         stdioBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
         LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        tLp.rightMargin = dp(6);
+        tLp.rightMargin = dp(4);
         transportBar.addView(stdioBtn, tLp);
 
         TextView httpBtn = new TextView(this);
         httpBtn.setText("HTTP (Remote)");
         httpBtn.setGravity(Gravity.CENTER);
-        httpBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
+        httpBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
         httpBtn.setTextColor(MUTED);
         httpBtn.setBackground(roundRect(SURFACE, 8, BORDER));
-        transportBar.addView(httpBtn, new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        hLp.rightMargin = dp(4);
+        transportBar.addView(httpBtn, hLp);
+
+        TextView jsonBtn = new TextView(this);
+        jsonBtn.setText("Import JSON");
+        jsonBtn.setGravity(Gravity.CENTER);
+        jsonBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
+        jsonBtn.setTextColor(MUTED);
+        jsonBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+        transportBar.addView(jsonBtn, new LinearLayout.LayoutParams(0, -2, 1f));
         sheet.addView(transportBar);
 
-        EditText name=new EditText(this);name.setHint("Server name (e.g. SQLite / Git MCP)");
+        EditText name=new EditText(this);name.setHint("Server name (e.g. SQLite / Cloudflare MCP)");
         name.setBackgroundResource(R.drawable.auth_field_background);
         name.setPadding(dp(12),dp(10),dp(12),dp(10));
         LinearLayout.LayoutParams nLp=new LinearLayout.LayoutParams(-1,-2);
@@ -1227,12 +1237,30 @@ public final class PluginCenterActivity extends AppCompatActivity {
         cLp.topMargin=dp(10);
         sheet.addView(targetInput,cLp);
 
+        EditText jsonInput=new EditText(this);
+        jsonInput.setHint("Paste Claude/Cursor, VS Code, or Antigravity MCP config JSON");
+        jsonInput.setMinLines(5);
+        jsonInput.setGravity(Gravity.TOP|Gravity.START);
+        jsonInput.setBackgroundResource(R.drawable.auth_field_background);
+        jsonInput.setPadding(dp(12),dp(10),dp(12),dp(10));
+        jsonInput.setTypeface(Typeface.MONOSPACE);
+        jsonInput.setTextSize(12);
+        LinearLayout.LayoutParams jLp=new LinearLayout.LayoutParams(-1,-2);
+        jLp.topMargin=dp(10);
+        jsonInput.setVisibility(View.GONE);
+        sheet.addView(jsonInput,jLp);
+
         stdioBtn.setOnClickListener(v -> {
             selectedTransport[0] = "stdio";
             stdioBtn.setTextColor(INK);stdioBtn.setTypeface(null, Typeface.BOLD);
             stdioBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
             httpBtn.setTextColor(MUTED);httpBtn.setTypeface(null, Typeface.NORMAL);
             httpBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            jsonBtn.setTextColor(MUTED);jsonBtn.setTypeface(null, Typeface.NORMAL);
+            jsonBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            name.setVisibility(View.VISIBLE);
+            targetInput.setVisibility(View.VISIBLE);
+            jsonInput.setVisibility(View.GONE);
             targetInput.setHint("Executable command (e.g. ocean-tool or python3 server.py)");
         });
 
@@ -1242,7 +1270,25 @@ public final class PluginCenterActivity extends AppCompatActivity {
             httpBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
             stdioBtn.setTextColor(MUTED);stdioBtn.setTypeface(null, Typeface.NORMAL);
             stdioBtn.setBackground(roundRect(SURFACE, 8, BORDER));
-            targetInput.setHint("Endpoint URL (e.g. https://api.example.com/mcp)");
+            jsonBtn.setTextColor(MUTED);jsonBtn.setTypeface(null, Typeface.NORMAL);
+            jsonBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            name.setVisibility(View.VISIBLE);
+            targetInput.setVisibility(View.VISIBLE);
+            jsonInput.setVisibility(View.GONE);
+            targetInput.setHint("Endpoint URL (e.g. https://mcp.cloudflare.com/mcp)");
+        });
+
+        jsonBtn.setOnClickListener(v -> {
+            selectedTransport[0] = "json";
+            jsonBtn.setTextColor(INK);jsonBtn.setTypeface(null, Typeface.BOLD);
+            jsonBtn.setBackground(roundRect(0xffe4e4e7, 8, BORDER));
+            stdioBtn.setTextColor(MUTED);stdioBtn.setTypeface(null, Typeface.NORMAL);
+            stdioBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            httpBtn.setTextColor(MUTED);httpBtn.setTypeface(null, Typeface.NORMAL);
+            httpBtn.setBackground(roundRect(SURFACE, 8, BORDER));
+            name.setVisibility(View.GONE);
+            targetInput.setVisibility(View.GONE);
+            jsonInput.setVisibility(View.VISIBLE);
         });
 
         TextView save=new TextView(this);
@@ -1256,6 +1302,31 @@ public final class PluginCenterActivity extends AppCompatActivity {
         sheet.addView(save,slp);
 
         save.setOnClickListener(v->{
+            if ("json".equals(selectedTransport[0])) {
+                String rawJson = jsonInput.getText().toString().trim();
+                if (rawJson.isEmpty()) {
+                    Toast.makeText(this, "Please paste valid JSON configuration", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                try {
+                    List<McpServerConfig> parsed = McpServerConfig.parseConfigDialects(rawJson);
+                    if (parsed.isEmpty()) {
+                        Toast.makeText(this, "No valid MCP servers recognized in JSON", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    for (McpServerConfig p : parsed) {
+                        p.status = McpStatus.SAVED;
+                        McpClientManager.getInstance(this).updateServerInStore(p);
+                    }
+                    dialog.dismiss();
+                    renderHubSections();
+                    Toast.makeText(this, "Imported " + parsed.size() + " MCP server(s). Tap card to verify.", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(this, "JSON parse error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
+
             String sName = name.getText().toString().trim();
             String sTarget = targetInput.getText().toString().trim();
             if (sName.isEmpty()) {
@@ -1409,9 +1480,18 @@ public final class PluginCenterActivity extends AppCompatActivity {
                     public void onFailure(McpStatus errorStatus, String error) {
                         runOnUiThread(() -> {
                             actionBtn.setEnabled(true);
-                            actionBtn.setText("Retry Handshake");
-                            Toast.makeText(PluginCenterActivity.this, "Handshake failed: " + error, Toast.LENGTH_LONG).show();
-                            dialog.dismiss();
+                            if (errorStatus == McpStatus.AUTH_REQUIRED && server.oauthAuthorizationUrl != null) {
+                                actionBtn.setText("Authorize in Browser");
+                                actionBtn.setOnClickListener(av -> {
+                                    try {
+                                        startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(server.oauthAuthorizationUrl)));
+                                    } catch (Exception ex) {
+                                        Toast.makeText(PluginCenterActivity.this, "Browser launch error: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } else {
+                                actionBtn.setText("Retry Handshake");
+                            }
                             renderHubSections();
                         });
                     }

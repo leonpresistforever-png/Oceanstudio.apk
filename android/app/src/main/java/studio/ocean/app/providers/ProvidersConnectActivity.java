@@ -22,10 +22,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.app.Dialog;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import studio.ocean.app.OceanModal;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -219,21 +220,38 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
 
     private void showSortDialog() {
         SortMode[] modes = SortMode.values();
-        String[] labels = new String[modes.length];
-        int selectedIndex = 0;
-        for (int i = 0; i < modes.length; i++) {
-            labels[i] = modes[i].label;
-            if (modes[i] == currentSort) selectedIndex = i;
+        float density = getResources().getDisplayMetrics().density;
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+
+        Dialog[] dialogHolder = new Dialog[1];
+        for (SortMode mode : modes) {
+            boolean isSelected = (mode == currentSort);
+            TextView item = new TextView(this);
+            item.setText((isSelected ? "● " : "○ ") + mode.label);
+            item.setTextSize(14f);
+            item.setTypeface(null, isSelected ? Typeface.BOLD : Typeface.NORMAL);
+            item.setTextColor(isSelected ? getColor(R.color.ocean_paper) : getColor(R.color.ocean_ink));
+            item.setBackgroundResource(isSelected ? R.drawable.model_chip_background_selected : R.drawable.settings_row_background);
+            int pad = (int) (12 * density);
+            item.setPadding(pad, pad, pad, pad);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = (int) (6 * density);
+            item.setLayoutParams(lp);
+
+            item.setOnClickListener(v -> {
+                currentSort = mode;
+                if (dialogHolder[0] != null) dialogHolder[0].dismiss();
+                renderProviders();
+            });
+            list.addView(item);
         }
 
-        new AlertDialog.Builder(this)
+        dialogHolder[0] = OceanModal.create(this)
                 .setTitle("Sort Providers")
-                .setSingleChoiceItems(labels, selectedIndex, (dialog, which) -> {
-                    currentSort = modes[which];
-                    dialog.dismiss();
-                    renderProviders();
-                })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setExplanation("Choose how providers are ordered in the catalog.")
+                .setCustomView(list)
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -584,9 +602,9 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         subtitle.setPadding(0, (int) (4 * density), 0, (int) (16 * density));
         sheet.addView(subtitle);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(sheet)
-                .create();
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(sheet);
 
         if (isConnected) {
             // Active connection details
@@ -833,12 +851,12 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         }
 
         if (!adapter.isInstalled()) {
-            new AlertDialog.Builder(this)
+            OceanModal.create(this)
                     .setTitle("CLI Not Found")
-                    .setMessage("The official CLI ('" + desc.officialCliName + "') was not detected in PATH or the app tools prefix.\n\n"
-                            + "Install it via Ocean Packages (`ocean-pkg install " + desc.officialCliName + "`) or connect using a direct API key.")
-                    .setPositiveButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null))
-                    .setNegativeButton(android.R.string.cancel, null)
+                    .setExplanation("The official CLI ('" + desc.officialCliName + "') was not detected in PATH or the app tools prefix.")
+                    .setDetailsText("Install via Ocean Packages:\n  ocean-pkg install " + desc.officialCliName)
+                    .setPositiveButton("Use API Key", v -> showApiKeyDialog(desc, null))
+                    .setNegativeButton("Cancel", null)
                     .show();
             return;
         }
@@ -855,12 +873,12 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             else if ("claude".equals(desc.id)) loginCmd = "claude login";
             else if ("codex".equals(desc.id)) loginCmd = "codex login";
 
-            new AlertDialog.Builder(this)
+            OceanModal.create(this)
                     .setTitle("Authentication Required")
-                    .setMessage("The official '" + desc.officialCliName + "' CLI is installed, but no active account session was detected.\n\n"
-                            + "Open Ocean Terminal and run:\n\n  " + loginCmd + "\n\nThen tap Verify once login succeeds.")
-                    .setPositiveButton("Verify & Connect", (d, w) -> connectViaOfficialCli(desc))
-                    .setNegativeButton(android.R.string.cancel, null)
+                    .setExplanation("The official '" + desc.officialCliName + "' CLI is installed, but no active account session was detected.")
+                    .setDetailsText("Open Ocean Terminal and run:\n  " + loginCmd + "\nThen tap Verify once login succeeds.")
+                    .setPositiveButton("Verify & Connect", v -> connectViaOfficialCli(desc))
+                    .setNegativeButton("Cancel", null)
                     .show();
             return;
         }
@@ -958,11 +976,11 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         Field baseField = field("API Base URL", currentBase);
         layout.addView(baseField.container);
 
-        new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle(desc.title + " Configuration")
-                .setView(layout)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Save & Connect", (dialog, which) -> {
+                .setExplanation("Enter your API key and configuration settings. Secrets are encrypted locally in CredentialVault.")
+                .setCustomView(layout)
+                .setPositiveButton("Save & Connect", v -> {
                     String model = modelField.input.getText().toString().trim();
                     String key = keyField.input.getText().toString().trim();
                     String base = baseField.input.getText().toString().trim();
@@ -1013,6 +1031,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                     // Background test
                     testConnection(desc, conn);
                 })
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -1020,11 +1039,11 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         authOrchestrator.startDirectConnect(desc, new AuthOrchestrator.AuthFlowCallback() {
             @Override
             public void onRiskWarningRequired(String title, String message, Runnable onProceed) {
-                runOnUiThread(() -> new AlertDialog.Builder(ProvidersConnectActivity.this)
+                runOnUiThread(() -> OceanModal.create(ProvidersConnectActivity.this)
                         .setTitle(title)
-                        .setMessage(message)
-                        .setPositiveButton("Proceed Anyway", (d, w) -> onProceed.run())
-                        .setNegativeButton(android.R.string.cancel, null)
+                        .setExplanation(message)
+                        .setPositiveButton("Proceed Anyway", v -> onProceed.run())
+                        .setNegativeButton("Cancel", null)
                         .show());
             }
 
@@ -1055,17 +1074,14 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             @Override
             public void onFailure(String error) {
                 runOnUiThread(() -> {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(ProvidersConnectActivity.this)
+                    OceanModal.Builder builder = OceanModal.create(ProvidersConnectActivity.this)
                             .setTitle(desc.title + " · Direct Connect")
-                            .setMessage(error)
-                            .setNegativeButton(android.R.string.cancel, null);
-                    if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
-                        builder.setPositiveButton("Use " + desc.officialCliName + " CLI Bridge", (d, w) -> connectViaOfficialCli(desc));
-                    }
+                            .setExplanation("Direct connect could not be completed.")
+                            .setInlineError(error)
+                            .setDetailsText(error)
+                            .setNegativeButton("Dismiss", null);
                     if (error != null && (error.contains("Client ID") || error.contains("OAuth 2.0"))) {
-                        builder.setNeutralButton("Set Client ID", (d, w) -> showConfigureClientIdDialog(desc));
-                    } else if (desc.supports(AuthStrategy.API_KEY)) {
-                        builder.setNeutralButton("Use API Key", (d, w) -> showApiKeyDialog(desc, null));
+                        builder.setPositiveButton("Set Client ID", v -> showConfigureClientIdDialog(desc));
                     }
                     builder.show();
                 });
@@ -1100,10 +1116,11 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             }
             @Override public void onFailure(String error) {
                 runOnUiThread(() -> {
-                    new AlertDialog.Builder(ProvidersConnectActivity.this)
+                    OceanModal.create(ProvidersConnectActivity.this)
                             .setTitle("Authentication Failed")
-                            .setMessage(error)
-                            .setPositiveButton(android.R.string.ok, null)
+                            .setExplanation("Could not complete authorization handshake.")
+                            .setInlineError(error)
+                            .setPositiveButton("Dismiss", null)
                             .show();
                 });
             }
@@ -1116,24 +1133,28 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         String existing = credentialVault.retrieve("oauth_client_id_" + desc.id);
         if (existing != null) input.setText(existing);
         input.setSingleLine(true);
+        input.setTextColor(getColor(R.color.ocean_ink));
+        input.setBackgroundResource(R.drawable.auth_field_background);
+        int pad = (int) (12 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
 
-        new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle("Configure OAuth Client ID")
-                .setMessage("Provide your registered OAuth 2.0 Client ID for " + desc.title + " (RFC 8252 native client). Secrets are never required or embedded.")
-                .setView(input)
-                .setPositiveButton("Save & Connect", (d, w) -> {
+                .setExplanation("Provide your registered OAuth 2.0 Client ID for " + desc.title + " (RFC 8252 native client). Secrets are never required or embedded.")
+                .setCustomView(input)
+                .setPositiveButton("Save & Connect", v -> {
                     String val = input.getText().toString().trim();
                     if (!val.isEmpty()) {
                         credentialVault.store("oauth_client_id_" + desc.id, val);
                         showDirectConnectFlow(desc);
                     }
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
     private void showDeviceCodeDialog(ProviderDescriptor desc, String userCode, String verificationUrl, int expiresInSeconds) {
-        AlertDialog[] dialogHolder = new AlertDialog[1];
+        Dialog[] dialogHolder = new Dialog[1];
         AtomicBoolean canceled = new AtomicBoolean(false);
 
         LinearLayout layout = new LinearLayout(this);
@@ -1166,22 +1187,23 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
         pollingText.setGravity(Gravity.CENTER);
         layout.addView(pollingText);
 
-        dialogHolder[0] = new AlertDialog.Builder(this)
+        dialogHolder[0] = OceanModal.create(this)
                 .setTitle(desc.title + " · Device Authorization")
-                .setView(layout)
-                .setPositiveButton("Open Browser", (d, w) -> {
+                .setExplanation("Confirm authorization in external browser.")
+                .setCustomView(layout)
+                .setPositiveButton("Open Browser", v -> {
                     try {
                         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(verificationUrl)));
                     } catch (Exception e) {
                         Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton("Cancel", (d, w) -> {
+                .setNegativeButton("Cancel", v -> {
                     canceled.set(true);
-                    d.dismiss();
                 })
-                .setOnDismissListener(d -> canceled.set(true))
                 .show();
+
+        dialogHolder[0].setOnDismissListener(d -> canceled.set(true));
 
         new Thread(() -> {
             int maxAttempts = Math.max(1, expiresInSeconds / 5);
@@ -1205,10 +1227,10 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     }
 
     private void confirmDisconnect(ProviderDescriptor desc, ProviderConnection conn) {
-        new AlertDialog.Builder(this)
+        OceanModal.create(this)
                 .setTitle("Disconnect " + desc.title)
-                .setMessage("Are you sure you want to disconnect? All local credentials and tokens will be permanently erased.")
-                .setPositiveButton("Disconnect", (d, w) -> {
+                .setExplanation("Are you sure you want to disconnect? All local credentials and tokens will be permanently erased.")
+                .setPositiveButton("Disconnect", v -> {
                     connectionStore.delete(conn.id);
                     if (conn.credentialRef != null) {
                         credentialVault.delete(conn.credentialRef);
@@ -1216,7 +1238,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                     Toast.makeText(this, desc.title + " disconnected", Toast.LENGTH_SHORT).show();
                     renderProviders();
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 

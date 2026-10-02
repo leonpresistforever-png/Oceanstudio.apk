@@ -1,158 +1,80 @@
 ---
 id: deep-coding
 name: Deep Coding
-description: Production-grade software engineering inside Ocean repos.
-status: connected
-source: bundled
+description: Production-grade software engineering, root-cause compiler triage, and minimal surgical patch lifecycle for Ocean repositories.
+version: 2.0.0
+required_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+  - write_to_file
+optional_tools:
+  - search_web
 ---
 
 # Deep Coding
 
-Production-grade software engineering inside Ocean repos.
+## 1. Mission and Scope
+Deliver correct, auditable, and production-hardened code modifications. Deep Coding governs the entire code change lifecycle: codebase reconnaissance, symbol reference tracing, minimal patch construction, iterative compiler loop resolution, and non-regression verification. Stubs, visual simulations, and premature declarations of completion are strictly banned.
 
+## 2. When to Invoke / When NOT to Invoke
+- **Invoke When**:
+  - Fixing functional bugs, race conditions, memory leaks, or build failures.
+  - Adding or refactoring core business logic, protocols, or storage systems.
+  - Cross-compiling C/C++ or optimizing native Bionic / Android runtime components.
+- **Do NOT Invoke When**:
+  - Task is pure visual mockup without logic (reject or route to UX Design).
+  - Writing superficial placeholder implementations without underlying operational logic.
+  - Conducting broad exploratory literature surveys without repository changes (use Research & Synthesis).
 
-## Ocean tooling you should actually use
-- **Terminal**: `usr/bin/bash` with Ocean home as cwd; prefer non-interactive flags.
-- **Packages**: `pkg install` / `pkg search` inside the Ocean prefix; verify with `which`.
-- **Dispatch**: `ocean-app-task` and `dispatch_android_app` for headless Android intents when policy allows.
-- **Plugins**: `ocean-plugin` lists and runs registered local capabilities; never invent npm packages.
-- **HTTP**: `ocean-api` or curl from terminal to verify Functions you define in the agent drawer.
-- **Forge**: confined workspace edits with `./gradlew :app:assembleDebug` and unit tests before claiming success.
-- **Ports**: Runtime Ports UI plus `curl` to confirm listeners before telling the user a server is up.
+## 3. Inputs to Gather
+1. Target repository commit hash, branch, and working tree cleanliness (`git status -s`).
+2. Exact compiler or runtime error logs, stack traces, and reproduction sequences.
+3. Relevant architectural constraints (e.g., Android minSdk 28, Bionic libc restrictions, Termux decoupling).
+4. Direct upstream specifications (RFCs, official provider APIs, protocol documentation).
 
+## 4. Tool Policy for This Domain
+- Prefer `view_file` with precise line ranges over indiscriminate whole-file dumps.
+- Always use `replace_file_content` for surgical, verifiable modifications to avoid rewriting entire files.
+- Run deterministic build and test commands after every contiguous change before declaring task completion.
+- Never write credentials, tokens, or private keys to source or revision control.
 
-## Operating procedure
+## 5. Step-by-Step Operating Procedure
+1. **Reconnaissance**: Read the smallest set of files defining the faulty behavior. Locate entry points, call graphs, and invariants.
+2. **Root-Cause Analysis**: Distinguish root cause from symptoms. Verify hypotheses against source code and build logs.
+3. **Surgical Patching**: Write the minimal contiguous patch necessary to resolve the root cause. Preserve existing coding conventions and comments.
+4. **Compile & Triage**: Run the project's build system (`gradlew`, `make`, `cmake`, or test runners). If compilation fails, isolate the first error, examine its AST/symbol context, and resolve it without reverting to hacks.
+5. **Regression Verification**: Execute existing unit and integration suites to ensure neighboring subsystems remain unaffected.
+6. **Documentation**: Add context-rich comments explaining non-obvious design choices, invariants, and edge cases.
 
-When working on Deep Coding, start by reading the smallest set of files that define the behavior you are changing.
+## 6. Domain-Specific Heuristics and Algorithms
+- **Rule of Locality**: If a defect can be repaired within the declaring class, never pollute callers or global singletons with defensive workarounds.
+- **Fail-Fast Boundary**: Validate arguments and preconditions at module entry points rather than allowing malformed states to propagate deeply.
+- **Surgical Minimality**: If two solutions exist, choose the one with the smallest auditable diff that completely solves the problem without accumulating technical debt.
 
-Document assumptions in chat only after you have verified them with terminal output or file reads.
+## 7. Evidence Requirements
+- Compiler output showing clean compilation (`BUILD SUCCESSFUL` or exit code 0).
+- Automated test logs demonstrating passing assertions on the modified code paths.
+- Clean `git diff` review confirming zero extraneous reformatting or unintended line changes.
 
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
+## 8. Failure Modes and Recovery
+- *Compiler Missing Symbols*: Check import paths, target SDK level, and transitive dependency scopes in build manifests.
+- *Concurrent Modification / Race Condition*: Protect shared mutable state with atomic primitives, immutable copy-on-write snapshots, or mutex synchronization.
+- *Regressed Sibling Tests*: Immediately rollback to last clean commit, re-evaluate assumptions, and construct a targeted fix addressing both cases.
 
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
+## 9. Security and Permission Boundaries
+- Respect the target application's sandbox and permission model. Never invoke unauthorized system capabilities.
+- Enforce strict Rule 5 Termux decoupling: never reference `/data/data/com.termux` in build configs, scripts, or runtime paths.
 
-If a build step fails, capture the full error log and fix the first root cause before layering more changes.
+## 10. Acceptance Tests
+1. Source compiles without warnings or errors under the project build configuration.
+2. Unit test suite passes 100% green with zero skipped or suppressed assertions.
+3. Git diff is minimal, documented, and free of mockups or placeholder functions.
 
-Use ripgrep or find under the workspace root before asking the user where code lives.
+## 11. Handoff Format
+- **Summary**: Concise explanation of what was broken, the root cause, and the exact fix applied.
+- **Files Modified**: Explicit list of altered files with line numbers and rationale.
+- **Verification Output**: Exact terminal transcript and test run results proving stability.
 
-Match naming, import style, and error-handling patterns from neighboring classes.
-
-When touching Android UI, validate on-device or with layout inspection; do not trust code-only guesses.
-
-For network work, mirror drawer-configured HTTP functions with curl and record status codes.
-
-Checkpoint risky edits through Forge before experimenting with signing or native binaries.
-
-Remove temporary logging and feature-flag hacks before finishing; leave the tree cleaner than you found it.
-
-Explain tradeoffs when multiple fixes exist; recommend one default and note rollback steps.
-
-Treat user-visible copy as part of the fix: empty states, button labels, and error strings matter.
-
-Respect App Access policy: do not bypass permissions with reflection or hidden APIs.
-
-Batch verification: run unit tests and assemble tasks that the repo already documents.
-
-When integrating external APIs, store secrets in BYOK or env files—not committed markdown.
-
-Use slash commands from skill frontmatter ids so users can invoke this skill quickly.
-
-If blocked by missing binaries, say which Ocean package provides them and how to install via pkg.
-
-When working on Deep Coding, start by reading the smallest set of files that define the behavior you are changing.
-
-Document assumptions in chat only after you have verified them with terminal output or file reads.
-
-Prefer extending existing Ocean helpers over introducing parallel abstractions that will diverge.
-
-Keep diffs minimal: no drive-by reformatting, no unrelated dependency bumps, no speculative refactors.
-
-## Checklist before you say done
-
-Re-ran the narrowest test that covers your change and captured output in chat.
-
-Removed debug prints, toggles, and commented-out experiments.
-
-Verified strings and dimensions against the greyscale Ocean palette.
-
-Confirmed no secrets, tokens, or signing keys were pasted into markdown skills.
-
-Left the UI without IllegalStateException from re-parented views.
-
-Updated frontmatter status only when the user connects/disconnects the skill.
-
-## Failure modes
-
-Assuming a binary exists without `which` or Runtime Ports inspection.
-
-Claiming HTTP success without status line and response snippet from curl.
-
-Editing three modules when one focused file would fix the bug.
-
-Using AlertDialog for multi-step create flows where bottom sheets exist.
-
-Treating bundled skill text as optional flavor instead of operational law.
-
-## Handoff notes
-
-Summarize what changed, where, and how it was verified in one short paragraph.
-
-List follow-up risks: permissions, migrations, or manual QA the user should run.
-
-Point to skill id slash commands the user can invoke next session.
-
-### Cycle 1
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 2
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 3
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 4
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 5
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 6
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 7
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
-
-### Cycle 8
-
-Re-read the task, identify constraints for **Deep Coding**, then execute the smallest verifiable step. 
-Use terminal transcripts as evidence. If UI is involved, switch tabs or screens deliberately to flush view hierarchies. 
-When integrating with the agent drawer, rebuild lists instead of caching views. 
-Cross-check Ocean hub entries: functions, tools, MCPs, and connected skills.
+## 12. Small Worked Examples
+- *Example*: Resolving an `IllegalStateException` caused by unparented view reuse by creating a defensive detach sequence before attaching to container, verifying via layout inspector and running activity unit tests.

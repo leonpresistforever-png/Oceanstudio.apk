@@ -45,6 +45,7 @@ public final class McpClientManager {
     private final Context context;
     private final OceanAgentHubStore hubStore;
     private final CredentialVault credentialVault;
+    private final McpOAuthResolver oauthResolver;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -58,6 +59,19 @@ public final class McpClientManager {
         this.context = context;
         this.hubStore = new OceanAgentHubStore(context);
         this.credentialVault = new CredentialVault(context);
+        this.oauthResolver = new McpOAuthResolver(context);
+    }
+
+    public McpOAuthResolver getOAuthResolver() {
+        return oauthResolver;
+    }
+
+    public static class McpAuthRequiredException extends IOException {
+        public final String wwwAuthenticate;
+        public McpAuthRequiredException(String wwwAuthenticate) {
+            super("MCP OAuth 2.1 authorization required");
+            this.wwwAuthenticate = wwwAuthenticate;
+        }
     }
 
     /**
@@ -78,6 +92,22 @@ public final class McpClientManager {
                     performStdioHandshake(config, callback, startTime);
                 } else {
                     performHttpHandshake(config, callback, startTime);
+                }
+            } catch (McpAuthRequiredException authEx) {
+                try {
+                    config.status = McpStatus.AUTH_REQUIRED;
+                    McpOAuthResolver.OAuthChallengeInfo challenge = oauthResolver.resolveChallenge(config.endpointUrl, authEx.wwwAuthenticate);
+                    McpOAuthResolver.OAuthSession session = oauthResolver.beginAuthorization(challenge, "ocean://mcp/callback");
+                    config.oauthAuthorizationUrl = session.authorizationUrl;
+                    config.lastError = "OAuth 2.1 authorization required. Tap Authorize to complete consent in browser.";
+                    updateServerInStore(config);
+                    postProgress(callback, McpStatus.AUTH_REQUIRED);
+                    postFailure(callback, McpStatus.AUTH_REQUIRED, config.lastError);
+                } catch (Exception resolveEx) {
+                    config.status = McpStatus.AUTH_ERROR;
+                    config.lastError = "OAuth discovery failed: " + resolveEx.getMessage();
+                    updateServerInStore(config);
+                    postFailure(callback, McpStatus.AUTH_ERROR, config.lastError);
                 }
             } catch (Throwable t) {
                 McpStatus errStatus = (t instanceof FileNotFoundException || (t.getMessage() != null && t.getMessage().contains("Executable not found")))
@@ -271,6 +301,15 @@ public final class McpClientManager {
         JSONObject caps = result.optJSONObject("capabilities");
         config.capabilities = caps != null ? caps : new JSONObject();
 
+        // Step 2: Send notifications/initialized (Directive §7.1 Step 12)
+        JSONObject notifyInitialized = new JSONObject()
+                .put("jsonrpc", "2.0")
+                .put("method", "notifications/initialized");
+        try {
+            sendHttpPost(config, notifyInitialized);
+        } catch (Exception ignored) {}
+
+        // Step 3: Discover capabilities (tools/list)
         postProgress(callback, McpStatus.DISCOVERING);
         config.status = McpStatus.DISCOVERING;
 
@@ -303,11 +342,24 @@ public final class McpClientManager {
         conn.setReadTimeout(10000);
         conn.setDoOutput(true);
         conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept", "application/json, text/event-stream");
         conn.setRequestProperty("User-Agent", "OceanStudio/1.2.6 (MCP Client)");
 
+        // Bearer token resolution: config ref or CredentialVault OAuth storage
+        String token = null;
         if (config.bearerTokenRef != null) {
-            String token = credentialVault.retrieve(config.bearerTokenRef);
-            if (token != null && !token.isEmpty()) conn.setRequestProperty("Authorization", "Bearer " + token);
+            token = credentialVault.retrieve(config.bearerTokenRef);
+        }
+        if (token == null || token.isEmpty()) {
+            token = oauthResolver.getStoredToken(config.endpointUrl);
+        }
+        if (token != null && !token.isEmpty()) {
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+        }
+
+        // Mcp-Session-Id header tracking (Directive §7.1 Step 11, §8.1)
+        if (config.sessionId != null && !config.sessionId.isEmpty()) {
+            conn.setRequestProperty("Mcp-Session-Id", config.sessionId);
         }
 
         for (Map.Entry<String, String> header : config.headers.entrySet()) {
@@ -320,6 +372,19 @@ public final class McpClientManager {
         }
 
         int code = conn.getResponseCode();
+
+        // Detect HTTP 401 challenge on initial unauthenticated request (Directive §7, §8)
+        if (code == 401) {
+            String wwwAuth = conn.getHeaderField("WWW-Authenticate");
+            throw new McpAuthRequiredException(wwwAuth);
+        }
+
+        // Capture server-assigned Mcp-Session-Id
+        String returnedSessionId = conn.getHeaderField("Mcp-Session-Id");
+        if (returnedSessionId != null && !returnedSessionId.isEmpty()) {
+            config.sessionId = returnedSessionId;
+        }
+
         InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
         if (is == null) throw new IOException("HTTP " + code + " with empty response");
 
@@ -332,7 +397,27 @@ public final class McpClientManager {
         if (code < 200 || code >= 300) {
             throw new IOException("HTTP " + code + ": " + resp);
         }
-        return new JSONObject(resp);
+        return resp.trim().isEmpty() ? new JSONObject() : new JSONObject(resp);
+    }
+
+    public void handleOAuthCallback(McpServerConfig config, Uri callbackUri, HandshakeCallback callback) {
+        executor.submit(() -> {
+            postProgress(callback, McpStatus.AUTHORIZING);
+            config.status = McpStatus.AUTHORIZING;
+            updateServerInStore(config);
+
+            McpOAuthResolver.TokenResult tokenRes = oauthResolver.exchangeCode(callbackUri);
+            if (!tokenRes.isSuccess) {
+                config.status = McpStatus.AUTH_ERROR;
+                config.lastError = tokenRes.error;
+                updateServerInStore(config);
+                postFailure(callback, McpStatus.AUTH_ERROR, tokenRes.error);
+                return;
+            }
+
+            // Retry handshake with freshly acquired token
+            connect(config, callback);
+        });
     }
 
     private void sendJsonRpc(BufferedWriter writer, JSONObject obj) throws IOException {
