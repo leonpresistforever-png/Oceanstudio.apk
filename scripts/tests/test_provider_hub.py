@@ -17,7 +17,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-REPO_ROOT = "/data/data/com.termux/files/home/Oceanstudio.apk"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROVIDERS_DIR = os.path.join(REPO_ROOT, "android/app/src/main/java/studio/ocean/app/providers")
 
 def test_no_termux_contamination():
