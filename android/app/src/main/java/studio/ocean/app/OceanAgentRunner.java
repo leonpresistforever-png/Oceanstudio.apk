@@ -163,7 +163,12 @@ public final class OceanAgentRunner {
                             if (mcpClientManager.isMcpTool(name)) {
                                 return runRuntimeTool("MCP tool", name, callback, () -> {
                                     try {
-                                        return mcpClientManager.callTool(name, args);
+                                        String output = mcpClientManager.callTool(name, args);
+                                        try {
+                                            return new JSONObject(output);
+                                        } catch (Exception ignored) {
+                                            return new JSONObject().put("output", output).put("exit_code", 0);
+                                        }
                                     } catch (Exception e) {
                                         throw new IOException("MCP tool execution failed: " + e.getMessage(), e);
                                     }

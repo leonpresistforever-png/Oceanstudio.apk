@@ -236,11 +236,11 @@ public final class AuthOrchestrator {
                         null,
                         defaultModel,
                         credRef,
-                        result.accountId,
-                        result.displayName,
-                        result.planTier,
-                        quota,
+                        null,
+                        finalReq.scopes,
                         result.expiresAtEpochMs,
+                        quota,
+                        discoveredModels,
                         System.currentTimeMillis()
                 );
 

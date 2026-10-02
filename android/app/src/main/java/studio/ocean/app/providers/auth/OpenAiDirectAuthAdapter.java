@@ -154,7 +154,7 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
                     JSONObject m = data.getJSONObject(i);
                     String id = m.optString("id");
                     if (id.startsWith("gpt") || id.startsWith("o1") || id.startsWith("o3")) {
-                        list.add(new ModelDescriptor(id, id, "OpenAI " + id, Arrays.asList("chat", "reasoning"), 128000, 4096, false));
+                        list.add(new ModelDescriptor(id, id, 128000, false, true, true, "Available"));
                     }
                 }
             }

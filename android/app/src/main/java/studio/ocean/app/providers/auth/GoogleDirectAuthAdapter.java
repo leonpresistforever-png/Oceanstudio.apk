@@ -177,8 +177,7 @@ public final class GoogleDirectAuthAdapter implements DirectAuthAdapter {
                     String cleanId = name.startsWith("models/") ? name.substring(7) : name;
                     String displayName = m.optString("displayName", cleanId);
                     String desc = m.optString("description", "Google Gemini model");
-                    models.add(new ModelDescriptor(cleanId, displayName, desc,
-                            Arrays.asList("chat", "reasoning", "tools"), 1048576, 8192, false));
+                    models.add(new ModelDescriptor(cleanId, displayName, 1048576, false, true, true, "Available"));
                 }
             }
         }
