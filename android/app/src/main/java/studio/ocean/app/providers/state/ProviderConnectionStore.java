@@ -20,6 +20,8 @@ public final class ProviderConnectionStore {
     private final File storeFile;
     private final List<ProviderConnection> cache = new ArrayList<>();
     private boolean loaded = false;
+    private long loadedLastModified = Long.MIN_VALUE;
+    private long loadedLength = Long.MIN_VALUE;
 
     public ProviderConnectionStore(Context context) {
         this.storeFile = new File(context.getApplicationContext().getFilesDir(), FILE_NAME);
@@ -96,7 +98,10 @@ public final class ProviderConnectionStore {
     }
 
     private void ensureLoaded() {
-        if (loaded) return;
+        long modified = storeFile.exists() ? storeFile.lastModified() : -1L;
+        long length = storeFile.exists() ? storeFile.length() : -1L;
+        if (loaded && modified == loadedLastModified && length == loadedLength) return;
+
         cache.clear();
         if (storeFile.exists()) {
             try (FileInputStream fis = new FileInputStream(storeFile)) {
@@ -114,9 +119,12 @@ public final class ProviderConnectionStore {
                     }
                 }
             } catch (Exception ignored) {
+                // Keep the in-memory view empty rather than trusting stale connections.
             }
         }
         loaded = true;
+        loadedLastModified = storeFile.exists() ? storeFile.lastModified() : -1L;
+        loadedLength = storeFile.exists() ? storeFile.length() : -1L;
     }
 
     private void persist() {
@@ -129,11 +137,19 @@ public final class ProviderConnectionStore {
             try (FileOutputStream fos = new FileOutputStream(tmp)) {
                 fos.write(arr.toString(2).getBytes(StandardCharsets.UTF_8));
                 fos.flush();
+                fos.getFD().sync();
             }
-            if (tmp.renameTo(storeFile) || (!storeFile.delete() && tmp.renameTo(storeFile))) {
-                // renamed successfully
+            boolean replaced = tmp.renameTo(storeFile);
+            if (!replaced && storeFile.exists() && storeFile.delete()) {
+                replaced = tmp.renameTo(storeFile);
             }
+            if (!replaced) throw new IOException("Could not replace provider connection store atomically.");
+            loaded = true;
+            loadedLastModified = storeFile.lastModified();
+            loadedLength = storeFile.length();
         } catch (Exception ignored) {
+            // Callers never get a false CONNECTED result from persistence alone;
+            // the active runtime/provider must still pass its own verification.
         }
     }
 }

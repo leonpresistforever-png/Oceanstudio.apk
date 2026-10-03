@@ -20,6 +20,10 @@ def resolveOceanFirebaseApiKey() {
     return ''
 }
 
+def resolveOceanOauthValue(String name) {
+    def value = System.getenv(name)
+    return value == null ? '' : value.trim()
+}
 def resolveOceanBuildCommit() {
     def fromEnv = System.getenv('OCEAN_BUILD_COMMIT')
     if (fromEnv != null && !fromEnv.trim().isEmpty()) return fromEnv.trim()
@@ -66,6 +70,9 @@ android {
         buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_VERSION", "\"${System.getenv('OCEAN_BOOTSTRAP_VERSION') ?: 'not-bundled'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_SHA256", "\"${System.getenv('OCEAN_BOOTSTRAP_SHA256') ?: 'not-bundled'}\""
+        // App-owned OAuth registration; never user-entered.
+        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID", "\"${resolveOceanOauthValue('OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID')}\""
+        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET", "\"${resolveOceanOauthValue('OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET')}\""
     }
     buildFeatures { buildConfig true }
     // Ocean Forge can rebuild Java/resources on-device by reusing the installed,
