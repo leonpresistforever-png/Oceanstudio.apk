@@ -144,7 +144,9 @@ def test_local_model_catalog_and_routing():
     assert_true("/health" in mgr_src, "LocalModelManager waits for a live llama-server health endpoint")
     assert_true("v1/chat/completions" in mgr_src and "verifyInference" in mgr_src, "LocalModelManager requires a real inference probe")
     assert_true("markVerifiedConnected" in mgr_src, "CONNECTED is assigned only through the verified runtime path")
-    assert_true("catch (Exception ignored)" not in mgr_src[mgr_src.find("connectModel"):mgr_src.find("deleteModel")], "connectModel does not ignore probe failures")
+    connect_src = mgr_src[mgr_src.find("public synchronized boolean connectModel"):mgr_src.find("public synchronized boolean disconnectModel")]
+    assert_true("failed the real /v1/chat/completions inference probe" in connect_src, "connectModel fails closed when live inference verification fails")
+    assert_true("catch (Exception e)" in connect_src and "return false;" in connect_src, "connectModel surfaces runtime/probe failures instead of marking connected")
     assert_true("local_model_override" in mgr_src, "LocalModelManager maintains local_model_override setting")
 
     runtime_file = "android/app/src/main/java/studio/ocean/app/models/local/LocalLlamaRuntime.java"
