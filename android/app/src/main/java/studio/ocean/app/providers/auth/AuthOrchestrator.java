@@ -333,8 +333,22 @@ public final class AuthOrchestrator {
                         1L);
                 credentialVault.storeRecord(record);
 
+                String connectionId = UUID.randomUUID().toString();
+                if (isAntigravity(finalTx.providerId)) {
+                    String verifiedProject = credentialVault.retrieve(
+                            AntigravityDirectAuthAdapter.PROJECT_VAULT_REF);
+                    if (verifiedProject == null || verifiedProject.trim().isEmpty()) {
+                        fail(finalTx, callback,
+                                "Antigravity verification completed without a Cloud Code project; refusing to save a fake connection.");
+                        return;
+                    }
+                    credentialVault.store(
+                            AntigravityDirectAuthAdapter.PROJECT_VAULT_REF + "_" + connectionId,
+                            verifiedProject.trim());
+                }
+
                 ProviderConnection connection = new ProviderConnection(
-                        UUID.randomUUID().toString(),
+                        connectionId,
                         finalTx.providerId,
                         result.displayName != null ? result.displayName : "Connected Account",
                         AuthStrategy.DIRECT_OAUTH,
