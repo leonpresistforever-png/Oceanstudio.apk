@@ -13,6 +13,7 @@ public final class LocalModel {
         AVAILABLE("Available"),
         DOWNLOADING("Downloading"),
         INSTALLED("Installed"),
+        CONNECTING("Connecting"),
         LOADED("Connected"),
         CONNECTED("Connected"),
         ERROR("Error"),

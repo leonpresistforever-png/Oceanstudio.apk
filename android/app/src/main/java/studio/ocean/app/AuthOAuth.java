@@ -13,6 +13,7 @@ import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.auth.OAuthProvider;
 
 /** Google and GitHub sign-in through Firebase when the project API key is available. */
@@ -103,7 +104,9 @@ final class AuthOAuth {
                 fail(target, activity.getString(R.string.oauth_not_configured, "Google"));
                 return;
             }
-            authClient.signInWithIdp("google.com", idToken, false, wrap(target));
+            FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
+                    .addOnSuccessListener(authResult -> finishFirebase(authResult, target))
+                    .addOnFailureListener(error -> fail(target, AuthClient.formatError(error)));
         } catch (ApiException error) {
             int code = error.getStatusCode();
             String title;

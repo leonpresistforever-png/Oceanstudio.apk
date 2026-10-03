@@ -11,10 +11,10 @@ public final class OceanModelConfig {
         this.provider = provider == null ? "" : provider.trim().toLowerCase(Locale.ROOT);
         this.model = normalizeModel(this.provider, model);
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        if (this.apiKey.isEmpty()) throw new IllegalArgumentException("An API key is required");
-        this.baseUrl = normalizeEndpoint(baseUrl);
+        if (this.apiKey.isEmpty() && !this.provider.equals("local")) throw new IllegalArgumentException("An API key is required");
+        this.baseUrl = this.provider.equals("local") ? normalizeLocalEndpoint(baseUrl) : normalizeEndpoint(baseUrl);
         if (!this.provider.equals("google") && !this.provider.equals("anthropic")
-                && !this.provider.equals("openai") && !this.provider.equals("custom"))
+                && !this.provider.equals("openai") && !this.provider.equals("custom") && !this.provider.equals("local"))
             throw new IllegalArgumentException("Choose a supported provider");
     }
 
@@ -42,6 +42,19 @@ public final class OceanModelConfig {
                 throw new IllegalArgumentException();
         } catch (Exception error) {
             throw new IllegalArgumentException("Enter an HTTPS base URL without a query, fragment, or credentials");
+        }
+        return base;
+    }
+
+    static String normalizeLocalEndpoint(String value) {
+        String base = value == null ? "" : value.trim().replaceAll("/+$", "");
+        try {
+            URI uri = new URI(base);
+            if (!"http".equalsIgnoreCase(uri.getScheme()) || !"127.0.0.1".equals(uri.getHost())
+                    || uri.getPort() < 1 || uri.getRawUserInfo() != null
+                    || uri.getRawQuery() != null || uri.getRawFragment() != null) throw new IllegalArgumentException();
+        } catch (Exception error) {
+            throw new IllegalArgumentException("Local inference requires an HTTP endpoint on 127.0.0.1 with an explicit port");
         }
         return base;
     }

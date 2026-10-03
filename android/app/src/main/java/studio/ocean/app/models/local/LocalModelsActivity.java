@@ -249,14 +249,19 @@ public final class LocalModelsActivity extends AppCompatActivity {
         } else if (model.state == LocalModel.State.INSTALLED) {
             Button connectBtn = createButton("CONNECT", true, density);
             connectBtn.setOnClickListener(v -> {
-                if (manager.connectModel(model.id)) {
-                    Toast.makeText(this, "Connected " + model.displayName + " on " + model.endpoint, Toast.LENGTH_SHORT).show();
-                    updateRamStatus();
-                    renderModels();
-                } else {
-                    String err = model.errorMessage != null ? model.errorMessage : "Failed to connect model runtime";
-                    Toast.makeText(this, err, Toast.LENGTH_LONG).show();
-                }
+                connectBtn.setEnabled(false);
+                connectBtn.setText("CONNECTING…");
+                new Thread(() -> {
+                    boolean connected = manager.connectModel(model.id);
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed()) return;
+                        String message = connected ? "Connected " + model.displayName + " on " + model.endpoint
+                                : model.errorMessage != null ? model.errorMessage : "Failed to connect model runtime";
+                        Toast.makeText(this, message, connected ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG).show();
+                        updateRamStatus();
+                        renderModels();
+                    });
+                }, "ocean-connect-local-model").start();
             });
             actions.addView(connectBtn);
 

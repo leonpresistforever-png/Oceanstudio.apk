@@ -110,6 +110,10 @@ public final class McpOAuthResolver {
      * Resolves Protected Resource Metadata and Authorization Server Metadata from a 401 challenge.
      */
     public OAuthChallengeInfo resolveChallenge(String serverUrl, String wwwAuthenticate) throws Exception {
+        return resolveChallenge(serverUrl, wwwAuthenticate, null);
+    }
+
+    public OAuthChallengeInfo resolveChallenge(String serverUrl, String wwwAuthenticate, String redirectUri) throws Exception {
         OAuthChallengeInfo info = new OAuthChallengeInfo();
         String origin = normalizeOrigin(serverUrl);
         info.resource = origin;
@@ -168,26 +172,25 @@ public final class McpOAuthResolver {
             info.registrationEndpoint = authServerJson.optString("registration_endpoint", null);
         }
 
-        // Fallbacks for well-known server conventions
-        if (info.authorizationEndpoint == null) {
-            info.authorizationEndpoint = info.authorizationServer + "/oauth2/authorize";
-        }
-        if (info.tokenEndpoint == null) {
-            info.tokenEndpoint = info.authorizationServer + "/oauth2/token";
-        }
+        if (info.authorizationEndpoint == null || info.tokenEndpoint == null)
+            throw new IOException("MCP authorization metadata did not declare authorization and token endpoints.");
 
         // Check if an issued client ID is already stored in CredentialVault for this origin
-        String storedClientId = credentialVault.retrieve("mcp_client_id:" + origin);
+        String registrationKey = "mcp_client_id:" + info.authorizationServer + ":" + redirectUri;
+        String storedClientId = redirectUri == null
+                ? credentialVault.retrieve("mcp_last_client_id:" + origin)
+                : credentialVault.retrieve(registrationKey);
         if (storedClientId != null && !storedClientId.isEmpty()) {
             info.clientId = storedClientId;
-        } else if (info.registrationEndpoint != null) {
+        } else if (info.registrationEndpoint != null && redirectUri != null) {
             // Dynamic Client Registration (DCR)
-            info.clientId = registerDynamicClient(info.registrationEndpoint, origin);
+            info.clientId = registerDynamicClient(info.registrationEndpoint, registrationKey, redirectUri);
         }
 
         if (info.clientId == null) {
-            info.clientId = "ocean-studio-mcp-client";
+            throw new IOException("MCP server did not issue a client registration for Ocean. Authorization cannot start.");
         }
+        credentialVault.store("mcp_last_client_id:" + origin, info.clientId);
 
         return info;
     }
@@ -195,13 +198,12 @@ public final class McpOAuthResolver {
     /**
      * Executes Dynamic Client Registration (RFC 7591) if supported by the server.
      */
-    private String registerDynamicClient(String regEndpoint, String origin) {
+    private String registerDynamicClient(String regEndpoint, String registrationKey, String redirectUri) throws IOException {
         try {
             JSONObject body = new JSONObject();
             body.put("client_name", "OceanStudio");
             JSONArray redirects = new JSONArray();
-            redirects.put("ocean://mcp/callback");
-            redirects.put("http://127.0.0.1:45454/callback");
+            redirects.put(redirectUri);
             body.put("redirect_uris", redirects);
             body.put("grant_types", new JSONArray().put("authorization_code").put("refresh_token"));
             body.put("response_types", new JSONArray().put("code"));
@@ -223,15 +225,17 @@ public final class McpOAuthResolver {
                 String respStr = readStream(conn.getInputStream());
                 JSONObject respJson = new JSONObject(respStr);
                 String issuedId = respJson.optString("client_id", null);
-                if (issuedId != null) {
-                    credentialVault.store("mcp_client_id:" + origin, issuedId);
+                if (issuedId != null && !issuedId.trim().isEmpty()) {
+                    credentialVault.store(registrationKey, issuedId);
+                    conn.disconnect();
                     return issuedId;
                 }
             }
+            conn.disconnect();
         } catch (Exception e) {
-            Log.w(TAG, "DCR dynamic registration skipped: " + e.getMessage());
+            throw new IOException("MCP client registration failed.", e);
         }
-        return null;
+        throw new IOException("MCP client registration was rejected or returned no client ID.");
     }
 
     /**
@@ -252,12 +256,12 @@ public final class McpOAuthResolver {
         for (byte b : stateBytes) sb.append(String.format("%02x", b));
         String state = sb.toString();
 
-        String scope = info.scope != null ? info.scope : "mcp";
+        String scope = info.scope;
         StringBuilder authUrl = new StringBuilder(info.authorizationEndpoint);
         authUrl.append("?response_type=code");
         authUrl.append("&client_id=").append(URLEncoder.encode(info.clientId, "UTF-8"));
         authUrl.append("&redirect_uri=").append(URLEncoder.encode(redirectUri, "UTF-8"));
-        authUrl.append("&scope=").append(URLEncoder.encode(scope, "UTF-8"));
+        if (scope != null && !scope.isEmpty()) authUrl.append("&scope=").append(URLEncoder.encode(scope, "UTF-8"));
         authUrl.append("&state=").append(URLEncoder.encode(state, "UTF-8"));
         authUrl.append("&code_challenge=").append(URLEncoder.encode(codeChallenge, "UTF-8"));
         authUrl.append("&code_challenge_method=S256");

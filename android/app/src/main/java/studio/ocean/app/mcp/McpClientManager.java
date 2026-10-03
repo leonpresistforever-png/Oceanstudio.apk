@@ -26,7 +26,7 @@ import studio.ocean.app.providers.state.CredentialVault;
 public final class McpClientManager {
 
     private static final String TAG = "McpClientManager";
-    public static final String PROTOCOL_VERSION = "2024-11-05";
+    public static final String PROTOCOL_VERSION = "2025-03-26";
 
     public interface HandshakeCallback {
         void onProgress(McpStatus status);
@@ -52,6 +52,7 @@ public final class McpClientManager {
 
     // Active STDIO child processes
     private final Map<String, Process> activeProcesses = new ConcurrentHashMap<>();
+    private final Map<String, OAuthLoopbackReceiver> oauthReceivers = new ConcurrentHashMap<>();
     private final Map<String, BufferedReader> processReaders = new ConcurrentHashMap<>();
     private final Map<String, BufferedWriter> processWriters = new ConcurrentHashMap<>();
     private final AtomicInteger requestIdCounter = new AtomicInteger(100);
@@ -97,14 +98,33 @@ public final class McpClientManager {
             } catch (McpAuthRequiredException authEx) {
                 try {
                     config.status = McpStatus.AUTH_REQUIRED;
-                    McpOAuthResolver.OAuthChallengeInfo challenge = oauthResolver.resolveChallenge(config.endpointUrl, authEx.wwwAuthenticate);
-                    McpOAuthResolver.OAuthSession session = oauthResolver.beginAuthorization(challenge, "ocean://mcp/callback");
+                    OAuthLoopbackReceiver oldReceiver = oauthReceivers.remove(config.id);
+                    if (oldReceiver != null) oldReceiver.close();
+                    OAuthLoopbackReceiver receiver = new OAuthLoopbackReceiver();
+                    oauthReceivers.put(config.id, receiver);
+                    McpOAuthResolver.OAuthChallengeInfo challenge = oauthResolver.resolveChallenge(config.endpointUrl, authEx.wwwAuthenticate, receiver.redirectUri());
+                    McpOAuthResolver.OAuthSession session = oauthResolver.beginAuthorization(challenge, receiver.redirectUri());
+                    receiver.listen(session.state, new OAuthLoopbackReceiver.Listener() {
+                        @Override public void received(String uri) {
+                            oauthReceivers.remove(config.id, receiver);
+                            handleOAuthCallback(config, android.net.Uri.parse(uri), callback);
+                        }
+                        @Override public void failed(String message) {
+                            oauthReceivers.remove(config.id, receiver);
+                            config.status = McpStatus.AUTH_ERROR;
+                            config.lastError = message;
+                            updateServerInStore(config);
+                            postFailure(callback, McpStatus.AUTH_ERROR, message);
+                        }
+                    });
                     config.oauthAuthorizationUrl = session.authorizationUrl;
                     config.lastError = "OAuth 2.1 authorization required. Tap Authorize to complete consent in browser.";
                     updateServerInStore(config);
                     postProgress(callback, McpStatus.AUTH_REQUIRED);
                     postFailure(callback, McpStatus.AUTH_REQUIRED, config.lastError);
                 } catch (Exception resolveEx) {
+                    OAuthLoopbackReceiver receiver = oauthReceivers.remove(config.id);
+                    if (receiver != null) receiver.close();
                     config.status = McpStatus.AUTH_ERROR;
                     config.lastError = "OAuth discovery failed: " + resolveEx.getMessage();
                     updateServerInStore(config);
@@ -306,9 +326,7 @@ public final class McpClientManager {
         JSONObject notifyInitialized = new JSONObject()
                 .put("jsonrpc", "2.0")
                 .put("method", "notifications/initialized");
-        try {
-            sendHttpPost(config, notifyInitialized);
-        } catch (Exception ignored) {}
+        sendHttpPost(config, notifyInitialized);
 
         // Step 3: Discover capabilities (tools/list)
         postProgress(callback, McpStatus.DISCOVERING);
@@ -320,6 +338,8 @@ public final class McpClientManager {
                     .put("id", 2)
                     .put("method", "tools/list");
             JSONObject toolsResp = sendHttpPost(config, toolsReq);
+            if (toolsResp.has("error")) throw new IOException("MCP tools discovery failed.");
+            if (!toolsResp.has("result")) throw new IOException("MCP tools discovery returned no result.");
             if (toolsResp.has("result")) {
                 JSONArray toolsList = toolsResp.getJSONObject("result").optJSONArray("tools");
                 config.tools = toolsList != null ? toolsList : new JSONArray();
@@ -338,6 +358,7 @@ public final class McpClientManager {
     private JSONObject sendHttpPost(McpServerConfig config, JSONObject payload) throws Exception {
         URL url = new URL(config.endpointUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(false);
         conn.setRequestMethod("POST");
         conn.setConnectTimeout(8000);
         conn.setReadTimeout(10000);
@@ -345,6 +366,10 @@ public final class McpClientManager {
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Accept", "application/json, text/event-stream");
         conn.setRequestProperty("User-Agent", "OceanStudio/1.2.6 (MCP Client)");
+
+        if (config.protocolVersion != null && !"initialize".equals(payload.optString("method"))) {
+            conn.setRequestProperty("MCP-Protocol-Version", config.protocolVersion);
+        }
 
         // Bearer token resolution: config ref or CredentialVault OAuth storage
         String token = null;
@@ -377,6 +402,7 @@ public final class McpClientManager {
         // Detect HTTP 401 challenge on initial unauthenticated request (Directive §7, §8)
         if (code == 401) {
             String wwwAuth = conn.getHeaderField("WWW-Authenticate");
+            conn.disconnect();
             throw new McpAuthRequiredException(wwwAuth);
         }
 
@@ -386,19 +412,48 @@ public final class McpClientManager {
             config.sessionId = returnedSessionId;
         }
 
-        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
-        if (is == null) throw new IOException("HTTP " + code + " with empty response");
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] buf = new byte[2048];
-        int r;
-        while ((r = is.read(buf)) != -1) baos.write(buf, 0, r);
-
-        String resp = baos.toString(StandardCharsets.UTF_8.name());
-        if (code < 200 || code >= 300) {
-            throw new IOException("HTTP " + code + ": " + resp);
-        }
-        return resp.trim().isEmpty() ? new JSONObject() : new JSONObject(resp);
+        try {
+            if (code == 202 || code == 204) {
+                if (payload.has("id")) throw new IOException("MCP request returned no JSON-RPC response.");
+                return new JSONObject();
+            }
+            InputStream stream = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+            if (stream == null) throw new IOException("HTTP " + code + " with empty response");
+            try (InputStream input = stream) {
+                if (code < 200 || code >= 300) throw new IOException("MCP HTTP " + code);
+                boolean sse = conn.getContentType() != null && conn.getContentType().startsWith("text/event-stream");
+                if (sse) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+                    StringBuilder data = new StringBuilder();
+                    int total = 0;
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        total += line.length();
+                        if (total > 2 * 1024 * 1024) throw new IOException("MCP event response too large.");
+                        if (line.isEmpty()) {
+                            if (data.length() > 0) {
+                                JSONObject event = new JSONObject(data.toString());
+                                if (event.has("id") && String.valueOf(event.get("id")).equals(String.valueOf(payload.opt("id")))) return event;
+                                data.setLength(0);
+                            }
+                        } else if (line.startsWith("data:")) {
+                            if (data.length() > 0) data.append('\n');
+                            data.append(line.substring(5).trim());
+                        }
+                    }
+                    throw new IOException("MCP event stream ended without a matching response.");
+                }
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                byte[] buffer = new byte[4096];
+                int n;
+                while ((n = input.read(buffer)) != -1) {
+                    if (bytes.size() + n > 2 * 1024 * 1024) throw new IOException("MCP response too large.");
+                    bytes.write(buffer, 0, n);
+                }
+                String response = bytes.toString(StandardCharsets.UTF_8.name());
+                return response.trim().isEmpty() && !payload.has("id") ? new JSONObject() : new JSONObject(response);
+            }
+        } finally { conn.disconnect(); }
     }
 
     public void handleOAuthCallback(McpServerConfig config, Uri callbackUri, HandshakeCallback callback) {
@@ -451,6 +506,8 @@ public final class McpClientManager {
     }
 
     public synchronized void disconnect(String serverId) {
+        OAuthLoopbackReceiver receiver = oauthReceivers.remove(serverId);
+        if (receiver != null) receiver.close();
         Process p = activeProcesses.remove(serverId);
         if (p != null) {
             try { p.destroy(); } catch (Exception ignored) {}

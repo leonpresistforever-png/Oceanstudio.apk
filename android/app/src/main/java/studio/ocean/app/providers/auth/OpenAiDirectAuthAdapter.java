@@ -57,6 +57,11 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
     private final CredentialVault credentialVault;
     private final ExecutorService loopbackExecutor = Executors.newCachedThreadPool();
     private final Map<String, LoopbackServer> activeServers = new ConcurrentHashMap<>();
+    private CallbackListener callbackListener;
+
+    public void setCallbackListener(CallbackListener listener) {
+        this.callbackListener = listener;
+    }
 
     public interface CallbackListener {
         void onCallbackReceived(Uri callbackUri);
@@ -118,6 +123,7 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
 
         // Start an ephemeral loopback callback listener on 127.0.0.1 (RFC 8252 §8.3)
         LoopbackServer server = new LoopbackServer(request.state);
+        server.setListener(callbackListener);
         server.start();
         activeServers.put(request.state, server);
 
@@ -478,83 +484,29 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
      */
     public static final class LoopbackServer {
         private final String expectedState;
-        private ServerSocket serverSocket;
-        private int port;
+        private studio.ocean.app.mcp.OAuthLoopbackReceiver receiver;
         private String redirectUri;
-        private volatile boolean running = false;
         private CallbackListener listener;
-
-        public LoopbackServer(String expectedState) {
-            this.expectedState = expectedState;
-        }
-
-        public void setRedirectUri(String redirectUri) {
-            this.redirectUri = redirectUri;
-        }
-
-        public String getRedirectUri() {
-            return redirectUri;
-        }
-
-        public void setListener(CallbackListener listener) {
-            this.listener = listener;
-        }
-
+        public LoopbackServer(String expectedState) { this.expectedState = expectedState; }
+        public void setRedirectUri(String redirectUri) { this.redirectUri = redirectUri; }
+        public String getRedirectUri() { return redirectUri; }
+        public void setListener(CallbackListener listener) { this.listener = listener; }
         public synchronized void start() throws IOException {
-            serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
-            port = serverSocket.getLocalPort();
-            running = true;
-
-            Executors.newSingleThreadExecutor().submit(() -> {
-                try {
-                    Socket socket = serverSocket.accept();
-                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                    String requestLine = in.readLine();
-                    if (requestLine != null && requestLine.startsWith("GET ")) {
-                        String[] parts = requestLine.split(" ");
-                        if (parts.length >= 2) {
-                            String pathWithQuery = parts[1];
-                            Uri uri = Uri.parse("http://127.0.0.1:" + port + pathWithQuery);
-
-                            // Send friendly response to the browser
-                            OutputStream out = socket.getOutputStream();
-                            String html = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-                                    + "<style>body{background:#191817;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px;box-sizing:border-box;}h1{font-size:22px;font-weight:600;}p{color:#d8d8d8;font-size:14px;}</style></head>"
-                                    + "<body><div><h1>Authorization Complete</h1><p>You may now return to OceanStudio.</p></div></body></html>";
-                            byte[] body = html.getBytes(StandardCharsets.UTF_8);
-
-                            String responseHeader = "HTTP/1.1 200 OK\r\n"
-                                    + "Content-Type: text/html; charset=utf-8\r\n"
-                                    + "Content-Length: " + body.length + "\r\n"
-                                    + "Connection: close\r\n\r\n";
-                            out.write(responseHeader.getBytes(StandardCharsets.UTF_8));
-                            out.write(body);
-                            out.flush();
-
-                            if (listener != null) {
-                                listener.onCallbackReceived(uri);
-                            }
-                        }
-                    }
-                    socket.close();
-                } catch (Exception ignored) {
-                } finally {
-                    stop();
+            receiver = new studio.ocean.app.mcp.OAuthLoopbackReceiver();
+            redirectUri = receiver.redirectUri();
+            receiver.listen(expectedState, new studio.ocean.app.mcp.OAuthLoopbackReceiver.Listener() {
+                @Override public void received(String callback) {
+                    if (listener != null) listener.onCallbackReceived(Uri.parse(callback));
+                }
+                @Override public void failed(String message) {
+                    if (listener != null) listener.onCallbackReceived(Uri.parse(redirectUri)
+                            .buildUpon().appendQueryParameter("state", expectedState)
+                            .appendQueryParameter("error", "temporarily_unavailable")
+                            .appendQueryParameter("error_description", message).build());
                 }
             });
         }
-
-        public int getPort() {
-            return port;
-        }
-
-        public synchronized void stop() {
-            running = false;
-            try {
-                if (serverSocket != null && !serverSocket.isClosed()) {
-                    serverSocket.close();
-                }
-            } catch (Exception ignored) {}
-        }
+        public int getPort() { return Uri.parse(redirectUri).getPort(); }
+        public synchronized void stop() { if (receiver != null) receiver.close(); }
     }
 }

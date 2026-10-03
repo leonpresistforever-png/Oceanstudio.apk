@@ -67,20 +67,7 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
 
     @Override
     public AuthResult handleCallback(Uri callback, AuthRequest originalRequest) throws Exception {
-        String token = callback.getQueryParameter("session_token");
-        if (token == null || token.trim().isEmpty()) {
-            token = callback.getQueryParameter("token");
-        }
-        if (token == null || token.trim().isEmpty()) {
-            return AuthResult.failure("Antigravity authorization failed: No valid product session token provided.");
-        }
-
-        // Store authenticated product session
-        credentialVault.store(PREF_ANTIGRAVITY_TOKEN, token);
-        credentialVault.store(PREF_ANTIGRAVITY_SESSION, "active");
-
-        long expiresAtEpochMs = System.currentTimeMillis() + (30L * 24L * 3600L * 1000L); // 30-day session
-        return AuthResult.success(token, null, expiresAtEpochMs, "antigravity_user", "Antigravity Product Account", "Antigravity Pro");
+        return AuthResult.failure("No verified Antigravity authorization contract is configured.");
     }
 
     @Override
@@ -90,32 +77,22 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
 
     @Override
     public AuthResult refresh(String refreshToken) throws Exception {
-        String existing = getStoredSessionToken();
-        if (existing == null) {
-            return AuthResult.failure("No Antigravity product session to refresh.");
-        }
-        long expiresAtEpochMs = System.currentTimeMillis() + (30L * 24L * 3600L * 1000L);
-        return AuthResult.success(existing, null, expiresAtEpochMs, "antigravity_user", "Antigravity Product Account", "Antigravity Pro");
+        return AuthResult.failure("Antigravity token refresh requires a provider-supported integration.");
     }
 
     @Override
     public List<ModelDescriptor> discoverModels(String accessToken) throws Exception {
-        List<ModelDescriptor> list = new ArrayList<>();
-        list.add(new ModelDescriptor("gemini-2.5-pro", "Gemini 2.5 Pro (Antigravity)", 1000000, true, true, true, "Available"));
-        list.add(new ModelDescriptor("gemini-2.5-flash", "Gemini 2.5 Flash (Antigravity)", 1000000, true, true, true, "Available"));
-        list.add(new ModelDescriptor("gemini-1.5-pro", "Gemini 1.5 Pro (Antigravity)", 2000000, true, true, true, "Available"));
-        return list;
+        return Collections.emptyList();
     }
 
     @Override
     public QuotaSnapshot fetchQuota(String accessToken) {
-        return QuotaSnapshot.reported(null, null, QuotaSnapshot.Unit.PROVIDER_DEFINED, null, "Antigravity Unified Product Quota", "product-session");
+        return QuotaSnapshot.unknown("Antigravity", "unverified");
     }
 
     @Override
     public boolean probe(String accessToken, String model) throws Exception {
-        // Truthful probe verifying that this session token is valid and active
-        return accessToken != null && !accessToken.trim().isEmpty() && !accessToken.equals("null");
+        return false;
     }
 
     @Override
