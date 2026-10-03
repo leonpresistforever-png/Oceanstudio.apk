@@ -42,8 +42,9 @@ public final class LocalModelManager {
     private final Map<String, LocalModel> catalog = new LinkedHashMap<>();
     private final Map<String, HttpURLConnection> activeDownloads = new ConcurrentHashMap<>();
     private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor();
-    private String loadedModelId = null;
-    private Process localRuntimeProcess = null;
+    private volatile String loadedModelId = null;
+    private volatile Process localRuntimeProcess = null;
+    private final java.util.concurrent.atomic.AtomicBoolean runtimeStarting = new java.util.concurrent.atomic.AtomicBoolean();
     private android.os.FileObserver modelsWatcher;
 
     private LocalModelManager(Context context) {
@@ -57,6 +58,8 @@ public final class LocalModelManager {
 
         initBuiltinCatalog();
         syncFromDisk();
+        // A persisted connection is not proof that a runtime survived process death.
+        new studio.ocean.app.providers.state.ProviderConnectionStore(context).delete("local_connection");
 
         // Watch models directory for externally installed models (Directive 3 §8.1)
         try {
@@ -179,7 +182,7 @@ public final class LocalModelManager {
 
     public synchronized boolean isModelInstalled(String id) {
         LocalModel model = getModel(id);
-        return model != null && (model.state == LocalModel.State.INSTALLED || model.state == LocalModel.State.LOADED);
+        return model != null && (model.state == LocalModel.State.INSTALLED || model.state == LocalModel.State.LOADED || model.state == LocalModel.State.CONNECTED);
     }
 
     public synchronized String getLoadedModelId() {
@@ -219,7 +222,7 @@ public final class LocalModelManager {
                     String id = name.substring(0, name.length() - 5);
                     LocalModel existing = catalog.get(id);
                     if (existing != null) {
-                        if (existing.state != LocalModel.State.LOADED) {
+                        if (existing.state != LocalModel.State.LOADED && existing.state != LocalModel.State.CONNECTED && existing.state != LocalModel.State.CONNECTING) {
                             existing.state = LocalModel.State.INSTALLED;
                         }
                     } else {
@@ -394,8 +397,14 @@ public final class LocalModelManager {
         }
     }
 
-    public synchronized boolean connectModel(String id) {
-        LocalModel model = catalog.get(id);
+    public boolean connectModel(String id) {
+        if (!runtimeStarting.compareAndSet(false, true)) return false;
+        try { return connectModelInternal(id); }
+        finally { runtimeStarting.set(false); }
+    }
+
+    private boolean connectModelInternal(String id) {
+        LocalModel model = getModel(id);
         if (model == null) return false;
         File modelFile = new File(modelsDir, id + ".gguf");
         if (!modelFile.isFile() || modelFile.length() == 0) {
@@ -411,11 +420,17 @@ public final class LocalModelManager {
 
         if (loadedModelId != null && !loadedModelId.equals(id)) disconnectModel(loadedModelId);
 
-        final int port = 8080;
+        final int port;
+        try (java.net.ServerSocket reservation = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
+            port = reservation.getLocalPort();
+        } catch (IOException error) {
+            model.errorMessage = "Unable to allocate a local inference port.";
+            return false;
+        }
         File prefix = new File(context.getFilesDir(), "usr");
         File[] candidates = new File[] {
-                new File(prefix, "bin/llama-server"),
                 new File(prefix, "bin/llama-server-ocean"),
+                new File(prefix, "bin/llama-server"),
                 new File(context.getApplicationInfo().nativeLibraryDir, "libllama-server.so")
         };
         File server = null;
@@ -430,6 +445,7 @@ public final class LocalModelManager {
         }
 
         try {
+            model.state = LocalModel.State.CONNECTING;
             if (localRuntimeProcess != null) {
                 localRuntimeProcess.destroy();
                 localRuntimeProcess = null;
@@ -443,18 +459,34 @@ public final class LocalModelManager {
                     "-c", String.valueOf(Math.min(model.context, 4096))
             );
             pb.directory(context.getFilesDir());
+            pb.environment().put("PREFIX", prefix.getAbsolutePath());
+            pb.environment().put("HOME", context.getFilesDir().getAbsolutePath());
+            pb.environment().put("PATH", new File(prefix, "bin").getAbsolutePath() + ":/system/bin");
+            pb.environment().put("LD_LIBRARY_PATH", new File(prefix, "lib").getAbsolutePath());
             pb.redirectErrorStream(true);
             localRuntimeProcess = pb.start();
 
-            long deadline = System.currentTimeMillis() + 15000L;
+            // llama-server writes startup diagnostics continuously. An unread pipe
+            // can fill before readiness and block the child indefinitely.
+            final Process startedProcess = localRuntimeProcess;
+            Thread drain = new Thread(() -> {
+                try (InputStream output = startedProcess.getInputStream()) {
+                    byte[] buffer = new byte[4096];
+                    while (output.read(buffer) != -1) { /* discard bounded diagnostics */ }
+                } catch (IOException ignored) {}
+            }, "ocean-local-runtime-output");
+            drain.setDaemon(true);
+            drain.start();
+
+            long deadline = System.currentTimeMillis() + 120000L;
             long probeStart = System.currentTimeMillis();
             String generated = null;
             while (System.currentTimeMillis() < deadline) {
-                if (!localRuntimeProcess.isAlive()) {
+                if (!startedProcess.isAlive()) {
                     throw new IOException("llama-server exited before becoming ready.");
                 }
                 try {
-                    HttpURLConnection probe = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/v1/chat/completions").openConnection();
+                    HttpURLConnection probe = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/v1/chat/completions").openConnection(java.net.Proxy.NO_PROXY);
                     probe.setRequestMethod("POST");
                     probe.setConnectTimeout(1000);
                     probe.setReadTimeout(5000);
@@ -483,8 +515,10 @@ public final class LocalModelManager {
                             JSONObject message = choices.getJSONObject(0).optJSONObject("message");
                             generated = message != null ? message.optString("content", "").trim() : "";
                         }
+                        probe.disconnect();
                         if (generated != null && !generated.isEmpty()) break;
                     }
+                    probe.disconnect();
                 } catch (Exception notReady) {
                     try { Thread.sleep(250L); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -494,8 +528,9 @@ public final class LocalModelManager {
             }
 
             if (generated == null || generated.isEmpty()) {
-                throw new IOException("llama-server did not produce a valid inference response within 15 seconds.");
+                throw new IOException("llama-server did not produce a valid inference response within 120 seconds.");
             }
+            if (!startedProcess.isAlive() || localRuntimeProcess != startedProcess) throw new IOException("Local runtime stopped during verification.");
 
             model.endpoint = "127.0.0.1:" + port;
             model.healthMs = Math.max(1L, System.currentTimeMillis() - probeStart);
@@ -566,7 +601,7 @@ public final class LocalModelManager {
         return false;
     }
 
-    public synchronized boolean loadModel(String id) {
+    public boolean loadModel(String id) {
         return connectModel(id);
     }
 
@@ -584,7 +619,12 @@ public final class LocalModelManager {
                 .edit().putBoolean("local_model_override", enabled).apply();
     }
 
-    public LocalModel getConnectedModel() {
+    public synchronized LocalModel getConnectedModel() {
+        if (runtimeStarting.get()) return null;
+        if (localRuntimeProcess == null || !localRuntimeProcess.isAlive()) {
+            if (loadedModelId != null) disconnectModel(loadedModelId);
+            return null;
+        }
         if (loadedModelId != null) {
             LocalModel m = catalog.get(loadedModelId);
             if (m != null && m.isConnected()) return m;
@@ -596,9 +636,10 @@ public final class LocalModelManager {
     }
 
     public synchronized boolean deleteModel(String id) {
+        if (runtimeStarting.get()) return false;
         LocalModel model = catalog.get(id);
         if (model == null) return false;
-        if (model.state == LocalModel.State.LOADED) {
+        if (model.state == LocalModel.State.LOADED || model.state == LocalModel.State.CONNECTED) {
             unloadModel(id);
         }
         File file = new File(modelsDir, id + ".gguf");

@@ -146,6 +146,9 @@ public final class AuthOrchestrator {
                         txId, desc.id, null, state, verifier, challenge, "ocean://auth/callback", Collections.singletonList("model:chat")
                 );
 
+                if (adapter instanceof OpenAiDirectAuthAdapter) {
+                    ((OpenAiDirectAuthAdapter) adapter).setCallbackListener(uri -> handleCallback(uri, txId, callback));
+                }
                 DirectAuthAdapter.AuthStartResult startResult = adapter.start(req);
                 sessionManager.updatePhase(txId, AuthTransaction.PHASE_BROWSER_ACTIVE);
 
@@ -268,9 +271,9 @@ public final class AuthOrchestrator {
                         ? discoveredModels.get(0).id : null;
 
                 // 4. Secure storage in Keystore-backed CredentialVault (both structured record and ref key)
-                String tokenToStore = (result.refreshToken != null && !result.refreshToken.isEmpty())
-                        ? result.refreshToken : result.accessToken;
-                String credRef = credentialVault.store(tokenToStore);
+                // Runtime Authorization headers need the access token. Refresh tokens
+                // remain in the structured record and must never be sent as bearers.
+                String credRef = credentialVault.store(result.accessToken);
 
                 CredentialRecord record = new CredentialRecord(
                         finalTx.providerId,
@@ -293,13 +296,15 @@ public final class AuthOrchestrator {
                 // 5. Save verified ProviderConnection
                 String connId = UUID.randomUUID().toString();
                 String displayName = result.displayName != null ? result.displayName : "Connected Account";
+                ProviderDescriptor provider = ProviderRegistry.find(finalTx.providerId);
+                if (provider == null || provider.defaultBaseUrl == null) throw new IllegalStateException("Provider has no runtime endpoint");
                 ProviderConnection connection = new ProviderConnection(
                         connId,
                         finalTx.providerId,
                         displayName,
                         AuthStrategy.DIRECT_OAUTH,
                         ConnectionStatus.CONNECTED,
-                        null,
+                        provider.defaultBaseUrl,
                         defaultModel,
                         credRef,
                         null,

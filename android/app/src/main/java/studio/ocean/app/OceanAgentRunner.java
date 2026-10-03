@@ -108,19 +108,20 @@ public final class OceanAgentRunner {
                         result = execution.optInt("exit_code", -1) == 0 ? "Command completed. Output is shown above."
                                 : "Command exited with code " + execution.optInt("exit_code", -1) + ". " + execution.optString("error", "Review its output above.");
                     } else {
-                        List<ProviderConnection> activeConns = connectionStore.listConnections();
-
                         // Directive 2026-10-02 §11.3: Check if persistent "Local model override" is enabled
                         studio.ocean.app.models.local.LocalModelManager lmm = studio.ocean.app.models.local.LocalModelManager.getInstance(context);
+                        List<ProviderConnection> activeConns = connectionStore.listConnections();
                         SmartRouter.RouteDecision decision = null;
                         if (lmm.isLocalOverrideEnabled()) {
                             studio.ocean.app.models.local.LocalModel connectedLocal = lmm.getConnectedModel();
+                            if (connectedLocal == null) throw new IOException("Reconnect your local model in Local Models. Local-only mode is enabled.");
                             if (connectedLocal != null) {
                                 ProviderConnection localConn = connectionStore.findByProviderId(studio.ocean.app.providers.ProviderRegistry.ID_LOCAL);
                                 if (localConn != null) {
                                     decision = new SmartRouter.RouteDecision(localConn, connectedLocal.id, "Local model override enabled: " + connectedLocal.displayName);
                                 }
                             }
+                            if (decision == null) throw new IOException("The local model has no verified provider route. Reconnect it in Local Models.");
                         }
                         if (decision == null) {
                             decision = smartRouter.selectRoute(activeConns, false, false, true);
@@ -276,7 +277,9 @@ public final class OceanAgentRunner {
 
     private JSONObject send(OceanModelConfig config, JSONObject body) throws Exception {
         if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-        HttpURLConnection conn = (HttpURLConnection) new URL(config.endpoint()).openConnection();
+        HttpURLConnection conn = (HttpURLConnection) (config.provider.equals("local")
+                ? new URL(config.endpoint()).openConnection(java.net.Proxy.NO_PROXY)
+                : new URL(config.endpoint()).openConnection());
         // Never forward a saved API key to a redirect target.
         conn.setInstanceFollowRedirects(false);
         conn.setRequestMethod("POST");
@@ -314,7 +317,7 @@ public final class OceanAgentRunner {
             if (code < 200 || code >= 300) {
                 String detail = text;
                 try { detail = new JSONObject(text).getJSONObject("error").optString("message", text); } catch (Exception ignored) {}
-                detail = detail.replace(config.apiKey, "[redacted]");
+                if (!config.apiKey.isEmpty()) detail = detail.replace(config.apiKey, "[redacted]");
                 if (detail.length() > 600) detail = detail.substring(0, 600);
                 if (code == 404) detail += " Check the model ID in BYOK Models & APIs; a provider name such as google is not a model ID.";
                 throw new IOException("Provider HTTP " + code + ": " + detail);

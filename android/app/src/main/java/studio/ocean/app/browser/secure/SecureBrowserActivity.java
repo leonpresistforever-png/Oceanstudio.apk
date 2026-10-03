@@ -1121,7 +1121,9 @@ public final class SecureBrowserActivity extends AppCompatActivity {
                             ProxyControllerAdapter.applyProxy(h + ":" + p, new ProxyControllerAdapter.ProxyCallback() {
                                 @Override
                                 public void onSuccess() {
-                                    networkPolicy.setProxyVerified(true);
+                                    // Applying WebView configuration does not prove that
+                                    // traffic traversed the configured proxy/exit route.
+                                    networkPolicy.setProxyVerified(false);
                                     Toast.makeText(SecureBrowserActivity.this, "Proxy override applied", Toast.LENGTH_SHORT).show();
                                 }
 
