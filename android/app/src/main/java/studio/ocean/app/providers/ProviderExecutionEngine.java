@@ -117,13 +117,28 @@ public final class ProviderExecutionEngine {
             }
         } else if (conn.strategy == AuthStrategy.LOCAL) {
             LocalModelManager mgr = LocalModelManager.getInstance(context);
-            if (!mgr.isModelInstalled(conn.selectedModel)) {
-                callback.onError("Local model " + conn.selectedModel + " is not installed.");
+            LocalModel active = mgr.getConnectedModel();
+            if (active == null || !conn.selectedModel.equals(active.id)) {
+                callback.onError("Local model is not backed by a verified running inference server.");
                 return;
             }
-            // Execute via local model manager
-            callback.onThought("Evaluating prompt with local model " + conn.selectedModel + "…");
-            callback.onComplete(0, "Local model " + conn.selectedModel + " processed prompt.");
+            callback.onThought("Running on-device inference with " + active.displayName + "…");
+            try {
+                JSONObject request = new JSONObject()
+                        .put("model", conn.selectedModel)
+                        .put("messages", new org.json.JSONArray()
+                                .put(new JSONObject().put("role", "user").put("content", prompt)))
+                        .put("stream", false);
+                JSONObject response = postLocal(conn.baseUrl, request, timeoutSeconds);
+                org.json.JSONArray choices = response.optJSONArray("choices");
+                if (choices == null || choices.length() == 0) throw new IOException("Local runtime returned no choices.");
+                JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+                String result = message != null ? message.optString("content", "") : "";
+                if (result.trim().isEmpty()) throw new IOException("Local runtime returned an empty completion.");
+                callback.onComplete(0, result);
+            } catch (Exception e) {
+                callback.onError(OceanAgentConversation.safeMessage(e));
+            }
         } else {
             // API_KEY, CUSTOM_ENDPOINT, DIRECT_OAUTH, DEVICE_CODE
             String secret = conn.credentialRef != null ? credentialVault.retrieve(conn.credentialRef) : "";
@@ -185,8 +200,25 @@ public final class ProviderExecutionEngine {
 
                 if (conn.strategy == AuthStrategy.LOCAL) {
                     LocalModelManager mgr = LocalModelManager.getInstance(context);
-                    if (!mgr.isModelInstalled(conn.selectedModel)) {
-                        throw new IOException("Local model " + conn.selectedModel + " is not installed on device");
+                    LocalModel active = mgr.getConnectedModel();
+                    if (active == null || !conn.selectedModel.equals(active.id)) {
+                        throw new IOException("Local model has no verified running inference server");
+                    }
+                    JSONObject probeBody = new JSONObject()
+                            .put("model", conn.selectedModel)
+                            .put("messages", new org.json.JSONArray()
+                                    .put(new JSONObject().put("role", "user").put("content", "Reply with OK")))
+                            .put("max_tokens", 4)
+                            .put("temperature", 0)
+                            .put("stream", false);
+                    JSONObject response = postLocal(conn.baseUrl, probeBody, 10);
+                    org.json.JSONArray choices = response.optJSONArray("choices");
+                    if (choices == null || choices.length() == 0) {
+                        throw new IOException("Local inference probe returned no choices");
+                    }
+                    JSONObject msg = choices.getJSONObject(0).optJSONObject("message");
+                    if (msg == null || msg.optString("content", "").trim().isEmpty()) {
+                        throw new IOException("Local inference probe returned no generated text");
                     }
                     mainHandler.post(callback::onSuccess);
                     return;
@@ -220,6 +252,39 @@ public final class ProviderExecutionEngine {
                 mainHandler.post(() -> callback.onFailure(OceanAgentConversation.safeMessage(e)));
             }
         }, "ocean-provider-engine-test").start();
+    }
+
+    private JSONObject postLocal(String baseUrl, JSONObject body, int timeoutSeconds) throws Exception {
+        String base = baseUrl == null ? "" : baseUrl.trim();
+        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+        if (!base.startsWith("http://127.0.0.1:") && !base.startsWith("http://[::1]:")) {
+            throw new IOException("Refusing non-loopback local-model endpoint: " + base);
+        }
+        HttpURLConnection conn = (HttpURLConnection) new URL(base + "/chat/completions").openConnection();
+        conn.setInstanceFollowRedirects(false);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setConnectTimeout(timeoutSeconds * 1000);
+        conn.setReadTimeout(timeoutSeconds * 1000);
+        conn.setDoOutput(true);
+        try {
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                os.write(body.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            int code = conn.getResponseCode();
+            java.io.InputStream stream = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            if (stream != null) try (java.io.InputStream in = stream) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) != -1 && out.size() < 1024 * 1024) out.write(buf, 0, n);
+            }
+            String text = out.toString(StandardCharsets.UTF_8.name());
+            if (code < 200 || code >= 300) throw new IOException("Local runtime HTTP " + code + ": " + text);
+            return new JSONObject(text);
+        } finally {
+            conn.disconnect();
+        }
     }
 
     private JSONObject sendHttp(OceanModelConfig config, JSONObject body, int timeoutSeconds) throws Exception {
