@@ -14,6 +14,7 @@ public final class QuotaService {
         if (connection == null) {
             return QuotaSnapshot.unknown("Unknown", "none");
         }
+        if (connection.strategy == AuthStrategy.GATEWAY) return connection.quota;
 
         if (connection.strategy == AuthStrategy.OFFICIAL_CLI) {
             // Subscription-backed official CLI tools report plan/entitlement directly

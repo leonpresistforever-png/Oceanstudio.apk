@@ -129,7 +129,7 @@ public final class ProviderExecutionEngine {
                         .put("messages", new org.json.JSONArray()
                                 .put(new JSONObject().put("role", "user").put("content", prompt)))
                         .put("stream", false);
-                JSONObject response = postLocal(conn.baseUrl, request, timeoutSeconds);
+                JSONObject response = postLocal(conn.baseUrl, request, credentialVault.retrieve(conn.credentialRef), timeoutSeconds);
                 org.json.JSONArray choices = response.optJSONArray("choices");
                 if (choices == null || choices.length() == 0) throw new IOException("Local runtime returned no choices.");
                 JSONObject message = choices.getJSONObject(0).optJSONObject("message");
@@ -142,8 +142,11 @@ public final class ProviderExecutionEngine {
         } else {
             // API_KEY, CUSTOM_ENDPOINT, DIRECT_OAUTH, DEVICE_CODE
             String secret = conn.credentialRef != null ? credentialVault.retrieve(conn.credentialRef) : "";
-            OceanModelConfig config = new OceanModelConfig(conn.providerId, conn.selectedModel, secret != null ? secret : "", conn.baseUrl);
             try {
+                if (conn.strategy == AuthStrategy.GATEWAY) studio.ocean.app.providers.gateway.OceanGatewayManager.get(context).ensureReady();
+                OceanModelConfig config = new OceanModelConfig(conn.strategy == AuthStrategy.GATEWAY ? "gateway" : conn.providerId,
+                        conn.selectedModel, secret != null ? secret : "", conn.strategy == AuthStrategy.GATEWAY
+                        ? studio.ocean.app.providers.gateway.OceanGatewayManager.get(context).baseUrl() : conn.baseUrl);
                 OceanAgentConversation convo = new OceanAgentConversation(config.provider, config.model);
                 String result = convo.run(prompt, body -> sendHttp(config, body, timeoutSeconds), (toolName, toolArgs) -> {
                     throw new IOException("Tool execution not supported in direct provider execution");
@@ -211,7 +214,7 @@ public final class ProviderExecutionEngine {
                             .put("max_tokens", 4)
                             .put("temperature", 0)
                             .put("stream", false);
-                    JSONObject response = postLocal(conn.baseUrl, probeBody, 10);
+                    JSONObject response = postLocal(conn.baseUrl, probeBody, credentialVault.retrieve(conn.credentialRef), 20);
                     org.json.JSONArray choices = response.optJSONArray("choices");
                     if (choices == null || choices.length() == 0) {
                         throw new IOException("Local inference probe returned no choices");
@@ -221,6 +224,19 @@ public final class ProviderExecutionEngine {
                         throw new IOException("Local inference probe returned no generated text");
                     }
                     mainHandler.post(callback::onSuccess);
+                    return;
+                }
+
+                if (conn.strategy == AuthStrategy.GATEWAY) {
+                    execute(conn, "Reply with OK", 120, new ExecutionCallback() {
+                        @Override public void onOutput(String chunk) { }
+                        @Override public void onThought(String thought) { }
+                        @Override public void onComplete(int exit, String result) {
+                            if (exit == 0 && result != null && !result.trim().isEmpty()) mainHandler.post(callback::onSuccess);
+                            else mainHandler.post(() -> callback.onFailure("Gateway returned no completion"));
+                        }
+                        @Override public void onError(String error) { mainHandler.post(() -> callback.onFailure(error)); }
+                    });
                     return;
                 }
 
@@ -254,7 +270,7 @@ public final class ProviderExecutionEngine {
         }, "ocean-provider-engine-test").start();
     }
 
-    private JSONObject postLocal(String baseUrl, JSONObject body, int timeoutSeconds) throws Exception {
+    private JSONObject postLocal(String baseUrl, JSONObject body, String key, int timeoutSeconds) throws Exception {
         String base = baseUrl == null ? "" : baseUrl.trim();
         if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
         if (!base.startsWith("http://127.0.0.1:") && !base.startsWith("http://[::1]:")) {
@@ -264,6 +280,7 @@ public final class ProviderExecutionEngine {
         conn.setInstanceFollowRedirects(false);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
+        if (key != null && !key.isEmpty()) conn.setRequestProperty("Authorization", "Bearer " + key);
         conn.setConnectTimeout(timeoutSeconds * 1000);
         conn.setReadTimeout(timeoutSeconds * 1000);
         conn.setDoOutput(true);

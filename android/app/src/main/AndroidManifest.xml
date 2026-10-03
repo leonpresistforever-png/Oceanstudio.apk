@@ -7,6 +7,7 @@
     <application
         android:name=".OceanApplication"
         android:allowBackup="true"
+        android:extractNativeLibs="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -44,6 +45,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="studio.ocean.app" android:host="oauth" android:path="/callback" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ocean" android:host="gateway" android:path="/return" />
+            </intent-filter>
         </activity>
         <activity android:name=".models.local.LocalModelsActivity" android:label="Local Models" android:exported="false" android:theme="@style/AppTheme" />
         <activity android:name=".browser.BrowserActivity" android:label="@string/browser" android:exported="false" android:theme="@style/AppTheme" android:windowSoftInputMode="adjustResize" />
@@ -62,6 +69,7 @@
         <activity android:name=".terminal.OceanTerminalDiagnosticsActivity" android:label="Ocean Terminal Diagnostics" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.diagnostics" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/diagnostic_file_paths" /></provider>
         <service android:name=".terminal.OceanTerminalRuntimeService" android:exported="false" />
+        <service android:name=".models.local.LocalInferenceService" android:exported="false" />
 
         <activity
             android:name=".MainActivity"

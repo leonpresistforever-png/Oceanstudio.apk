@@ -12,9 +12,9 @@ public final class OceanModelConfig {
         this.model = normalizeModel(this.provider, model);
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         if (this.apiKey.isEmpty() && !this.provider.equals("local")) throw new IllegalArgumentException("An API key is required");
-        this.baseUrl = this.provider.equals("local") ? normalizeLocalEndpoint(baseUrl) : normalizeEndpoint(baseUrl);
+        this.baseUrl = this.provider.equals("local") || this.provider.equals("gateway") ? normalizeLocalEndpoint(baseUrl) : normalizeEndpoint(baseUrl);
         if (!this.provider.equals("google") && !this.provider.equals("anthropic")
-                && !this.provider.equals("openai") && !this.provider.equals("custom") && !this.provider.equals("local"))
+                && !this.provider.equals("openai") && !this.provider.equals("custom") && !this.provider.equals("local") && !this.provider.equals("gateway"))
             throw new IllegalArgumentException("Choose a supported provider");
     }
 

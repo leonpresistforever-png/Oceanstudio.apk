@@ -162,9 +162,14 @@ public final class OceanAgentRunner {
                                     || decision.connection.strategy == AuthStrategy.DIRECT_OAUTH
                                     || decision.connection.strategy == AuthStrategy.DEVICE_CODE
                                     || decision.connection.strategy == AuthStrategy.OFFICIAL_OAUTH
+                                    || decision.connection.strategy == AuthStrategy.GATEWAY
                                     || decision.connection.strategy == AuthStrategy.LOCAL)) {
+                                if (decision.connection.strategy == AuthStrategy.GATEWAY)
+                                    studio.ocean.app.providers.gateway.OceanGatewayManager.get(context).ensureReady();
                                 String tokenOrKey = credentialVault.retrieve(decision.connection.credentialRef);
-                                config = new OceanModelConfig(decision.connection.providerId, decision.selectedModel, tokenOrKey != null ? tokenOrKey : "", decision.connection.baseUrl);
+                                config = new OceanModelConfig(decision.connection.strategy == AuthStrategy.GATEWAY ? "gateway" : decision.connection.providerId,
+                                        decision.selectedModel, tokenOrKey != null ? tokenOrKey : "",
+                                        decision.connection.strategy == AuthStrategy.GATEWAY ? studio.ocean.app.providers.gateway.OceanGatewayManager.get(context).baseUrl() : decision.connection.baseUrl);
                             } else {
                                 if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
                                 config = configuredModel();
@@ -282,7 +287,7 @@ public final class OceanAgentRunner {
                 && config.apiKey.equals(openAiRecord.accessToken);
         String endpoint = planOAuth ? studio.ocean.app.providers.auth.OpenAiDirectAuthAdapter.RESPONSES_ENDPOINT : config.endpoint();
         if (planOAuth) body = studio.ocean.app.providers.auth.OpenAiResponses.request(body);
-        HttpURLConnection conn = (HttpURLConnection) (config.provider.equals("local")
+        HttpURLConnection conn = (HttpURLConnection) (config.provider.equals("local") || config.provider.equals("gateway")
                 ? new URL(endpoint).openConnection(java.net.Proxy.NO_PROXY)
                 : new URL(endpoint).openConnection());
         // Never forward a saved API key to a redirect target.

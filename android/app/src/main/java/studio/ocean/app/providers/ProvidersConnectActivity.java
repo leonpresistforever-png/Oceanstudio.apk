@@ -56,6 +56,7 @@ import studio.ocean.app.providers.state.CredentialVault;
 import studio.ocean.app.providers.state.ModelCatalogService;
 import studio.ocean.app.providers.state.ProviderConnectionStore;
 import studio.ocean.app.providers.state.QuotaService;
+import studio.ocean.app.providers.gateway.OceanGatewayManager;
 
 /**
  * OceanStudio Provider Hub:
@@ -314,7 +315,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
 
             // Apply filter category
             if (activeFilter == FilterCategory.CONNECTED && !isConnected) continue;
-            if (activeFilter == FilterCategory.DIRECT_CONNECT && !desc.supports(AuthStrategy.DIRECT_OAUTH) && !desc.supports(AuthStrategy.OFFICIAL_OAUTH) && !desc.supports(AuthStrategy.DEVICE_CODE)) continue;
+            if (activeFilter == FilterCategory.DIRECT_CONNECT && !desc.supports(AuthStrategy.GATEWAY) && !desc.supports(AuthStrategy.DIRECT_OAUTH) && !desc.supports(AuthStrategy.OFFICIAL_OAUTH) && !desc.supports(AuthStrategy.DEVICE_CODE)) continue;
             if (activeFilter == FilterCategory.CLI_SUBSCRIPTION && !desc.supports(AuthStrategy.OFFICIAL_CLI)) continue;
             if (activeFilter == FilterCategory.API_KEY && !desc.supports(AuthStrategy.API_KEY)) continue;
 
@@ -354,7 +355,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             if (activeFilter != FilterCategory.ALL || !searchQuery.isEmpty()) {
                 introView.setText("Showing " + filtered.size() + " matching provider" + (filtered.size() == 1 ? "" : "s"));
             } else {
-                introView.setText("Connect subscription accounts via official CLI bridges, direct API keys, or local runtimes.");
+                introView.setText("Connect accounts in your browser, run the Ocean gateway, or use API keys and local models.");
             }
         }
 
@@ -363,6 +364,9 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             list.setVisibility(View.GONE);
             return;
         }
+        Button gatewayButton = createSecondaryButton("Install & Start Ocean Gateway", density);
+        gatewayButton.setOnClickListener(v -> showGatewayFlow(null));
+        list.addView(gatewayButton);
 
         emptyState.setVisibility(View.GONE);
         list.setVisibility(View.VISIBLE);
@@ -617,6 +621,17 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             testBtn.setOnClickListener(v -> testConnection(desc, activeConn));
             sheet.addView(testBtn);
 
+            if (activeConn.strategy == AuthStrategy.GATEWAY) {
+                Button refreshQuota = createSecondaryButton("Refresh Account Quota", density);
+                refreshQuota.setOnClickListener(v -> new Thread(() -> {
+                    try {
+                        OceanGatewayManager.get(this).refreshQuota(activeConn);
+                        runOnUiThread(() -> { dialog.dismiss(); showProviderBottomSheet(desc); });
+                    } catch (Exception error) { runOnUiThread(() -> Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show()); }
+                }, "ocean-gateway-quota").start());
+                sheet.addView(refreshQuota);
+            }
+
             Button editBtn = createSecondaryButton("Configure Settings", density);
             editBtn.setOnClickListener(v -> {
                 dialog.dismiss();
@@ -651,6 +666,12 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 showDirectConnectFlow(desc);
             });
             sheet.addView(directBtn);
+
+            if (ProviderRegistry.ID_OPENAI.equals(desc.id)) {
+                Button subscription = createSecondaryButton("Connect Codex Subscription via Gateway", density);
+                subscription.setOnClickListener(v -> { dialog.dismiss(); showGatewayFlow(desc); });
+                sheet.addView(subscription);
+            }
 
             if (desc.supports(AuthStrategy.OFFICIAL_CLI)) {
                 Button cliBtn = createSecondaryButton("Connect via " + desc.officialCliName + " CLI Bridge", density);
@@ -1036,6 +1057,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     }
 
     private void showDirectConnectFlow(ProviderDescriptor desc) {
+        if (desc.supports(AuthStrategy.GATEWAY)) { showGatewayFlow(desc); return; }
         authOrchestrator.startDirectConnect(desc, new AuthOrchestrator.AuthFlowCallback() {
             @Override
             public void onRiskWarningRequired(String title, String message, Runnable onProceed) {
@@ -1096,6 +1118,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     private void handleIncomingOAuthIntent(Intent intent) {
         if (intent == null || intent.getData() == null) return;
         Uri data = intent.getData();
+        if (OceanGatewayManager.get(this).acceptReturn(data)) return;
         boolean isOceanCallback = "ocean".equalsIgnoreCase(data.getScheme()) && "auth".equalsIgnoreCase(data.getHost());
         boolean isStudioCallback = "studio.ocean.app".equalsIgnoreCase(data.getScheme()) && "oauth".equalsIgnoreCase(data.getHost());
         if (!isOceanCallback && !isStudioCallback) return;
@@ -1202,6 +1225,11 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 .setTitle("Disconnect " + desc.title)
                 .setExplanation("Are you sure you want to disconnect? All local credentials and tokens will be permanently erased.")
                 .setPositiveButton("Disconnect", v -> {
+                    if (conn.strategy == AuthStrategy.GATEWAY) {
+                        OceanGatewayManager.get(this).disconnect(conn,
+                                () -> runOnUiThread(this::renderProviders), gatewayListener(null, null, null, null));
+                        return;
+                    }
                     connectionStore.delete(conn.id);
                     if (conn.credentialRef != null) {
                         credentialVault.delete(conn.credentialRef);
@@ -1211,6 +1239,58 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showGatewayFlow(ProviderDescriptor descriptor) {
+        float density = getResources().getDisplayMetrics().density;
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (24 * density); layout.setPadding(pad, pad, pad, pad);
+        TextView title = new TextView(this);
+        title.setText(descriptor == null ? "Ocean Gateway" : "Connect " + descriptor.title);
+        title.setTextSize(20); title.setTypeface(null, Typeface.BOLD);
+        layout.addView(title);
+        ProgressBar spinner = new ProgressBar(this);
+        layout.addView(spinner);
+        TextView status = new TextView(this);
+        status.setText("Preparing the local runtime…"); status.setPadding(0, pad, 0, pad);
+        layout.addView(status);
+        Button retry = createPrimaryButton("Retry", density); retry.setVisibility(View.GONE);
+        layout.addView(retry);
+        Dialog dialog = new Dialog(this); dialog.setContentView(layout);
+        retry.setOnClickListener(v -> { dialog.dismiss(); showGatewayFlow(descriptor); });
+        dialog.setOnCancelListener(v -> OceanGatewayManager.get(this).cancelAuthorization());
+        dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        OceanGatewayManager.Listener listener = gatewayListener(dialog, status, spinner, retry);
+        if (descriptor == null) OceanGatewayManager.get(this).installAndStart(listener);
+        else OceanGatewayManager.get(this).connect(descriptor, listener);
+    }
+
+    private OceanGatewayManager.Listener gatewayListener(Dialog dialog, TextView status, ProgressBar spinner, Button retry) {
+        return new OceanGatewayManager.Listener() {
+            @Override public void progress(String message) { runOnUiThread(() -> {
+                if (status != null) status.setText(message);
+                if (message.startsWith("Ocean gateway is running") && spinner != null) spinner.setVisibility(View.GONE);
+            }); }
+            @Override public void authorize(String url) { runOnUiThread(() -> {
+                try { new androidx.browser.customtabs.CustomTabsIntent.Builder().setShowTitle(true).build()
+                        .launchUrl(ProvidersConnectActivity.this, Uri.parse(url)); }
+                catch (Exception error) { failed("Could not open the system browser: " + error.getMessage()); }
+            }); }
+            @Override public void connected(ProviderConnection connection) { runOnUiThread(() -> {
+                if (dialog != null) dialog.dismiss();
+                studio.ocean.app.models.local.LocalModelManager.getInstance(ProvidersConnectActivity.this).setLocalOverrideEnabled(false);
+                renderProviders();
+                Toast.makeText(ProvidersConnectActivity.this, connection.displayAccount + " connected · " + connection.selectedModel, Toast.LENGTH_LONG).show();
+            }); }
+            @Override public void failed(String message) { runOnUiThread(() -> {
+                if (spinner != null) spinner.setVisibility(View.GONE);
+                if (status != null) status.setText(message);
+                else Toast.makeText(ProvidersConnectActivity.this, message, Toast.LENGTH_LONG).show();
+                if (retry != null) retry.setVisibility(View.VISIBLE);
+            }); }
+        };
     }
 
     private void testConnection(ProviderDescriptor desc, ProviderConnection conn) {

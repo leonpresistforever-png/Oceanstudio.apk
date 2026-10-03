@@ -260,9 +260,19 @@ public final class OceanTerminalRuntimeService extends Service {
 
     /** Runs a bounded headless command through the same Ocean PTY, prefix and environment. */
     public CommandHandle requestCommand(String command, String cwd, int timeoutSeconds, CommandCallback callback) {
+        return requestOwnedCommand(command, cwd, timeoutSeconds, false, callback);
+    }
+
+    /** Long-lived local gateway, owned and reaped by this foreground service. */
+    public CommandHandle requestDaemonCommand(String command, CommandCallback callback) {
+        return requestOwnedCommand(command, null, 0, true, callback);
+    }
+
+    private CommandHandle requestOwnedCommand(String command, String cwd, int timeoutSeconds,
+            boolean daemon, CommandCallback callback) {
         CommandHandle request = new CommandHandle(callback);
         if (command == null || command.trim().isEmpty() || command.indexOf('\0') >= 0
-                || timeoutSeconds < 1 || timeoutSeconds > 3600) {
+                || (!daemon && (timeoutSeconds < 1 || timeoutSeconds > 3600))) {
             request.fail(new IllegalArgumentException("Invalid command or timeout"));
             return request;
         }
@@ -276,7 +286,7 @@ public final class OceanTerminalRuntimeService extends Service {
             request.fail(error);
             return request;
         }
-        main.postDelayed(request.deadline, timeoutSeconds * 1000L);
+        if (!daemon) main.postDelayed(request.deadline, timeoutSeconds * 1000L);
         bootstrapWorker.execute(() -> {
             try {
                 if (request.cancelled) return;
@@ -312,7 +322,7 @@ public final class OceanTerminalRuntimeService extends Service {
         Notification notification=builder
                 .setSmallIcon(android.R.drawable.stat_sys_download)
                 .setContentTitle("Ocean task running")
-                .setContentText("A local terminal or Ocean Forge task is active.")
+                .setContentText("An Ocean gateway, terminal, or build task is active.")
                 .setContentIntent(pending)
                 .setOngoing(true)
                 .build();

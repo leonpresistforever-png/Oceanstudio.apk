@@ -21,6 +21,7 @@ public final class ModelCatalogService {
 
     public List<ModelDescriptor> discoverModels(ProviderConnection connection) {
         if (connection == null) return Collections.emptyList();
+        if (connection.strategy == AuthStrategy.GATEWAY) return connection.models;
 
         // If connection already cached models, return them
         if (connection.models != null && !connection.models.isEmpty()) {

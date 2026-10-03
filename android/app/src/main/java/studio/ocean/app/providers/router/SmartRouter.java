@@ -101,6 +101,12 @@ public final class SmartRouter {
             }
         }
 
+        // The gateway's real priority combo handles account/model cooldown and fallback.
+        for (ProviderConnection conn : verified) if (conn.strategy == AuthStrategy.GATEWAY && "gateway_auto".equals(conn.id))
+            return new RouteDecision(conn, conn.selectedModel, "Ocean gateway · fallback among connected accounts");
+        for (ProviderConnection conn : verified) if (conn.strategy == AuthStrategy.GATEWAY)
+            return new RouteDecision(conn, conn.selectedModel, "Ocean gateway · " + conn.displayAccount);
+
         // Priority 1: Direct OAuth subscription accounts (zero per-token API meter)
         for (ProviderConnection conn : verified) {
             if (conn.strategy == AuthStrategy.DIRECT_OAUTH || conn.strategy == AuthStrategy.OFFICIAL_OAUTH || conn.strategy == AuthStrategy.DEVICE_CODE) {
@@ -158,6 +164,10 @@ public final class SmartRouter {
 
     @NonNull
     private String chooseModel(@NonNull ProviderConnection conn, boolean tools, boolean vision) {
+        if (!tools && !vision && conn.selectedModel != null && !conn.selectedModel.isEmpty()) return conn.selectedModel;
+        for (ModelDescriptor m : conn.models) {
+            if (m.id.equals(conn.selectedModel) && (!tools || m.supportsTools) && (!vision || m.supportsVision)) return m.id;
+        }
         if (conn.models != null) {
             for (ModelDescriptor m : conn.models) {
                 if (tools && !m.supportsTools) continue;

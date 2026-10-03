@@ -406,6 +406,7 @@ public final class LocalModelManager {
     private boolean connectModelInternal(String id) {
         LocalModel model = getModel(id);
         if (model == null) return false;
+        if (id.equals(loadedModelId) && localRuntimeProcess != null && localRuntimeProcess.isAlive()) return true;
         File modelFile = new File(modelsDir, id + ".gguf");
         if (!modelFile.isFile() || modelFile.length() == 0) {
             model.errorMessage = "Model file is missing or empty.";
@@ -429,9 +430,9 @@ public final class LocalModelManager {
         }
         File prefix = new File(context.getFilesDir(), "usr");
         File[] candidates = new File[] {
+                new File(context.getApplicationInfo().nativeLibraryDir, "libllama-server.so"),
                 new File(prefix, "bin/llama-server-ocean"),
-                new File(prefix, "bin/llama-server"),
-                new File(context.getApplicationInfo().nativeLibraryDir, "libllama-server.so")
+                new File(prefix, "bin/llama-server")
         };
         File server = null;
         for (File candidate : candidates) {
@@ -445,6 +446,14 @@ public final class LocalModelManager {
         }
 
         try {
+            android.content.Intent keepAlive = new android.content.Intent(context, LocalInferenceService.class);
+            if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(keepAlive);
+            else context.startService(keepAlive);
+            studio.ocean.app.providers.state.CredentialVault vault = new studio.ocean.app.providers.state.CredentialVault(context);
+            byte[] randomKey = new byte[32];
+            new java.security.SecureRandom().nextBytes(randomKey);
+            String runtimeKey = android.util.Base64.encodeToString(randomKey, android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE);
+            vault.store("local_inference_key", runtimeKey);
             model.state = LocalModel.State.CONNECTING;
             if (localRuntimeProcess != null) {
                 localRuntimeProcess.destroy();
@@ -456,23 +465,33 @@ public final class LocalModelManager {
                     "-m", modelFile.getAbsolutePath(),
                     "--host", "127.0.0.1",
                     "--port", String.valueOf(port),
-                    "-c", String.valueOf(Math.min(model.context, 4096))
+                    "-c", String.valueOf(Math.min(model.context, 4096)),
+                    "--alias", model.id,
+                    "--api-key", runtimeKey,
+                    "--jinja", "--parallel", "1",
+                    "--threads", String.valueOf(Math.min(4, Runtime.getRuntime().availableProcessors()))
             );
             pb.directory(context.getFilesDir());
             pb.environment().put("PREFIX", prefix.getAbsolutePath());
             pb.environment().put("HOME", context.getFilesDir().getAbsolutePath());
             pb.environment().put("PATH", new File(prefix, "bin").getAbsolutePath() + ":/system/bin");
-            pb.environment().put("LD_LIBRARY_PATH", new File(prefix, "lib").getAbsolutePath());
+            // The bundled server links inference and C++ statically; do not mix package ABIs.
+            pb.environment().remove("LD_PRELOAD");
+            pb.environment().remove("LD_LIBRARY_PATH");
             pb.redirectErrorStream(true);
             localRuntimeProcess = pb.start();
 
             // llama-server writes startup diagnostics continuously. An unread pipe
             // can fill before readiness and block the child indefinitely.
             final Process startedProcess = localRuntimeProcess;
+            final File runtimeLog = new File(statusFile.getParentFile(), "llama-server.log");
             Thread drain = new Thread(() -> {
-                try (InputStream output = startedProcess.getInputStream()) {
+                try (InputStream output = startedProcess.getInputStream(); OutputStream log = new FileOutputStream(runtimeLog)) {
                     byte[] buffer = new byte[4096];
-                    while (output.read(buffer) != -1) { /* discard bounded diagnostics */ }
+                    int count; long written = 0;
+                    while ((count = output.read(buffer)) != -1) {
+                        if (written < 1024 * 1024) { log.write(buffer, 0, count); log.flush(); written += count; }
+                    }
                 } catch (IOException ignored) {}
             }, "ocean-local-runtime-output");
             drain.setDaemon(true);
@@ -489,8 +508,9 @@ public final class LocalModelManager {
                     HttpURLConnection probe = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/v1/chat/completions").openConnection(java.net.Proxy.NO_PROXY);
                     probe.setRequestMethod("POST");
                     probe.setConnectTimeout(1000);
-                    probe.setReadTimeout(5000);
+                    probe.setReadTimeout(15000);
                     probe.setRequestProperty("Content-Type", "application/json");
+                    probe.setRequestProperty("Authorization", "Bearer " + runtimeKey);
                     probe.setDoOutput(true);
                     JSONObject body = new JSONObject()
                             .put("model", model.id)
@@ -519,6 +539,7 @@ public final class LocalModelManager {
                         if (generated != null && !generated.isEmpty()) break;
                     }
                     probe.disconnect();
+                    Thread.sleep(250L);
                 } catch (Exception notReady) {
                     try { Thread.sleep(250L); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -534,7 +555,7 @@ public final class LocalModelManager {
 
             model.endpoint = "127.0.0.1:" + port;
             model.healthMs = Math.max(1L, System.currentTimeMillis() - probeStart);
-            model.verifiedContext = model.context;
+            model.verifiedContext = Math.min(model.context, 4096);
             model.state = LocalModel.State.CONNECTED;
             model.errorMessage = null;
             loadedModelId = id;
@@ -548,10 +569,12 @@ public final class LocalModelManager {
                             studio.ocean.app.providers.model.ConnectionStatus.CONNECTED,
                             "http://127.0.0.1:" + port + "/v1",
                             model.id,
-                            null, null,
+                            "local_inference_key", null,
                             Collections.singletonList(model.id),
                             null,
-                            studio.ocean.app.providers.model.QuotaSnapshot.unlimited("On-device local execution", "local-runtime"),
+                            studio.ocean.app.providers.model.QuotaSnapshot.reported(null, null,
+                                    studio.ocean.app.providers.model.QuotaSnapshot.Unit.PROVIDER_DEFINED,
+                                    null, "On-device local execution", "local-runtime"),
                             null,
                             System.currentTimeMillis()
                     );
@@ -575,6 +598,7 @@ public final class LocalModelManager {
                 if (stale != null) store.delete(stale.id);
             } catch (Exception ignored) {}
             persistStatus();
+            context.stopService(new android.content.Intent(context, LocalInferenceService.class));
             return false;
         }
     }
@@ -596,6 +620,8 @@ public final class LocalModelManager {
             } catch (Exception ignored) {}
 
             persistStatus();
+            new studio.ocean.app.providers.state.CredentialVault(context).delete("local_inference_key");
+            context.stopService(new android.content.Intent(context, LocalInferenceService.class));
             return true;
         }
         return false;

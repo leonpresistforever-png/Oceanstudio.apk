@@ -56,6 +56,10 @@ jobs:
         run: |
           python3 scripts/tests/test_master_directive_repairs.py
           python3 scripts/tests/test_provider_hub.py
+          python3 scripts/tests/test_runtime_auth_boundaries.py
+
+      - name: Consume verified canonical gateway command
+        run: python3 scripts/prepare-gateway-command.py
 
       - name: Verify bundled signed package catalogue
         run: |
@@ -64,6 +68,9 @@ jobs:
 
       - name: Build Android FFmpeg and FFprobe from verified upstream source
         run: bash scripts/build-android-ffmpeg.sh
+
+      - name: Build and package real Android llama-server
+        run: bash scripts/build-android-llama.sh
 
       - name: Build debug APK (Gradle)
         working-directory: android
@@ -88,6 +95,10 @@ jobs:
           APK_CONTENTS=$(unzip -Z -1 "$APK")
           grep -Fxq 'lib/arm64-v8a/liboceanstudio_ext.so' <<< "$APK_CONTENTS"
           grep -Fxq 'lib/arm64-v8a/liboceanpty.so' <<< "$APK_CONTENTS"
+          grep -Fxq 'lib/arm64-v8a/libllama-server.so' <<< "$APK_CONTENTS"
+          grep -Fxq 'assets/ocean/gateway/ocean-gateway' <<< "$APK_CONTENTS"
+          test "$(unzip -p "$APK" lib/arm64-v8a/libllama-server.so | sha256sum | cut -d' ' -f1)" = \
+            "$(sha256sum android/app/src/main/jniLibs/arm64-v8a/libllama-server.so | cut -d' ' -f1)"
           if grep -Eq '^lib/arm64-v8a/lib(oceanstudio_ext|oceanpty)d\.so$' <<< "$APK_CONTENTS"; then
             echo 'Stale debug postfix native libraries found in APK' >&2
             exit 1
@@ -145,11 +156,10 @@ jobs:
           Test APK built and verified from commit \`${GITHUB_SHA:0:8}\`.
 
           #### What's New in v${VERSION}:
-          - **AI Provider Hub & Direct Connect**: 17+ verified AI providers including OpenAI, Anthropic Claude, Google Gemini, Antigravity, Kimi, DeepSeek, Groq, Ollama, OpenRouter, Mistral, and official CLI bridges with OAuth 2.0 PKCE and API key management.
-          - **On-Device Local Models (GGUF)**: Offline on-device LLM inference engine supporting SmolLM2, Qwen2.5, and Llama 3.2 with hardware RAM validation and loopback inference runtime.
-          - **Secure Private Web Browser**: Ephemeral privacy-first browser with tracker shielding, popup firewall, DNS/WebRTC leak protection, and zero disk traces.
-          - **Unified Home & Composer UI**: New interactive suggestion cards, quick action chips below composer, dynamic top model chip, and streamlined navigation drawer.
-          - **Android minSdk 28 & Bionic Decoupling**: Fully autonomous native environment targeting Android 9.0+ with zero Termux contamination.
+          - **Local inference**: Includes an Android arm64 llama-server built from pinned official source. Connect starts it, verifies generated text, and registers the local route used by Ocean Agent.
+          - **Ocean gateway**: One-tap installation/start of integrity-pinned upstream OmniRoute. Browser authorization, native loopback callbacks, token exchange, provider model discovery, quota refresh, and encrypted gateway-key storage are wired into Connect.
+          - **Connected-account fallback**: The upstream gateway handles a real priority combo across verified accounts. Ocean uses its OpenAI-compatible inference endpoint; the gateway handles provider-specific request/response translation and token refresh.
+          - **Verification scope**: Build/signature/ABI checks and automated protocol tests. A user's live provider consent and subscription quota require completing account login on their device.
 
           #### Installation Note:
           This is a debug-signed test build. If you have an older version installed, please uninstall it first before installing this APK.

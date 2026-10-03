@@ -12,6 +12,7 @@ public enum AuthStrategy {
     API_KEY("API Key"),
     ENTERPRISE("Enterprise"),
     LOCAL("Local Runtime"),
+    GATEWAY("Ocean Gateway"),
     CUSTOM_ENDPOINT("Custom Endpoint");
 
     public final String displayName;

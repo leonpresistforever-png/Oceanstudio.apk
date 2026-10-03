@@ -25,3 +25,7 @@ Thumbs.db
 *.keystore
 releases/*signing*key*.pem
 build/
+android/app/src/main/jniLibs/arm64-v8a/libllama-server.so
+android/app/src/main/assets/ocean/native/llama-runtime.json
+android/app/src/main/assets/ocean/native/llama-LICENSE
+android/app/src/main/assets/ocean/gateway/ocean-gateway
