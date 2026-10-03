@@ -170,7 +170,7 @@ def test_direct_provider_auth():
     assert_true("127.0.0.1" in openai_src and "ServerSocket" in openai_src, "OpenAiDirectAuthAdapter runs ephemeral loopback listener")
     assert_true("chatgpt.tokens.use.direct" in openai_src, "OpenAiDirectAuthAdapter requests chatgpt.tokens.use.direct scope")
     assert_true("ext_agent_host_id" in openai_src, "OpenAiDirectAuthAdapter uses persistent ext_agent_host_id URN")
-    assert_true("v1/chat/completions" in openai_src, "OpenAiDirectAuthAdapter executes live 1-token probe")
+    assert_true("v1/responses" in openai_src and '"response.completed"' in openai_src and '"stream", true' in openai_src, "OpenAI probe targets streamed Responses and requires completion (source contract)")
 
     # Antigravity vs Google Gemini product split
     antigravity_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AntigravityDirectAuthAdapter.java"
