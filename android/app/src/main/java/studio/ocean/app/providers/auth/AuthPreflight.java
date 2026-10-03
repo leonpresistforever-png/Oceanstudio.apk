@@ -205,12 +205,7 @@ public final class AuthPreflight {
         }
 
         if ("openai".equals(provider.id)) {
-            if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
-                return PreflightResult.fail("OAuth Client Not Configured",
-                        "OpenAI Direct OAuth requires a configured OAuth 2.0 Client ID (RFC 8252).\n\nPlease configure your OpenAI OAuth Client ID, or connect using Codex CLI / API Key.",
-                        "Client ID missing",
-                        "Configure OAuth Client ID or connect via Codex CLI / API key.");
-            }
+            // Open-source SIWC obtains its own issued client; Firebase's Google client is unrelated.
             return PreflightResult.success();
         }
 

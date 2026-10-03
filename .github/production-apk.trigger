@@ -1,1 +1,1 @@
-Build OceanStudio 1.2.7 UI release using the verified bundled signed package catalogue and native bootstrap. Package promotions retain the full payload audit.
+Build main after the runtime callback and ChatGPT plan inference repairs, preserving existing production signing identity.

@@ -329,27 +329,7 @@ public final class ProviderExecutionEngine {
     private boolean probeOAuthToken(String providerId, String token) {
         try {
             if ("openai".equals(providerId)) {
-                HttpURLConnection conn = (HttpURLConnection) new URL("https://api.openai.com/v1/chat/completions").openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Authorization", "Bearer " + token);
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
-                conn.setDoOutput(true);
-                String body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1,\"store\":false}";
-                try (java.io.OutputStream os = conn.getOutputStream()) {
-                    os.write(body.getBytes(StandardCharsets.UTF_8));
-                }
-                int code = conn.getResponseCode();
-                if (code >= 200 && code < 300) return true;
-
-                // Fallback models endpoint probe if completion fails
-                HttpURLConnection mConn = (HttpURLConnection) new URL("https://api.openai.com/v1/models").openConnection();
-                mConn.setRequestMethod("GET");
-                mConn.setRequestProperty("Authorization", "Bearer " + token);
-                mConn.setConnectTimeout(6000);
-                mConn.setReadTimeout(6000);
-                return mConn.getResponseCode() >= 200 && mConn.getResponseCode() < 300;
+                return new studio.ocean.app.providers.auth.OpenAiDirectAuthAdapter(context).probe(token, null);
             }
 
             String probeUrl = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1";

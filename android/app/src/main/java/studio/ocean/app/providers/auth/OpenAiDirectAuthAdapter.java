@@ -43,7 +43,7 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
     public static final String AUTH_ENDPOINT = "https://auth.openai.com/api/accounts/authorize";
     public static final String TOKEN_ENDPOINT = "https://auth.openai.com/api/accounts/oauth/token";
     public static final String RESOURCE_URI = "https://api.openai.com/v1";
-    public static final String RESPONSES_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+    public static final String RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
     public static final String MODELS_ENDPOINT = "https://api.openai.com/v1/models";
 
     public static final String DYNAMIC_CLIENT_ID = "dynamic_agent_client";
@@ -137,7 +137,8 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         StringBuilder sb = new StringBuilder(AUTH_ENDPOINT);
         sb.append("?response_type=code");
         sb.append("&client_id=").append(URLEncoder.encode(effectiveClientId, "UTF-8"));
-        sb.append("&agent_name_hint=").append(URLEncoder.encode(AGENT_NAME_HINT, "UTF-8"));
+        if (existingIssuedClientId == null) sb.append("&agent_name_hint=").append(URLEncoder.encode(AGENT_NAME_HINT, "UTF-8"));
+        credentialVault.store("openai_pending_client_" + request.state, effectiveClientId);
         sb.append("&ext_agent_host_id=").append(URLEncoder.encode(hostId, "UTF-8"));
         sb.append("&redirect_uri=").append(URLEncoder.encode(loopbackRedirectUri, "UTF-8"));
         sb.append("&scope=").append(URLEncoder.encode(REQUIRED_SCOPES, "UTF-8"));
@@ -173,29 +174,19 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         }
 
         String returnedState = callback.getQueryParameter("state");
-        if (returnedState != null && !returnedState.equals(originalRequest.state)) {
+        if (!originalRequest.state.equals(returnedState)) {
             return AuthResult.failure("State token mismatch in callback (CSRF detected).");
         }
 
-        // Capture issued client ID if returned in callback (e.g. oaiapp_...)
+        String pendingClientId = credentialVault.retrieve("openai_pending_client_" + originalRequest.state);
+        if (pendingClientId == null) return AuthResult.failure("Missing OpenAI authorization transaction.");
         String issuedFromCallback = callback.getQueryParameter("client_id");
-        if (issuedFromCallback != null && !issuedFromCallback.isEmpty() && !DYNAMIC_CLIENT_ID.equals(issuedFromCallback)) {
-            setIssuedClientId(issuedFromCallback);
-        }
-
-        String effectiveClientId = getIssuedClientId();
-        if (effectiveClientId == null) {
-            // Check if passed via request or custom configuration
-            effectiveClientId = originalRequest.clientId;
-        }
-        if (effectiveClientId == null || DYNAMIC_CLIENT_ID.equals(effectiveClientId)) {
-            // If callback did not supply client_id and no issued ID exists, check query param or throw
-            if (issuedFromCallback != null && !issuedFromCallback.isEmpty()) {
-                effectiveClientId = issuedFromCallback;
-            } else {
-                return AuthResult.failure("OpenAI dynamic registration did not provide an issued client ID.");
-            }
-        }
+        boolean initialRegistration = DYNAMIC_CLIENT_ID.equals(pendingClientId);
+        if (initialRegistration && (issuedFromCallback == null || !issuedFromCallback.startsWith("oaiapp_")))
+            return AuthResult.failure("OpenAI registration did not return an issued client ID.");
+        if (!initialRegistration && issuedFromCallback != null && !pendingClientId.equals(issuedFromCallback))
+            return AuthResult.failure("OpenAI callback changed the registered client ID.");
+        String effectiveClientId = initialRegistration ? issuedFromCallback : pendingClientId;
 
         String resolvedRedirectUri = credentialVault.retrieve("openai_redirect_uri_" + originalRequest.state);
         if (resolvedRedirectUri == null || resolvedRedirectUri.isEmpty()) {
@@ -220,74 +211,27 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         long expiresIn = tokenJson.optLong("expires_in", 3600);
         long expiresAtEpochMs = System.currentTimeMillis() + (expiresIn * 1000L);
 
-        // Capture any client_id returned in token response
-        String tokenClientId = tokenJson.optString("client_id", null);
-        if (tokenClientId != null && !tokenClientId.isEmpty() && !DYNAMIC_CLIENT_ID.equals(tokenClientId)) {
-            setIssuedClientId(tokenClientId);
-            effectiveClientId = tokenClientId;
-        }
-
-        // Validate ID token signature, issuer, audience, and expiry (Directive §3.2 Step 7)
+        String tokenClientId = tokenJson.optString("client_id", effectiveClientId);
+        if (!effectiveClientId.equals(tokenClientId)) return AuthResult.failure("OpenAI token client mismatch.");
         String idToken = tokenJson.optString("id_token", null);
-        String accountEmail = "ChatGPT Account";
-        String accountSubject = "openai_account";
-
-        if (idToken != null && idToken.contains(".")) {
-            try {
-                String[] parts = idToken.split("\\.");
-                if (parts.length >= 2) {
-                    byte[] payloadBytes = Base64.decode(parts[1], Base64.URL_SAFE | Base64.NO_WRAP);
-                    JSONObject payload = new JSONObject(new String(payloadBytes, StandardCharsets.UTF_8));
-
-                    // Verify issuer
-                    String iss = payload.optString("iss", "");
-                    if (!iss.contains("openai.com")) {
-                        return AuthResult.failure("Untrusted ID token issuer: " + iss);
-                    }
-
-                    // Verify expiry
-                    long exp = payload.optLong("exp", 0);
-                    if (exp > 0 && exp * 1000L < System.currentTimeMillis() - 60000L) {
-                        return AuthResult.failure("Expired ID token received from OpenAI.");
-                    }
-
-                    // Extract identity
-                    if (payload.has("email")) {
-                        accountEmail = payload.getString("email");
-                    }
-                    if (payload.has("sub")) {
-                        accountSubject = payload.getString("sub");
-                    }
-
-                    // Verify nonce if present
-                    String storedNonce = credentialVault.retrieve("openai_nonce_" + originalRequest.state);
-                    if (storedNonce != null && payload.has("nonce")) {
-                        if (!storedNonce.equals(payload.getString("nonce"))) {
-                            return AuthResult.failure("Nonce mismatch in ID token.");
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "ID token inspection warning: " + e.getMessage());
-            }
-        }
-
-        // Verify granted scopes (Directive §3.2 Step 8)
+        String nonce = credentialVault.retrieve("openai_nonce_" + originalRequest.state);
+        JSONObject identity = OpenAiIdentityVerifier.verify(idToken, effectiveClientId, nonce);
+        String accountSubject = identity.getString("sub");
+        String accountEmail = identity.optString("email", "ChatGPT Account");
+        CredentialRecord previous = credentialVault.retrieveRecord("openai");
+        if (!initialRegistration && previous != null && !accountSubject.equals(previous.accountSubject))
+            return AuthResult.failure("OpenAI returning account identity changed.");
         String grantedScope = tokenJson.optString("scope", "");
-        boolean hasDirectTokenScope = grantedScope.contains("chatgpt.tokens.use.direct") || grantedScope.contains("resource.invoke");
-        if (!grantedScope.isEmpty() && !hasDirectTokenScope) {
-            Log.w(TAG, "Notice: chatgpt.tokens.use.direct not explicitly confirmed in scope: " + grantedScope);
-        }
-
-        // Probe Responses API with genuine 1-token completion before CONNECTED (Directive §3.2 Step 10)
-        boolean probeOk = probe(accessToken, "gpt-4o-mini");
-        if (!probeOk) {
-            // Also try a models list probe as fallback
-            probeOk = probeModelsEndpoint(accessToken);
-        }
-        if (!probeOk) {
-            return AuthResult.failure("OpenAI live API probe failed after token exchange. Quota or plan permission unavailable.");
-        }
+        Set<String> granted = new HashSet<>(Arrays.asList(grantedScope.trim().split("\\s+")));
+        if (!granted.contains("chatgpt.tokens.use.direct") || !granted.contains("resource.invoke"))
+            return AuthResult.failure("ChatGPT plan use was not authorized. Review the plan-sharing permission during sign-in.");
+        List<ModelDescriptor> models = discoverModels(accessToken);
+        if (models.isEmpty() || !probe(accessToken, models.get(0).id))
+            return AuthResult.failure("OpenAI inference did not complete. Plan access or remaining usage could not be verified.");
+        setIssuedClientId(effectiveClientId);
+        credentialVault.delete("openai_pending_client_" + originalRequest.state);
+        credentialVault.delete("openai_nonce_" + originalRequest.state);
+        credentialVault.delete("openai_redirect_uri_" + originalRequest.state);
 
         // Store tokens securely in Android Keystore-backed CredentialVault
         credentialVault.store("openai_access_token", accessToken);
@@ -309,7 +253,7 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
                 "https://auth.openai.com",
                 effectiveClientId,
                 accountEmail,
-                "ChatGPT Plan",
+                "Plan permission granted; remaining usage unknown",
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
                 1L
@@ -377,13 +321,13 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
         if (conn.getResponseCode() >= 200 && conn.getResponseCode() < 300) {
             String resp = readStream(conn.getInputStream());
             JSONObject json = new JSONObject(resp);
-            JSONArray data = json.optJSONArray("data");
+            JSONArray data = json.optJSONArray("models");
             if (data != null) {
                 for (int i = 0; i < data.length(); i++) {
                     JSONObject m = data.getJSONObject(i);
-                    String id = m.optString("id");
-                    if (id.startsWith("gpt") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("chatgpt")) {
-                        list.add(new ModelDescriptor(id, id, 128000, false, true, true, "Available"));
+                    String id = m.optString("slug");
+                    if ("list".equals(m.optString("visibility")) && !id.isEmpty()) {
+                        list.add(new ModelDescriptor(id, m.optString("display_name", id), 0, list.isEmpty(), true, false, "Available"));
                     }
                 }
             }
@@ -393,54 +337,44 @@ public final class OpenAiDirectAuthAdapter implements DirectAuthAdapter {
 
     @Override
     public QuotaSnapshot fetchQuota(String accessToken) {
-        return QuotaSnapshot.reported(null, null, QuotaSnapshot.Unit.PROVIDER_DEFINED, null, "ChatGPT Plan Backed", "oauth-pkce");
+        return QuotaSnapshot.unknown("Remaining ChatGPT plan usage", "provider usage not reported");
     }
 
     @Override
     public boolean probe(String accessToken, String model) throws Exception {
+        if (model == null || model.isEmpty()) {
+            List<ModelDescriptor> available = discoverModels(accessToken);
+            if (available.isEmpty()) return false;
+            model = available.get(0).id;
+        }
+        HttpURLConnection conn = (HttpURLConnection) new URL(RESPONSES_ENDPOINT).openConnection();
+        conn.setInstanceFollowRedirects(false);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept", "text/event-stream");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(60000);
+        conn.setDoOutput(true);
+        JSONObject payload = new JSONObject().put("model", model).put("input", "Reply with OK.")
+                .put("store", false).put("stream", true);
         try {
-            URL url = new URL(RESPONSES_ENDPOINT);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("User-Agent", "OceanStudio/1.2.6");
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(10000);
-            conn.setDoOutput(true);
-
-            JSONObject payload = new JSONObject();
-            payload.put("model", (model != null && !model.isEmpty()) ? model : "gpt-4o-mini");
-            JSONArray messages = new JSONArray();
-            messages.put(new JSONObject().put("role", "user").put("content", "ping"));
-            payload.put("messages", messages);
-            payload.put("max_tokens", 1);
-            payload.put("store", false);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+            try (OutputStream os = conn.getOutputStream()) { os.write(payload.toString().getBytes(StandardCharsets.UTF_8)); }
+            if (conn.getResponseCode() != 200) return false;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line; int total = 0;
+                while ((line = reader.readLine()) != null) {
+                    total += line.length(); if (total > 2097152) return false;
+                    if (!line.startsWith("data:")) continue;
+                    String data = line.substring(5).trim();
+                    if (data.isEmpty() || "[DONE]".equals(data)) continue;
+                    String type = new JSONObject(data).optString("type");
+                    if ("response.completed".equals(type)) return true;
+                    if ("response.failed".equals(type) || "response.incomplete".equals(type) || "error".equals(type)) return false;
+                }
+                return false;
             }
-
-            int code = conn.getResponseCode();
-            return code >= 200 && code < 300;
-        } catch (Exception e) {
-            Log.w(TAG, "Responses API probe encountered: " + e.getMessage());
-            return false;
-        }
-    }
-
-    private boolean probeModelsEndpoint(String accessToken) {
-        try {
-            URL url = new URL(MODELS_ENDPOINT);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
-            conn.setConnectTimeout(6000);
-            conn.setReadTimeout(6000);
-            return conn.getResponseCode() >= 200 && conn.getResponseCode() < 300;
-        } catch (Exception e) {
-            return false;
-        }
+        } finally { conn.disconnect(); }
     }
 
     @Override

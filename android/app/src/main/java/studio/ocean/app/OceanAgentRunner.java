@@ -277,9 +277,14 @@ public final class OceanAgentRunner {
 
     private JSONObject send(OceanModelConfig config, JSONObject body) throws Exception {
         if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+        studio.ocean.app.providers.state.CredentialRecord openAiRecord = credentialVault.retrieveRecord("openai");
+        boolean planOAuth = config.provider.equals("openai") && openAiRecord != null
+                && config.apiKey.equals(openAiRecord.accessToken);
+        String endpoint = planOAuth ? studio.ocean.app.providers.auth.OpenAiDirectAuthAdapter.RESPONSES_ENDPOINT : config.endpoint();
+        if (planOAuth) body = studio.ocean.app.providers.auth.OpenAiResponses.request(body);
         HttpURLConnection conn = (HttpURLConnection) (config.provider.equals("local")
-                ? new URL(config.endpoint()).openConnection(java.net.Proxy.NO_PROXY)
-                : new URL(config.endpoint()).openConnection());
+                ? new URL(endpoint).openConnection(java.net.Proxy.NO_PROXY)
+                : new URL(endpoint).openConnection());
         // Never forward a saved API key to a redirect target.
         conn.setInstanceFollowRedirects(false);
         conn.setRequestMethod("POST");
@@ -322,7 +327,7 @@ public final class OceanAgentRunner {
                 if (code == 404) detail += " Check the model ID in BYOK Models & APIs; a provider name such as google is not a model ID.";
                 throw new IOException("Provider HTTP " + code + ": " + detail);
             }
-            return new JSONObject(text);
+            return planOAuth ? studio.ocean.app.providers.auth.OpenAiResponses.reply(text) : new JSONObject(text);
         } finally {
             if (agentRequest) activeConnection = null;
             conn.disconnect();

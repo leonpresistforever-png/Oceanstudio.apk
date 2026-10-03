@@ -291,7 +291,8 @@ public final class AuthOrchestrator {
                         System.currentTimeMillis(),
                         1L
                 );
-                credentialVault.storeRecord(record);
+                // The OpenAI adapter retains its verified identity, issued client and granted scopes.
+                if (!"openai".equals(finalTx.providerId)) credentialVault.storeRecord(record);
 
                 // 5. Save verified ProviderConnection
                 String connId = UUID.randomUUID().toString();
