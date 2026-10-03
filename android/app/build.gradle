@@ -22,8 +22,7 @@ def resolveOceanFirebaseApiKey() {
 
 def resolveOceanOauthValue(String name) {
     def value = System.getenv(name)
-    if (value == null) return ''
-    return value.trim().replace('\\\\', '\\\\\\\\').replace('"', '\\"')
+    return value == null ? '' : value.trim()
 }
 def resolveOceanBuildCommit() {
     def fromEnv = System.getenv('OCEAN_BUILD_COMMIT')
@@ -71,7 +70,10 @@ android {
         buildConfigField "String", "OCEAN_BOOTSTRAP_BUILD_COMMIT", "\"${System.getenv('OCEAN_BOOTSTRAP_BUILD_COMMIT') ?: 'local'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_VERSION", "\"${System.getenv('OCEAN_BOOTSTRAP_VERSION') ?: 'not-bundled'}\""
         buildConfigField "String", "OCEAN_BOOTSTRAP_SHA256", "\"${System.getenv('OCEAN_BOOTSTRAP_SHA256') ?: 'not-bundled'}\""
-        // App-owned OAuth registration; never user-entered.\n        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID", "\\"${resolveOceanOauthValue(\'OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID\')}\\""\n        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET", "\\"${resolveOceanOauthValue(\'OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET\')}\\""\n    }
+        // App-owned OAuth registration; never user-entered.
+        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID", "\"${resolveOceanOauthValue('OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID')}\""
+        buildConfigField "String", "OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET", "\"${resolveOceanOauthValue('OCEAN_ANTIGRAVITY_OAUTH_CLIENT_SECRET')}\""
+    }
     buildFeatures { buildConfig true }
     // Ocean Forge can rebuild Java/resources on-device by reusing the installed,
     // already-verified PTY library when native source is unchanged.
