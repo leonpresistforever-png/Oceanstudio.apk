@@ -48,23 +48,21 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
 
     @Override
     public Availability preflight(Context ctx) {
-        // Antigravity product sessions are verified via direct browser authorization or CLI keyring.
-        // Generic Google OAuth tokens do not carry Antigravity product entitlement.
-        return Availability.available();
+        /*
+         * Do not invent an OAuth endpoint here. Antigravity has no verified public native-app
+         * authorization endpoint/client registration in this build. A browser must never be
+         * launched at a guessed product URL and a connection must never be marked CONNECTED
+         * without a provider-issued credential plus a live authenticated probe.
+         */
+        return Availability.unavailable(
+                "Direct Antigravity account authorization is not available through a verified public native OAuth endpoint. "
+                + "The previous /auth/session URL was invalid and has been disabled. "
+                + "Use a genuine provider-supported account bridge when one is installed; Ocean will not simulate this connection.");
     }
 
     @Override
     public AuthStartResult start(AuthRequest request) throws Exception {
-        String sessionToken = getStoredSessionToken();
-        if (sessionToken != null && !sessionToken.trim().isEmpty()) {
-            // Direct product session verification
-            return AuthStartResult.browser("https://antigravity.google/auth/session?state=" + request.state);
-        }
-
-        // Direct browser sign-in for Antigravity product session
-        String redirectUri = request.redirectUri != null ? request.redirectUri : "ocean://auth/callback";
-        String encodedRedirect = java.net.URLEncoder.encode(redirectUri, "UTF-8");
-        return AuthStartResult.browser("https://antigravity.google/auth/session?state=" + request.state + "&redirect_uri=" + encodedRedirect);
+        throw new IOException("Antigravity Direct Connect blocked: no verified public native OAuth authorization endpoint is configured.");
     }
 
     @Override
