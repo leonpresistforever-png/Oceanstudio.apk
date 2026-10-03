@@ -52,7 +52,7 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
             "https://daily-cloudcode-pa.googleapis.com",
             "https://cloudcode-pa.googleapis.com"
     };
-    private static final String PROJECT_REF = "antigravity_verified_project";
+    public static final String PROJECT_VAULT_REF = "antigravity_verified_project";
 
     private static final List<String> SCOPES = Arrays.asList(
             "openid",
@@ -73,7 +73,7 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
     public AntigravityDirectAuthAdapter(Context context) {
         this.context = context.getApplicationContext();
         this.vault = new CredentialVault(this.context);
-        this.lastProjectId = vault.retrieve(PROJECT_REF);
+        this.lastProjectId = vault.retrieve(PROJECT_VAULT_REF);
     }
 
     public static List<String> requestedScopes() {
@@ -192,7 +192,7 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
         String project = discoverOrProvisionProject(accessToken);
         if (project == null || project.trim().isEmpty()) return false;
         lastProjectId = project.trim();
-        vault.store(PROJECT_REF, lastProjectId);
+        vault.store(PROJECT_VAULT_REF, lastProjectId);
 
         // A real model catalog call proves this is an Antigravity/Cloud Code
         // entitlement, not merely a generic Google OAuth token.
@@ -255,7 +255,7 @@ public final class AntigravityDirectAuthAdapter implements DirectAuthAdapter {
     public void logout(String accessToken) {
         lastProjectId = null;
         lastModelCatalog = null;
-        vault.delete(PROJECT_REF);
+        vault.delete(PROJECT_VAULT_REF);
         if (accessToken == null || accessToken.trim().isEmpty()) return;
         new Thread(() -> {
             HttpURLConnection conn = null;
