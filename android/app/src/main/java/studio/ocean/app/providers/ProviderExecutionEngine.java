@@ -117,13 +117,22 @@ public final class ProviderExecutionEngine {
             }
         } else if (conn.strategy == AuthStrategy.LOCAL) {
             LocalModelManager mgr = LocalModelManager.getInstance(context);
-            if (!mgr.isModelInstalled(conn.selectedModel)) {
-                callback.onError("Local model " + conn.selectedModel + " is not installed.");
+            LocalModel connected = mgr.getConnectedModel();
+            if (connected == null || !conn.selectedModel.equals(connected.id)) {
+                callback.onError("Local model is not connected to a verified llama.cpp runtime.");
                 return;
             }
-            // Execute via local model manager
-            callback.onThought("Evaluating prompt with local model " + conn.selectedModel + "…");
-            callback.onComplete(0, "Local model " + conn.selectedModel + " processed prompt.");
+            callback.onThought("Running prompt on verified local model " + conn.selectedModel + "…");
+            try {
+                OceanModelConfig config = new OceanModelConfig("local", conn.selectedModel, "", conn.baseUrl);
+                OceanAgentConversation convo = new OceanAgentConversation(config.provider, config.model);
+                String result = convo.run(prompt, body -> sendHttp(config, body, timeoutSeconds), (toolName, toolArgs) -> {
+                    throw new IOException("Tool execution is not enabled in standalone local-provider execution");
+                }, thought -> mainHandler.post(() -> callback.onThought(thought)));
+                callback.onComplete(0, result);
+            } catch (Exception e) {
+                callback.onError(OceanAgentConversation.safeMessage(e));
+            }
         } else {
             // API_KEY, CUSTOM_ENDPOINT, DIRECT_OAUTH, DEVICE_CODE
             String secret = conn.credentialRef != null ? credentialVault.retrieve(conn.credentialRef) : "";
@@ -185,9 +194,13 @@ public final class ProviderExecutionEngine {
 
                 if (conn.strategy == AuthStrategy.LOCAL) {
                     LocalModelManager mgr = LocalModelManager.getInstance(context);
-                    if (!mgr.isModelInstalled(conn.selectedModel)) {
-                        throw new IOException("Local model " + conn.selectedModel + " is not installed on device");
+                    LocalModel connected = mgr.getConnectedModel();
+                    if (connected == null || !conn.selectedModel.equals(connected.id)) {
+                        throw new IOException("Local model is not connected to a live verified runtime");
                     }
+                    OceanModelConfig config = new OceanModelConfig("local", conn.selectedModel, "", conn.baseUrl);
+                    new OceanAgentConversation(config.provider, config.model)
+                            .testConnection(body -> sendHttp(config, body, 30));
                     mainHandler.post(callback::onSuccess);
                     return;
                 }
@@ -233,6 +246,8 @@ public final class ProviderExecutionEngine {
         } else if ("anthropic".equals(config.provider)) {
             conn.setRequestProperty("x-api-key", config.apiKey);
             conn.setRequestProperty("anthropic-version", "2023-06-01");
+        } else if ("local".equals(config.provider)) {
+            // Ocean-owned loopback llama.cpp runtime needs no bearer credential.
         } else {
             conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
         }
