@@ -5,19 +5,35 @@ import java.util.Locale;
 
 /** Immutable provider settings: a request must not mix settings edited during a tool run. */
 public final class OceanModelConfig {
-    public final String provider, model, apiKey, baseUrl;
+    /** Wire-protocol provider consumed by OceanAgentConversation (google/openai/anthropic/local/custom). */
+    public final String provider;
+    /** Original routed provider identity, retained for provider-specific transports such as Antigravity. */
+    public final String sourceProvider;
+    public final String model, apiKey, baseUrl;
 
     public OceanModelConfig(String provider, String model, String apiKey, String baseUrl) {
-        this.provider = provider == null ? "" : provider.trim().toLowerCase(Locale.ROOT);
+        String rawProvider = provider == null ? "" : provider.trim().toLowerCase(Locale.ROOT);
+        this.sourceProvider = rawProvider;
+        this.provider = isAntigravityProvider(rawProvider) ? "google" : rawProvider;
         this.model = normalizeModel(this.provider, model);
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         if (this.apiKey.isEmpty() && !this.provider.equals("local"))
-            throw new IllegalArgumentException("An API key is required");
-        this.baseUrl = normalizeEndpoint(this.provider, baseUrl);
-        if (!this.provider.equals("google") && !this.provider.equals("anthropic")
-                && !this.provider.equals("openai") && !this.provider.equals("custom")
-                && !this.provider.equals("local"))
+            throw new IllegalArgumentException("An API key or verified access token is required");
+        this.baseUrl = normalizeEndpoint(rawProvider, baseUrl);
+        if (!rawProvider.equals("google") && !rawProvider.equals("anthropic")
+                && !rawProvider.equals("openai") && !rawProvider.equals("custom")
+                && !rawProvider.equals("local") && !isAntigravityProvider(rawProvider))
             throw new IllegalArgumentException("Choose a supported provider");
+    }
+
+    public boolean isAntigravity() {
+        return isAntigravityProvider(sourceProvider);
+    }
+
+    private static boolean isAntigravityProvider(String provider) {
+        return "antigravity".equals(provider)
+                || "antigravity_ide".equals(provider)
+                || "antigravity_20".equals(provider);
     }
 
     static String normalizeModel(String provider, String value) {
@@ -56,6 +72,12 @@ public final class OceanModelConfig {
     }
 
     public String endpoint() {
+        if (isAntigravity()) {
+            // Antigravity requests are wrapped and sent through ProviderExecutionEngine's
+            // verified Cloud Code transport. Returning the base here prevents accidental
+            // construction of the public Gemini API URL.
+            return baseUrl;
+        }
         if (provider.equals("google")) {
             String base = baseUrl.endsWith("/v1beta") || baseUrl.endsWith("/v1") ? baseUrl : baseUrl + "/v1beta";
             return base + "/models/" + model + ":generateContent";
