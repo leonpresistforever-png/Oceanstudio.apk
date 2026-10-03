@@ -129,7 +129,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
 
         for (LocalModel model : models) {
             // Apply filter
-            if (activeFilter == ModelFilter.INSTALLED && model.state != LocalModel.State.INSTALLED && model.state != LocalModel.State.LOADED) {
+            if (activeFilter == ModelFilter.INSTALLED && model.state != LocalModel.State.INSTALLED && !model.isConnected()) {
                 continue;
             }
             if (activeFilter == ModelFilter.AVAILABLE && model.state != LocalModel.State.AVAILABLE) {
@@ -185,7 +185,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
 
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(10 * density);
-        if (model.state == LocalModel.State.LOADED) {
+        if (model.isConnected()) {
             bg.setColor(getColor(R.color.ocean_ink));
             badge.setTextColor(getColor(R.color.ocean_background));
         } else if (model.state == LocalModel.State.INSTALLED) {
@@ -249,14 +249,27 @@ public final class LocalModelsActivity extends AppCompatActivity {
         } else if (model.state == LocalModel.State.INSTALLED) {
             Button connectBtn = createButton("CONNECT", true, density);
             connectBtn.setOnClickListener(v -> {
-                if (manager.connectModel(model.id)) {
-                    Toast.makeText(this, "Connected " + model.displayName + " on " + model.endpoint, Toast.LENGTH_SHORT).show();
-                    updateRamStatus();
-                    renderModels();
-                } else {
-                    String err = model.errorMessage != null ? model.errorMessage : "Failed to connect model runtime";
-                    Toast.makeText(this, err, Toast.LENGTH_LONG).show();
-                }
+                connectBtn.setEnabled(false);
+                connectBtn.setText("CONNECTING…");
+                Toast.makeText(this, "Starting and verifying local inference…", Toast.LENGTH_SHORT).show();
+                new Thread(() -> {
+                    boolean connected = manager.connectModel(model.id);
+                    runOnUiThread(() -> {
+                        connectBtn.setEnabled(true);
+                        connectBtn.setText("CONNECT");
+                        if (connected) {
+                            manager.setLocalOverrideEnabled(true);
+                            Toast.makeText(this,
+                                    "Verified local inference. " + model.displayName + " is now connected to Ocean Agent.",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            String err = model.errorMessage != null ? model.errorMessage : "Failed to connect local inference runtime";
+                            Toast.makeText(this, err, Toast.LENGTH_LONG).show();
+                        }
+                        updateRamStatus();
+                        renderModels();
+                    });
+                }, "ocean-local-connect-" + model.id).start();
             });
             actions.addView(connectBtn);
 
