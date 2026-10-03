@@ -5,8 +5,8 @@ import pathlib
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-COMMIT = 'fe2dd0de5e10a9fe5fac1f2c2862d7c0b108c4fe'
-SHA256 = '939159d38f5cd98eb7452d8da08353a3148fb0652109ad3313427b4176cd03c3'
+COMMIT = '9780660ffb0c7ed09d86c52c8cee4f90d1ee18a3'
+SHA256 = 'b0ed2b76e3985278976a248011e96b0db2879be3ca066347727b811fbc8aec54'
 URL = f'https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/{COMMIT}/packages/ocean-gateway/ocean-gateway'
 target = ROOT / 'android/app/src/main/assets/ocean/gateway/ocean-gateway'
 if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != SHA256:

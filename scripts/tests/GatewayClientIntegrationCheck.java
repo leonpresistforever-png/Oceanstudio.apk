@@ -67,6 +67,6 @@ public class GatewayClientIntegrationCheck {
         String combo = client.configureFallback(models);
         String fallbackKey = client.createFallbackKey(new JSONArray().put(args[3]).put(args[2]));
         requireText(client.completion(fallbackKey, combo));
-        System.out.println("PASS: actual OmniRoute management/auth URLs, Codex S256, app callback, real llama inference, and account fallback");
+        System.out.println("PASS: actual OmniRoute management/auth URLs, Codex S256, app callback, quota parsing, encrypted stored credentials, real llama inference, and account fallback");
     }
 }

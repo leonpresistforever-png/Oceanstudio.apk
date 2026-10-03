@@ -13,7 +13,7 @@ ocean-gateway status
 ocean-gateway stop
 ```
 
-The default gateway port is 20129, separate from existing OmniRoute installations. The native app selects another loopback port if necessary. The gateway binds to 127.0.0.1. Its private state, generated management password, token encryption secrets and logs are under `$PREFIX/var/lib/ocean-gateway`. Ocean invokes the upstream server without its package postinstall hooks or optional native dependencies. No foreign terminal packages or patches are downloaded.
+The default gateway port is 20129, separate from existing OmniRoute installations. The native app selects another loopback port if necessary. The gateway binds to 127.0.0.1. Its private state, generated management password, token encryption secrets and logs are under `$PREFIX/var/lib/ocean-gateway`. Installation always configures upstream `STORAGE_ENCRYPTION_KEY`, enabling actual AES-256-GCM encryption of persisted account credentials; an older environment gains that key without rotating its existing secrets. Ocean invokes the upstream server without its package postinstall hooks or optional native dependencies. No foreign terminal packages or patches are downloaded.
 
 ## Account authorization contracts
 
@@ -40,9 +40,9 @@ MCP authorization returns to the MCPs screen automatically. A foreground service
 
 - Official llama.cpp source: `ggml-org/llama.cpp`, commit `4d9176092d00586775af140581bb0b558ddc4389`. The Android build checks arm64, the Android linker and absence of unbundled llama/ggml/C++/OpenMP/OpenSSL dependencies. APK packaging must preserve the executable's recorded SHA-256.
 - Published OmniRoute: npm `omniroute@3.8.51`, exact registry SHA-512 checked by the canonical Ocean gateway command. Source was inspected at `diegosouzapw/OmniRoute` commit `23a11484862b3bb589a55e85b00e4ac53ffeb234`; integration checks exercise the published 3.8.51 package, not an unpublished checkout.
-- Canonical Ocean gateway source: `leonpresistforever-png/Oceanstudio-packages`, commit `fe2dd0de5e10a9fe5fac1f2c2862d7c0b108c4fe`. APK preparation checks the command's exact SHA-256. Existing package payloads are unchanged.
+- Canonical Ocean gateway source: `leonpresistforever-png/Oceanstudio-packages`, commit `9780660ffb0c7ed09d86c52c8cee4f90d1ee18a3`. APK preparation checks the command's exact SHA-256. Existing package payloads are unchanged.
 
-`scripts/tests/test_gateway_integration.py` starts the **actual published gateway** and an actual llama.cpp server with the official `ggml-org/models` tiny GGUF fixture. It compiles Ocean's production Java HTTP client and checks management authentication, rejection of anonymous inference, real model discovery, generated text, an invalid account key followed by successful account fallback, actual provider authorization URL contracts, Codex's mathematically verified S256 challenge, and the native callback HTTP redirect.
+`scripts/tests/test_gateway_integration.py` starts the **actual published gateway** and an actual llama.cpp server with the official `ggml-org/models` tiny GGUF fixture. It compiles Ocean's production Java HTTP client and checks management authentication, rejection of anonymous inference, real model discovery, generated text, an invalid account key followed by successful account fallback, actual provider authorization URL contracts, Codex's mathematically verified S256 challenge, and the native callback HTTP redirect. It also inspects the actual SQLite credential columns for AES-GCM ciphertext and checks that adding the storage encryption key preserves an existing gateway's other secrets.
 
 `scripts/tests/test_runtime_auth_boundaries.py` exercises real JVM sockets, state rejection, callback paths, both application return destinations and loopback-only inference URL validation. Android CI compiles native and Java sources, runs unit tests, verifies APK contents, alignment, native checksums and signing.
 

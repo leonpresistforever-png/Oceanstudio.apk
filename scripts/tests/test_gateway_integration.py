@@ -8,6 +8,7 @@ import os
 import pathlib
 import shutil
 import socket
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -54,6 +55,16 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
     environment = {**os.environ, 'OCEAN_GATEWAY_ROOT': str(args.gateway_root.resolve()),
                    'OCEAN_GATEWAY_DATA': str(work / 'state'), 'OCEAN_GATEWAY_PORT': str(gateway_port)}
     subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
+    env_file = work / 'state/.env'
+    initialized = dict(line.split('=', 1) for line in env_file.read_text().splitlines() if '=' in line)
+    assert len(initialized['STORAGE_ENCRYPTION_KEY']) == 64
+    # Upgrade an older private gateway environment without rotating its account secrets.
+    env_file.write_text(''.join(line + '\n' for line in env_file.read_text().splitlines()
+                                if not line.startswith('STORAGE_ENCRYPTION_KEY=')))
+    subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
+    upgraded = dict(line.split('=', 1) for line in env_file.read_text().splitlines() if '=' in line)
+    assert len(upgraded['STORAGE_ENCRYPTION_KEY']) == 64
+    assert all(upgraded[name] == initialized[name] for name in ['INITIAL_PASSWORD','JWT_SECRET','API_KEY_SECRET'])
     gateway_log = (work / 'gateway.log').open('w')
     llama_log = (work / 'llama.log').open('w')
     processes = []
@@ -69,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
         local, origin = f'http://127.0.0.1:{llama_port}', f'http://127.0.0.1:{gateway_port}'
         ready(local, '/health', llama)
         ready(origin, '/api/monitoring/health', gateway)
-        secret = dict(line.split('=', 1) for line in (work / 'state/.env').read_text().splitlines())['INITIAL_PASSWORD']
+        secret = upgraded['INITIAL_PASSWORD']
         request(origin, '/api/auth/login', {'password': secret})
         try:
             request(origin, '/v1/chat/completions', {'model':'stories','messages':[{'role':'user','content':'Hello'}]}, anonymous=True)
@@ -86,6 +97,10 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
             # All test resources are confined to the temporary, isolated gateway database.
             request(origin, '/api/providers/'+account['id'], {'isActive':True}, method='PUT')
             accounts.append(account['id'])
+        with sqlite3.connect(work / 'state/storage.sqlite') as database:
+            encrypted = [row[0] for row in database.execute('SELECT api_key FROM provider_connections WHERE id IN (?,?)', accounts)]
+            assert len(encrypted) == 2 and all(value.startswith('enc:v1:') for value in encrypted)
+            assert all('ocean-integration-key' not in value and 'invalid-integration-key' not in value for value in encrypted)
         compiler = ['javac'] if shutil.which('javac') else ['java','com.sun.tools.javac.Main']
         subprocess.run(compiler + ['-cp',str(args.json_jar.resolve()),'-d',directory,
                        str(JAVA/'providers/gateway/GatewayClient.java'),str(JAVA/'providers/gateway/GatewayQuota.java'),
