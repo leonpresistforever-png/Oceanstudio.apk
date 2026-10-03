@@ -276,6 +276,12 @@ public final class OceanAgentRunner {
 
     private JSONObject send(OceanModelConfig config, JSONObject body) throws Exception {
         if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+        if (config.isAntigravity()) {
+            // Antigravity Direct Connect uses the Gemini wire schema inside a
+            // Cloud Code envelope, not the public Gemini REST endpoint.
+            return providerExecutionEngine.sendModelRequest(
+                    config, null, body, Math.max(15, agentSettings.readTimeoutMs() / 1000));
+        }
         HttpURLConnection conn = (HttpURLConnection) new URL(config.endpoint()).openConnection();
         // Never forward a saved API key to a redirect target.
         conn.setInstanceFollowRedirects(false);
