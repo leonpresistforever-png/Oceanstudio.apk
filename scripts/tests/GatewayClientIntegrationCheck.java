@@ -1,4 +1,5 @@
 import studio.ocean.app.providers.gateway.GatewayClient;
+import studio.ocean.app.providers.gateway.GatewayQuota;
 import studio.ocean.app.mcp.OAuthLoopbackReceiver;
 import java.net.*;
 import java.nio.file.*;
@@ -26,6 +27,8 @@ public class GatewayClientIntegrationCheck {
     }
     public static void main(String[] args) throws Exception {
         GatewayClient client = new GatewayClient(Integer.parseInt(args[0]));
+        require(GatewayQuota.parse(new JSONObject("{\"plan\":\"plus\",\"quotas\":{\"session\":{\"used\":20,\"total\":100,\"remaining\":80},\"weekly\":{\"used\":90,\"total\":100,\"remaining\":10}}}"), "codex/model").remaining == 10,
+                "Codex quota does not reflect the limiting provider-reported window");
         String password = null;
         for (String line : Files.readAllLines(Paths.get(args[1]))) if (line.startsWith("INITIAL_PASSWORD=")) password = line.substring(17);
         client.login(password);

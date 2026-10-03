@@ -26,6 +26,12 @@ public class GatewayQuotaTest {
             assertEquals(QuotaSnapshot.Confidence.UNKNOWN, quota.confidence);
         }
     }
+    @Test public void codexNormalizedWindowsMatchUpstreamContract() throws Exception {
+        QuotaSnapshot quota = GatewayQuota.parse(new JSONObject("{\"plan\":\"plus\",\"quotas\":{\"session\":{\"used\":20,\"total\":100,\"remaining\":80},\"weekly\":{\"used\":90,\"total\":100,\"remaining\":10}}}"), "codex/model");
+        assertEquals(10, quota.remaining, 0);
+        assertEquals(QuotaSnapshot.Unit.PERCENT, quota.unit);
+        assertEquals("plus", quota.planName);
+    }
     @Test public void localQuotaSerializesWithoutNonFiniteNumbers() throws Exception {
         QuotaSnapshot quota = QuotaSnapshot.reported(null, null, QuotaSnapshot.Unit.PROVIDER_DEFINED, null,
                 "On-device", "local-runtime");

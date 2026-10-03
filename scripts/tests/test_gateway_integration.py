@@ -88,7 +88,8 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
             accounts.append(account['id'])
         compiler = ['javac'] if shutil.which('javac') else ['java','com.sun.tools.javac.Main']
         subprocess.run(compiler + ['-cp',str(args.json_jar.resolve()),'-d',directory,
-                       str(JAVA/'providers/gateway/GatewayClient.java'),str(JAVA/'mcp/OAuthLoopbackReceiver.java'),
+                       str(JAVA/'providers/gateway/GatewayClient.java'),str(JAVA/'providers/gateway/GatewayQuota.java'),
+                       str(JAVA/'providers/model/QuotaSnapshot.java'),str(JAVA/'mcp/OAuthLoopbackReceiver.java'),
                        str(ROOT/'scripts/tests/GatewayClientIntegrationCheck.java')],check=True)
         classpath = directory + os.pathsep + str(args.json_jar.resolve())
         subprocess.run(['java','-cp',classpath,'GatewayClientIntegrationCheck',str(gateway_port),
