@@ -53,6 +53,7 @@ public final class McpClientManager {
     // Active STDIO child processes
     private final Map<String, Process> activeProcesses = new ConcurrentHashMap<>();
     private final Map<String, OAuthLoopbackReceiver> oauthReceivers = new ConcurrentHashMap<>();
+    private final Map<String, String> oauthReturnTickets = new ConcurrentHashMap<>();
     private final Map<String, BufferedReader> processReaders = new ConcurrentHashMap<>();
     private final Map<String, BufferedWriter> processWriters = new ConcurrentHashMap<>();
     private final AtomicInteger requestIdCounter = new AtomicInteger(100);
@@ -100,17 +101,30 @@ public final class McpClientManager {
                     config.status = McpStatus.AUTH_REQUIRED;
                     OAuthLoopbackReceiver oldReceiver = oauthReceivers.remove(config.id);
                     if (oldReceiver != null) oldReceiver.close();
-                    OAuthLoopbackReceiver receiver = new OAuthLoopbackReceiver();
+                    byte[] random = new byte[32];
+                    new java.security.SecureRandom().nextBytes(random);
+                    StringBuilder hex = new StringBuilder();
+                    for (byte value : random) hex.append(String.format("%02x", value));
+                    String ticket = hex.toString();
+                    oauthReturnTickets.entrySet().removeIf(entry -> config.id.equals(entry.getValue()));
+                    oauthReturnTickets.put(ticket, config.id);
+                    OAuthLoopbackReceiver receiver = new OAuthLoopbackReceiver(0, "/callback",
+                            "ocean://mcp/return?ticket=" + ticket);
                     oauthReceivers.put(config.id, receiver);
                     McpOAuthResolver.OAuthChallengeInfo challenge = oauthResolver.resolveChallenge(config.endpointUrl, authEx.wwwAuthenticate, receiver.redirectUri());
                     McpOAuthResolver.OAuthSession session = oauthResolver.beginAuthorization(challenge, receiver.redirectUri());
+                    androidx.core.content.ContextCompat.startForegroundService(context,
+                            new android.content.Intent(context, McpAuthorizationService.class));
                     receiver.listen(session.state, new OAuthLoopbackReceiver.Listener() {
                         @Override public void received(String uri) {
                             oauthReceivers.remove(config.id, receiver);
                             handleOAuthCallback(config, android.net.Uri.parse(uri), callback);
+                            mainHandler.postDelayed(() -> oauthReturnTickets.remove(ticket), 60000);
                         }
                         @Override public void failed(String message) {
                             oauthReceivers.remove(config.id, receiver);
+                            oauthReturnTickets.remove(ticket);
+                            releaseAuthorizationService();
                             config.status = McpStatus.AUTH_ERROR;
                             config.lastError = message;
                             updateServerInStore(config);
@@ -125,6 +139,8 @@ public final class McpClientManager {
                 } catch (Exception resolveEx) {
                     OAuthLoopbackReceiver receiver = oauthReceivers.remove(config.id);
                     if (receiver != null) receiver.close();
+                    oauthReturnTickets.entrySet().removeIf(entry -> config.id.equals(entry.getValue()));
+                    releaseAuthorizationService();
                     config.status = McpStatus.AUTH_ERROR;
                     config.lastError = "OAuth discovery failed: " + resolveEx.getMessage();
                     updateServerInStore(config);
@@ -463,6 +479,7 @@ public final class McpClientManager {
             updateServerInStore(config);
 
             McpOAuthResolver.TokenResult tokenRes = oauthResolver.exchangeCode(callbackUri);
+            releaseAuthorizationService();
             if (!tokenRes.isSuccess) {
                 config.status = McpStatus.AUTH_ERROR;
                 config.lastError = tokenRes.error;
@@ -508,6 +525,8 @@ public final class McpClientManager {
     public synchronized void disconnect(String serverId) {
         OAuthLoopbackReceiver receiver = oauthReceivers.remove(serverId);
         if (receiver != null) receiver.close();
+        oauthReturnTickets.entrySet().removeIf(entry -> serverId.equals(entry.getValue()));
+        releaseAuthorizationService();
         Process p = activeProcesses.remove(serverId);
         if (p != null) {
             try { p.destroy(); } catch (Exception ignored) {}
@@ -530,6 +549,16 @@ public final class McpClientManager {
             if (obj != null) result.add(McpServerConfig.fromJson(obj));
         }
         return result;
+    }
+
+    public boolean acceptAuthorizationReturn(Uri uri) {
+        if (uri == null || !"ocean".equals(uri.getScheme()) || !"mcp".equals(uri.getHost())
+                || !"/return".equals(uri.getPath())) return false;
+        String ticket = uri.getQueryParameter("ticket");
+        return ticket != null && ticket.matches("[a-f0-9]{64}") && oauthReturnTickets.remove(ticket) != null;
+    }
+    private void releaseAuthorizationService() {
+        if (oauthReceivers.isEmpty()) context.stopService(new android.content.Intent(context, McpAuthorizationService.class));
     }
 
     public McpServerConfig getServer(String id) {

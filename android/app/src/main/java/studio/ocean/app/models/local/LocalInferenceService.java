@@ -28,8 +28,7 @@ public final class LocalInferenceService extends Service {
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
         LocalModelManager manager = LocalModelManager.getInstance(this);
-        String id = manager.getLoadedModelId();
-        if (id != null) manager.disconnectModel(id);
+        manager.shutdownRuntime();
         stopForeground(true);
         super.onDestroy();
     }

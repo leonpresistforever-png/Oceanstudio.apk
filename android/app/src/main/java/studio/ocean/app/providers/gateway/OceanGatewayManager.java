@@ -90,7 +90,8 @@ public final class OceanGatewayManager {
                 returnTicket = randomHex();
                 String returnUri = "ocean://gateway/return?ticket=" + returnTicket;
                 receiver = new OAuthLoopbackReceiver("codex".equals(upstream) ? 1455 : 0,
-                        "codex".equals(upstream) ? "/auth/callback" : "/callback", returnUri);
+                        "codex".equals(upstream) ? "/auth/callback" : "/callback", returnUri,
+                        "codex".equals(upstream) ? "localhost" : "127.0.0.1");
                 OAuthLoopbackReceiver current = receiver;
                 JSONObject auth = client.authorize(upstream, current.redirectUri());
                 String authUrl = auth.optString("authUrl"), state = auth.optString("state");
@@ -173,7 +174,14 @@ public final class OceanGatewayManager {
                     context.getSharedPreferences("ocean_gateway", 0).edit().putInt("port", port).apply();
                 }
                 if (listener != null) listener.progress("Starting the local provider gateway…");
-                daemon = runtime.requestDaemonCommand("OCEAN_GATEWAY_PORT=" + port + " exec " + shell(command.getAbsolutePath()) + " serve",
+                File log = new File(data, "gateway.log");
+                if (log.length() > 2 * 1024 * 1024) {
+                    File previous = new File(data, "gateway.log.previous");
+                    if (previous.exists()) previous.delete();
+                    log.renameTo(previous);
+                }
+                daemon = runtime.requestDaemonCommand("OCEAN_GATEWAY_PORT=" + port + " exec " + shell(command.getAbsolutePath())
+                        + " serve >> " + shell(log.getAbsolutePath()) + " 2>&1",
                         new OceanTerminalRuntimeService.CommandCallback() {
                             @Override public void onOutput(byte[] bytes, int length) { }
                             @Override public void onExit(int code) { daemon = null; client = null; }
@@ -348,32 +356,7 @@ public final class OceanGatewayManager {
         return GatewayClient.safeId(connection.cliSessionRef.substring(8));
     }
     public static QuotaSnapshot parseQuota(JSONObject response, String model) {
-        String plan = response.optString("plan", "");
-        JSONObject quotas = response.optJSONObject("quotas");
-        String bare = model.substring(model.indexOf('/') + 1);
-        JSONObject selected = quotas == null ? null : quotas.optJSONObject(bare);
-        if (selected == null && quotas != null) {
-            Iterator<String> names = quotas.keys();
-            while (names.hasNext()) {
-                JSONObject value = quotas.optJSONObject(names.next());
-                if (value != null && value.has("remainingPercentage")
-                        && (selected == null || value.optDouble("remainingPercentage") < selected.optDouble("remainingPercentage"))) selected = value;
-            }
-        }
-        if (selected == null || !selected.optBoolean("fractionReported", true))
-            return QuotaSnapshot.unknown(plan, "gateway/provider-quota");
-        Long reset = null;
-        try { String time = selected.optString("resetAt"); if (!time.isEmpty() && !time.equals("null")) reset = java.time.Instant.parse(time).toEpochMilli(); }
-        catch (Exception ignored) { }
-        if (selected.has("remainingPercentage")) {
-            double remaining = selected.optDouble("remainingPercentage", Double.NaN);
-            if (Double.isFinite(remaining) && remaining >= 0 && remaining <= 100)
-                return QuotaSnapshot.reported(100 - remaining, remaining, QuotaSnapshot.Unit.PERCENT, reset, plan, "gateway/provider-quota");
-        }
-        double used = selected.optDouble("used", Double.NaN), total = selected.optDouble("total", Double.NaN);
-        if (Double.isFinite(used) && Double.isFinite(total) && total > 0)
-            return QuotaSnapshot.reported(used, Math.max(0, total - used), QuotaSnapshot.Unit.PROVIDER_DEFINED, reset, plan, "gateway/provider-quota");
-        return QuotaSnapshot.unknown(plan, "gateway/provider-quota");
+        return GatewayQuota.parse(response, model);
     }
     private static Map<String,String> query(String raw) throws Exception {
         Map<String,String> result = new HashMap<>();

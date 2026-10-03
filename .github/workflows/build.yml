@@ -14,6 +14,51 @@ permissions:
   contents: write
 
 jobs:
+  gateway-integration:
+    name: Real gateway and inference integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.4.0'
+      - name: Consume the canonical gateway command
+        run: python3 scripts/prepare-gateway-command.py
+      - name: Build real host inference server from the same pinned source
+        run: |
+          set -euo pipefail
+          revision=4d9176092d00586775af140581bb0b558ddc4389
+          git init "$RUNNER_TEMP/llama-source"
+          git -C "$RUNNER_TEMP/llama-source" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$RUNNER_TEMP/llama-source" fetch --depth 1 origin "$revision"
+          git -C "$RUNNER_TEMP/llama-source" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/llama-source" rev-parse HEAD)" = "$revision"
+          cmake -S "$RUNNER_TEMP/llama-source" -B "$RUNNER_TEMP/llama-build" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF \
+            -DGGML_OPENMP=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_SERVER=ON -DLLAMA_BUILD_UI=OFF -DLLAMA_OPENSSL=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-server --parallel 2
+      - name: Download official integration fixture and JSON runtime
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            'https://huggingface.co/ggml-org/models/resolve/499bc8821c6b12b4e53c5bffcb21ec206f212d81/tinyllamas/stories15M-q4_0.gguf' \
+            --output "$RUNNER_TEMP/stories.gguf"
+          curl --fail --location --retry 3 \
+            'https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar' \
+            --output "$RUNNER_TEMP/json.jar"
+      - name: Exercise actual installation, authorization contracts, model inference and fallback
+        run: |
+          python3 scripts/tests/test_gateway_integration.py \
+            --gateway-root "$RUNNER_TEMP/gateway" \
+            --llama-server "$RUNNER_TEMP/llama-build/bin/llama-server" \
+            --model "$RUNNER_TEMP/stories.gguf" \
+            --json-jar "$RUNNER_TEMP/json.jar"
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest

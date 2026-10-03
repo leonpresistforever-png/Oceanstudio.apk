@@ -603,6 +603,12 @@ public final class LocalModelManager {
         }
     }
 
+    public synchronized void shutdownRuntime() {
+        String id = loadedModelId;
+        if (id != null) disconnectModel(id);
+        else if (localRuntimeProcess != null) { localRuntimeProcess.destroy(); localRuntimeProcess = null; }
+    }
+
     public synchronized boolean disconnectModel(String id) {
         if (localRuntimeProcess != null) {
             localRuntimeProcess.destroy();

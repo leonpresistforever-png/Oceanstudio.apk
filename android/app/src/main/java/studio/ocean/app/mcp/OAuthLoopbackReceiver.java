@@ -10,6 +10,7 @@ public final class OAuthLoopbackReceiver implements AutoCloseable {
     private final ServerSocket socket;
     private final String callbackPath;
     private final String returnUri;
+    private final String callbackHost;
     private volatile boolean closed;
 
     public OAuthLoopbackReceiver() throws IOException {
@@ -17,16 +18,21 @@ public final class OAuthLoopbackReceiver implements AutoCloseable {
     }
 
     public OAuthLoopbackReceiver(int port, String path, String returnUri) throws IOException {
+        this(port, path, returnUri, "127.0.0.1");
+    }
+    public OAuthLoopbackReceiver(int port, String path, String returnUri, String host) throws IOException {
         if (path == null || !path.matches("/[a-zA-Z0-9/_-]+")) throw new IOException("Invalid callback path");
-        if (returnUri != null && !returnUri.matches("ocean://gateway/return\\?ticket=[a-f0-9]{64}"))
+        if (returnUri != null && !returnUri.matches("ocean://(gateway|mcp)/return\\?ticket=[a-f0-9]{64}"))
             throw new IOException("Invalid application return URI");
         this.callbackPath = path;
         this.returnUri = returnUri;
+        if (!"127.0.0.1".equals(host) && !"localhost".equals(host)) throw new IOException("Callback must use loopback");
+        this.callbackHost = host;
         socket = new ServerSocket(port, 4, InetAddress.getByName("127.0.0.1"));
         socket.setSoTimeout(1000);
     }
 
-    public String redirectUri() { return "http://127.0.0.1:" + socket.getLocalPort() + callbackPath; }
+    public String redirectUri() { return "http://" + callbackHost + ":" + socket.getLocalPort() + callbackPath; }
 
     public void listen(String state, Listener listener) {
         Thread thread = new Thread(() -> {

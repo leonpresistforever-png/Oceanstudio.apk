@@ -89,6 +89,12 @@ public final class PluginCenterActivity extends AppCompatActivity {
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        if (getIntent() != null && getIntent().getData() != null) {
+            if (!studio.ocean.app.mcp.McpClientManager.getInstance(this).acceptAuthorizationReturn(getIntent().getData())) {
+                finish(); return;
+            }
+            hubSection = "mcps";
+        }
         setContentView(R.layout.activity_plugins);
         getWindow().setStatusBarColor(SURFACE);
         getWindow().setNavigationBarColor(SURFACE);
@@ -166,6 +172,20 @@ public final class PluginCenterActivity extends AppCompatActivity {
             showHubSection("skills");
             uiHandlerOpenSkill(skillId);
         }
+    }
+
+    @Override protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        if (studio.ocean.app.mcp.McpClientManager.getInstance(this).acceptAuthorizationReturn(intent.getData())) {
+            setIntent(intent);
+            hubSection = "mcps";
+            renderHubSections();
+            showHubSection(hubSection);
+        }
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if (hub != null) renderHubSections();
     }
 
     private void uiHandlerOpenSkill(String skillId){
@@ -1484,7 +1504,8 @@ public final class PluginCenterActivity extends AppCompatActivity {
                                 actionBtn.setText("Authorize in Browser");
                                 actionBtn.setOnClickListener(av -> {
                                     try {
-                                        startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(server.oauthAuthorizationUrl)));
+                                        new androidx.browser.customtabs.CustomTabsIntent.Builder().build()
+                                                .launchUrl(PluginCenterActivity.this, android.net.Uri.parse(server.oauthAuthorizationUrl));
                                     } catch (Exception ex) {
                                         Toast.makeText(PluginCenterActivity.this, "Browser launch error: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
                                     }

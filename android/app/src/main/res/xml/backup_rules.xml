@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="file" path="usr/var/lib/ocean-gateway/" />
+    <exclude domain="file" path="usr/opt/ocean-gateway/" />
+    <exclude domain="sharedpref" path="ocean_provider_credential_vault.xml" />
+</full-backup-content>

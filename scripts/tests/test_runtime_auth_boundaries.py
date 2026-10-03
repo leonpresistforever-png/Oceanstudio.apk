@@ -43,6 +43,22 @@ public class RuntimeAuthBoundaryCheck {
       require(completion.await(3, TimeUnit.SECONDS));
       require(result[0].contains("code=actual"));
     }
+    for (String host : new String[]{"gateway", "mcp"}) {
+      String returnUri = "ocean://" + host + "/return?ticket=" + "b".repeat(64);
+      CountDownLatch returned = new CountDownLatch(1);
+      try (OAuthLoopbackReceiver receiver = new OAuthLoopbackReceiver(0, "/callback", returnUri)) {
+        receiver.listen("expected", new OAuthLoopbackReceiver.Listener() {
+          public void received(String callback) { returned.countDown(); }
+          public void failed(String error) { throw new AssertionError(error); }
+        });
+        HttpURLConnection connection = (HttpURLConnection) new URL(receiver.redirectUri() + "?state=expected&code=actual").openConnection(Proxy.NO_PROXY);
+        connection.setInstanceFollowRedirects(false);
+        require(connection.getResponseCode() == 302);
+        require(returnUri.equals(connection.getHeaderField("Location")));
+        require(returned.await(3, TimeUnit.SECONDS));
+        connection.disconnect();
+      }
+    }
     System.out.println("PASS: local endpoint and real loopback callback boundaries");
   }
 }

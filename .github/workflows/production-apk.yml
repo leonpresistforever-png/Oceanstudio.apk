@@ -107,6 +107,10 @@ jobs:
         run: sdkmanager --install 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - name: Build Android media tools from verified FFmpeg source
         run: bash scripts/build-android-ffmpeg.sh
+      - name: Build official native inference runtime and consume canonical gateway command
+        run: |
+          bash scripts/build-android-llama.sh
+          python3 scripts/prepare-gateway-command.py
       - name: Download previous published APK for certificate comparison
         env:
           GH_TOKEN: ${{ github.token }}

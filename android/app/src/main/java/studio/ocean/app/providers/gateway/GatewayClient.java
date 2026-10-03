@@ -82,7 +82,8 @@ public final class GatewayClient {
         connection.setConnectTimeout(3000); connection.setReadTimeout(seconds * 1000);
         connection.setRequestMethod(method);
         connection.setRequestProperty("Accept", "application/json");
-        if (cookie != null) connection.setRequestProperty("Cookie", cookie);
+        // A management session must never bypass an inference key's account restrictions.
+        if (cookie != null && !path.startsWith("/v1/")) connection.setRequestProperty("Cookie", cookie);
         if (key != null) connection.setRequestProperty("Authorization", "Bearer " + key);
         try {
             if (body != null) {

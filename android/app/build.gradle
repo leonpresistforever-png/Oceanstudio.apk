@@ -89,6 +89,8 @@ android {
         // Install the PIE llama-server in Android's executable native-library directory.
         // Android 10+ disallows execution from writable application data directories.
         jniLibs.useLegacyPackaging = true
+        // The receipt identifies this already-stripped executable byte for byte.
+        jniLibs.keepDebugSymbols += ['**/libllama-server.so']
     }
     def forgeKeystorePath = System.getenv('OCEAN_FORGE_KEYSTORE')
     signingConfigs {
@@ -177,6 +179,8 @@ def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     }
     from(rootProject.projectDir.parentFile) {
         include "scripts/verify-native-only.sh"
+        include "scripts/build-android-llama.sh"
+        include "scripts/prepare-gateway-command.py"
         include "packages/ocean-prefix.env"
         include "PACKAGE_SOURCE_POLICY.md"
         include "ocean-packages/CANONICAL_PACKAGE_SOURCE.json"
@@ -206,6 +210,10 @@ def prepareGatewayCommand = tasks.register('prepareGatewayCommand', Exec) {
     commandLine 'python3', 'scripts/prepare-gateway-command.py'
 }
 tasks.named('preBuild').configure { dependsOn(prepareGatewayCommand) }
+prepareForgeSourceBundle.configure {
+    dependsOn(prepareLlamaRuntime)
+    dependsOn(prepareGatewayCommand)
+}
 
 tasks.register("verifyBundledScriptShebangs") {
     doLast {

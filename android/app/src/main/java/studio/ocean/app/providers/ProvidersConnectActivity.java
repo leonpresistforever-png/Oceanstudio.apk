@@ -528,7 +528,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
             gd.setStroke((int) (1 * density), getColor(R.color.ocean_border));
         } else {
             // Unconfigured or disconnected - never display OFFLINE merely because not configured
-            OfficialCliAdapter adapter = desc != null ? resolveCliAdapter(desc.id) : null;
+            OfficialCliAdapter adapter = desc != null && !desc.supports(AuthStrategy.GATEWAY) ? resolveCliAdapter(desc.id) : null;
             if (adapter != null) {
                 if (!adapter.isInstalled()) {
                     badge.setText("NOT INSTALLED");
@@ -549,6 +549,7 @@ public final class ProvidersConnectActivity extends AppCompatActivity {
     }
 
     private String defaultStrategyLabel(ProviderDescriptor desc) {
+        if (desc.supports(AuthStrategy.GATEWAY)) return "Browser Connect";
         if (desc.supports(AuthStrategy.OFFICIAL_CLI)) return "CLI Bridge";
         if (desc.supports(AuthStrategy.LOCAL)) return "Local Runtime";
         return "API Key";
