@@ -16,6 +16,8 @@ import studio.ocean.app.OceanAgentRunner;
 import studio.ocean.app.OceanModelConfig;
 import studio.ocean.app.models.local.LocalModel;
 import studio.ocean.app.models.local.LocalModelManager;
+import studio.ocean.app.providers.auth.AntigravityDirectAuthAdapter;
+import studio.ocean.app.providers.auth.DirectAuthAdapter;
 import studio.ocean.app.providers.cli.AntigravityCliAdapter;
 import studio.ocean.app.providers.cli.ClaudeCodeCliAdapter;
 import studio.ocean.app.providers.cli.CodexCliAdapter;
@@ -23,6 +25,7 @@ import studio.ocean.app.providers.cli.KimiCliAdapter;
 import studio.ocean.app.providers.cli.OfficialCliAdapter;
 import studio.ocean.app.providers.model.AuthStrategy;
 import studio.ocean.app.providers.model.ProviderConnection;
+import studio.ocean.app.providers.state.CredentialRecord;
 import studio.ocean.app.providers.state.CredentialVault;
 
 /**
@@ -126,7 +129,7 @@ public final class ProviderExecutionEngine {
             try {
                 OceanModelConfig config = new OceanModelConfig("local", conn.selectedModel, "", conn.baseUrl);
                 OceanAgentConversation convo = new OceanAgentConversation(config.provider, config.model);
-                String result = convo.run(prompt, body -> sendHttp(config, body, timeoutSeconds), (toolName, toolArgs) -> {
+                String result = convo.run(prompt, body -> sendModelRequest(config, conn, body, timeoutSeconds), (toolName, toolArgs) -> {
                     throw new IOException("Tool execution is not enabled in standalone local-provider execution");
                 }, thought -> mainHandler.post(() -> callback.onThought(thought)));
                 callback.onComplete(0, result);
@@ -207,6 +210,17 @@ public final class ProviderExecutionEngine {
 
                 if (conn.strategy == AuthStrategy.DIRECT_OAUTH || conn.strategy == AuthStrategy.DEVICE_CODE || conn.strategy == AuthStrategy.OFFICIAL_OAUTH) {
                     String token = conn.credentialRef != null ? credentialVault.retrieve(conn.credentialRef) : null;
+                    if (isAntigravityProvider(conn.providerId)) {
+                        if (token == null || token.isEmpty()) {
+                            throw new IOException("No Antigravity access token found in the secure vault");
+                        }
+                        OceanModelConfig config = new OceanModelConfig(
+                                conn.providerId, conn.selectedModel, token, conn.baseUrl);
+                        new OceanAgentConversation(config.provider, config.model)
+                                .testConnection(body -> sendModelRequest(config, conn, body, 30));
+                        mainHandler.post(callback::onSuccess);
+                        return;
+                    }
                     if (token == null || token.isEmpty()) {
                         throw new IOException("No valid authentication token found in secure vault");
                     }
@@ -227,12 +241,214 @@ public final class ProviderExecutionEngine {
                     throw new IOException("API key is not configured");
                 }
                 OceanModelConfig config = new OceanModelConfig(conn.providerId, conn.selectedModel, apiKey, conn.baseUrl);
-                new OceanAgentConversation(config.provider, config.model).testConnection(body -> sendHttp(config, body, 15));
+                new OceanAgentConversation(config.provider, config.model).testConnection(body -> sendModelRequest(config, conn, body, 15));
                 mainHandler.post(callback::onSuccess);
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onFailure(OceanAgentConversation.safeMessage(e)));
             }
         }, "ocean-provider-engine-test").start();
+    }
+
+    /**
+     * Sends one already-formatted model request through the provider's real transport.
+     * Antigravity uses Google's Cloud Code internal envelope while the conversation
+     * itself stays on Gemini wire format. Other providers keep their normal HTTP path.
+     */
+    public JSONObject sendModelRequest(OceanModelConfig config,
+                                       ProviderConnection connection,
+                                       JSONObject body,
+                                       int timeoutSeconds) throws Exception {
+        if (config.isAntigravity()) {
+            return sendAntigravityRequest(config, connection, body, timeoutSeconds);
+        }
+        return sendHttp(config, body, timeoutSeconds);
+    }
+
+    private JSONObject sendAntigravityRequest(OceanModelConfig config,
+                                              ProviderConnection connection,
+                                              JSONObject geminiBody,
+                                              int timeoutSeconds) throws Exception {
+        String token = resolveAntigravityAccessToken(config.sourceProvider, config.apiKey);
+        String project = resolveAntigravityProject(connection, token);
+
+        try {
+            return sendAntigravityOnce(project, config.model, geminiBody, token, timeoutSeconds);
+        } catch (ProviderHttpException authFailure) {
+            if (authFailure.status != 401) throw authFailure;
+            String refreshed = refreshAntigravityToken(config.sourceProvider);
+            return sendAntigravityOnce(project, config.model, geminiBody, refreshed, timeoutSeconds);
+        }
+    }
+
+    private String resolveAntigravityProject(ProviderConnection connection, String accessToken) throws Exception {
+        String project = null;
+        if (connection != null && connection.id != null && !connection.id.isEmpty()) {
+            project = credentialVault.retrieve(
+                    AntigravityDirectAuthAdapter.PROJECT_VAULT_REF + "_" + connection.id);
+        }
+        if (project == null || project.trim().isEmpty()) {
+            project = credentialVault.retrieve(AntigravityDirectAuthAdapter.PROJECT_VAULT_REF);
+        }
+        if (project == null || project.trim().isEmpty()) {
+            AntigravityDirectAuthAdapter adapter = new AntigravityDirectAuthAdapter(context);
+            if (!adapter.probe(accessToken, null)) {
+                throw new IOException("Antigravity account is authenticated but Cloud Code entitlement verification failed");
+            }
+            project = credentialVault.retrieve(AntigravityDirectAuthAdapter.PROJECT_VAULT_REF);
+        }
+        if (project == null || project.trim().isEmpty()) {
+            throw new IOException("Antigravity Cloud Code project is unavailable; reconnect the provider");
+        }
+        return project.trim();
+    }
+
+    private String resolveAntigravityAccessToken(String providerId, String fallbackAccessToken) throws Exception {
+        CredentialRecord record = credentialVault.retrieveRecord(providerId);
+        if (record == null) {
+            if (fallbackAccessToken == null || fallbackAccessToken.trim().isEmpty()) {
+                throw new IOException("Antigravity credential record is missing; reconnect the provider");
+            }
+            return fallbackAccessToken.trim();
+        }
+        if (record.isExpiringSoon(5 * 60 * 1000L)) {
+            if (record.refreshToken == null || record.refreshToken.trim().isEmpty()) {
+                throw new IOException("Antigravity session is expiring and no refresh token is available; reconnect the provider");
+            }
+            return refreshAntigravityToken(providerId);
+        }
+        if (record.accessToken == null || record.accessToken.trim().isEmpty()) {
+            throw new IOException("Antigravity secure credential record contains no access token");
+        }
+        return record.accessToken;
+    }
+
+    private String refreshAntigravityToken(String providerId) throws Exception {
+        CredentialRecord record = credentialVault.retrieveRecord(providerId);
+        if (record == null || record.refreshToken == null || record.refreshToken.trim().isEmpty()) {
+            throw new IOException("Antigravity refresh token is unavailable; reconnect the provider");
+        }
+        DirectAuthAdapter.AuthResult refreshed =
+                new AntigravityDirectAuthAdapter(context).refresh(record.refreshToken);
+        if (!refreshed.isSuccess || refreshed.accessToken == null || refreshed.accessToken.trim().isEmpty()) {
+            throw new IOException("Antigravity token refresh failed: "
+                    + (refreshed.error != null ? refreshed.error : "provider returned no access token"));
+        }
+        long newExpiry = refreshed.expiresAtEpochMs != null
+                ? refreshed.expiresAtEpochMs
+                : record.expiresAtEpochMs;
+        CredentialRecord rotated = record.withRotatedTokens(
+                refreshed.accessToken,
+                refreshed.refreshToken != null && !refreshed.refreshToken.isEmpty()
+                        ? refreshed.refreshToken : record.refreshToken,
+                newExpiry);
+        if (!credentialVault.rotateRecord(rotated)) {
+            throw new IOException("Antigravity token refreshed but secure credential rotation failed");
+        }
+        return refreshed.accessToken;
+    }
+
+    private JSONObject sendAntigravityOnce(String project,
+                                           String model,
+                                           JSONObject geminiBody,
+                                           String accessToken,
+                                           int timeoutSeconds) throws Exception {
+        JSONObject envelope = new JSONObject()
+                .put("project", project)
+                .put("model", model)
+                .put("request", geminiBody)
+                .put("requestType", "agent")
+                .put("userAgent", "antigravity")
+                .put("requestId", "ocean-" + java.util.UUID.randomUUID());
+
+        String[] bases = {
+                "https://daily-cloudcode-pa.googleapis.com",
+                "https://cloudcode-pa.googleapis.com"
+        };
+        Exception last = null;
+        for (String base : bases) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL(base + "/v1internal:generateContent").openConnection();
+                conn.setInstanceFollowRedirects(false);
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setRequestProperty("User-Agent", "antigravity");
+                conn.setRequestProperty("X-Goog-Api-Client",
+                        "google-cloud-sdk vscode_cloudshelleditor/0.1");
+                conn.setRequestProperty("Client-Metadata",
+                        "{\"ideType\":\"ANTIGRAVITY\",\"platform\":\"PLATFORM_UNSPECIFIED\",\"pluginType\":\"GEMINI\"}");
+                conn.setConnectTimeout(Math.max(5000, timeoutSeconds * 1000));
+                conn.setReadTimeout(Math.max(15000, timeoutSeconds * 1000));
+                conn.setDoOutput(true);
+
+                byte[] bytes = envelope.toString().getBytes(StandardCharsets.UTF_8);
+                conn.setFixedLengthStreamingMode(bytes.length);
+                try (java.io.OutputStream os = conn.getOutputStream()) {
+                    os.write(bytes);
+                }
+
+                int code = conn.getResponseCode();
+                String responseText = readBoundedResponse(conn, code, 4 * 1024 * 1024);
+                if (code == 401 || code == 403 || code == 400) {
+                    throw new ProviderHttpException(code, responseText);
+                }
+                if (code == 429 || code >= 500) {
+                    last = new ProviderHttpException(code, responseText);
+                    continue;
+                }
+                if (code < 200 || code >= 300) {
+                    throw new ProviderHttpException(code, responseText);
+                }
+
+                JSONObject parsed = new JSONObject(responseText);
+                JSONObject response = parsed.optJSONObject("response");
+                return response != null ? response : parsed;
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }
+        if (last instanceof Exception) throw (Exception) last;
+        throw new IOException("Antigravity request failed on every Cloud Code endpoint");
+    }
+
+    private static String readBoundedResponse(HttpURLConnection conn, int code, int maxBytes) throws Exception {
+        java.io.InputStream stream = code >= 200 && code < 400
+                ? conn.getInputStream() : conn.getErrorStream();
+        if (stream == null) return "";
+        try (java.io.InputStream in = stream;
+             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                if (out.size() + read > maxBytes) {
+                    throw new IOException("Provider response exceeded " + maxBytes + " bytes");
+                }
+                out.write(buffer, 0, read);
+            }
+            return new String(out.toByteArray(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private static boolean isAntigravityProvider(String providerId) {
+        return "antigravity".equals(providerId)
+                || "antigravity_ide".equals(providerId)
+                || "antigravity_20".equals(providerId);
+    }
+
+    private static final class ProviderHttpException extends IOException {
+        final int status;
+        ProviderHttpException(int status, String body) {
+            super("Antigravity HTTP " + status + (body == null || body.trim().isEmpty()
+                    ? "" : ": " + abbreviate(body, 700)));
+            this.status = status;
+        }
+    }
+
+    private static String abbreviate(String value, int max) {
+        String clean = value == null ? "" : value.replace('\n', ' ').replace('\r', ' ').trim();
+        return clean.length() <= max ? clean : clean.substring(0, max) + "…";
     }
 
     private JSONObject sendHttp(OceanModelConfig config, JSONObject body, int timeoutSeconds) throws Exception {
