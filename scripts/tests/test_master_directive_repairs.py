@@ -139,9 +139,19 @@ def test_local_model_catalog_and_routing():
         mgr_src = f.read()
     assert_true("connectModel" in mgr_src, "LocalModelManager implements connectModel()")
     assert_true("disconnectModel" in mgr_src, "LocalModelManager implements disconnectModel()")
-    assert_true("availMem" in mgr_src, "LocalModelManager verifies device RAM headroom")
-    assert_true("v1/chat/completions" in mgr_src, "LocalModelManager performs live inference probe")
+    assert_true("availRam" in mgr_src, "LocalModelManager verifies device RAM headroom")
+    assert_true("LocalLlamaRuntime" in mgr_src and "ProcessBuilder" in mgr_src, "LocalModelManager starts a real verified llama.cpp runtime")
+    assert_true("/health" in mgr_src, "LocalModelManager waits for a live llama-server health endpoint")
+    assert_true("v1/chat/completions" in mgr_src and "verifyInference" in mgr_src, "LocalModelManager requires a real inference probe")
+    assert_true("markVerifiedConnected" in mgr_src, "CONNECTED is assigned only through the verified runtime path")
+    assert_true("catch (Exception ignored)" not in mgr_src[mgr_src.find("connectModel"):mgr_src.find("deleteModel")], "connectModel does not ignore probe failures")
     assert_true("local_model_override" in mgr_src, "LocalModelManager maintains local_model_override setting")
+
+    runtime_file = "android/app/src/main/java/studio/ocean/app/models/local/LocalLlamaRuntime.java"
+    with open(runtime_file, "r", encoding="utf-8") as f:
+        runtime_src = f.read()
+    assert_true("SHA256" in runtime_src and "sha256(archiveFile)" in runtime_src, "llama.cpp runtime archive is integrity-verified")
+    assert_true("ggml-org/llama.cpp/releases/download" in runtime_src, "llama.cpp runtime comes from verified upstream release artifacts")
 
     # Check OceanAgentRunner local routing
     runner_file = "android/app/src/main/java/studio/ocean/app/OceanAgentRunner.java"
@@ -172,12 +182,19 @@ def test_direct_provider_auth():
     assert_true("ext_agent_host_id" in openai_src, "OpenAiDirectAuthAdapter uses persistent ext_agent_host_id URN")
     assert_true("v1/chat/completions" in openai_src, "OpenAiDirectAuthAdapter executes live 1-token probe")
 
-    # Antigravity vs Google Gemini product split
+    # Antigravity: real Google OAuth + Cloud Code verification, never a fabricated /auth/session route
     antigravity_file = "android/app/src/main/java/studio/ocean/app/providers/auth/AntigravityDirectAuthAdapter.java"
     with open(antigravity_file, "r", encoding="utf-8") as f:
         ag_src = f.read()
-    assert_true("ProviderRegistry.ID_ANTIGRAVITY" in ag_src, "AntigravityDirectAuthAdapter maps to ID_ANTIGRAVITY")
-    assert_true("Generic Google OAuth" in ag_src, "Strictly prevents generic Google OAuth token aliasing")
+    assert_true("accounts.google.com/o/oauth2/v2/auth" in ag_src, "Antigravity starts at Google's real OAuth authorization endpoint")
+    assert_true("oauth2.googleapis.com/token" in ag_src, "Antigravity performs a real authorization-code token exchange")
+    assert_true("loadCodeAssist" in ag_src and "fetchAvailableModels" in ag_src, "Antigravity verifies Cloud Code entitlement and discovers live models")
+    assert_true("OCEAN_ANTIGRAVITY_OAUTH_CLIENT_ID" in ag_src, "OAuth registration is app-owned at build time, not user-entered")
+    assert_true("antigravity.google/auth/session" not in ag_src, "Removed nonexistent antigravity.google/auth/session endpoint")
+    assert_true("session_token" not in ag_src, "Removed synthetic Antigravity session-token callback contract")
+    assert_true("return accessToken != null" not in ag_src, "Probe is not a fake non-empty-token check")
+    assert_true("startLoopbackListener" in orch_src, "AuthOrchestrator uses a real loopback callback broker for Antigravity")
+    assert_true("processConsumedCallback" in orch_src, "Loopback and deep-link callbacks share a replay-safe consumed transaction path")
 
     google_file = "android/app/src/main/java/studio/ocean/app/providers/auth/GoogleDirectAuthAdapter.java"
     with open(google_file, "r", encoding="utf-8") as f:
