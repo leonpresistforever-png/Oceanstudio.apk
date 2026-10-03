@@ -11,10 +11,12 @@ public final class OceanModelConfig {
         this.provider = provider == null ? "" : provider.trim().toLowerCase(Locale.ROOT);
         this.model = normalizeModel(this.provider, model);
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        if (this.apiKey.isEmpty()) throw new IllegalArgumentException("An API key is required");
-        this.baseUrl = normalizeEndpoint(baseUrl);
+        if (this.apiKey.isEmpty() && !this.provider.equals("local"))
+            throw new IllegalArgumentException("An API key is required");
+        this.baseUrl = normalizeEndpoint(this.provider, baseUrl);
         if (!this.provider.equals("google") && !this.provider.equals("anthropic")
-                && !this.provider.equals("openai") && !this.provider.equals("custom"))
+                && !this.provider.equals("openai") && !this.provider.equals("custom")
+                && !this.provider.equals("local"))
             throw new IllegalArgumentException("Choose a supported provider");
     }
 
@@ -33,14 +35,21 @@ public final class OceanModelConfig {
         return model;
     }
 
-    static String normalizeEndpoint(String value) {
+    static String normalizeEndpoint(String provider, String value) {
         String base = value == null ? "" : value.trim().replaceAll("/+$", "");
         try {
             URI uri = new URI(base);
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
-                    || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null)
+            boolean local = "local".equals(provider);
+            boolean schemeOk = "https".equalsIgnoreCase(uri.getScheme())
+                    || (local && "http".equalsIgnoreCase(uri.getScheme()));
+            boolean hostOk = uri.getHost() != null
+                    && (!local || "127.0.0.1".equals(uri.getHost()));
+            if (!schemeOk || !hostOk || uri.getRawUserInfo() != null
+                    || uri.getRawQuery() != null || uri.getRawFragment() != null)
                 throw new IllegalArgumentException();
         } catch (Exception error) {
+            if ("local".equals(provider))
+                throw new IllegalArgumentException("Local models must use an Ocean-owned http://127.0.0.1 endpoint");
             throw new IllegalArgumentException("Enter an HTTPS base URL without a query, fragment, or credentials");
         }
         return base;
