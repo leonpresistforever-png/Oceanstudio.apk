@@ -304,6 +304,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
             actions.addView(connectBtn);
 
             Button deleteBtn = createButton("DELETE", false, density);
+            deleteBtn.setEnabled(!manager.isRuntimeBusy());
             deleteBtn.setOnClickListener(v -> confirmDelete(model));
             actions.addView(deleteBtn);
         } else if (model.isConnected()) {
@@ -408,9 +409,14 @@ public final class LocalModelsActivity extends AppCompatActivity {
                 .setTitle("Delete Model")
                 .setExplanation("Delete local model file for " + model.displayName + "?")
                 .setPositiveButton("Delete", v -> {
-                    manager.deleteModel(model.id);
-                    Toast.makeText(this, "Model deleted", Toast.LENGTH_SHORT).show();
-                    renderModels();
+                    new Thread(() -> {
+                        boolean deleted = manager.deleteModel(model.id);
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            Toast.makeText(this, deleted ? "Model deleted" : "Model could not be deleted", Toast.LENGTH_SHORT).show();
+                            renderModels();
+                        });
+                    }, "ocean-delete-local-model").start();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
