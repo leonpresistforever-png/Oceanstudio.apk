@@ -222,7 +222,7 @@ jobs:
           - **Verification scope**: Build/signature/ABI checks and automated protocol tests. A user's live provider consent and subscription quota require completing account login on their device.
 
           #### Installation Note:
-          This is a debug-signed test build. If you have an older version installed, please uninstall it first before installing this APK.
+          This is a debug-signed test build. Android will reject updating an installation with a different certificate. Preserve your existing app data; an update compatible with that installation requires its original signing key.
           EOF
 
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
