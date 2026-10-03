@@ -142,7 +142,7 @@ public final class ProviderExecutionEngine {
             OceanModelConfig config = new OceanModelConfig(conn.providerId, conn.selectedModel, secret != null ? secret : "", conn.baseUrl);
             try {
                 OceanAgentConversation convo = new OceanAgentConversation(config.provider, config.model);
-                String result = convo.run(prompt, body -> sendHttp(config, body, timeoutSeconds), (toolName, toolArgs) -> {
+                String result = convo.run(prompt, body -> sendModelRequest(config, conn, body, timeoutSeconds), (toolName, toolArgs) -> {
                     throw new IOException("Tool execution not supported in direct provider execution");
                 }, thought -> mainHandler.post(() -> callback.onThought(thought)));
                 callback.onComplete(0, result);
