@@ -19,50 +19,53 @@ public final class ProviderConnectionStore {
     private static final String FILE_NAME = "ocean_provider_connections.json";
     private final File storeFile;
     private final List<ProviderConnection> cache = new ArrayList<>();
-    private boolean loaded = false;
+    private static final Object FILE_LOCK = new Object();
 
     public ProviderConnectionStore(Context context) {
-        this.storeFile = new File(context.getApplicationContext().getFilesDir(), FILE_NAME);
+        this(context.getApplicationContext().getFilesDir());
     }
+    ProviderConnectionStore(File directory) { this.storeFile = new File(directory, FILE_NAME); }
 
-    public synchronized List<ProviderConnection> listAll() {
+    public List<ProviderConnection> listAll() { synchronized (FILE_LOCK) {
         ensureLoaded();
         return Collections.unmodifiableList(new ArrayList<>(cache));
-    }
+    } }
 
-    public synchronized List<ProviderConnection> listConnections() {
+    public List<ProviderConnection> listConnections() {
         return listAll();
     }
 
-    public synchronized List<ProviderConnection> listByProvider(String providerId) {
+    public List<ProviderConnection> listByProvider(String providerId) { synchronized (FILE_LOCK) {
         ensureLoaded();
         List<ProviderConnection> matches = new ArrayList<>();
         if (providerId == null) return matches;
         for (ProviderConnection conn : cache) {
             if (providerId.equals(conn.providerId)) matches.add(conn);
         }
+        matches.sort((a, b) -> {
+            boolean ac = a.status == studio.ocean.app.providers.model.ConnectionStatus.CONNECTED;
+            boolean bc = b.status == studio.ocean.app.providers.model.ConnectionStatus.CONNECTED;
+            if (ac != bc) return ac ? -1 : 1;
+            return Long.compare(b.lastValidatedAtEpochMs, a.lastValidatedAtEpochMs);
+        });
         return Collections.unmodifiableList(matches);
+    } }
+
+    public ProviderConnection findByProviderId(String providerId) {
+        List<ProviderConnection> matches = listByProvider(providerId);
+        return matches.isEmpty() ? null : matches.get(0);
     }
 
-    public synchronized ProviderConnection findByProviderId(String providerId) {
-        ensureLoaded();
-        if (providerId == null) return null;
-        for (ProviderConnection conn : cache) {
-            if (providerId.equals(conn.providerId)) return conn;
-        }
-        return null;
-    }
-
-    public synchronized ProviderConnection get(String id) {
+    public ProviderConnection get(String id) { synchronized (FILE_LOCK) {
         ensureLoaded();
         if (id == null) return null;
         for (ProviderConnection conn : cache) {
             if (id.equals(conn.id)) return conn;
         }
         return null;
-    }
+    } }
 
-    public synchronized void save(ProviderConnection connection) {
+    public void save(ProviderConnection connection) { synchronized (FILE_LOCK) {
         if (connection == null) return;
         ensureLoaded();
         for (int i = 0; i < cache.size(); i++) {
@@ -74,9 +77,9 @@ public final class ProviderConnectionStore {
         }
         cache.add(connection);
         persist();
-    }
+    } }
 
-    public synchronized void delete(String id) {
+    public void delete(String id) { synchronized (FILE_LOCK) {
         if (id == null) return;
         ensureLoaded();
         boolean removed = false;
@@ -88,20 +91,22 @@ public final class ProviderConnectionStore {
             }
         }
         if (removed) persist();
-    }
+    } }
 
-    public synchronized void clear() {
+    public void clear() { synchronized (FILE_LOCK) {
         cache.clear();
         persist();
-    }
+    } }
 
     private void ensureLoaded() {
-        if (loaded) return;
+        // Different app components own different repository instances. Always read
+        // the atomic file under the shared lock, including before each mutation.
         cache.clear();
         if (storeFile.exists()) {
             try (FileInputStream fis = new FileInputStream(storeFile)) {
                 byte[] bytes = new byte[(int) storeFile.length()];
-                int read = fis.read(bytes);
+                int read = 0, count;
+                while (read < bytes.length && (count = fis.read(bytes, read, bytes.length - read)) > 0) read += count;
                 if (read > 0) {
                     String json = new String(bytes, 0, read, StandardCharsets.UTF_8);
                     JSONArray arr = new JSONArray(json);
@@ -116,7 +121,6 @@ public final class ProviderConnectionStore {
             } catch (Exception ignored) {
             }
         }
-        loaded = true;
     }
 
     private void persist() {
@@ -129,11 +133,11 @@ public final class ProviderConnectionStore {
             try (FileOutputStream fos = new FileOutputStream(tmp)) {
                 fos.write(arr.toString(2).getBytes(StandardCharsets.UTF_8));
                 fos.flush();
+                fos.getFD().sync();
             }
-            if (tmp.renameTo(storeFile) || (!storeFile.delete() && tmp.renameTo(storeFile))) {
-                // renamed successfully
-            }
-        } catch (Exception ignored) {
+            if (!tmp.renameTo(storeFile)) throw new java.io.IOException("Atomic connection-store update failed");
+        } catch (Exception error) {
+            throw new IllegalStateException("Could not save the verified provider connection", error);
         }
     }
 }
