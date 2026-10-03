@@ -5,15 +5,19 @@ import pathlib
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-COMMIT = '9780660ffb0c7ed09d86c52c8cee4f90d1ee18a3'
-SHA256 = 'b0ed2b76e3985278976a248011e96b0db2879be3ca066347727b811fbc8aec54'
-URL = f'https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/{COMMIT}/packages/ocean-gateway/ocean-gateway'
-target = ROOT / 'android/app/src/main/assets/ocean/gateway/ocean-gateway'
-if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != SHA256:
-    with urllib.request.urlopen(URL, timeout=60) as response:
-        payload = response.read()
-    if hashlib.sha256(payload).hexdigest() != SHA256:
-        raise SystemExit('Canonical Ocean gateway command integrity check failed')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(payload)
+COMMIT = 'd19e68695f56542f4b625618aa579d9021c381f8'
+FILES = {
+    'ocean-gateway': 'da7c61876a8e5f2c0520edea7c7b60f6ddcc6d8bf11e2ef13541ddf07f54e51e',
+    'prepare-runtime.mjs': 'fabde3226316a25d0fc47349fa7d2e4f352ec4199eb6ca1d23fbf11c5cd3210d',
+}
+for name, expected in FILES.items():
+    url = f'https://raw.githubusercontent.com/leonpresistforever-png/Oceanstudio-packages/{COMMIT}/packages/ocean-gateway/{name}'
+    target = ROOT / 'android/app/src/main/assets/ocean/gateway' / name
+    if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != expected:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            payload = response.read()
+        if hashlib.sha256(payload).hexdigest() != expected:
+            raise SystemExit('Canonical Ocean gateway integrity check failed: ' + name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(payload)
 print(f'Verified canonical Ocean gateway command: {COMMIT}')

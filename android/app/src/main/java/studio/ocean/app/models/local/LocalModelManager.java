@@ -35,6 +35,7 @@ public final class LocalModelManager {
         }
         return instance;
     }
+    static LocalModelManager existingInstance() { return instance; }
 
     private final Context context;
     private final File modelsDir;
@@ -44,6 +45,14 @@ public final class LocalModelManager {
     private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor();
     private volatile String loadedModelId = null;
     private volatile Process localRuntimeProcess = null;
+    private final ManagedLocalRuntime runtime = new ManagedLocalRuntime();
+    private final Object connectLock = new Object();
+    private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+    private volatile LocalInferenceService runtimeService;
+    private volatile android.content.ServiceConnection runtimeBinding;
+    private volatile OllamaClient ollama;
+    private volatile String activeBackend = "llama.cpp";
+    private volatile String runtimePhase = "Server stopped";
     private final java.util.concurrent.atomic.AtomicBoolean runtimeStarting = new java.util.concurrent.atomic.AtomicBoolean();
     private android.os.FileObserver modelsWatcher;
 
@@ -398,15 +407,180 @@ public final class LocalModelManager {
     }
 
     public boolean connectModel(String id) {
-        if (!runtimeStarting.compareAndSet(false, true)) return false;
-        try { return connectModelInternal(id); }
-        finally { runtimeStarting.set(false); }
+        synchronized (connectLock) {
+            runtimeStarting.set(true);
+            try {
+                if (getModel(id) == null) return false;
+                preferences().edit().putString("selected_local_model", id).putBoolean("local_runtime_wanted", true).apply();
+                boolean connected = "ollama".equals(preferences().getString("local_backend", "llama.cpp"))
+                        ? connectOllamaModel(id) : connectModelInternal(id);
+                if (connected) preferences().edit().putBoolean("local_runtime_wanted", true).apply();
+                updateRuntimeNotification();
+                return connected;
+            } finally { runtimeStarting.set(false); if (!runtime.isRunning()) releaseRuntimeService(); }
+        }
+    }
+
+    private android.content.SharedPreferences preferences() {
+        return context.getSharedPreferences("ocean_model_prefs", Context.MODE_PRIVATE);
+    }
+    public String runtimeStatus() { return runtimePhase; }
+    public boolean isRuntimeBusy() { return runtimeStarting.get(); }
+    public String backend() { return preferences().getString("local_backend", "llama.cpp"); }
+    public void useBundledLlama() {
+        shutdownRuntime(); preferences().edit().putString("local_backend", "llama.cpp").apply();
+        activeBackend = "llama.cpp";
+    }
+    public boolean startOllamaServer() {
+        synchronized (connectLock) {
+            runtimeStarting.set(true);
+            try {
+                preferences().edit().putString("local_backend", "ollama").apply();
+                ensureOllamaServer(); return true;
+            } catch (Exception error) {
+                runtimePhase = "Ollama startup failed: " + error.getMessage(); updateRuntimeNotification(); return false;
+            } finally { runtimeStarting.set(false); if (!runtime.isRunning()) releaseRuntimeService(); }
+        }
+    }
+    private void ensureOllamaServer() throws Exception {
+        ensureRuntimeService();
+        if ("ollama".equals(activeBackend) && runtime.isRunning() && ollama != null) {
+            ollama.version(); return;
+        }
+        runtime.stop(); localRuntimeProcess = null; runtimeExited("Changing local runtime");
+        File executable = new File(context.getApplicationInfo().nativeLibraryDir, "libollama.so");
+        if (!executable.isFile() || !executable.canExecute()) throw new IOException("Bundled Ollama executable is missing");
+        int port;
+        try (java.net.ServerSocket available = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
+            port = available.getLocalPort();
+        }
+        File home = new File(context.getFilesDir(), "ollama"); home.mkdirs();
+        ProcessBuilder builder = new ProcessBuilder(executable.getAbsolutePath(), "serve");
+        builder.directory(home);
+        builder.environment().put("HOME", home.getAbsolutePath());
+        builder.environment().put("OLLAMA_HOST", "127.0.0.1:" + port);
+        builder.environment().put("OLLAMA_MODELS", new File(home, "models").getAbsolutePath());
+        builder.environment().put("OLLAMA_NO_CLOUD", "true");
+        builder.environment().put("OLLAMA_KEEP_ALIVE", "-1");
+        builder.environment().put("OLLAMA_MAX_LOADED_MODELS", "1");
+        builder.environment().put("OLLAMA_NUM_PARALLEL", "1");
+        builder.environment().put("OLLAMA_CONTEXT_LENGTH", "2048");
+        builder.environment().remove("LD_PRELOAD"); builder.environment().remove("LD_LIBRARY_PATH");
+        activeBackend = "ollama"; runtimePhase = "Starting Ollama server…"; updateRuntimeNotification();
+        localRuntimeProcess = runtime.start(builder, new File(home, "server.log"), this::runtimeExited);
+        ollama = new OllamaClient(port);
+        long deadline = System.currentTimeMillis() + 90000;
+        Exception last = null;
+        while (System.currentTimeMillis() < deadline) {
+            if (!runtime.isRunning()) throw new IOException(runtime.lastExit());
+            try {
+                if (!ollama.version().optString("version").isEmpty()) {
+                    runtimePhase = "Ollama server ready · 127.0.0.1:" + port; updateRuntimeNotification(); return;
+                }
+            } catch (Exception error) { last = error; }
+            Thread.sleep(250);
+        }
+        runtime.stop(); throw new IOException("Ollama server did not become ready", last);
+    }
+    private boolean connectOllamaModel(String id) {
+        LocalModel model = getModel(id);
+        if (id.equals(loadedModelId) && model.isConnected() && runtime.isRunning() && "ollama".equals(activeBackend)) return true;
+        try {
+            File file = new File(modelsDir, id + ".gguf");
+            if (!file.isFile()) throw new IOException("Downloaded GGUF is missing");
+            if (loadedModelId != null && !loadedModelId.equals(id)) disconnectModel(loadedModelId);
+            ensureOllamaServer(); // The server must answer /api/version before any model setup.
+            model.state = LocalModel.State.CONNECTING;
+            runtimePhase = "Ollama ready · registering " + model.displayName; updateRuntimeNotification();
+            int contextSize = Math.min(model.context, 2048);
+            String alias = ollama.importModel(model.id, file, contextSize);
+            runtimePhase = "Loading " + model.displayName + " in Ollama…"; updateRuntimeNotification();
+            ollama.load(alias);
+            long before = System.currentTimeMillis(); ollama.infer(alias);
+            if (!runtime.isRunning()) throw new IOException(runtime.lastExit());
+            model.endpoint = ollama.baseUrl().replace("http://", "").replace("/v1", "");
+            model.verifiedContext = contextSize; model.healthMs = Math.max(1, System.currentTimeMillis() - before);
+            model.errorMessage = null; model.state = LocalModel.State.CONNECTED; loadedModelId = id;
+            studio.ocean.app.providers.model.ProviderConnection connection = new studio.ocean.app.providers.model.ProviderConnection(
+                    "local_connection", studio.ocean.app.providers.ProviderRegistry.ID_LOCAL, model.displayName,
+                    studio.ocean.app.providers.model.AuthStrategy.LOCAL, studio.ocean.app.providers.model.ConnectionStatus.CONNECTED,
+                    ollama.baseUrl(), alias, null, null, Collections.singletonList(alias), null,
+                    studio.ocean.app.providers.model.QuotaSnapshot.reported(null, null,
+                            studio.ocean.app.providers.model.QuotaSnapshot.Unit.PROVIDER_DEFINED, null,
+                            "On-device Ollama execution", "local-runtime"), null, System.currentTimeMillis());
+            new studio.ocean.app.providers.state.ProviderConnectionStore(context).save(connection);
+            setLocalOverrideEnabled(true); runtimePhase = "Ollama running · " + model.displayName;
+            persistStatus(); return true;
+        } catch (Exception error) {
+            model.state = LocalModel.State.INSTALLED; model.errorMessage = error.getMessage(); loadedModelId = null;
+            new studio.ocean.app.providers.state.ProviderConnectionStore(context).delete("local_connection");
+            runtimePhase = runtime.isRunning() ? "Ollama ready · model setup failed" : "Ollama stopped";
+            persistStatus(); return false;
+        }
+    }
+    public LocalModel ensureConnectedModel() {
+        LocalModel connected = getConnectedModel();
+        if (connected != null) return connected;
+        String selected = preferences().getString("selected_local_model", null);
+        if (selected != null && preferences().getBoolean("local_runtime_wanted", false) && connectModel(selected)) return getConnectedModel();
+        return null;
+    }
+    void restoreAfterProcessDeath() {
+        if (preferences().getBoolean("local_runtime_wanted", false)) new Thread(this::ensureConnectedModel, "ocean-restore-local").start();
+    }
+    private synchronized void runtimeExited(String reason) {
+        if (runtime.isRunning()) return;
+        LocalModel model = loadedModelId == null ? null : catalog.get(loadedModelId);
+        if (model != null) { model.state = LocalModel.State.INSTALLED; model.endpoint = null; model.errorMessage = reason; }
+        loadedModelId = null;
+        runtimePhase = reason == null ? "Server stopped" : reason;
+        new studio.ocean.app.providers.state.ProviderConnectionStore(context).delete("local_connection");
+        persistStatus(); updateRuntimeNotification();
+        if (!runtimeStarting.get()) releaseRuntimeService();
+    }
+    private void ensureRuntimeService() throws Exception {
+        if (runtimeService != null) return;
+        java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Exception> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        main.post(() -> {
+            try {
+            android.content.Intent intent = new android.content.Intent(context, LocalInferenceService.class);
+            if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent); else context.startService(intent);
+            android.content.ServiceConnection binding = new android.content.ServiceConnection() {
+                @Override public void onServiceConnected(android.content.ComponentName name, android.os.IBinder binder) {
+                    runtimeService = ((LocalInferenceService.LocalBinder) binder).service(); runtimeBinding = this; ready.countDown();
+                }
+                @Override public void onServiceDisconnected(android.content.ComponentName name) { runtimeService = null; }
+                @Override public void onNullBinding(android.content.ComponentName name) { ready.countDown(); }
+            };
+            if (!context.bindService(intent, binding, Context.BIND_AUTO_CREATE)) ready.countDown();
+            } catch (Exception error) { failure.set(error); ready.countDown(); }
+        });
+        if (!ready.await(20, java.util.concurrent.TimeUnit.SECONDS) || runtimeService == null)
+            throw new IOException("Foreground inference service did not become ready", failure.get());
+    }
+    private void updateRuntimeNotification() {
+        main.post(() -> { LocalInferenceService service = runtimeService; if (service != null) service.updateState(runtimePhase); });
+    }
+    private void releaseRuntimeService() {
+        LocalInferenceService previous = runtimeService;
+        main.post(() -> {
+            if (runtimeService != previous || runtime.isRunning() || runtimeStarting.get()) return;
+            runtimeService = null;
+            if (runtimeBinding != null) { context.unbindService(runtimeBinding); runtimeBinding = null; }
+            context.stopService(new android.content.Intent(context, LocalInferenceService.class));
+        });
+    }
+    void serviceDestroyed(LocalInferenceService service) {
+        if (runtimeService != service) return; // An old service must not stop its successor.
+        runtimeService = null; runtimeBinding = null;
+        runtime.stop(); localRuntimeProcess = null; runtimeExited("Android stopped the inference service; reconnecting is available");
     }
 
     private boolean connectModelInternal(String id) {
         LocalModel model = getModel(id);
         if (model == null) return false;
-        if (id.equals(loadedModelId) && localRuntimeProcess != null && localRuntimeProcess.isAlive()) return true;
+        if (id.equals(loadedModelId) && runtime.isRunning() && "llama.cpp".equals(activeBackend)) return true;
         File modelFile = new File(modelsDir, id + ".gguf");
         if (!modelFile.isFile() || modelFile.length() == 0) {
             model.errorMessage = "Model file is missing or empty.";
@@ -420,6 +594,7 @@ public final class LocalModelManager {
         }
 
         if (loadedModelId != null && !loadedModelId.equals(id)) disconnectModel(loadedModelId);
+        runtime.stop(); localRuntimeProcess = null;
 
         final int port;
         try (java.net.ServerSocket reservation = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
@@ -446,19 +621,16 @@ public final class LocalModelManager {
         }
 
         try {
-            android.content.Intent keepAlive = new android.content.Intent(context, LocalInferenceService.class);
-            if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(keepAlive);
-            else context.startService(keepAlive);
+            ensureRuntimeService();
+            activeBackend = "llama.cpp";
+            runtimePhase = "Starting llama.cpp server and loading " + model.displayName;
             studio.ocean.app.providers.state.CredentialVault vault = new studio.ocean.app.providers.state.CredentialVault(context);
             byte[] randomKey = new byte[32];
             new java.security.SecureRandom().nextBytes(randomKey);
             String runtimeKey = android.util.Base64.encodeToString(randomKey, android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE);
             vault.store("local_inference_key", runtimeKey);
             model.state = LocalModel.State.CONNECTING;
-            if (localRuntimeProcess != null) {
-                localRuntimeProcess.destroy();
-                localRuntimeProcess = null;
-            }
+            runtime.stop(); localRuntimeProcess = null;
 
             ProcessBuilder pb = new ProcessBuilder(
                     server.getAbsolutePath(),
@@ -479,23 +651,9 @@ public final class LocalModelManager {
             pb.environment().remove("LD_PRELOAD");
             pb.environment().remove("LD_LIBRARY_PATH");
             pb.redirectErrorStream(true);
-            localRuntimeProcess = pb.start();
-
-            // llama-server writes startup diagnostics continuously. An unread pipe
-            // can fill before readiness and block the child indefinitely.
-            final Process startedProcess = localRuntimeProcess;
             final File runtimeLog = new File(statusFile.getParentFile(), "llama-server.log");
-            Thread drain = new Thread(() -> {
-                try (InputStream output = startedProcess.getInputStream(); OutputStream log = new FileOutputStream(runtimeLog)) {
-                    byte[] buffer = new byte[4096];
-                    int count; long written = 0;
-                    while ((count = output.read(buffer)) != -1) {
-                        if (written < 1024 * 1024) { log.write(buffer, 0, count); log.flush(); written += count; }
-                    }
-                } catch (IOException ignored) {}
-            }, "ocean-local-runtime-output");
-            drain.setDaemon(true);
-            drain.start();
+            localRuntimeProcess = runtime.start(pb, runtimeLog, this::runtimeExited);
+            final Process startedProcess = localRuntimeProcess;
 
             long deadline = System.currentTimeMillis() + 120000L;
             long probeStart = System.currentTimeMillis();
@@ -556,6 +714,7 @@ public final class LocalModelManager {
             model.endpoint = "127.0.0.1:" + port;
             model.healthMs = Math.max(1L, System.currentTimeMillis() - probeStart);
             model.verifiedContext = Math.min(model.context, 4096);
+            runtimePhase = "llama.cpp server running · " + model.displayName;
             model.state = LocalModel.State.CONNECTED;
             model.errorMessage = null;
             loadedModelId = id;
@@ -588,7 +747,10 @@ public final class LocalModelManager {
                 localRuntimeProcess = null;
             }
             model.state = LocalModel.State.INSTALLED;
-            model.errorMessage = e.getMessage() != null ? e.getMessage() : "Local runtime failed to start.";
+            runtime.stop();
+            runtimePhase = "Server stopped";
+            model.errorMessage = (e.getMessage() != null ? e.getMessage() : "Local runtime failed to start.")
+                    + "\n" + ManagedLocalRuntime.tail(new File(statusFile.getParentFile(), "llama-server.log"));
             loadedModelId = null;
             try {
                 studio.ocean.app.providers.state.ProviderConnectionStore store =
@@ -598,46 +760,42 @@ public final class LocalModelManager {
                 if (stale != null) store.delete(stale.id);
             } catch (Exception ignored) {}
             persistStatus();
-            context.stopService(new android.content.Intent(context, LocalInferenceService.class));
+            updateRuntimeNotification();
             return false;
         }
     }
 
-    public synchronized void shutdownRuntime() {
-        String id = loadedModelId;
-        if (id != null) disconnectModel(id);
-        else if (localRuntimeProcess != null) { localRuntimeProcess.destroy(); localRuntimeProcess = null; }
+    public void shutdownRuntime() {
+        synchronized (connectLock) {
+            preferences().edit().putBoolean("local_runtime_wanted", false).apply();
+            runtime.stop(); localRuntimeProcess = null; runtimeExited("Local server stopped"); releaseRuntimeService();
+        }
     }
 
-    public synchronized boolean disconnectModel(String id) {
-        if (localRuntimeProcess != null) {
-            localRuntimeProcess.destroy();
-            localRuntimeProcess = null;
-        }
-        LocalModel model = catalog.get(id);
-        if (model != null && (model.state == LocalModel.State.CONNECTED || model.state == LocalModel.State.LOADED)) {
-            model.state = LocalModel.State.INSTALLED;
-            model.endpoint = null;
-            model.healthMs = 0;
-            if (id.equals(loadedModelId)) loadedModelId = null;
-
-            try {
-                new studio.ocean.app.providers.state.ProviderConnectionStore(context).delete("local_connection");
-            } catch (Exception ignored) {}
-
-            persistStatus();
+    public boolean disconnectModel(String id) {
+        synchronized (connectLock) {
+            LocalModel model = getModel(id);
+            if (model == null) return false;
+            if ("ollama".equals(activeBackend) && ollama != null && model.isConnected()) {
+                try { ollama.unload("ocean-" + id); } catch (Exception ignored) { }
+            } else { runtime.stop(); localRuntimeProcess = null; }
+            model.state = LocalModel.State.INSTALLED; model.endpoint = null; model.healthMs = 0;
+            loadedModelId = null;
+            new studio.ocean.app.providers.state.ProviderConnectionStore(context).delete("local_connection");
             new studio.ocean.app.providers.state.CredentialVault(context).delete("local_inference_key");
-            context.stopService(new android.content.Intent(context, LocalInferenceService.class));
+            preferences().edit().putBoolean("local_runtime_wanted", false).apply();
+            runtimePhase = runtime.isRunning() ? "Ollama server ready · no model loaded" : "Server stopped";
+            persistStatus(); updateRuntimeNotification();
+            if (!runtime.isRunning()) releaseRuntimeService();
             return true;
         }
-        return false;
     }
 
     public boolean loadModel(String id) {
         return connectModel(id);
     }
 
-    public synchronized boolean unloadModel(String id) {
+    public boolean unloadModel(String id) {
         return disconnectModel(id);
     }
 
@@ -653,8 +811,8 @@ public final class LocalModelManager {
 
     public synchronized LocalModel getConnectedModel() {
         if (runtimeStarting.get()) return null;
-        if (localRuntimeProcess == null || !localRuntimeProcess.isAlive()) {
-            if (loadedModelId != null) disconnectModel(loadedModelId);
+        if (!runtime.isRunning()) {
+            if (loadedModelId != null) runtimeExited(runtime.lastExit() != null ? runtime.lastExit() : "Local server is no longer running");
             return null;
         }
         if (loadedModelId != null) {
@@ -667,7 +825,8 @@ public final class LocalModelManager {
         return null;
     }
 
-    public synchronized boolean deleteModel(String id) {
+    public boolean deleteModel(String id) {
+        synchronized (connectLock) {
         if (runtimeStarting.get()) return false;
         LocalModel model = catalog.get(id);
         if (model == null) return false;
@@ -683,6 +842,7 @@ public final class LocalModelManager {
         model.downloadProgress = 0;
         persistStatus();
         return deleted;
+        }
     }
 
     private synchronized void persistStatus() {
@@ -693,6 +853,8 @@ public final class LocalModelManager {
             }
             JSONObject root = new JSONObject();
             root.put("loadedModel", loadedModelId);
+            root.put("runtimeBackend", activeBackend);
+            root.put("runtimePhase", runtimePhase);
             root.put("availableRamMb", getAvailableDeviceRamMb());
             root.put("totalRamMb", getTotalDeviceRamMb());
             root.put("models", arr);

@@ -118,7 +118,7 @@ public final class ProviderExecutionEngine {
         } else if (conn.strategy == AuthStrategy.LOCAL) {
             LocalModelManager mgr = LocalModelManager.getInstance(context);
             LocalModel active = mgr.getConnectedModel();
-            if (active == null || !conn.selectedModel.equals(active.id)) {
+            if (active == null || !(conn.selectedModel.equals(active.id) || conn.selectedModel.equals("ocean-" + active.id))) {
                 callback.onError("Local model is not backed by a verified running inference server.");
                 return;
             }
@@ -204,7 +204,7 @@ public final class ProviderExecutionEngine {
                 if (conn.strategy == AuthStrategy.LOCAL) {
                     LocalModelManager mgr = LocalModelManager.getInstance(context);
                     LocalModel active = mgr.getConnectedModel();
-                    if (active == null || !conn.selectedModel.equals(active.id)) {
+                    if (active == null || !(conn.selectedModel.equals(active.id) || conn.selectedModel.equals("ocean-" + active.id))) {
                         throw new IOException("Local model has no verified running inference server");
                     }
                     JSONObject probeBody = new JSONObject()

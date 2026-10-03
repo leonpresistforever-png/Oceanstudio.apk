@@ -99,6 +99,10 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.8'
+          cache: false
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
@@ -110,6 +114,7 @@ jobs:
       - name: Build official native inference runtime and consume canonical gateway command
         run: |
           bash scripts/build-android-llama.sh
+          bash scripts/build-android-ollama.sh
           python3 scripts/prepare-gateway-command.py
       - name: Download previous published APK for certificate comparison
         env:

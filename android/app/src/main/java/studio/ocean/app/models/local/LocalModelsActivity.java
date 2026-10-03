@@ -35,6 +35,14 @@ public final class LocalModelsActivity extends AppCompatActivity {
     private TextView ramStatusView;
     private LinearLayout filtersContainer;
     private LinearLayout listContainer;
+    private final android.os.Handler refreshHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable runtimeRefresh = new Runnable() {
+        @Override public void run() {
+            if (isFinishing() || isDestroyed()) return;
+            manager.getConnectedModel(); updateRamStatus(); renderModels();
+            refreshHandler.postDelayed(this, 2000);
+        }
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,12 +63,16 @@ public final class LocalModelsActivity extends AppCompatActivity {
         renderModels();
     }
 
+    @Override protected void onPause() { refreshHandler.removeCallbacks(runtimeRefresh); super.onPause(); }
+
     @Override
     protected void onResume() {
         super.onResume();
         manager.syncFromDisk();
         updateRamStatus();
         renderModels();
+        refreshHandler.removeCallbacks(runtimeRefresh);
+        refreshHandler.postDelayed(runtimeRefresh, 2000);
     }
 
     private void refresh() {
@@ -124,12 +136,32 @@ public final class LocalModelsActivity extends AppCompatActivity {
         listContainer.removeAllViews();
         float density = getResources().getDisplayMetrics().density;
 
+        TextView runtime = new TextView(this);
+        runtime.setText(manager.runtimeStatus()); runtime.setTextSize(13f);
+        runtime.setTextColor(getColor(R.color.ocean_text_secondary));
+        runtime.setPadding(8, 8, 8, 12); listContainer.addView(runtime);
+        LinearLayout serverActions = new LinearLayout(this);
+        serverActions.setOrientation(LinearLayout.HORIZONTAL);
+        Button start = createButton("Start Ollama Server", true, density);
+        start.setEnabled(!manager.isRuntimeBusy());
+        start.setOnClickListener(v -> runRuntimeAction(start, () -> manager.startOllamaServer()));
+        serverActions.addView(start);
+        Button bundled = createButton("Use llama.cpp", false, density);
+        bundled.setEnabled(!manager.isRuntimeBusy());
+        bundled.setOnClickListener(v -> runRuntimeAction(bundled, () -> { manager.useBundledLlama(); return true; }));
+        serverActions.addView(bundled);
+        listContainer.addView(serverActions);
+        Button stop = createButton("Stop Server", false, density);
+        stop.setEnabled(!manager.isRuntimeBusy());
+        stop.setOnClickListener(v -> runRuntimeAction(stop, () -> { manager.shutdownRuntime(); return true; }));
+        listContainer.addView(stop);
+
         List<LocalModel> models = manager.listModels();
         int shownCount = 0;
 
         for (LocalModel model : models) {
             // Apply filter
-            if (activeFilter == ModelFilter.INSTALLED && model.state != LocalModel.State.INSTALLED && model.state != LocalModel.State.LOADED) {
+            if (activeFilter == ModelFilter.INSTALLED && model.state != LocalModel.State.INSTALLED && !model.isConnected() && model.state != LocalModel.State.CONNECTING) {
                 continue;
             }
             if (activeFilter == ModelFilter.AVAILABLE && model.state != LocalModel.State.AVAILABLE) {
@@ -185,7 +217,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
 
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(10 * density);
-        if (model.state == LocalModel.State.LOADED) {
+        if (model.isConnected()) {
             bg.setColor(getColor(R.color.ocean_ink));
             badge.setTextColor(getColor(R.color.ocean_background));
         } else if (model.state == LocalModel.State.INSTALLED) {
@@ -216,6 +248,11 @@ public final class LocalModelsActivity extends AppCompatActivity {
         meta.setTextSize(12f);
         meta.setPadding(0, (int) (4 * density), 0, (int) (8 * density));
         card.addView(meta);
+        if (model.errorMessage != null && !model.errorMessage.isEmpty()) {
+            TextView error = new TextView(this);
+            error.setText(model.errorMessage); error.setTextSize(12f); error.setMaxLines(6);
+            error.setTextColor(getColor(R.color.ocean_text_secondary)); card.addView(error);
+        }
 
         // Download progress bar if downloading
         if (model.state == LocalModel.State.DOWNLOADING) {
@@ -248,6 +285,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
             actions.addView(cancelBtn);
         } else if (model.state == LocalModel.State.INSTALLED) {
             Button connectBtn = createButton("CONNECT", true, density);
+            connectBtn.setEnabled(!manager.isRuntimeBusy());
             connectBtn.setOnClickListener(v -> {
                 connectBtn.setEnabled(false);
                 connectBtn.setText("CONNECTING…");
@@ -279,10 +317,7 @@ public final class LocalModelsActivity extends AppCompatActivity {
 
             Button disconnectBtn = createButton("DISCONNECT", false, density);
             disconnectBtn.setOnClickListener(v -> {
-                manager.disconnectModel(model.id);
-                Toast.makeText(this, "Disconnected " + model.displayName, Toast.LENGTH_SHORT).show();
-                updateRamStatus();
-                renderModels();
+                runRuntimeAction(disconnectBtn, () -> manager.disconnectModel(model.id));
             });
             actions.addView(disconnectBtn);
         }
@@ -294,6 +329,21 @@ public final class LocalModelsActivity extends AppCompatActivity {
         card.addView(actions);
         card.setOnClickListener(v -> showModelDetails(model));
         return card;
+    }
+
+    private interface RuntimeAction { boolean run(); }
+    private void runRuntimeAction(Button button, RuntimeAction action) {
+        button.setEnabled(false); button.setText("Starting…");
+        new Thread(() -> {
+            String failure = null;
+            try { action.run(); } catch (Exception error) { failure = error.getMessage(); }
+            final String message = failure == null ? manager.runtimeStatus() : failure;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                updateRamStatus(); renderModels();
+            });
+        }, "ocean-local-server-action").start();
     }
 
     private Button createButton(String label, boolean primary, float density) {
@@ -374,7 +424,8 @@ public final class LocalModelsActivity extends AppCompatActivity {
                 + "File Size: " + sizeMb + " MB (" + model.sizeBytes + " bytes)\n"
                 + "Context Window: " + model.context + " tokens\n"
                 + "Min RAM Required: " + model.minRamMb + " MB\n"
-                + "Runtime Backend: " + model.backend + "\n"
+                + "Selected Runtime: " + manager.backend() + "\n"
+                + "Server: " + manager.runtimeStatus() + "\n"
                 + "Target Architecture: " + model.architecture + "\n"
                 + "Open-Source License: " + model.license + "\n"
                 + "Lifecycle State: " + model.state.label + "\n"

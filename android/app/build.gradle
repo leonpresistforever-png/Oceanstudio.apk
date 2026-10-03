@@ -54,8 +54,8 @@ android {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 24
-        versionName "1.4.1"
+        versionCode 25
+        versionName "1.4.2"
         if (project.hasProperty('oceanForgeVersionCode')) versionCode Integer.parseInt(project.property('oceanForgeVersionCode').toString())
         if (project.hasProperty('oceanForgeVersionName')) versionName project.property('oceanForgeVersionName').toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -90,7 +90,7 @@ android {
         // Android 10+ disallows execution from writable application data directories.
         jniLibs.useLegacyPackaging = true
         // The receipt identifies this already-stripped executable byte for byte.
-        jniLibs.keepDebugSymbols += ['**/libllama-server.so']
+        jniLibs.keepDebugSymbols += ['**/libllama-server.so', '**/libollama.so', '**/libollama-llama-server.so']
     }
     def forgeKeystorePath = System.getenv('OCEAN_FORGE_KEYSTORE')
     signingConfigs {
@@ -180,6 +180,7 @@ def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     from(rootProject.projectDir.parentFile) {
         include "scripts/verify-native-only.sh"
         include "scripts/build-android-llama.sh"
+        include "scripts/build-android-ollama.sh"
         include "scripts/prepare-gateway-command.py"
         include "packages/ocean-prefix.env"
         include "PACKAGE_SOURCE_POLICY.md"
@@ -204,14 +205,21 @@ def prepareLlamaRuntime = tasks.register('prepareLlamaRuntime', Exec) {
     commandLine 'bash', 'scripts/build-android-llama.sh'
 }
 tasks.named('preBuild').configure { dependsOn(prepareLlamaRuntime) }
+def prepareOllamaRuntime = tasks.register('prepareOllamaRuntime', Exec) {
+    onlyIf { System.getenv('OCEAN_FORGE_REUSE_NATIVE') != 'true' }
+    workingDir rootProject.projectDir.parentFile
+    environment 'ANDROID_HOME', android.sdkDirectory.toString()
+    commandLine 'bash', 'scripts/build-android-ollama.sh'
+}
+tasks.named('preBuild').configure { dependsOn(prepareOllamaRuntime) }
 def prepareGatewayCommand = tasks.register('prepareGatewayCommand', Exec) {
-    onlyIf { !file('src/main/assets/ocean/gateway/ocean-gateway').exists() }
     workingDir rootProject.projectDir.parentFile
     commandLine 'python3', 'scripts/prepare-gateway-command.py'
 }
 tasks.named('preBuild').configure { dependsOn(prepareGatewayCommand) }
 prepareForgeSourceBundle.configure {
     dependsOn(prepareLlamaRuntime)
+    dependsOn(prepareOllamaRuntime)
     dependsOn(prepareGatewayCommand)
 }
 

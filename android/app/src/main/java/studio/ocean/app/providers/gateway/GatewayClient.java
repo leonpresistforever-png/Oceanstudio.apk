@@ -7,6 +7,14 @@ import org.json.*;
 
 /** The actual upstream management and OpenAI-compatible inference HTTP contracts. */
 public final class GatewayClient {
+    public static final class HttpFailure extends IOException {
+        public final int status;
+        HttpFailure(int status, String method, String path, String detail) {
+            super("Gateway HTTP " + status + " · " + method + " " + path.split("\\?", 2)[0]
+                    + (detail == null || detail.isEmpty() ? "" : ": " + detail));
+            this.status = status;
+        }
+    }
     private final String origin;
     private String cookie;
 
@@ -103,11 +111,16 @@ public final class GatewayClient {
                 }
             }
             String text = bytes.toString("UTF-8");
-            JSONObject response = text.trim().isEmpty() ? new JSONObject() : new JSONObject(text);
+            JSONObject response;
+            try { response = text.trim().isEmpty() ? new JSONObject() : new JSONObject(text); }
+            catch (JSONException invalid) {
+                if (status < 200 || status >= 300) throw new HttpFailure(status, method, path, null);
+                throw new IOException("Gateway returned invalid JSON for " + path.split("\\?", 2)[0], invalid);
+            }
             if (status < 200 || status >= 300) {
                 Object error = response.opt("error");
                 String detail = error instanceof JSONObject ? ((JSONObject) error).optString("message") : String.valueOf(error);
-                throw new IOException("Gateway HTTP " + status + (detail == null || detail.equals("null") ? "" : ": " + detail));
+                throw new HttpFailure(status, method, path, detail == null || detail.equals("null") ? null : detail);
             }
             return response;
         } finally { connection.disconnect(); }

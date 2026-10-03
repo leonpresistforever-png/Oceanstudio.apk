@@ -1145,7 +1145,7 @@ public class MainActivity extends AppCompatActivity {
                 studio.ocean.app.providers.model.ProviderConnection active = conns.get(0);
                 String title = active.displayAccount != null && !active.displayAccount.isEmpty() ? active.displayAccount : active.providerId;
                 String modelStr = active.selectedModel != null && !active.selectedModel.isEmpty() ? active.selectedModel : title;
-                if (sub != null) sub.setText("Cloud · " + modelStr);
+                if (sub != null) sub.setText((active.strategy == studio.ocean.app.providers.model.AuthStrategy.LOCAL ? "Local · " : "Cloud · ") + modelStr);
                 if (modelBtn != null) modelBtn.setText(modelStr);
                 return;
             }

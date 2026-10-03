@@ -89,6 +89,7 @@ public final class LocalModel {
         if (endpoint != null) obj.put("endpoint", endpoint);
         obj.put("healthMs", healthMs);
         obj.put("verifiedContext", verifiedContext);
+        if (errorMessage != null) obj.put("errorMessage", errorMessage);
         return obj;
     }
 
@@ -118,6 +119,7 @@ public final class LocalModel {
         model.endpoint = obj.optString("endpoint", null);
         model.healthMs = obj.optLong("healthMs", 0);
         model.verifiedContext = obj.optInt("verifiedContext", model.context);
+        model.errorMessage = obj.optString("errorMessage", null);
         return model;
     }
 }

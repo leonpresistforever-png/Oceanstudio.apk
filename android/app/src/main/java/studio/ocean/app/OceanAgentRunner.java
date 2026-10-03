@@ -113,12 +113,13 @@ public final class OceanAgentRunner {
                         List<ProviderConnection> activeConns = connectionStore.listConnections();
                         SmartRouter.RouteDecision decision = null;
                         if (lmm.isLocalOverrideEnabled()) {
-                            studio.ocean.app.models.local.LocalModel connectedLocal = lmm.getConnectedModel();
+                            status(callback, "Checking your local inference server…");
+                            studio.ocean.app.models.local.LocalModel connectedLocal = lmm.ensureConnectedModel();
                             if (connectedLocal == null) throw new IOException("Reconnect your local model in Local Models. Local-only mode is enabled.");
                             if (connectedLocal != null) {
                                 ProviderConnection localConn = connectionStore.findByProviderId(studio.ocean.app.providers.ProviderRegistry.ID_LOCAL);
                                 if (localConn != null) {
-                                    decision = new SmartRouter.RouteDecision(localConn, connectedLocal.id, "Local model override enabled: " + connectedLocal.displayName);
+                                    decision = new SmartRouter.RouteDecision(localConn, localConn.selectedModel, "Local model override enabled: " + connectedLocal.displayName);
                                 }
                             }
                             if (decision == null) throw new IOException("The local model has no verified provider route. Reconnect it in Local Models.");

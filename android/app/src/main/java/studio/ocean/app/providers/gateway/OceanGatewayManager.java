@@ -48,6 +48,7 @@ public final class OceanGatewayManager {
     private volatile String returnTicket;
     private volatile OAuthLoopbackReceiver receiver;
     private volatile Listener activeListener;
+    private volatile long daemonGeneration;
 
     private OceanGatewayManager(Context context) {
         this.context = context;
@@ -158,13 +159,27 @@ public final class OceanGatewayManager {
         synchronized (startupLock) {
             String password = password();
             GatewayClient candidate = new GatewayClient(port);
-            if (password != null) try { candidate.login(password); client = candidate; return; } catch (Exception ignored) { }
+            boolean repairRunningServer = false;
+            if (password != null) try {
+                candidate.login(password);
+                candidate.connections("antigravity");
+                client = candidate; return;
+            } catch (GatewayClient.HttpFailure error) { repairRunningServer = error.status >= 500; }
+              catch (Exception ignored) { }
             OceanTerminalRuntimeService runtime = bindRuntime();
             if (listener != null) listener.progress("Installing and checking Ocean gateway and Node.js…");
             // Bootstrap activates its prefix atomically. Install the command AFTER that activation.
             runCommand(runtime, "true", 900);
             prepareCommand();
             runInstall(runtime, listener);
+            if (repairRunningServer) {
+                if (listener != null) listener.progress("Repairing the gateway's Android dependency and restarting its server…");
+                daemonGeneration++;
+                OceanTerminalRuntimeService.CommandHandle previous = daemon;
+                daemon = null; client = null;
+                if (previous != null) previous.cancel();
+                runCommand(runtime, shell(command.getAbsolutePath()) + " stop", 30);
+            }
             password = password();
             if (password == null) throw new IOException("Gateway initialization did not create its private management credentials");
             if (daemon == null) {
@@ -180,19 +195,20 @@ public final class OceanGatewayManager {
                     if (previous.exists()) previous.delete();
                     log.renameTo(previous);
                 }
+                final long generation = ++daemonGeneration;
                 daemon = runtime.requestDaemonCommand("OCEAN_GATEWAY_PORT=" + port + " exec " + shell(command.getAbsolutePath())
                         + " serve >> " + shell(log.getAbsolutePath()) + " 2>&1",
                         new OceanTerminalRuntimeService.CommandCallback() {
                             @Override public void onOutput(byte[] bytes, int length) { }
-                            @Override public void onExit(int code) { daemon = null; client = null; }
-                            @Override public void onFailure(Throwable error) { daemon = null; client = null; }
+                            @Override public void onExit(int code) { if (daemonGeneration == generation) { daemon = null; client = null; } }
+                            @Override public void onFailure(Throwable error) { if (daemonGeneration == generation) { daemon = null; client = null; } }
                         });
             }
             candidate = new GatewayClient(port);
             Exception last = null;
             long deadline = System.currentTimeMillis() + 120000;
             while (System.currentTimeMillis() < deadline) {
-                try { candidate.login(password); client = candidate; return; }
+                try { candidate.login(password); candidate.connections("antigravity"); client = candidate; return; }
                 catch (Exception error) { last = error; Thread.sleep(500); }
             }
             throw new IOException("Ocean gateway did not become ready", last);
@@ -235,6 +251,9 @@ public final class OceanGatewayManager {
         if (failure[0] != null || exit[0] != 0) throw new IOException("Gateway installation failed (exit " + exit[0] + "): " + output.toString().trim(), failure[0]);
     }
     private void prepareCommand() throws Exception {
+        File helper = new File(context.getFilesDir(), "usr/share/ocean-gateway/prepare-runtime.mjs");
+        helper.getParentFile().mkdirs();
+        copyAsset("ocean/gateway/prepare-runtime.mjs", helper);
         command.getParentFile().mkdirs();
         File temporary = new File(command.getParentFile(), "ocean-gateway.new");
         try (InputStream input = context.getAssets().open("ocean/gateway/ocean-gateway"); OutputStream output = new FileOutputStream(temporary)) {
@@ -242,6 +261,15 @@ public final class OceanGatewayManager {
             while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
         }
         if (!temporary.setExecutable(true, true) || !temporary.renameTo(command)) throw new IOException("Could not install the gateway command");
+    }
+    private void copyAsset(String asset, File destination) throws IOException {
+        File temporary = new File(destination.getParentFile(), destination.getName() + ".new");
+        try (InputStream input = context.getAssets().open(asset); FileOutputStream output = new FileOutputStream(temporary)) {
+            byte[] bytes = new byte[8192]; int count;
+            while ((count = input.read(bytes)) != -1) output.write(bytes, 0, count);
+            output.getFD().sync();
+        }
+        if (!temporary.renameTo(destination)) throw new IOException("Could not install " + destination.getName());
     }
     private String password() throws IOException {
         File environment = new File(data, ".env");
