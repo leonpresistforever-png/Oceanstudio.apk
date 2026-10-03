@@ -43,6 +43,7 @@ public final class LocalModelManager {
     private final Map<String, HttpURLConnection> activeDownloads = new ConcurrentHashMap<>();
     private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor();
     private String loadedModelId = null;
+    private Process localRuntimeProcess = null;
     private android.os.FileObserver modelsWatcher;
 
     private LocalModelManager(Context context) {
@@ -396,71 +397,158 @@ public final class LocalModelManager {
     public synchronized boolean connectModel(String id) {
         LocalModel model = catalog.get(id);
         if (model == null) return false;
-        File file = new File(modelsDir, id + ".gguf");
-        if (!file.exists() || file.length() == 0) return false;
+        File modelFile = new File(modelsDir, id + ".gguf");
+        if (!modelFile.isFile() || modelFile.length() == 0) {
+            model.errorMessage = "Model file is missing or empty.";
+            return false;
+        }
 
-        // Verify RAM headroom (Directive §11.2)
         long availRam = getAvailableDeviceRamMb();
         if (availRam > 0 && availRam < model.minRamMb) {
             model.errorMessage = "Insufficient RAM: " + availRam + " MB available, requires " + model.minRamMb + " MB.";
             return false;
         }
 
-        // Unload previous connected model
-        if (loadedModelId != null && !loadedModelId.equals(id)) {
-            disconnectModel(loadedModelId);
+        if (loadedModelId != null && !loadedModelId.equals(id)) disconnectModel(loadedModelId);
+
+        final int port = 8080;
+        File prefix = new File(context.getFilesDir(), "usr");
+        File[] candidates = new File[] {
+                new File(prefix, "bin/llama-server"),
+                new File(prefix, "bin/llama-server-ocean"),
+                new File(context.getApplicationInfo().nativeLibraryDir, "libllama-server.so")
+        };
+        File server = null;
+        for (File candidate : candidates) {
+            if (candidate.isFile() && candidate.canExecute()) { server = candidate; break; }
+        }
+        if (server == null) {
+            model.errorMessage = "No executable llama-server runtime is installed. Ocean will not mark this model connected until a real inference runtime exists.";
+            model.state = LocalModel.State.INSTALLED;
+            persistStatus();
+            return false;
         }
 
-        // Ephemeral port selection & loopback runtime endpoint
-        int port = 8080;
-        long probeStart = System.currentTimeMillis();
-
-        // Perform small inference / health probe on local runtime (Directive 2026-10-02 §11.2)
         try {
-            java.net.HttpURLConnection probeConn = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:" + port + "/v1/chat/completions").openConnection();
-            probeConn.setConnectTimeout(150);
-            probeConn.setReadTimeout(150);
-            probeConn.setRequestMethod("GET");
-            probeConn.connect();
-        } catch (Exception ignored) {
-            // Probe executed against local loopback runtime
-        }
+            if (localRuntimeProcess != null) {
+                localRuntimeProcess.destroy();
+                localRuntimeProcess = null;
+            }
 
-        long latencyMs = Math.max(1, System.currentTimeMillis() - probeStart + 24);
-
-        model.endpoint = "127.0.0.1:" + port;
-        model.healthMs = latencyMs;
-        model.verifiedContext = model.context;
-        model.state = LocalModel.State.CONNECTED;
-        model.errorMessage = null;
-        loadedModelId = id;
-
-        // Register in ProviderConnectionStore as active local provider (Directive §11.2)
-        try {
-            studio.ocean.app.providers.model.ProviderConnection conn = new studio.ocean.app.providers.model.ProviderConnection(
-                    "local_connection",
-                    studio.ocean.app.providers.ProviderRegistry.ID_LOCAL,
-                    model.displayName,
-                    studio.ocean.app.providers.model.AuthStrategy.LOCAL,
-                    studio.ocean.app.providers.model.ConnectionStatus.CONNECTED,
-                    "http://127.0.0.1:" + port + "/v1",
-                    model.id,
-                    null,
-                    null,
-                    Collections.singletonList(model.id),
-                    null,
-                    studio.ocean.app.providers.model.QuotaSnapshot.unlimited("On-device local execution", "local-runtime"),
-                    null,
-                    System.currentTimeMillis()
+            ProcessBuilder pb = new ProcessBuilder(
+                    server.getAbsolutePath(),
+                    "-m", modelFile.getAbsolutePath(),
+                    "--host", "127.0.0.1",
+                    "--port", String.valueOf(port),
+                    "-c", String.valueOf(Math.min(model.context, 4096))
             );
-            new studio.ocean.app.providers.state.ProviderConnectionStore(context).save(conn);
-        } catch (Exception ignored) {}
+            pb.directory(context.getFilesDir());
+            pb.redirectErrorStream(true);
+            localRuntimeProcess = pb.start();
 
-        persistStatus();
-        return true;
+            long deadline = System.currentTimeMillis() + 15000L;
+            long probeStart = System.currentTimeMillis();
+            String generated = null;
+            while (System.currentTimeMillis() < deadline) {
+                if (!localRuntimeProcess.isAlive()) {
+                    throw new IOException("llama-server exited before becoming ready.");
+                }
+                try {
+                    HttpURLConnection probe = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/v1/chat/completions").openConnection();
+                    probe.setRequestMethod("POST");
+                    probe.setConnectTimeout(1000);
+                    probe.setReadTimeout(5000);
+                    probe.setRequestProperty("Content-Type", "application/json");
+                    probe.setDoOutput(true);
+                    JSONObject body = new JSONObject()
+                            .put("model", model.id)
+                            .put("messages", new JSONArray().put(new JSONObject().put("role", "user").put("content", "Reply with OK")))
+                            .put("max_tokens", 4)
+                            .put("temperature", 0);
+                    try (OutputStream out = probe.getOutputStream()) {
+                        out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                    }
+                    int code = probe.getResponseCode();
+                    InputStream input = code >= 200 && code < 300 ? probe.getInputStream() : probe.getErrorStream();
+                    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                    if (input != null) try (InputStream in = input) {
+                        byte[] buf = new byte[4096];
+                        int n;
+                        while ((n = in.read(buf)) != -1 && bytes.size() < 65536) bytes.write(buf, 0, n);
+                    }
+                    if (code >= 200 && code < 300) {
+                        JSONObject response = new JSONObject(bytes.toString(StandardCharsets.UTF_8.name()));
+                        JSONArray choices = response.optJSONArray("choices");
+                        if (choices != null && choices.length() > 0) {
+                            JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+                            generated = message != null ? message.optString("content", "").trim() : "";
+                        }
+                        if (generated != null && !generated.isEmpty()) break;
+                    }
+                } catch (Exception notReady) {
+                    try { Thread.sleep(250L); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Local runtime startup interrupted.", ie);
+                    }
+                }
+            }
+
+            if (generated == null || generated.isEmpty()) {
+                throw new IOException("llama-server did not produce a valid inference response within 15 seconds.");
+            }
+
+            model.endpoint = "127.0.0.1:" + port;
+            model.healthMs = Math.max(1L, System.currentTimeMillis() - probeStart);
+            model.verifiedContext = model.context;
+            model.state = LocalModel.State.CONNECTED;
+            model.errorMessage = null;
+            loadedModelId = id;
+
+            studio.ocean.app.providers.model.ProviderConnection conn =
+                    new studio.ocean.app.providers.model.ProviderConnection(
+                            "local_connection",
+                            studio.ocean.app.providers.ProviderRegistry.ID_LOCAL,
+                            model.displayName,
+                            studio.ocean.app.providers.model.AuthStrategy.LOCAL,
+                            studio.ocean.app.providers.model.ConnectionStatus.CONNECTED,
+                            "http://127.0.0.1:" + port + "/v1",
+                            model.id,
+                            null, null,
+                            Collections.singletonList(model.id),
+                            null,
+                            studio.ocean.app.providers.model.QuotaSnapshot.unlimited("On-device local execution", "local-runtime"),
+                            null,
+                            System.currentTimeMillis()
+                    );
+            new studio.ocean.app.providers.state.ProviderConnectionStore(context).save(conn);
+            setLocalOverrideEnabled(true);
+            persistStatus();
+            return true;
+        } catch (Exception e) {
+            if (localRuntimeProcess != null) {
+                localRuntimeProcess.destroy();
+                localRuntimeProcess = null;
+            }
+            model.state = LocalModel.State.INSTALLED;
+            model.errorMessage = e.getMessage() != null ? e.getMessage() : "Local runtime failed to start.";
+            loadedModelId = null;
+            try {
+                studio.ocean.app.providers.state.ProviderConnectionStore store =
+                        new studio.ocean.app.providers.state.ProviderConnectionStore(context);
+                studio.ocean.app.providers.model.ProviderConnection stale =
+                        store.findByProviderId(studio.ocean.app.providers.ProviderRegistry.ID_LOCAL);
+                if (stale != null) store.delete(stale.id);
+            } catch (Exception ignored) {}
+            persistStatus();
+            return false;
+        }
     }
 
     public synchronized boolean disconnectModel(String id) {
+        if (localRuntimeProcess != null) {
+            localRuntimeProcess.destroy();
+            localRuntimeProcess = null;
+        }
         LocalModel model = catalog.get(id);
         if (model != null && (model.state == LocalModel.State.CONNECTED || model.state == LocalModel.State.LOADED)) {
             model.state = LocalModel.State.INSTALLED;
