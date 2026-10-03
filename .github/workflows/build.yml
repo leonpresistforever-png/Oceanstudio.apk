@@ -137,6 +137,8 @@ jobs:
 
           VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' android/app/build.gradle | head -n1)
           VERSION_CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' android/app/build.gradle | head -n1)
+          trap 'echo "APK verification failed at line $LINENO: $BASH_COMMAND"' ERR
+          python3 scripts/verify-inference-apk.py "$APK"
           APK_CONTENTS=$(unzip -Z -1 "$APK")
           grep -Fxq 'lib/arm64-v8a/liboceanstudio_ext.so' <<< "$APK_CONTENTS"
           grep -Fxq 'lib/arm64-v8a/liboceanpty.so' <<< "$APK_CONTENTS"
@@ -148,7 +150,9 @@ jobs:
             echo 'Stale debug postfix native libraries found in APK' >&2
             exit 1
           fi
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 4 "$APK"
+          # Native libraries are extracted before execution (useLegacyPackaging=true).
+          # Their ELF LOAD alignment is verified above; APK entries need normal ZIP alignment.
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --min-sdk-version 28 "$APK"
           test "$(unzip -p "$APK" assets/ocean/robotic-eye/robotic-eye.glb | sha256sum | cut -d' ' -f1)" = \
             "$(sha256sum android/app/src/main/assets/ocean/robotic-eye/robotic-eye.glb | cut -d' ' -f1)"
@@ -184,6 +188,17 @@ jobs:
           path: |
             ${{ steps.apk.outputs.path }}
             ${{ steps.apk.outputs.checksum }}
+
+      - name: Preserve failed packaging evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-packaging-diagnostics
+          retention-days: 2
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/src/main/assets/ocean/native/llama-runtime.json
+            android/app/build/test-results/testDebugUnitTest/
 
       - name: Publish installable test APK to GitHub Releases
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
