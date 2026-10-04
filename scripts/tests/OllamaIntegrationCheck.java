@@ -4,6 +4,7 @@ import java.nio.file.*;
 import java.util.concurrent.*;
 import studio.ocean.app.models.local.ManagedLocalRuntime;
 import studio.ocean.app.models.local.OllamaClient;
+import studio.ocean.app.models.local.LocalGenerationSettings;
 
 public final class OllamaIntegrationCheck {
     public static void main(String[] args) throws Exception {
@@ -33,11 +34,14 @@ public final class OllamaIntegrationCheck {
                     catch (Exception starting) { if (System.currentTimeMillis() > deadline) throw starting; Thread.sleep(200); }
                 }
                 String alias = client.importModel("stories", model, 512);
-                client.load(alias);
-                if (client.infer(alias).isEmpty()) throw new AssertionError("No real generated text");
+                LocalGenerationSettings settings = new LocalGenerationSettings(512, 16, .2f, .8f, 12, 1.1f, 1, true, false, 512);
+                client.load(alias, settings);
+                if (client.infer(alias, settings).isEmpty()) throw new AssertionError("No real generated text");
+                if (client.loadedContext(alias) != 512) throw new AssertionError("Native context setting was not applied");
+                if (client.show(alias).optJSONArray("capabilities") == null) throw new AssertionError("Runtime did not report capabilities");
                 Thread.sleep(5500); // Survive the reported four-second disconnect window.
-                if (!runtime.isRunning() || client.infer(alias).isEmpty()) throw new AssertionError("Connection did not survive");
-                client.unload(alias); client.load(alias); client.infer(alias);
+                if (!runtime.isRunning() || client.infer(alias, settings).isEmpty()) throw new AssertionError("Connection did not survive");
+                client.unload(alias); client.load(alias, settings); client.infer(alias, settings);
                 runtime.stop();
                 if (runtime.isRunning()) throw new AssertionError("Owned server did not stop");
             }

@@ -54,8 +54,8 @@ android {
         applicationId "studio.ocean.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 25
-        versionName "1.4.2"
+        versionCode 26
+        versionName "1.4.3"
         if (project.hasProperty('oceanForgeVersionCode')) versionCode Integer.parseInt(project.property('oceanForgeVersionCode').toString())
         if (project.hasProperty('oceanForgeVersionName')) versionName project.property('oceanForgeVersionName').toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -158,6 +158,10 @@ def prepareForgeToolOverlay = tasks.register("prepareForgeToolOverlay", Copy) {
     from(forgeToolSourceDir)
     into(file("$buildDir/generated/forgeAssets/ocean/forge/tools"))
 }
+def prepareForgeShebangHelper = tasks.register("prepareForgeShebangHelper", Copy) {
+    from(rootProject.projectDir.parentFile.toPath().resolve("ocean-packages/scripts/fix-runtime-shebangs.py").toFile())
+    into(file("$buildDir/generated/forgeAssets/ocean/forge/helpers"))
+}
 def prepareForgeSourceBundle = tasks.register("prepareForgeSourceBundle", Zip) {
     archiveFileName = "source.zip"
     destinationDirectory = file("$buildDir/generated/forgeAssets/ocean/forge")
@@ -195,6 +199,7 @@ android.sourceSets.main.assets.srcDir(forgeGeneratedAssets)
 tasks.named("preBuild").configure {
     dependsOn(prepareForgeRuntimeCommand)
     dependsOn(prepareForgeToolOverlay)
+    dependsOn(prepareForgeShebangHelper)
     dependsOn(prepareForgeSourceBundle)
 }
 

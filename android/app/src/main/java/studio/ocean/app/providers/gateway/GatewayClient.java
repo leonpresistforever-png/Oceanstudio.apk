@@ -23,6 +23,11 @@ public final class GatewayClient {
         origin = "http://127.0.0.1:" + port;
     }
     public String baseUrl() { return origin + "/v1"; }
+    public void requireOcean() throws Exception {
+        JSONObject health = request("GET", "/health", null, null, 5);
+        if (!"ocean".equals(health.optString("engine")) || !"1.0.0".equals(health.optString("version")))
+            throw new IOException("The selected port does not run the packaged Ocean gateway");
+    }
     public void login(String password) throws Exception {
         request("POST", "/api/auth/login", new JSONObject().put("password", password), null, 20);
         if (cookie == null) throw new IOException("Gateway did not issue a management session");

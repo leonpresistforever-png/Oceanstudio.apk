@@ -10,6 +10,20 @@ import org.json.JSONObject;
 import org.junit.Test;
 
 public final class OceanAgentConversationTest {
+    @Test public void localChatDoesNotSendUnsupportedToolsOrCloudSystemInstructions() throws Exception {
+        OceanAgentConversation conversation = new OceanAgentConversation("local", "smollm");
+        JSONObject body = conversation.request(new JSONArray().put(new JSONObject().put("role", "user").put("content", "Hi")), true);
+        assertFalse(body.has("tools")); assertFalse(body.has("tool_choice"));
+        assertTrue(body.getJSONArray("messages").getJSONObject(0).getString("content").length() < 600);
+        assertEquals("smollm", body.getString("model"));
+    }
+    @Test public void localToolModelOnlyGetsBoundedRuntimeToolsAndCloudToolsRemainAvailable() throws Exception {
+        JSONArray messages = new JSONArray().put(new JSONObject().put("role", "user").put("content", "Check the terminal"));
+        JSONObject local = new OceanAgentConversation("local", "qwen").withLocalTools(true).request(messages, true);
+        assertEquals(4, local.getJSONArray("tools").length());
+        JSONObject cloud = new OceanAgentConversation("google", "gemini-test").request(messages, true);
+        assertTrue(cloud.getJSONArray("tools").getJSONObject(0).getJSONArray("functionDeclarations").length() > 4);
+    }
     private static JSONObject json(String text) throws Exception { return new JSONObject(text); }
     private static JSONObject gemini(String parts) throws Exception { return json("{candidates:[{content:{role:'model',parts:" + parts + "},finishReason:'STOP'}]}"); }
     private static JSONObject success() throws Exception { return json("{output:'pip 24.3 from Ocean',exit_code:0}"); }

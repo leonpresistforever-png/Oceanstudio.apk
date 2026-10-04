@@ -15,6 +15,18 @@ public final class OllamaClient {
     }
     public String baseUrl() { return origin + "/v1"; }
     public JSONObject version() throws Exception { return request("GET", "/api/version", null, null, 10); }
+    public JSONObject show(String model) throws Exception {
+        return request("POST", "/api/show", new JSONObject().put("model", model), null, 20);
+    }
+    public int loadedContext(String model) throws Exception {
+        JSONArray models = request("GET", "/api/ps", null, null, 10).optJSONArray("models");
+        if (models != null) for (int i = 0; i < models.length(); i++) {
+            JSONObject item = models.getJSONObject(i);
+            String name = item.optString("name", item.optString("model"));
+            if (name.equals(model) || name.equals(model + ":latest")) return item.optInt("context_length", 0);
+        }
+        return 0;
+    }
     public String importModel(String id, File gguf, int context) throws Exception {
         String alias = "ocean-" + id;
         MessageDigest sha = MessageDigest.getInstance("SHA-256");
@@ -42,6 +54,10 @@ public final class OllamaClient {
         request("POST", "/api/generate", new JSONObject().put("model", model)
                 .put("prompt", "").put("keep_alive", -1).put("stream", false), null, 180);
     }
+    public void load(String model, LocalGenerationSettings settings) throws Exception {
+        request("POST", "/api/generate", new JSONObject().put("model", model).put("prompt", "")
+                .put("options", settings.ollamaOptions(settings.maxTokens)).put("keep_alive", -1).put("stream", false), null, 180);
+    }
     public String infer(String model) throws Exception {
         JSONObject response = request("POST", "/v1/chat/completions", new JSONObject().put("model", model)
                 .put("messages", new JSONArray().put(new JSONObject().put("role", "user").put("content", "Reply with OK")))
@@ -49,6 +65,15 @@ public final class OllamaClient {
         JSONArray choices = response.optJSONArray("choices");
         if (choices == null || choices.length() == 0) throw new IOException("Ollama returned no generated text");
         JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+        String text = message == null ? "" : message.optString("content", "").trim();
+        if (text.isEmpty()) throw new IOException("Ollama returned empty generated text");
+        return text;
+    }
+    public String infer(String model, LocalGenerationSettings settings) throws Exception {
+        JSONObject response = request("POST", "/api/chat", new JSONObject().put("model", model)
+                .put("messages", new JSONArray().put(new JSONObject().put("role", "user").put("content", "Reply with OK")))
+                .put("options", settings.ollamaOptions(8)).put("keep_alive", -1).put("stream", false), null, 120);
+        JSONObject message = response.optJSONObject("message");
         String text = message == null ? "" : message.optString("content", "").trim();
         if (text.isEmpty()) throw new IOException("Ollama returned empty generated text");
         return text;

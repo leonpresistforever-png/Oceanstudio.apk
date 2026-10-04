@@ -455,16 +455,18 @@ public final class LocalModelManager {
             port = available.getLocalPort();
         }
         File home = new File(context.getFilesDir(), "ollama"); home.mkdirs();
+        File temporary = new File(home, "tmp"); temporary.mkdirs();
         ProcessBuilder builder = new ProcessBuilder(executable.getAbsolutePath(), "serve");
         builder.directory(home);
         builder.environment().put("HOME", home.getAbsolutePath());
+        builder.environment().put("TMPDIR", temporary.getAbsolutePath());
         builder.environment().put("OLLAMA_HOST", "127.0.0.1:" + port);
         builder.environment().put("OLLAMA_MODELS", new File(home, "models").getAbsolutePath());
         builder.environment().put("OLLAMA_NO_CLOUD", "true");
         builder.environment().put("OLLAMA_KEEP_ALIVE", "-1");
         builder.environment().put("OLLAMA_MAX_LOADED_MODELS", "1");
         builder.environment().put("OLLAMA_NUM_PARALLEL", "1");
-        builder.environment().put("OLLAMA_CONTEXT_LENGTH", "2048");
+        builder.environment().put("OLLAMA_CONTEXT_LENGTH", "4096");
         builder.environment().remove("LD_PRELOAD"); builder.environment().remove("LD_LIBRARY_PATH");
         activeBackend = "ollama"; runtimePhase = "Starting Ollama server…"; updateRuntimeNotification();
         localRuntimeProcess = runtime.start(builder, new File(home, "server.log"), this::runtimeExited);
@@ -492,14 +494,21 @@ public final class LocalModelManager {
             ensureOllamaServer(); // The server must answer /api/version before any model setup.
             model.state = LocalModel.State.CONNECTING;
             runtimePhase = "Ollama ready · registering " + model.displayName; updateRuntimeNotification();
-            int contextSize = Math.min(model.context, 2048);
+            LocalGenerationSettings settings = new LocalModelSettings(context, model.id).read(model);
+            int contextSize = settings.context;
             String alias = ollama.importModel(model.id, file, contextSize);
             runtimePhase = "Loading " + model.displayName + " in Ollama…"; updateRuntimeNotification();
-            ollama.load(alias);
-            long before = System.currentTimeMillis(); ollama.infer(alias);
+            ollama.load(alias, settings);
+            long before = System.currentTimeMillis(); ollama.infer(alias, settings);
             if (!runtime.isRunning()) throw new IOException(runtime.lastExit());
             model.endpoint = ollama.baseUrl().replace("http://", "").replace("/v1", "");
-            model.verifiedContext = contextSize; model.healthMs = Math.max(1, System.currentTimeMillis() - before);
+            model.verifiedContext = ollama.loadedContext(alias);
+            if (model.verifiedContext != contextSize) throw new IOException("Ollama did not apply the requested context allocation");
+            model.healthMs = Math.max(1, System.currentTimeMillis() - before);
+            JSONArray capabilities = ollama.show(alias).optJSONArray("capabilities");
+            model.supportsTools = false;
+            if (capabilities != null) for (int i = 0; i < capabilities.length(); i++)
+                if ("tools".equals(capabilities.optString(i))) model.supportsTools = true;
             model.errorMessage = null; model.state = LocalModel.State.CONNECTED; loadedModelId = id;
             studio.ocean.app.providers.model.ProviderConnection connection = new studio.ocean.app.providers.model.ProviderConnection(
                     "local_connection", studio.ocean.app.providers.ProviderRegistry.ID_LOCAL, model.displayName,
@@ -632,16 +641,17 @@ public final class LocalModelManager {
             model.state = LocalModel.State.CONNECTING;
             runtime.stop(); localRuntimeProcess = null;
 
+            LocalGenerationSettings settings = new LocalModelSettings(context, model.id).read(model);
             ProcessBuilder pb = new ProcessBuilder(
                     server.getAbsolutePath(),
                     "-m", modelFile.getAbsolutePath(),
                     "--host", "127.0.0.1",
                     "--port", String.valueOf(port),
-                    "-c", String.valueOf(Math.min(model.context, 4096)),
+                    "-c", String.valueOf(settings.context),
                     "--alias", model.id,
                     "--api-key", runtimeKey,
                     "--jinja", "--parallel", "1",
-                    "--threads", String.valueOf(Math.min(4, Runtime.getRuntime().availableProcessors()))
+                    "--threads", String.valueOf(settings.threads)
             );
             pb.directory(context.getFilesDir());
             pb.environment().put("PREFIX", prefix.getAbsolutePath());
@@ -713,7 +723,12 @@ public final class LocalModelManager {
 
             model.endpoint = "127.0.0.1:" + port;
             model.healthMs = Math.max(1L, System.currentTimeMillis() - probeStart);
-            model.verifiedContext = Math.min(model.context, 4096);
+            JSONObject properties = localRequest(model.endpoint, runtimeKey, "/props", null);
+            JSONObject generation = properties.optJSONObject("default_generation_settings");
+            model.verifiedContext = generation == null ? 0 : generation.optInt("n_ctx", 0);
+            if (model.verifiedContext != settings.context) throw new IOException("llama.cpp did not apply the requested context allocation");
+            JSONObject caps = properties.optJSONObject("chat_template_caps");
+            model.supportsTools = caps != null && caps.optBoolean("supports_tool_calls", false);
             runtimePhase = "llama.cpp server running · " + model.displayName;
             model.state = LocalModel.State.CONNECTED;
             model.errorMessage = null;
@@ -793,6 +808,71 @@ public final class LocalModelManager {
 
     public boolean loadModel(String id) {
         return connectModel(id);
+    }
+
+    public LocalGenerationSettings generationSettings(LocalModel model) {
+        return new LocalModelSettings(context, model.id).read(model);
+    }
+    public boolean isOllamaRuntime() { return "ollama".equals(activeBackend); }
+
+    /** Changes requiring memory allocation are applied by restarting and probing. */
+    public void applyGenerationSettings(String id, LocalGenerationSettings settings) throws Exception {
+        synchronized (connectLock) {
+            LocalModel model = getConnectedModel();
+            if (model == null || !id.equals(model.id)) throw new IOException("The selected local model changed. Reopen its settings.");
+            LocalModelSettings store = new LocalModelSettings(context, id);
+            LocalGenerationSettings previous = store.read(model);
+            store.save(settings);
+            if (previous.context != settings.context || previous.threads != settings.threads) {
+                disconnectModel(id);
+                if (!connectModel(id)) {
+                    String reason = model.errorMessage;
+                    store.save(previous);
+                    connectModel(id);
+                    throw new IOException("The new allocation could not start: " + reason + ". Previous settings restored.");
+                }
+            }
+        }
+    }
+
+    public JSONObject prepareAgentRequest(String selectedModel, JSONObject source) throws Exception {
+        synchronized (connectLock) {
+            LocalModel model = getConnectedModel();
+            if (model == null) throw new IOException("Local server stopped before this request.");
+            String expected = isOllamaRuntime() ? "ocean-" + model.id : model.id;
+            if (!(selectedModel.equals(expected) || selectedModel.equals(expected + ":latest")))
+                throw new IOException("Local model selection changed before the request. Retry with the selected model.");
+            LocalGenerationSettings settings = generationSettings(model);
+            JSONObject body = new JSONObject(source.toString());
+            if (!settings.tools) { body.remove("tools"); body.remove("tool_choice"); }
+            if (isOllamaRuntime()) return LocalInferenceProtocol.prepareOllama(body, settings);
+            String key = new studio.ocean.app.providers.state.CredentialVault(context).retrieve("local_inference_key");
+            return LocalInferenceProtocol.prepareLlama(body, settings,
+                    (path, payload) -> localRequest(model.endpoint, key, path, payload));
+        }
+    }
+    private JSONObject localRequest(String endpoint, String key, String path, JSONObject body) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL("http://" + endpoint + path).openConnection(java.net.Proxy.NO_PROXY);
+        connection.setInstanceFollowRedirects(false);
+        connection.setConnectTimeout(3000); connection.setReadTimeout(15000);
+        if (key != null && !key.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + key);
+        try {
+            if (body != null) {
+                connection.setRequestMethod("POST"); connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json");
+                try (OutputStream out = connection.getOutputStream()) { out.write(body.toString().getBytes(StandardCharsets.UTF_8)); }
+            }
+            int code = connection.getResponseCode();
+            if (code != 200) throw new IOException("Local runtime " + path + " returned HTTP " + code);
+            try (InputStream in = connection.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                byte[] bytes = new byte[8192]; int count;
+                while ((count = in.read(bytes)) != -1) {
+                    if (out.size() + count > 2 * 1024 * 1024) throw new IOException("Local runtime metadata exceeded its limit");
+                    out.write(bytes, 0, count);
+                }
+                return new JSONObject(out.toString("UTF-8"));
+            }
+        } finally { connection.disconnect(); }
     }
 
     public boolean unloadModel(String id) {

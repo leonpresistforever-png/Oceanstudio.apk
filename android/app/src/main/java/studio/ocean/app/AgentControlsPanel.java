@@ -9,6 +9,9 @@ import android.widget.*;
 import androidx.appcompat.widget.SwitchCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import studio.ocean.app.models.local.LocalModel;
+import studio.ocean.app.models.local.LocalModelManager;
+import studio.ocean.app.models.local.LocalGenerationSettings;
 
 /** Right drawer: live agent sliders, HTTP function builder, tools, and hub shortcuts. */
 final class AgentControlsPanel {
@@ -19,6 +22,7 @@ final class AgentControlsPanel {
         void openDevice();
         void openRuntime();
         OceanByokManager byok();
+        boolean agentRunning();
     }
 
     private final MainActivity activity;
@@ -27,6 +31,7 @@ final class AgentControlsPanel {
     private final OceanAgentHubStore hub;
     private final LinearLayout tabs;
     private final FrameLayout body;
+    private final TextView subtitle;
     private String activeTab = "model";
     private boolean inlineFunctionEditor;
     private boolean inlineToolEditor;
@@ -39,6 +44,7 @@ final class AgentControlsPanel {
         hub = new OceanAgentHubStore(activity);
         tabs = root.findViewById(R.id.agent_hub_tabs);
         body = root.findViewById(R.id.agent_controls_body);
+        subtitle = root.findViewById(R.id.agent_controls_subtitle);
         View close = root.findViewById(R.id.agent_controls_close);
         if (close != null) close.setOnClickListener(v -> host.close());
         buildTabs();
@@ -86,6 +92,10 @@ final class AgentControlsPanel {
     }
 
     private void renderModel() {
+        LocalModelManager manager = LocalModelManager.getInstance(activity);
+        LocalModel connected = manager.isLocalOverrideEnabled() ? manager.getConnectedModel() : null;
+        if (connected != null) { renderLocalModel(manager, connected); return; }
+        if (subtitle != null) subtitle.setText("Raw agent configuration");
         LinearLayout col = column();
         body.addView(col);
 
@@ -144,6 +154,65 @@ final class AgentControlsPanel {
                 Toast.makeText(activity, "Check numeric fields", Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void renderLocalModel(LocalModelManager manager, LocalModel model) {
+        if (subtitle != null) subtitle.setText("Local model · " + model.displayName);
+        LinearLayout col = column(); body.addView(col);
+        LocalGenerationSettings current = manager.generationSettings(model);
+        label(col, "CONNECTED LOCAL RUNTIME");
+        muted(col, model.displayName + "\n" + manager.backend() + " · " + model.endpoint
+                + "\nActive context: " + model.verifiedContext + " tokens");
+        label(col, "GENERATION");
+        SeekBar temp = slider(col, "Temperature", (int) (current.temperature * 100), 0, 200);
+        SeekBar topP = slider(col, "Top P", (int) (current.topP * 100), 1, 100);
+        SeekBar tokens = slider(col, "Max output tokens", current.maxTokens / 128, 1, Math.max(1, (current.context - 128) / 128));
+        SeekBar context = slider(col, "Context tokens", current.context / 128, 4, Math.min(32768, model.context) / 128);
+        context.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                ((TextView) bar.getTag()).setText(formatSliderValue("Context tokens", progress));
+                tokens.setMax(Math.max(1, progress - 1));
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { }
+            @Override public void onStopTrackingTouch(SeekBar bar) { }
+        });
+        EditText topK = field(col, "Top K (0 disables)", String.valueOf(current.topK));
+        EditText repeat = field(col, "Repetition penalty", String.valueOf(current.repeatPenalty));
+        EditText threads = field(col, "CPU threads (1–" + Runtime.getRuntime().availableProcessors() + ")", String.valueOf(current.threads));
+        topK.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        repeat.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        threads.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        SwitchCompat keep = switchRow(col, "Keep local conversation context", current.keepContext);
+        SwitchCompat tools = switchRow(col, "Terminal and runtime tools", current.tools);
+        tools.setEnabled(model.supportsTools);
+        muted(col, model.supportsTools ? "Tool support verified from the runtime."
+                : "This model's runtime reports no tool calling. Chat requests omit tool schemas.");
+        muted(col, "Context and thread changes reload the model. Settings apply only to this model; output is bounded by the available context.");
+        TextView save = outlinedAction(col, "Apply local model settings");
+        save.setOnClickListener(v -> {
+            if (host.agentRunning()) { Toast.makeText(activity, "Stop the current response before reloading the local model", Toast.LENGTH_SHORT).show(); return; }
+            final LocalGenerationSettings value;
+            try {
+                value = new LocalGenerationSettings(context.getProgress() * 128, tokens.getProgress() * 128,
+                        temp.getProgress() / 100f, topP.getProgress() / 100f, Integer.parseInt(topK.getText().toString()),
+                        Float.parseFloat(repeat.getText().toString()), Integer.parseInt(threads.getText().toString()),
+                        keep.isChecked(), tools.isChecked() && model.supportsTools, model.context);
+            } catch (Exception invalid) { Toast.makeText(activity, "Check Top K, repetition penalty and thread values", Toast.LENGTH_LONG).show(); return; }
+            save.setEnabled(false); save.setText("Applying to the local runtime…");
+            new Thread(() -> {
+                String failure = null;
+                try { manager.applyGenerationSettings(model.id, value); }
+                catch (Exception error) { failure = OceanAgentConversation.safeMessage(error); }
+                final String detail = failure;
+                activity.runOnUiThread(() -> {
+                    if (activity.isDestroyed()) return;
+                    Toast.makeText(activity, detail == null ? "Local settings applied" : detail, Toast.LENGTH_LONG).show();
+                    if ("model".equals(activeTab)) showTab("model");
+                });
+            }, "ocean-local-settings").start();
+        });
+        TextView models = outlinedAction(col, "Manage local models");
+        models.setOnClickListener(v -> { host.close(); activity.startActivity(new Intent(activity, studio.ocean.app.models.local.LocalModelsActivity.class)); });
     }
 
     private void renderFunctions() {
@@ -421,6 +490,8 @@ final class AgentControlsPanel {
         rowLp.bottomMargin = dp(4);
         parent.addView(row, rowLp);
         SeekBar bar = new SeekBar(activity);
+        bar.setTag(value);
+        bar.setMin(min);
         bar.setMax(max);
         bar.setProgress(Math.max(min, Math.min(max, progress)));
         OceanUi.styleSeekBar(activity, bar);

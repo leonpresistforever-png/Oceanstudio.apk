@@ -45,6 +45,7 @@ public final class LocalModel {
     public volatile String endpoint = null;
     public volatile long healthMs = 0;
     public volatile int verifiedContext = 0;
+    public volatile boolean supportsTools = false;
 
     public LocalModel(String id, String displayName, String family, String format,
                       String quantization, long sizeBytes, int minRamMb, int context,
@@ -89,6 +90,7 @@ public final class LocalModel {
         if (endpoint != null) obj.put("endpoint", endpoint);
         obj.put("healthMs", healthMs);
         obj.put("verifiedContext", verifiedContext);
+        obj.put("supportsTools", supportsTools);
         if (errorMessage != null) obj.put("errorMessage", errorMessage);
         return obj;
     }

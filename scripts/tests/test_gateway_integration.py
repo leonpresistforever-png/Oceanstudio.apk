@@ -8,7 +8,8 @@ import os
 import pathlib
 import shutil
 import socket
-import sqlite3
+import http.server
+import threading
 import subprocess
 import tempfile
 import time
@@ -52,7 +53,7 @@ def ready(origin, path, process):
 with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
     work = pathlib.Path(directory)
     gateway_port, llama_port = port(), port()
-    environment = {**os.environ, 'OCEAN_GATEWAY_ROOT': str(args.gateway_root.resolve()),
+    environment = {**os.environ, 'OCEAN_GATEWAY_CODE': str(args.gateway_command.resolve().parent),
                    'OCEAN_GATEWAY_DATA': str(work / 'state'), 'OCEAN_GATEWAY_PORT': str(gateway_port)}
     subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
     env_file = work / 'state/.env'
@@ -64,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
     subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
     upgraded = dict(line.split('=', 1) for line in env_file.read_text().splitlines() if '=' in line)
     assert len(upgraded['STORAGE_ENCRYPTION_KEY']) == 64
-    assert all(upgraded[name] == initialized[name] for name in ['INITIAL_PASSWORD','JWT_SECRET','API_KEY_SECRET'])
+    assert upgraded['INITIAL_PASSWORD'] == initialized['INITIAL_PASSWORD']
     gateway_log = (work / 'gateway.log').open('w')
     llama_log = (work / 'llama.log').open('w')
     processes = []
@@ -86,29 +87,40 @@ with tempfile.TemporaryDirectory(prefix='ocean-real-gateway-') as directory:
             request(origin, '/v1/chat/completions', {'model':'stories','messages':[{'role':'user','content':'Hello'}]}, anonymous=True)
             raise AssertionError('Unauthenticated inference accepted')
         except urllib.error.HTTPError as rejected: assert rejected.code == 401
-        node = request(origin, '/api/provider-nodes', {'name':'Ocean llama integration','prefix':'oceanllama',
-                       'apiType':'chat','type':'openai-compatible','baseUrl':local+'/v1'})['node']
+        class Limited(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                # Discover the real llama model, then inject a deterministic HTTP limit
+                # to exercise fallback. No generated response is fabricated.
+                transport = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                with transport.open(urllib.request.Request(local + self.path, headers={'Authorization':'Bearer ocean-integration-key'})) as response:
+                    self.send_response(response.status); self.end_headers(); self.wfile.write(response.read())
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get('Content-Length', '0')))
+                self.send_response(429); self.send_header('Content-Type','application/json'); self.send_header('Retry-After','1'); self.end_headers()
+                self.wfile.write(b'{"error":{"message":"integration rate limit"}}')
+            def log_message(self, *args): pass
+        limited = http.server.ThreadingHTTPServer(('127.0.0.1',0),Limited)
+        threading.Thread(target=limited.serve_forever,daemon=True).start()
         accounts = []
-        for name, key in [('valid','ocean-integration-key'), ('expired','invalid-integration-key')]:
-            response = request(origin, '/api/providers', {'provider':node['id'], 'name':name, 'apiKey':key,
-                               'providerSpecificData':{'baseUrl':local+'/v1'}})
+        for name, base in [('valid',local+'/v1'), ('limited',f'http://127.0.0.1:{limited.server_port}/v1')]:
+            response = request(origin, '/api/providers', {'provider':'oceanllama', 'displayName':name,
+                               'authType':'local','format':'openai','apiKey':'ocean-integration-key','baseUrl':base})
             account = response['connection']
-            # This negative test deliberately exercises a real 401 and fallback.
-            # All test resources are confined to the temporary, isolated gateway database.
-            request(origin, '/api/providers/'+account['id'], {'isActive':True}, method='PUT')
             accounts.append(account['id'])
-        with sqlite3.connect(work / 'state/storage.sqlite') as database:
-            encrypted = [row[0] for row in database.execute('SELECT api_key FROM provider_connections WHERE id IN (?,?)', accounts)]
-            assert len(encrypted) == 2 and all(value.startswith('enc:v1:') for value in encrypted)
-            assert all('ocean-integration-key' not in value and 'invalid-integration-key' not in value for value in encrypted)
+        encrypted = (work / 'state/ocean-state.aesgcm').read_text()
+        assert 'ocean-integration-key' not in encrypted and json.loads(encrypted)['version']==1
         compiler = ['javac'] if shutil.which('javac') else ['java','com.sun.tools.javac.Main']
         subprocess.run(compiler + ['-cp',str(args.json_jar.resolve()),'-d',directory,
                        str(JAVA/'providers/gateway/GatewayClient.java'),str(JAVA/'providers/gateway/GatewayQuota.java'),
                        str(JAVA/'providers/model/QuotaSnapshot.java'),str(JAVA/'mcp/OAuthLoopbackReceiver.java'),
+                       str(JAVA/'models/local/LocalGenerationSettings.java'),str(JAVA/'models/local/LocalInferenceProtocol.java'),
+                       str(ROOT/'scripts/tests/LocalInferenceIntegrationCheck.java'),
                        str(ROOT/'scripts/tests/GatewayClientIntegrationCheck.java')],check=True)
         classpath = directory + os.pathsep + str(args.json_jar.resolve())
         subprocess.run(['java','-cp',classpath,'GatewayClientIntegrationCheck',str(gateway_port),
                        str(work/'state/.env'),accounts[0],accounts[1],'oceanllama/stories'],check=True)
+        subprocess.run(['java','-cp',classpath,'LocalInferenceIntegrationCheck',local],check=True)
+        limited.shutdown(); limited.server_close()
     except Exception:
         gateway_log.flush(); llama_log.flush()
         for path in (work/'llama.log',work/'gateway.log'):

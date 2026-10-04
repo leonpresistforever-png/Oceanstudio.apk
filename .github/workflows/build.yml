@@ -75,6 +75,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ollama-classes"
           javac -cp "$RUNNER_TEMP/json.jar" -d "$RUNNER_TEMP/ollama-classes" \
             android/app/src/main/java/studio/ocean/app/models/local/ManagedLocalRuntime.java \
+            android/app/src/main/java/studio/ocean/app/models/local/LocalGenerationSettings.java \
+            android/app/src/main/java/studio/ocean/app/models/local/LocalInferenceProtocol.java \
             android/app/src/main/java/studio/ocean/app/models/local/OllamaClient.java \
             scripts/tests/OllamaIntegrationCheck.java
           java -cp "$RUNNER_TEMP/ollama-classes:$RUNNER_TEMP/json.jar" OllamaIntegrationCheck \
@@ -136,7 +138,7 @@ jobs:
       - name: Verify bundled signed package catalogue
         run: |
           python3 ocean-packages/tests/test-apk-package-catalog.py \
-            --assets android/app/src/main/assets/ocean/repository --min-packages 6482
+            --assets android/app/src/main/assets/ocean/repository --min-packages 6690
 
       - name: Build Android FFmpeg and FFprobe from verified upstream source
         run: bash scripts/build-android-ffmpeg.sh
@@ -257,8 +259,11 @@ jobs:
 
           #### What's New in v${VERSION}:
           - **Local inference**: Bundles official Ollama and its CPU backend alongside llama.cpp. Start Ollama Server waits for readiness before GGUF import, model load and generated-text verification. Foreground service startup is acknowledged; stale exits cannot stop replacement servers. Selected models can reconnect automatically.
-          - **Ocean gateway**: Repairs the Android dependency exception behind provider-route HTTP 500. Existing owned servers are patched and restarted automatically. Browser authorization uses the gateway’s provider URL and a real loopback callback.
-          - **Connected-account fallback**: The upstream gateway handles a real priority combo across verified accounts. Ocean uses its OpenAI-compatible inference endpoint; the gateway handles provider-specific request/response translation and token refresh.
+          - **Local model controls**: The right drawer uses separate per-model context, output, temperature, Top P, Top K, repetition and thread controls while a connected local model is selected. Runtime allocation is probed after reload. Unsupported tools are omitted, llama.cpp prompts use real tokenization and complete old exchanges are trimmed to fit. Model changes invalidate the conversation cache.
+          - **Independent Ocean gateway**: Installs Ocean's own packaged Node server without npm or OmniRoute. It exposes a local /v1 endpoint, opens provider authorization in the browser and receives a validated loopback callback that returns to the app. Codex uses S256 PKCE; each provider uses its registered OAuth grant.
+          - **Connected-account fallback**: Ocean's original gateway translates provider requests and streamed responses, refreshes tokens using their issuing client and retries permitted connected accounts before streaming starts. Account state uses AES-256-GCM; inference keys are separate from management sessions. Subscription quotas come from provider responses.
+          - **Terminal compatibility**: Repairs copied npm/npx entry points from older builds, preserves valid launcher links and complete script contents, and keeps existing env implementations.
+          - **Package catalogue**: Bundles a verified signed APT catalogue containing the additive upstream dependencies and independent gateway package. Existing package archives remain available.
           - **Verification scope**: Real gateway installation/routes, official Ollama inference/reconnect, unit tests, APK signing and arm64/16 KB ABI checks all pass before publication. A user's live provider consent and subscription quota require completing account login on their device.
 
           #### Installation Note:

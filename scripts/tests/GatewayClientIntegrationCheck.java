@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.json.*;
 
-/** Exercises Ocean's HTTP client against the actual published OmniRoute server. */
+/** Exercises Ocean's HTTP client against the independent Ocean server and real inference. */
 public class GatewayClientIntegrationCheck {
     static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }
     static Map<String,String> query(String url) throws Exception {
@@ -27,6 +27,7 @@ public class GatewayClientIntegrationCheck {
     }
     public static void main(String[] args) throws Exception {
         GatewayClient client = new GatewayClient(Integer.parseInt(args[0]));
+        client.requireOcean();
         require(GatewayQuota.parse(new JSONObject("{\"plan\":\"plus\",\"quotas\":{\"session\":{\"used\":20,\"total\":100,\"remaining\":80},\"weekly\":{\"used\":90,\"total\":100,\"remaining\":10}}}"), "codex/model").remaining == 10,
                 "Codex quota does not reflect the limiting provider-reported window");
         String password = null;
@@ -67,6 +68,6 @@ public class GatewayClientIntegrationCheck {
         String combo = client.configureFallback(models);
         String fallbackKey = client.createFallbackKey(new JSONArray().put(args[3]).put(args[2]));
         requireText(client.completion(fallbackKey, combo));
-        System.out.println("PASS: actual OmniRoute management/auth URLs, Codex S256, app callback, quota parsing, encrypted stored credentials, real llama inference, and account fallback");
+        System.out.println("PASS: independent Ocean management/auth URLs, Codex S256, app callback, quota parsing, encrypted credentials, real llama inference and account fallback");
     }
 }

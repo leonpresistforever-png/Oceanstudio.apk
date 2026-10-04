@@ -18,6 +18,8 @@ with zipfile.ZipFile(args.apk) as archive:
                   'assets/ocean/gateway/prepare-runtime.mjs']:
         if entry not in archive.namelist(): raise SystemExit('APK is missing ' + entry)
         print('Packaged:', entry)
+    if archive.read('assets/ocean/forge/helpers/fix-runtime-shebangs.py') != (root / 'ocean-packages/scripts/fix-runtime-shebangs.py').read_bytes():
+        raise SystemExit('APK shebang helper differs from the canonical Ocean helper')
     entry = 'lib/arm64-v8a/libllama-server.so'
     binary = archive.read(entry)
     original = root / 'android/app/src/main/jniLibs/arm64-v8a/libllama-server.so'
@@ -47,7 +49,7 @@ with zipfile.ZipFile(args.apk) as archive:
                       if struct.unpack_from('<I', elf, offset + i * size)[0] == 1]
         if not alignments or min(alignments) < 16384: raise SystemExit('ELF lacks 16 KB page support: ' + name)
         print('16 KB ELF verified:', name)
-    for name in ['ocean-gateway', 'prepare-runtime.mjs']:
+    for name in ['ocean-gateway', 'prepare-runtime.mjs', 'server.mjs', 'store.mjs', 'transport.mjs', 'providers.mjs', 'oauth.mjs', 'registrations.mjs', 'connect.mjs']:
         command = root / 'android/app/src/main/assets/ocean/gateway' / name
         if archive.read('assets/ocean/gateway/' + name) != command.read_bytes():
             raise SystemExit('APK changed the verified canonical gateway file: ' + name)

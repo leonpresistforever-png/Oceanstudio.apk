@@ -313,6 +313,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public void openDevice() { startActivity(new Intent(MainActivity.this, studio.ocean.app.device.DeviceAccessActivity.class)); }
             @Override public void openRuntime() { startActivity(new Intent(MainActivity.this, studio.ocean.app.runtime.RuntimePortsActivity.class)); }
             @Override public OceanByokManager byok() { return byokManager; }
+            @Override public boolean agentRunning() { return agentRunner != null && agentRunner.isRunning(); }
         });
         safeClick(R.id.menu_button, v -> openDrawer());
         safeClick(R.id.agent_controls_button, v -> openAgentControls());

@@ -15,7 +15,7 @@ import studio.ocean.app.providers.model.*;
 import studio.ocean.app.providers.state.*;
 import studio.ocean.app.terminal.OceanTerminalRuntimeService;
 
-/** Installs, owns and connects to the real upstream gateway; no synthetic account state. */
+/** Installs, owns and connects to Ocean's independent local gateway. */
 public final class OceanGatewayManager {
     public interface Listener {
         void progress(String message);
@@ -29,7 +29,7 @@ public final class OceanGatewayManager {
         return instance;
     }
     public static String upstreamProvider(String id) {
-        if ("antigravity".equals(id)) return "agy";
+        if ("antigravity".equals(id)) return "antigravity";
         if ("antigravity_ide".equals(id) || "antigravity_20".equals(id)) return "antigravity";
         if ("openai".equals(id)) return "codex";
         return null;
@@ -161,11 +161,12 @@ public final class OceanGatewayManager {
             GatewayClient candidate = new GatewayClient(port);
             boolean repairRunningServer = false;
             if (password != null) try {
+                candidate.requireOcean();
                 candidate.login(password);
                 candidate.connections("antigravity");
                 client = candidate; return;
             } catch (GatewayClient.HttpFailure error) { repairRunningServer = error.status >= 500; }
-              catch (Exception ignored) { }
+              catch (Exception ignored) { repairRunningServer = daemon != null; }
             OceanTerminalRuntimeService runtime = bindRuntime();
             if (listener != null) listener.progress("Installing and checking Ocean gateway and Node.js…");
             // Bootstrap activates its prefix atomically. Install the command AFTER that activation.
@@ -208,7 +209,7 @@ public final class OceanGatewayManager {
             Exception last = null;
             long deadline = System.currentTimeMillis() + 120000;
             while (System.currentTimeMillis() < deadline) {
-                try { candidate.login(password); candidate.connections("antigravity"); client = candidate; return; }
+                try { candidate.requireOcean(); candidate.login(password); candidate.connections("antigravity"); client = candidate; return; }
                 catch (Exception error) { last = error; Thread.sleep(500); }
             }
             throw new IOException("Ocean gateway did not become ready", last);
@@ -251,9 +252,11 @@ public final class OceanGatewayManager {
         if (failure[0] != null || exit[0] != 0) throw new IOException("Gateway installation failed (exit " + exit[0] + "): " + output.toString().trim(), failure[0]);
     }
     private void prepareCommand() throws Exception {
-        File helper = new File(context.getFilesDir(), "usr/share/ocean-gateway/prepare-runtime.mjs");
-        helper.getParentFile().mkdirs();
-        copyAsset("ocean/gateway/prepare-runtime.mjs", helper);
+        File code = new File(context.getFilesDir(), "usr/share/ocean-gateway");
+        if (!code.isDirectory() && !code.mkdirs()) throw new IOException("Could not create Ocean gateway code directory");
+        for (String name : new String[]{"server", "store", "transport", "providers", "oauth", "registrations", "prepare-runtime", "connect"}) {
+            copyAsset("ocean/gateway/" + name + ".mjs", new File(code, name + ".mjs"));
+        }
         command.getParentFile().mkdirs();
         File temporary = new File(command.getParentFile(), "ocean-gateway.new");
         try (InputStream input = context.getAssets().open("ocean/gateway/ocean-gateway"); OutputStream output = new FileOutputStream(temporary)) {
@@ -295,7 +298,7 @@ public final class OceanGatewayManager {
             JSONObject model = models.optJSONObject(i);
             String id = model == null ? models.optString(i) : model.optString("id", model.optString("model"));
             if (id.isEmpty()) continue;
-            String routed = id.contains("/") ? id : upstream + "/" + id;
+            String routed = id.startsWith(upstream + "/") ? id : upstream + "/" + id;
             catalog.add(new ModelDescriptor(routed, model == null ? id : model.optString("name", id),
                     model == null ? 0 : model.optInt("context_length", model.optInt("contextWindow", 0)), false,
                     model != null && model.optBoolean("supportsTools", false),

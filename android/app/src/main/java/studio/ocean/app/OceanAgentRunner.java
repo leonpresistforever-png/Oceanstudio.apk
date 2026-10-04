@@ -175,9 +175,17 @@ public final class OceanAgentRunner {
                                 if (!byokManager.isVerified()) throw new IOException("Connect a model in BYOK Models & APIs using Save & Test Connection.");
                                 config = configuredModel();
                             }
-                            String digest = (decision != null ? decision.connection.id : byokManager.configurationDigest()) + "|" + agentSettings.signature(context);
+                            studio.ocean.app.models.local.LocalModel localModel = config.provider.equals("local") ? lmm.getConnectedModel() : null;
+                            studio.ocean.app.models.local.LocalGenerationSettings localSettings = localModel == null ? null : lmm.generationSettings(localModel);
+                            String digest = (decision != null ? decision.connection.id : byokManager.configurationDigest())
+                                    + "|" + config.provider + "|" + config.model + "|" + config.baseUrl + "|" + agentSettings.signature(context)
+                                    + (localSettings == null ? "" : "|" + localSettings.signature());
                             if (conversation == null || !digest.equals(conversationDigest)) {
-                                conversation = new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.effectiveUserInstructions(context));
+                                conversation = localSettings == null
+                                        ? new OceanAgentConversation(config.provider, config.model, agentSettings.temperature(), agentSettings.topP(), agentSettings.maxTokens(), agentSettings.maxRounds(), agentSettings.maxToolCalls(), agentSettings.keepSessionAlive(), agentSettings.reasoningEffort(), agentSettings.effectiveUserInstructions(context))
+                                        : new OceanAgentConversation(config.provider, config.model, localSettings.temperature, localSettings.topP, localSettings.maxTokens,
+                                                agentSettings.maxRounds(), agentSettings.maxToolCalls(), localSettings.keepContext, "default", agentSettings.userInstructions())
+                                                .withLocalTools(localSettings.tools);
                                 conversationDigest = digest;
                             }
                             status(callback, "Working with " + config.model + "…");
@@ -288,6 +296,13 @@ public final class OceanAgentRunner {
                 && config.apiKey.equals(openAiRecord.accessToken);
         String endpoint = planOAuth ? studio.ocean.app.providers.auth.OpenAiDirectAuthAdapter.RESPONSES_ENDPOINT : config.endpoint();
         if (planOAuth) body = studio.ocean.app.providers.auth.OpenAiResponses.request(body);
+        boolean localOllama = false;
+        if (config.provider.equals("local")) {
+            studio.ocean.app.models.local.LocalModelManager local = studio.ocean.app.models.local.LocalModelManager.getInstance(context);
+            body = local.prepareAgentRequest(config.model, body);
+            localOllama = local.isOllamaRuntime();
+            if (localOllama) endpoint = config.baseUrl.replaceAll("/v1$", "") + "/api/chat";
+        }
         HttpURLConnection conn = (HttpURLConnection) (config.provider.equals("local") || config.provider.equals("gateway")
                 ? new URL(endpoint).openConnection(java.net.Proxy.NO_PROXY)
                 : new URL(endpoint).openConnection());
@@ -307,7 +322,8 @@ public final class OceanAgentRunner {
             }
         } else conn.setRequestProperty("Authorization", "Bearer " + config.apiKey);
         conn.setConnectTimeout(agentSettings.connectTimeoutMs());
-        conn.setReadTimeout(agentSettings.antiTimeout()?agentSettings.readTimeoutMs():Math.min(agentSettings.readTimeoutMs(),60000));
+        conn.setReadTimeout(config.provider.equals("local") ? Math.max(300000, agentSettings.readTimeoutMs())
+                : agentSettings.antiTimeout()?agentSettings.readTimeoutMs():Math.min(agentSettings.readTimeoutMs(),60000));
         conn.setDoOutput(true);
         boolean agentRequest = Thread.currentThread() == worker;
         if (agentRequest) activeConnection = conn;
@@ -333,7 +349,8 @@ public final class OceanAgentRunner {
                 if (code == 404) detail += " Check the model ID in BYOK Models & APIs; a provider name such as google is not a model ID.";
                 throw new IOException("Provider HTTP " + code + ": " + detail);
             }
-            return planOAuth ? studio.ocean.app.providers.auth.OpenAiResponses.reply(text) : new JSONObject(text);
+            return planOAuth ? studio.ocean.app.providers.auth.OpenAiResponses.reply(text)
+                    : localOllama ? studio.ocean.app.models.local.LocalInferenceProtocol.ollamaReply(new JSONObject(text)) : new JSONObject(text);
         } finally {
             if (agentRequest) activeConnection = null;
             conn.disconnect();

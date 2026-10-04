@@ -30,6 +30,7 @@ android/app/src/main/assets/ocean/native/llama-runtime.json
 android/app/src/main/assets/ocean/native/llama-LICENSE
 android/app/src/main/assets/ocean/gateway/ocean-gateway
 android/app/src/main/assets/ocean/gateway/prepare-runtime.mjs
+android/app/src/main/assets/ocean/gateway/*.mjs
 android/app/src/main/jniLibs/arm64-v8a/libollama.so
 android/app/src/main/jniLibs/arm64-v8a/libollama-llama-server.so
 android/app/src/main/assets/ocean/native/ollama-runtime.json

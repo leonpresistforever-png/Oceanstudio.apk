@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory(prefix='ocean-android-gateway-') as directory:
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
     environment = {**os.environ, 'HOME': str(work / 'home'),
-                   'OCEAN_GATEWAY_ROOT': str(args.gateway_root.resolve()),
+                   'OCEAN_GATEWAY_CODE': str(args.gateway_command.resolve().parent),
                    'OCEAN_GATEWAY_DATA': str(work / 'state'), 'OCEAN_GATEWAY_PORT': str(port)}
     subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
     subprocess.run(['bash', str(args.gateway_command.resolve()), 'install'], env=environment, check=True)
@@ -34,9 +34,13 @@ with tempfile.TemporaryDirectory(prefix='ocean-android-gateway-') as directory:
                                         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     def request(path, body=None):
         payload = None if body is None else json.dumps(body).encode()
-        with opener.open(urllib.request.Request(f'http://127.0.0.1:{port}' + path, data=payload,
-                         headers={'Content-Type': 'application/json'}), timeout=20) as response:
-            return json.load(response)
+        try:
+            with opener.open(urllib.request.Request(f'http://127.0.0.1:{port}' + path, data=payload,
+                             headers={'Content-Type': 'application/json'}), timeout=20) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            detail = json.load(error).get('error', {})
+            raise RuntimeError(f'Gateway HTTP {error.code}: {detail.get("message", "request failed")}') from error
     with (work / 'server.log').open('w') as log:
         server = subprocess.Popen(['bash', str(args.gateway_command.resolve()), 'serve'], env=environment,
                                   stdout=log, stderr=subprocess.STDOUT)
@@ -61,7 +65,8 @@ with tempfile.TemporaryDirectory(prefix='ocean-android-gateway-') as directory:
                 assert auth['redirectUri'] == callback
                 assert auth['authUrl'].startswith('https://') and auth['state']
             assert request('/api/providers?provider=codex')['connections'] == []
-            assert (work / 'state/cache').is_dir()
+            assert request('/health')['engine'] == 'ocean'
+            assert not (work / 'state/node_modules').exists()
             print('PASS: actual Android-selected gateway account routes and authorization')
         except Exception:
             log.flush()

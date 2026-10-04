@@ -42,6 +42,9 @@ public final class OceanForgeInstaller {
     }
 
     public static synchronized File ensureToolOverlay(Context context)throws IOException{
+        // The overlay command invokes this canonical Ocean helper in the real
+        // runtime prefix. Previously only the launcher was packaged.
+        installShebangHelper(context);
         final String assetRoot="ocean/forge/tools";
         String[] names=context.getAssets().list(assetRoot);
         File dir=new File(context.getFilesDir(),"forge-tools/bin");
@@ -70,6 +73,22 @@ public final class OceanForgeInstaller {
             else if(file.getName().endsWith(".tmp"))file.delete();
         }
         return dir;
+    }
+
+    private static void installShebangHelper(Context context) throws IOException {
+        byte[] asset = readAsset(context, "ocean/forge/helpers/fix-runtime-shebangs.py", 256 * 1024);
+        File target = new File(context.getFilesDir(), "usr/share/ocean/scripts/fix-runtime-shebangs.py");
+        if (!target.getParentFile().isDirectory() && !target.getParentFile().mkdirs())
+            throw new IOException("Could not create Ocean helper directory");
+        if (target.isFile()) {
+            try { if (sha256(asset).equals(sha256(target))) return; } catch (Exception ignored) { }
+        }
+        File temporary = new File(target.getParentFile(), target.getName() + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(temporary, false)) {
+            out.write(asset); out.flush(); out.getFD().sync();
+        }
+        java.nio.file.Files.move(temporary.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        target.setReadable(true, true); target.setWritable(true, true);
     }
 
     public static synchronized File ensure(Context context)throws IOException{
