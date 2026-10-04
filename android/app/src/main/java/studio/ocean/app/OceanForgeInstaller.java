@@ -42,8 +42,8 @@ public final class OceanForgeInstaller {
     }
 
     public static synchronized File ensureToolOverlay(Context context)throws IOException{
-        // The overlay command invokes this canonical Ocean helper in the real
-        // runtime prefix. Previously only the launcher was packaged.
+        // Keep the overlay's canonical helper outside the transactional prefix.
+        // Bootstrap activation can replace usr; the launcher's fallback must survive.
         installShebangHelper(context);
         final String assetRoot="ocean/forge/tools";
         String[] names=context.getAssets().list(assetRoot);
@@ -77,7 +77,7 @@ public final class OceanForgeInstaller {
 
     private static void installShebangHelper(Context context) throws IOException {
         byte[] asset = readAsset(context, "ocean/forge/helpers/fix-runtime-shebangs.py", 256 * 1024);
-        File target = new File(context.getFilesDir(), "usr/share/ocean/scripts/fix-runtime-shebangs.py");
+        File target = new File(context.getFilesDir(), "forge-tools/share/ocean/scripts/fix-runtime-shebangs.py");
         if (!target.getParentFile().isDirectory() && !target.getParentFile().mkdirs())
             throw new IOException("Could not create Ocean helper directory");
         if (target.isFile()) {
