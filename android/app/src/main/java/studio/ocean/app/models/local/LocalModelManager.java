@@ -497,6 +497,10 @@ public final class LocalModelManager {
             LocalGenerationSettings settings = new LocalModelSettings(context, model.id).read(model);
             int contextSize = settings.context;
             String alias = ollama.importModel(model.id, file, contextSize);
+            JSONObject information = ollama.show(alias);
+            model.runtimeContextLimit = OllamaClient.trainedContext(information);
+            settings = new LocalModelSettings(context, model.id).read(model);
+            contextSize = settings.context;
             runtimePhase = "Loading " + model.displayName + " in Ollama…"; updateRuntimeNotification();
             ollama.load(alias, settings);
             long before = System.currentTimeMillis(); ollama.infer(alias, settings);
@@ -505,7 +509,7 @@ public final class LocalModelManager {
             model.verifiedContext = ollama.loadedContext(alias);
             if (model.verifiedContext != contextSize) throw new IOException("Ollama did not apply the requested context allocation");
             model.healthMs = Math.max(1, System.currentTimeMillis() - before);
-            JSONArray capabilities = ollama.show(alias).optJSONArray("capabilities");
+            JSONArray capabilities = information.optJSONArray("capabilities");
             model.supportsTools = false;
             if (capabilities != null) for (int i = 0; i < capabilities.length(); i++)
                 if ("tools".equals(capabilities.optString(i))) model.supportsTools = true;

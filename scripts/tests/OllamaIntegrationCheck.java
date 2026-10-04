@@ -34,10 +34,16 @@ public final class OllamaIntegrationCheck {
                     catch (Exception starting) { if (System.currentTimeMillis() > deadline) throw starting; Thread.sleep(200); }
                 }
                 String alias = client.importModel("stories", model, 512);
-                LocalGenerationSettings settings = new LocalGenerationSettings(512, 16, .2f, .8f, 12, 1.1f, 1, true, false, 512);
+                int trainingContext = OllamaClient.trainedContext(client.show(alias));
+                if (trainingContext != 128) throw new AssertionError("Official fixture training context changed: " + trainingContext);
+                LocalGenerationSettings settings = new LocalGenerationSettings(512, 16, .2f, .8f, 12, 1.1f, 1, true, false, trainingContext);
                 client.load(alias, settings);
                 if (client.infer(alias, settings).isEmpty()) throw new AssertionError("No real generated text");
-                if (client.loadedContext(alias) != 512) throw new AssertionError("Native context setting was not applied");
+                if (client.loadedContext(alias) != settings.context) throw new AssertionError("Native context setting was not applied");
+                LocalGenerationSettings smaller = new LocalGenerationSettings(64, 16, .2f, .8f, 12, 1.1f, 1, true, false, 64);
+                client.unload(alias); client.load(alias, smaller); client.infer(alias, smaller);
+                if (client.loadedContext(alias) != 64) throw new AssertionError("Explicit smaller context was not applied");
+                client.unload(alias); client.load(alias, settings);
                 if (client.show(alias).optJSONArray("capabilities") == null) throw new AssertionError("Runtime did not report capabilities");
                 Thread.sleep(5500); // Survive the reported four-second disconnect window.
                 if (!runtime.isRunning() || client.infer(alias, settings).isEmpty()) throw new AssertionError("Connection did not survive");

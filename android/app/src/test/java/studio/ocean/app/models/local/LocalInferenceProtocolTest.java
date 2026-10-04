@@ -6,6 +6,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class LocalInferenceProtocolTest {
+    @Test public void runtimeMetadataLimitsTinyModelContextWithoutInventingAnAllocation() throws Exception {
+        JSONObject information = new JSONObject("{model_info:{'general.architecture':'llama','llama.context_length':128}}");
+        LocalGenerationSettings value = new LocalGenerationSettings(512, 512, .7f, 1, 40, 1.1f, 1, true, false,
+                OllamaClient.trainedContext(information));
+        assertEquals(128, value.context);
+        assertEquals(96, value.maxTokens);
+        assertEquals(128, value.ollamaOptions(512).getInt("num_ctx"));
+        assertEquals(0, OllamaClient.trainedContext(new JSONObject()));
+    }
     private LocalGenerationSettings settings(int context, int output) {
         return new LocalGenerationSettings(context, output, 0.3f, 0.8f, 17, 1.2f, 1, true, false, context);
     }

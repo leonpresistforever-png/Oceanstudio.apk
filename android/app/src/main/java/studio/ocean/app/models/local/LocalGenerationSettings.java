@@ -10,14 +10,19 @@ public final class LocalGenerationSettings {
 
     public LocalGenerationSettings(int context, int maxTokens, float temperature, float topP,
             int topK, float repeatPenalty, int threads, boolean keepContext, boolean tools, int modelContext) {
-        this.context = clamp(context, 512, Math.max(512, Math.min(32768, modelContext)));
-        this.maxTokens = clamp(maxTokens, 16, this.context - 128);
+        int limit = Math.max(64, Math.min(32768, modelContext));
+        this.context = clamp(context, Math.min(512, limit), limit);
+        this.maxTokens = clamp(maxTokens, 16, outputLimit(this.context));
         this.temperature = clamp(temperature, 0, 2);
         this.topP = clamp(topP, 0.01f, 1);
         this.topK = clamp(topK, 0, 200);
         this.repeatPenalty = clamp(repeatPenalty, 0.5f, 2);
         this.threads = clamp(threads, 1, Math.max(1, Runtime.getRuntime().availableProcessors()));
         this.keepContext = keepContext; this.tools = tools;
+    }
+
+    public static int outputLimit(int context) {
+        return Math.max(16, context - Math.min(128, context / 4));
     }
 
     public JSONObject ollamaOptions(int output) throws Exception {

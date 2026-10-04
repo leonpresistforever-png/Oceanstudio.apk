@@ -166,12 +166,15 @@ final class AgentControlsPanel {
         label(col, "GENERATION");
         SeekBar temp = slider(col, "Temperature", (int) (current.temperature * 100), 0, 200);
         SeekBar topP = slider(col, "Top P", (int) (current.topP * 100), 1, 100);
-        SeekBar tokens = slider(col, "Max output tokens", current.maxTokens / 128, 1, Math.max(1, (current.context - 128) / 128));
-        SeekBar context = slider(col, "Context tokens", current.context / 128, 4, Math.min(32768, model.context) / 128);
+        int contextLimit = Math.max(64, Math.min(32768, model.contextLimit()));
+        SeekBar tokens = slider(col, "Max output tokens", current.maxTokens / 16, 1,
+                LocalGenerationSettings.outputLimit(current.context) / 16, p -> String.valueOf(p * 16));
+        SeekBar context = slider(col, "Context tokens", current.context / 64,
+                Math.min(8, contextLimit / 64), contextLimit / 64, p -> String.valueOf(p * 64));
         context.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                ((TextView) bar.getTag()).setText(formatSliderValue("Context tokens", progress));
-                tokens.setMax(Math.max(1, progress - 1));
+                ((TextView) bar.getTag()).setText(String.valueOf(progress * 64));
+                tokens.setMax(LocalGenerationSettings.outputLimit(progress * 64) / 16);
             }
             @Override public void onStartTrackingTouch(SeekBar bar) { }
             @Override public void onStopTrackingTouch(SeekBar bar) { }
@@ -193,10 +196,10 @@ final class AgentControlsPanel {
             if (host.agentRunning()) { Toast.makeText(activity, "Stop the current response before reloading the local model", Toast.LENGTH_SHORT).show(); return; }
             final LocalGenerationSettings value;
             try {
-                value = new LocalGenerationSettings(context.getProgress() * 128, tokens.getProgress() * 128,
+                value = new LocalGenerationSettings(context.getProgress() * 64, tokens.getProgress() * 16,
                         temp.getProgress() / 100f, topP.getProgress() / 100f, Integer.parseInt(topK.getText().toString()),
                         Float.parseFloat(repeat.getText().toString()), Integer.parseInt(threads.getText().toString()),
-                        keep.isChecked(), tools.isChecked() && model.supportsTools, model.context);
+                        keep.isChecked(), tools.isChecked() && model.supportsTools, model.contextLimit());
             } catch (Exception invalid) { Toast.makeText(activity, "Check Top K, repetition penalty and thread values", Toast.LENGTH_LONG).show(); return; }
             save.setEnabled(false); save.setText("Applying to the local runtime…");
             new Thread(() -> {
@@ -472,6 +475,11 @@ final class AgentControlsPanel {
     }
 
     private SeekBar slider(LinearLayout parent, String title, int progress, int min, int max) {
+        return slider(parent, title, progress, min, max, value -> formatSliderValue(title, value));
+    }
+
+    private SeekBar slider(LinearLayout parent, String title, int progress, int min, int max,
+            java.util.function.IntFunction<String> format) {
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -495,10 +503,10 @@ final class AgentControlsPanel {
         bar.setMax(max);
         bar.setProgress(Math.max(min, Math.min(max, progress)));
         OceanUi.styleSeekBar(activity, bar);
-        value.setText(formatSliderValue(title, bar.getProgress()));
+        value.setText(format.apply(bar.getProgress()));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int prog, boolean fromUser) {
-                value.setText(formatSliderValue(title, prog));
+                value.setText(format.apply(prog));
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}

@@ -45,7 +45,12 @@ public final class LocalModel {
     public volatile String endpoint = null;
     public volatile long healthMs = 0;
     public volatile int verifiedContext = 0;
+    public volatile int runtimeContextLimit = 0;
     public volatile boolean supportsTools = false;
+
+    public int contextLimit() {
+        return runtimeContextLimit > 0 ? Math.min(context, runtimeContextLimit) : context;
+    }
 
     public LocalModel(String id, String displayName, String family, String format,
                       String quantization, long sizeBytes, int minRamMb, int context,
@@ -90,6 +95,7 @@ public final class LocalModel {
         if (endpoint != null) obj.put("endpoint", endpoint);
         obj.put("healthMs", healthMs);
         obj.put("verifiedContext", verifiedContext);
+        obj.put("runtimeContextLimit", runtimeContextLimit);
         obj.put("supportsTools", supportsTools);
         if (errorMessage != null) obj.put("errorMessage", errorMessage);
         return obj;
@@ -121,6 +127,7 @@ public final class LocalModel {
         model.endpoint = obj.optString("endpoint", null);
         model.healthMs = obj.optLong("healthMs", 0);
         model.verifiedContext = obj.optInt("verifiedContext", model.context);
+        model.runtimeContextLimit = obj.optInt("runtimeContextLimit", 0);
         model.errorMessage = obj.optString("errorMessage", null);
         return model;
     }

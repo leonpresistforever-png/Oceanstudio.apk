@@ -18,6 +18,12 @@ public final class OllamaClient {
     public JSONObject show(String model) throws Exception {
         return request("POST", "/api/show", new JSONObject().put("model", model), null, 20);
     }
+    public static int trainedContext(JSONObject information) {
+        JSONObject metadata = information.optJSONObject("model_info");
+        if (metadata == null) return 0;
+        String architecture = metadata.optString("general.architecture", "");
+        return architecture.isEmpty() ? 0 : Math.max(0, metadata.optInt(architecture + ".context_length", 0));
+    }
     public int loadedContext(String model) throws Exception {
         JSONArray models = request("GET", "/api/ps", null, null, 10).optJSONArray("models");
         if (models != null) for (int i = 0; i < models.length(); i++) {
